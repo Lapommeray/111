@@ -29,6 +29,12 @@
       "source_module": "meta_adaptive_ai",
       "target_interface": "adaptive_profile_bus",
       "enabled": true
+    },
+    {
+      "name": "hook_evolution_kernel",
+      "source_module": "evolution_kernel",
+      "target_interface": "evolution_control_bus",
+      "enabled": true
     }
   ]
 }

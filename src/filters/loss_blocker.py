@@ -37,4 +37,10 @@ class LossBlocker:
         return {
             "blocked": len(blocked_reasons) > 0,
             "reasons": blocked_reasons,
+            "metrics": {
+                "confidence": confidence,
+                "min_confidence": self.min_confidence,
+                "spread_points": spread_points,
+                "max_spread_points": self.max_spread_points,
+            },
         }

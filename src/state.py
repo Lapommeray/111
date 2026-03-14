@@ -33,6 +33,16 @@ class ConnectorHook:
 
 
 @dataclass
+class EvolutionStatus:
+    enabled: bool = False
+    inspection_summary: dict[str, int] = field(default_factory=dict)
+    gap_count: int = 0
+    proposed_count: int = 0
+    verified_count: int = 0
+    rejected_count: int = 0
+
+
+@dataclass
 class PipelineState:
     symbol: str
     mode: str
@@ -44,6 +54,7 @@ class PipelineState:
     module_results: dict[str, ModuleResult] = field(default_factory=dict)
     module_health: dict[str, ModuleHealth] = field(default_factory=dict)
     connector_hooks: dict[str, ConnectorHook] = field(default_factory=dict)
+    evolution_status: EvolutionStatus = field(default_factory=EvolutionStatus)
     final_confidence: float = 0.0
     final_direction: str = "WAIT"
     blocked: bool = False
@@ -84,4 +95,14 @@ class PipelineState:
                 "description": value.description,
             }
             for key, value in self.connector_hooks.items()
+        }
+
+    def as_evolution_payload(self) -> dict[str, Any]:
+        return {
+            "enabled": self.evolution_status.enabled,
+            "inspection_summary": self.evolution_status.inspection_summary,
+            "gap_count": self.evolution_status.gap_count,
+            "proposed_count": self.evolution_status.proposed_count,
+            "verified_count": self.evolution_status.verified_count,
+            "rejected_count": self.evolution_status.rejected_count,
         }
