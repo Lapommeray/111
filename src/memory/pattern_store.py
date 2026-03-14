@@ -56,6 +56,7 @@ class PatternStore:
             self._write(path, seed)
             return seed
         except json.JSONDecodeError:
+            self._backup_corrupt_file(path)
             seed = self._seed_for(name)
             self._write(path, seed)
             return seed
@@ -98,6 +99,15 @@ class PatternStore:
     def save_generated_rules(self, rules: list[dict[str, Any]]) -> None:
         payload = {"rules": rules, "updated_at": self._now_iso()}
         self.save("generated_rules", payload)
+
+    def _backup_corrupt_file(self, path: Path) -> None:
+        if not path.exists():
+            return
+        backup_path = path.with_name(f"{path.name}.corrupt.{self._new_id('bak')}")
+        try:
+            backup_path.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+        except OSError as exc:
+            raise RuntimeError(f"Failed to back up corrupt memory file: {path}") from exc
 
     def _new_id(self, prefix: str) -> str:
         ts = datetime.now(tz=timezone.utc).strftime("%Y%m%d%H%M%S%f")

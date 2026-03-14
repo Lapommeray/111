@@ -28,6 +28,20 @@ def test_pattern_store_recovers_from_corrupt_json(tmp_path: Path) -> None:
     assert recovered == []
 
 
+def test_pattern_store_backups_corrupt_file_before_reseed(tmp_path: Path) -> None:
+    mem_root = tmp_path / "memory"
+    store = PatternStore(PatternStoreConfig(root=str(mem_root)))
+    corrupt_path = store.files["trade_outcomes"]
+    corrupt_path.write_text("{bad-json", encoding="utf-8")
+
+    recovered = store.load("trade_outcomes")
+    assert recovered == []
+
+    backups = list(mem_root.glob("trade_outcomes.json.corrupt.*"))
+    assert backups, "Expected at least one corrupt backup file"
+    assert backups[0].read_text(encoding="utf-8") == "{bad-json"
+
+
 def test_memory_lifecycle_writes_snapshot_and_outcomes(tmp_path: Path) -> None:
     mem_root = tmp_path / "memory"
     store = PatternStore(PatternStoreConfig(root=str(mem_root)))
@@ -74,6 +88,52 @@ def test_run_pipeline_first_run_live_and_replay_csv(tmp_path: Path) -> None:
     assert live_output["schema_version"] == replay_output["schema_version"] == "phase3.output.v1"
     assert set(live_output.keys()) == set(replay_output.keys())
     assert live_output["symbol"] == replay_output["symbol"] == "XAUUSD"
+
+
+def test_run_pipeline_compact_output_mode(tmp_path: Path) -> None:
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+
+    output = run_pipeline(
+        RuntimeConfig(
+            symbol="XAUUSD",
+            timeframe="M5",
+            bars=120,
+            sample_path=str(sample_path),
+            memory_root=str(tmp_path / "memory"),
+            mode="replay",
+            replay_source="csv",
+            replay_csv_path=str(sample_path),
+            compact_output=True,
+        )
+    )
+
+    signal = output["signal"]
+    assert signal["symbol"] == "XAUUSD"
+    assert "module_results" not in signal.get("advanced_modules", {})
+    assert "gap_count" in signal.get("evolution_kernel", {})
+
+
+def test_status_panel_exposes_evolution_promoted_archived_counts(tmp_path: Path) -> None:
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+
+    output = run_pipeline(
+        RuntimeConfig(
+            symbol="XAUUSD",
+            timeframe="M5",
+            bars=120,
+            sample_path=str(sample_path),
+            memory_root=str(tmp_path / "memory"),
+            mode="replay",
+            replay_source="csv",
+            replay_csv_path=str(sample_path),
+        )
+    )
+
+    evo = output["status_panel"]["evolution_result"]
+    assert "promoted" in evo
+    assert "archived" in evo
 
 
 def test_replay_from_memory_uses_stored_bars(tmp_path: Path) -> None:

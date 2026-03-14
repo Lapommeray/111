@@ -61,6 +61,35 @@ def module_ready(output: dict[str, Any]) -> tuple[bool, str, list[str]]:
     return True, "ready", reasons or ["healthy"]
 
 
+def normalize_reasons(reasons: list[str]) -> list[str]:
+    """Normalize and deduplicate reason strings while preserving first-seen order."""
+    seen: set[str] = set()
+    normalized: list[str] = []
+    for reason in reasons:
+        reason_text = str(reason).strip()
+        if not reason_text or reason_text in seen:
+            continue
+        seen.add(reason_text)
+        normalized.append(reason_text)
+    return normalized
+
+
+def read_json_safe(path: Path, default: Any) -> Any:
+    if not path.exists():
+        return default
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return default
+
+
+def write_json_atomic(path: Path, payload: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_suffix(f"{path.suffix}.tmp")
+    tmp_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    tmp_path.replace(path)
+
+
 def register_generated_artifact(
     registry_path: Path,
     artifact_type: str,
@@ -68,13 +97,11 @@ def register_generated_artifact(
     metadata: dict[str, Any],
 ) -> dict[str, Any]:
     registry_path.parent.mkdir(parents=True, exist_ok=True)
-    if registry_path.exists():
-        try:
-            data = json.loads(registry_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            data = {"artifacts": []}
-    else:
+    data = read_json_safe(registry_path, default={"artifacts": []})
+    if not isinstance(data, dict):
         data = {"artifacts": []}
+    if not isinstance(data.get("artifacts"), list):
+        data["artifacts"] = []
 
     entry = {
         "timestamp": datetime.now(tz=timezone.utc).isoformat(),
@@ -83,5 +110,5 @@ def register_generated_artifact(
         "metadata": metadata,
     }
     data.setdefault("artifacts", []).append(entry)
-    registry_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    write_json_atomic(registry_path, data)
     return entry

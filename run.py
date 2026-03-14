@@ -7,6 +7,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from src.evaluation.replay_evaluator import evaluate_replay
+from src.evolution.architecture_guard import ArchitectureGuard
+from src.evolution.code_generator import CodeGenerator
+from src.evolution.duplication_audit import DuplicationAudit
+from src.evolution.evolution_registry import EvolutionRegistry
+from src.evolution.gap_discovery import GapDiscovery
+from src.evolution.promoter import Promoter
+from src.evolution.self_inspector import SelfInspector
+from src.evolution.verifier import Verifier
 from src.features.liquidity import assess_liquidity_state
 from src.features.market_structure import classify_market_structure
 from src.filters.loss_blocker import LossBlocker
@@ -21,7 +30,7 @@ from src.mt5.execution_state import ExecutionState
 from src.mt5.symbol_guard import SymbolGuard
 from src.pipeline import OversoulDirector, run_advanced_modules, state_to_dict
 from src.scoring.confidence_score import compute_confidence
-from src.utils import register_generated_artifact
+from src.utils import normalize_reasons, register_generated_artifact
 
 
 SUPPORTED_TIMEFRAMES = {"M1", "M5", "M15", "H1", "H4"}
@@ -39,6 +48,14 @@ class RuntimeConfig:
     replay_csv_path: str = "data/samples/xauusd.csv"
     generated_registry_path: str = "memory/generated_code_registry.json"
     meta_adaptive_profile_path: str = "memory/meta_adaptive_profile.json"
+    evolution_enabled: bool = True
+    evolution_registry_path: str = "memory/evolution_registry.json"
+    evolution_artifact_root: str = "memory/evolution_artifacts"
+    evolution_max_proposals: int = 3
+    compact_output: bool = False
+    evaluation_steps: int = 30
+    evaluation_stride: int = 5
+    evaluation_output_path: str = "memory/replay_evaluation_report.json"
 
 
 def ensure_sample_data(path: Path) -> None:
@@ -97,6 +114,14 @@ def load_runtime_config(path: Path) -> RuntimeConfig:
         meta_adaptive_profile_path=str(
             data.get("meta_adaptive_profile_path", "memory/meta_adaptive_profile.json")
         ),
+        evolution_enabled=bool(data.get("evolution_enabled", True)),
+        evolution_registry_path=str(data.get("evolution_registry_path", "memory/evolution_registry.json")),
+        evolution_artifact_root=str(data.get("evolution_artifact_root", "memory/evolution_artifacts")),
+        evolution_max_proposals=int(data.get("evolution_max_proposals", 3)),
+        compact_output=bool(data.get("compact_output", False)),
+        evaluation_steps=int(data.get("evaluation_steps", 30)),
+        evaluation_stride=int(data.get("evaluation_stride", 5)),
+        evaluation_output_path=str(data.get("evaluation_output_path", "memory/replay_evaluation_report.json")),
     )
 
 
@@ -114,6 +139,14 @@ def validate_runtime_config(config: RuntimeConfig) -> None:
     Path(config.memory_root).mkdir(parents=True, exist_ok=True)
     Path(config.generated_registry_path).parent.mkdir(parents=True, exist_ok=True)
     Path(config.meta_adaptive_profile_path).parent.mkdir(parents=True, exist_ok=True)
+    Path(config.evolution_registry_path).parent.mkdir(parents=True, exist_ok=True)
+    Path(config.evolution_artifact_root).mkdir(parents=True, exist_ok=True)
+    Path(config.evaluation_output_path).parent.mkdir(parents=True, exist_ok=True)
+
+    if config.evaluation_steps <= 0:
+        raise ValueError("evaluation_steps must be > 0")
+    if config.evaluation_stride <= 0:
+        raise ValueError("evaluation_stride must be > 0")
 
 
 def load_bars_from_csv(csv_path: Path, bars: int) -> list[dict[str, Any]]:
@@ -147,6 +180,124 @@ def load_bars_from_memory(store: PatternStore, bars: int) -> list[dict[str, Any]
     if not snapshot_bars:
         raise ValueError("Latest snapshot has no stored bars for replay.")
     return snapshot_bars[-bars:]
+
+
+def run_evolution_kernel(config: RuntimeConfig) -> dict[str, Any]:
+    if not config.evolution_enabled:
+        return {
+            "enabled": False,
+            "inspection": {},
+            "gaps": [],
+            "lifecycle": [],
+            "status_counts": {
+                "proposed": 0,
+                "verified": 0,
+                "promoted": 0,
+                "rejected": 0,
+                "archived": 0,
+            },
+        }
+
+    project_root = Path.cwd()
+    generated_registry_path = Path(config.generated_registry_path)
+    evolution_registry = EvolutionRegistry(Path(config.evolution_registry_path))
+
+    inspector = SelfInspector(
+        project_root=project_root,
+        generated_registry_path=generated_registry_path,
+        evolution_registry_path=Path(config.evolution_registry_path),
+    )
+    inspection = inspector.inspect()
+    gaps = GapDiscovery().discover(inspection)
+
+    generator = CodeGenerator(Path(config.evolution_artifact_root))
+    verifier = Verifier()
+    guard = ArchitectureGuard(project_root)
+    duplication = DuplicationAudit(project_root)
+    promoter = Promoter(evolution_registry)
+
+    lifecycle: list[dict[str, Any]] = []
+    for gap in gaps[: config.evolution_max_proposals]:
+        generated = generator.generate_proposal(gap)
+        artifact_path = Path(generated["artifact_path"])
+        proposal = generated["proposal"]
+
+        duplicate_check = duplication.check_proposal(
+            artifact_path=artifact_path,
+            proposal=proposal,
+            existing_registry_entries=evolution_registry.latest(limit=1000),
+        )
+        validation = verifier.verify(artifact_path, proposal)
+        architecture_check = guard.evaluate(proposal, symbol=config.symbol)
+
+        entry = evolution_registry.append_entry(
+            gap=gap,
+            artifact_path=str(artifact_path),
+            artifact_type="code_proposal",
+            status="proposed",
+            validation=validation,
+            duplicate_check={**duplicate_check, "architecture_check": architecture_check},
+        )
+        promoted = promoter.decide_status(
+            entry_id=entry["entry_id"],
+            verification=validation,
+            duplicate_check=duplicate_check,
+            architecture_check=architecture_check,
+        )
+        lifecycle.append(promoted)
+
+        register_generated_artifact(
+            registry_path=generated_registry_path,
+            artifact_type="evolution_proposal",
+            artifact_path=str(artifact_path),
+            metadata={
+                "gap_id": gap["gap_id"],
+                "validation_passed": validation["passed"],
+                "final_status": promoted["status"],
+                "symbol": config.symbol,
+            },
+        )
+
+    return {
+        "enabled": True,
+        "inspection": inspection,
+        "gaps": gaps,
+        "lifecycle": lifecycle,
+        "status_counts": evolution_registry.count_by_status(),
+    }
+
+
+def _build_compact_signal_payload(signal_payload: dict[str, Any]) -> dict[str, Any]:
+    """Return reduced-detail signal payload for downstream consumers when configured."""
+    compact = {
+        "symbol": signal_payload.get("symbol", "XAUUSD"),
+        "action": signal_payload.get("action", "WAIT"),
+        "confidence": signal_payload.get("confidence", 0.0),
+        "reasons": signal_payload.get("reasons", []),
+        "blocked": signal_payload.get("blocked", False),
+        "setup_classification": signal_payload.get("setup_classification", "observe"),
+        "blocker_reasons": signal_payload.get("blocker_reasons", []),
+        "memory_context": signal_payload.get("memory_context", {}),
+        "rule_context": signal_payload.get("rule_context", {}),
+        "schema_version": signal_payload.get("schema_version", "phase3.v1"),
+        "consumer_hints": signal_payload.get("consumer_hints", {}),
+        "advanced_modules": {
+            "final_direction": signal_payload.get("advanced_modules", {}).get("final_direction", "WAIT"),
+            "final_confidence": signal_payload.get("advanced_modules", {}).get("final_confidence", 0.0),
+            "module_count": len(signal_payload.get("advanced_modules", {}).get("module_results", {})),
+            "ready_count": sum(
+                1
+                for h in signal_payload.get("advanced_modules", {}).get("module_health", {}).values()
+                if bool(h.get("ready", False))
+            ),
+        },
+        "generated_code_visibility": signal_payload.get("generated_code_visibility", {}),
+        "evolution_kernel": {
+            "enabled": signal_payload.get("evolution_kernel", {}).get("enabled", False),
+            "gap_count": signal_payload.get("evolution_kernel", {}).get("gap_count", 0),
+        },
+    }
+    return compact
 
 
 def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
@@ -210,15 +361,18 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     )
 
     blocker = LossBlocker(min_confidence=0.6, max_spread_points=60.0)
+    spread_points = float(
+        advanced_state.module_results.get("spread_state", {}).payload.get("spread_points", 25.0)
+    )
     block = blocker.evaluate(
         confidence=advanced_state.final_confidence,
         structure=structure,
         liquidity=liquidity,
-        spread_points=25.0,
+        spread_points=spread_points,
     )
 
     combined_blocked = block["blocked"] or advanced_state.blocked
-    combined_reasons = block["reasons"] + advanced_state.blocked_reasons
+    combined_reasons = normalize_reasons(block["reasons"] + advanced_state.blocked_reasons)
 
     snapshot_id = store.record_snapshot(
         {
@@ -235,9 +389,7 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
 
     decision = advanced_state.final_direction
     reasons = (
-        combined_reasons
-        if combined_blocked
-        else [f"advanced_direction={decision}"] + score["reasons"]
+        combined_reasons if combined_blocked else [f"advanced_direction={decision}"] + score["reasons"]
     )
 
     if combined_blocked:
@@ -292,6 +444,8 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         metadata={"symbol": config.symbol, "mode": config.mode, "snapshot_id": snapshot_id},
     )
 
+    evolution_result = run_evolution_kernel(config)
+
     memory_context = {
         "latest_snapshot_id": snapshot_id,
         "last_blocked_count": len(store.load("blocked_setups")),
@@ -314,6 +468,7 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     signal_payload = signal.to_dict()
     signal_payload["advanced_modules"] = {
         "director_module_map": director.as_dict(),
+        "discovered_modules": director.discovered_as_dict(),
         "module_results": advanced_state.as_module_payload(),
         "module_health": advanced_state.as_health_payload(),
         "connector_hooks": advanced_state.as_connector_payload(),
@@ -324,6 +479,15 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         "registry_path": config.generated_registry_path,
         "latest_entries": [rules_registry_entry, profile_registry_entry],
     }
+    signal_payload["evolution_kernel"] = {
+        "enabled": evolution_result["enabled"],
+        "inspection": evolution_result["inspection"],
+        "gap_count": len(evolution_result["gaps"]),
+        "lifecycle": evolution_result["lifecycle"],
+    }
+
+    if config.compact_output:
+        signal_payload = _build_compact_signal_payload(signal_payload)
 
     chart_objects = build_chart_objects(
         symbol=config.symbol,
@@ -348,6 +512,17 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         "module_count": len(advanced_state.module_results),
         "ready_count": sum(1 for h in advanced_state.module_health.values() if h.ready),
     }
+    status_counts = evolution_result.get("status_counts", {})
+    status_panel["evolution_result"] = {
+        "enabled": evolution_result["enabled"],
+        "gaps_found": len(evolution_result["gaps"]),
+        "proposals_processed": len(evolution_result["lifecycle"]),
+        "proposed": int(status_counts.get("proposed", 0)),
+        "verified": int(status_counts.get("verified", 0)),
+        "promoted": int(status_counts.get("promoted", 0)),
+        "rejected": int(status_counts.get("rejected", 0)),
+        "archived": int(status_counts.get("archived", 0)),
+    }
     status_panel["execution_state"] = execution_state.to_dict()
 
     return build_indicator_output(
@@ -358,12 +533,46 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     )
 
 
+
+def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
+    """Run replay evaluation using the existing replay pipeline path."""
+    validate_runtime_config(config)
+    ensure_sample_data(Path(config.sample_path))
+
+    report = evaluate_replay(
+        pipeline_runner=run_pipeline,
+        config_factory=RuntimeConfig,
+        symbol=config.symbol,
+        timeframe=config.timeframe,
+        bars=config.bars,
+        replay_csv_path=config.replay_csv_path,
+        sample_path=config.sample_path,
+        memory_root=config.memory_root,
+        generated_registry_path=config.generated_registry_path,
+        meta_adaptive_profile_path=config.meta_adaptive_profile_path,
+        evolution_enabled=config.evolution_enabled,
+        evolution_registry_path=config.evolution_registry_path,
+        evolution_artifact_root=config.evolution_artifact_root,
+        evolution_max_proposals=config.evolution_max_proposals,
+        compact_output=config.compact_output,
+        evaluation_steps=config.evaluation_steps,
+        evaluation_stride=config.evaluation_stride,
+    )
+
+    Path(config.evaluation_output_path).write_text(json.dumps(report, indent=2), encoding="utf-8")
+    return report
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="XAUUSD indicator runner")
     parser.add_argument("--config", default="config/settings.json")
     parser.add_argument("--mode", choices=["live", "replay"], default=None)
     parser.add_argument("--replay-source", choices=["csv", "memory"], default=None)
     parser.add_argument("--replay-csv", default=None)
+    parser.add_argument("--evolution-enabled", choices=["true", "false"], default=None)
+    parser.add_argument("--compact-output", choices=["true", "false"], default=None)
+    parser.add_argument("--evaluate-replay", choices=["true", "false"], default=None)
+    parser.add_argument("--evaluation-steps", type=int, default=None)
+    parser.add_argument("--evaluation-stride", type=int, default=None)
     return parser.parse_args()
 
 
@@ -376,7 +585,24 @@ def main() -> None:
         config = RuntimeConfig(**{**config.__dict__, "replay_source": args.replay_source})
     if args.replay_csv is not None:
         config = RuntimeConfig(**{**config.__dict__, "replay_csv_path": args.replay_csv})
-    print(run_pipeline(config))
+    if args.evolution_enabled is not None:
+        config = RuntimeConfig(
+            **{**config.__dict__, "evolution_enabled": args.evolution_enabled.lower() == "true"}
+        )
+    if args.compact_output is not None:
+        config = RuntimeConfig(
+            **{**config.__dict__, "compact_output": args.compact_output.lower() == "true"}
+        )
+    if args.evaluation_steps is not None:
+        config = RuntimeConfig(**{**config.__dict__, "evaluation_steps": int(args.evaluation_steps)})
+    if args.evaluation_stride is not None:
+        config = RuntimeConfig(**{**config.__dict__, "evaluation_stride": int(args.evaluation_stride)})
+
+    evaluate_replay_mode = args.evaluate_replay is not None and args.evaluate_replay.lower() == "true"
+    if evaluate_replay_mode:
+        print(run_replay_evaluation(config))
+    else:
+        print(run_pipeline(config))
 
 
 if __name__ == "__main__":

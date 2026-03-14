@@ -4,6 +4,7 @@ from dataclasses import asdict
 from typing import Any
 
 from src.features.displacement import compute_displacement
+from src.module_factory import ModuleFactory
 from src.features.fvg import detect_fvg_state
 from src.features.human_lag_exploit import measure_human_lag_signal
 from src.features.invisible_data_miner import mine_internal_patterns
@@ -29,6 +30,9 @@ class OversoulDirector:
     """Visible module map/director for advanced module wiring and traceability."""
 
     def __init__(self) -> None:
+        self.module_factory = ModuleFactory()
+        self.discovered_modules = self.module_factory.list_all_modules()
+
         self.module_map: dict[str, dict[str, str]] = {
             "displacement": {"role": "momentum_displacement", "group": "features"},
             "fvg": {"role": "fair_value_gap_detection", "group": "features"},
@@ -48,6 +52,7 @@ class OversoulDirector:
             "spectral_signal_fusion": {"role": "multi_signal_fusion", "group": "scoring"},
             "meta_conscious_routing": {"role": "entropy_liquidity_regime_router", "group": "scoring"},
             "meta_adaptive_ai": {"role": "internal_memory_adaptive_profile", "group": "memory"},
+            "evolution_kernel": {"role": "evolution_kernel_reporter", "group": "evolution"},
         }
         self.connector_hooks: dict[str, dict[str, str]] = {
             "hook_displacement": {
@@ -75,6 +80,11 @@ class OversoulDirector:
                 "target_interface": "adaptive_profile_bus",
                 "description": "Expose internal-memory adaptive profile output.",
             },
+            "hook_evolution_kernel": {
+                "source_module": "evolution_kernel",
+                "target_interface": "evolution_control_bus",
+                "description": "Expose evolution inspection/proposal lifecycle summary.",
+            },
         }
 
     def as_dict(self) -> dict[str, dict[str, str]]:
@@ -82,6 +92,9 @@ class OversoulDirector:
 
     def hooks_as_dict(self) -> dict[str, dict[str, str]]:
         return self.connector_hooks
+
+    def discovered_as_dict(self) -> dict[str, list[str]]:
+        return self.discovered_modules
 
 
 def _module_result(name: str, role: str, output: dict[str, Any]) -> ModuleResult:
