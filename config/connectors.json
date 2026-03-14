@@ -1,0 +1,40 @@
+{
+  "hooks": [
+    {
+      "name": "hook_displacement",
+      "source_module": "displacement",
+      "target_interface": "direction_vote_bus",
+      "enabled": true
+    },
+    {
+      "name": "hook_spectral_fusion",
+      "source_module": "spectral_signal_fusion",
+      "target_interface": "confidence_bus",
+      "enabled": true
+    },
+    {
+      "name": "hook_meta_routing",
+      "source_module": "meta_conscious_routing",
+      "target_interface": "routing_bus",
+      "enabled": true
+    },
+    {
+      "name": "hook_self_destruct",
+      "source_module": "self_destruct_protocol",
+      "target_interface": "risk_gate_bus",
+      "enabled": true
+    },
+    {
+      "name": "hook_meta_adaptive",
+      "source_module": "meta_adaptive_ai",
+      "target_interface": "adaptive_profile_bus",
+      "enabled": true
+    },
+    {
+      "name": "hook_evolution_kernel",
+      "source_module": "evolution_kernel",
+      "target_interface": "evolution_control_bus",
+      "enabled": true
+    }
+  ]
+}

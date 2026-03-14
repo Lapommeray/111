@@ -1,0 +1,20 @@
+{
+  "symbol": "XAUUSD",
+  "timeframe": "M5",
+  "bars": 220,
+  "sample_path": "data/samples/xauusd.csv",
+  "memory_root": "memory",
+  "mode": "live",
+  "replay_source": "csv",
+  "replay_csv_path": "data/samples/xauusd.csv",
+  "generated_registry_path": "memory/generated_code_registry.json",
+  "meta_adaptive_profile_path": "memory/meta_adaptive_profile.json",
+  "evolution_enabled": true,
+  "evolution_registry_path": "memory/evolution_registry.json",
+  "evolution_artifact_root": "memory/evolution_artifacts",
+  "evolution_max_proposals": 3,
+  "compact_output": false,
+  "evaluation_steps": 30,
+  "evaluation_stride": 5,
+  "evaluation_output_path": "memory/replay_evaluation_report.json"
+}
