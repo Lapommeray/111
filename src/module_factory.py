@@ -16,6 +16,7 @@ class FactoryConfig:
         "filters",
         "scoring",
         "memory",
+        "evolution",
         "indicator",
         "mt5",
     )

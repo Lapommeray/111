@@ -8,12 +8,13 @@ def test_module_factory_discovers_expected_categories() -> None:
     factory = ModuleFactory()
     modules = factory.list_all_modules()
 
-    for category in ("features", "filters", "scoring", "memory", "indicator", "mt5"):
+    for category in ("features", "filters", "scoring", "memory", "evolution", "indicator", "mt5"):
         assert category in modules
 
     assert "market_structure" in modules["features"]
     assert "loss_blocker" in modules["filters"]
     assert "confidence_score" in modules["scoring"]
+    assert "self_inspector" in modules["evolution"]
 
 
 def test_module_factory_count_and_create() -> None:
