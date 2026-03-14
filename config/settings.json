@@ -1,0 +1,12 @@
+{
+  "symbol": "XAUUSD",
+  "timeframe": "M5",
+  "bars": 220,
+  "sample_path": "data/samples/xauusd.csv",
+  "memory_root": "memory",
+  "mode": "live",
+  "replay_source": "csv",
+  "replay_csv_path": "data/samples/xauusd.csv",
+  "generated_registry_path": "memory/generated_code_registry.json",
+  "meta_adaptive_profile_path": "memory/meta_adaptive_profile.json"
+}
