@@ -23,6 +23,19 @@ def build_module_contribution_report(records: list[dict[str, Any]]) -> dict[str,
 
         advanced = signal.get("advanced_modules", {}) if isinstance(signal.get("advanced_modules"), dict) else {}
         module_results = advanced.get("module_results", {}) if isinstance(advanced.get("module_results"), dict) else {}
+from typing import Any
+
+
+def build_module_contribution_report(records: list[dict[str, Any]]) -> dict[str, Any]:
+    """Summarize module vote/delta behavior across replay records."""
+    module_stats: dict[str, dict[str, Any]] = {}
+
+    for record in records:
+        signal = record.get("signal", {})
+        action = str(signal.get("action", "WAIT"))
+        confidence = float(signal.get("confidence", 0.0))
+        advanced = signal.get("advanced_modules", {})
+        module_results = advanced.get("module_results", {})
 
         for module_name, module_payload in module_results.items():
             stats = module_stats.setdefault(
@@ -51,6 +64,9 @@ def build_module_contribution_report(records: list[dict[str, Any]]) -> dict[str,
                     "_misaligned_delta_count": 0,
                     "_drawdown_wait_hits": 0,
                     "_low_conf_samples": 0,
+                    "buy_action_hits": 0,
+                    "sell_action_hits": 0,
+                    "wait_action_hits": 0,
                 },
             )
 
@@ -158,6 +174,13 @@ def build_module_contribution_report(records: list[dict[str, Any]]) -> dict[str,
         for key in list(stats.keys()):
             if key.startswith("_"):
                 del stats[key]
+
+            if action == "BUY":
+                stats["buy_action_hits"] += 1
+            elif action == "SELL":
+                stats["sell_action_hits"] += 1
+            else:
+                stats["wait_action_hits"] += 1
 
     return {
         "module_count": len(module_stats),

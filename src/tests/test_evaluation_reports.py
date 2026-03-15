@@ -129,3 +129,6 @@ def test_run_replay_evaluation_writes_json_report(tmp_path: Path) -> None:
     loaded = json.loads(report_path.read_text(encoding="utf-8"))
     assert loaded["steps"] == 4
     assert loaded["knowledge_expansion_phase_a"]["enabled"] is True
+
+    loaded = json.loads(report_path.read_text(encoding="utf-8"))
+    assert loaded["steps"] == 4
