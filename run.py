@@ -4,6 +4,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 from datetime import datetime, timezone
 from dataclasses import dataclass
 from pathlib import Path
@@ -43,6 +44,7 @@ from src.utils import normalize_reasons, register_generated_artifact, write_json
 
 
 SUPPORTED_TIMEFRAMES = {"M1", "M5", "M15", "H1", "H4"}
+MIN_TRADE_VOLUME = 0.01
 
 
 @dataclass(frozen=True)
@@ -70,10 +72,12 @@ class RuntimeConfig:
     knowledge_candidate_limit: int = 6
     live_execution_enabled: bool = True
     live_order_volume: float = 0.01
-    alpha_vantage_api_key: str = "GE1OX5L1JKNPRQQU"
-    fred_api_key: str = "ea67abdfefec0dc91da0a0d6219f6c08"
+    alpha_vantage_api_key: str = ""
+    fred_api_key: str = ""
     treasury_yields_endpoint: str = "https://moneymatter.me/api/treasury/interest-rates"
     economic_calendar_endpoint: str = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+    macro_feed_enabled: bool = True
+    macro_feed_allow_replay_fetch: bool = False
 
 
 def ensure_sample_data(path: Path) -> None:
@@ -145,14 +149,18 @@ def load_runtime_config(path: Path) -> RuntimeConfig:
         knowledge_candidate_limit=int(data.get("knowledge_candidate_limit", 6)),
         live_execution_enabled=bool(data.get("live_execution_enabled", True)),
         live_order_volume=float(data.get("live_order_volume", 0.01)),
-        alpha_vantage_api_key=str(data.get("alpha_vantage_api_key", "GE1OX5L1JKNPRQQU")),
-        fred_api_key=str(data.get("fred_api_key", "ea67abdfefec0dc91da0a0d6219f6c08")),
+        alpha_vantage_api_key=str(
+            data.get("alpha_vantage_api_key", os.getenv("ALPHA_VANTAGE_API_KEY", ""))
+        ),
+        fred_api_key=str(data.get("fred_api_key", os.getenv("FRED_API_KEY", ""))),
         treasury_yields_endpoint=str(
             data.get("treasury_yields_endpoint", "https://moneymatter.me/api/treasury/interest-rates")
         ),
         economic_calendar_endpoint=str(
             data.get("economic_calendar_endpoint", "https://nfs.faireconomy.media/ff_calendar_thisweek.json")
         ),
+        macro_feed_enabled=bool(data.get("macro_feed_enabled", True)),
+        macro_feed_allow_replay_fetch=bool(data.get("macro_feed_allow_replay_fetch", False)),
     )
 
 
@@ -1083,7 +1091,8 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
             fred_api_key=config.fred_api_key,
             treasury_endpoint=config.treasury_yields_endpoint,
             economic_calendar_endpoint=config.economic_calendar_endpoint,
-            enabled=config.mode == "live",
+            enabled=bool(config.macro_feed_enabled)
+            and (config.mode == "live" or bool(config.macro_feed_allow_replay_fetch)),
         ),
     )
     macro_tags = dict(macro_state.get("trade_tags", {}))
@@ -1119,7 +1128,7 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     capital_guard = evaluate_capital_protection(
         memory_root=config.memory_root,
         latest_bar_time=int(bars[-1].get("time", 0)) if bars else 0,
-        requested_volume=max(0.01, macro_adjusted_volume),
+        requested_volume=max(MIN_TRADE_VOLUME, macro_adjusted_volume),
         volatility_value=float(
             advanced_state.module_results.get("volatility", {}).payload.get("volatility_ratio", 1.0)
         ),

@@ -9,6 +9,16 @@ from src.macro.adapters import AlphaVantageAdapter, EconomicCalendarAdapter, FRE
 from src.utils import clamp, normalize_reasons, read_json_safe, write_json_atomic
 
 _MACRO_STATE_CACHE: dict[str, Any] = {}
+ROUND_NUMBER_NEAR_THRESHOLD = 0.25
+ROUND_NUMBER_APPROACHING_THRESHOLD = 0.75
+DXY_YIELD_SIZE_MULTIPLIER = 0.55
+DXY_YIELD_CONFIDENCE_PENALTY = 0.12
+HIGH_RISK_EVENT_SIZE_MULTIPLIER = 0.5
+HIGH_RISK_EVENT_CONFIDENCE_PENALTY = 0.08
+WATCH_EVENT_SIZE_MULTIPLIER = 0.75
+WATCH_EVENT_CONFIDENCE_PENALTY = 0.04
+SESSION_EVENT_SIZE_MULTIPLIER = 0.8
+SESSION_EVENT_CONFIDENCE_PENALTY = 0.04
 
 
 @dataclass(frozen=True)
@@ -47,13 +57,21 @@ def _round_number_proximity(price: float, step: float = 10.0) -> dict[str, Any]:
         return {"state": "unknown", "distance": None}
     nearest = round(price / step) * step
     distance = abs(price - nearest)
-    if distance <= 0.25:
+    if distance <= ROUND_NUMBER_NEAR_THRESHOLD:
         state = "near_round_number"
-    elif distance <= 0.75:
+    elif distance <= ROUND_NUMBER_APPROACHING_THRESHOLD:
         state = "approaching_round_number"
     else:
         state = "clear_round_number"
     return {"state": state, "distance": round(distance, 4), "nearest_level": round(nearest, 4)}
+
+
+def _derive_yield_state(*, yield_pressure: str, curve_10y_2y: Any) -> str:
+    if yield_pressure != "neutral":
+        return yield_pressure
+    if isinstance(curve_10y_2y, (int, float)) and curve_10y_2y > 0:
+        return "steepening"
+    return "flat_or_inverted"
 
 
 def collect_xauusd_macro_state(
@@ -120,20 +138,20 @@ def collect_xauusd_macro_state(
     confidence_penalty = 0.0
     risk_reasons: list[str] = []
     if dxy_state == "strong_usd" and yield_pressure == "bearish_gold":
-        size_multiplier *= 0.55
-        confidence_penalty += 0.12
+        size_multiplier *= DXY_YIELD_SIZE_MULTIPLIER
+        confidence_penalty += DXY_YIELD_CONFIDENCE_PENALTY
         risk_reasons.append("dxy_yield_against_gold")
     if event_state == "high_risk":
-        size_multiplier *= 0.5
-        confidence_penalty += 0.08
+        size_multiplier *= HIGH_RISK_EVENT_SIZE_MULTIPLIER
+        confidence_penalty += HIGH_RISK_EVENT_CONFIDENCE_PENALTY
         risk_reasons.append("major_news_risk")
     elif event_state == "watch":
-        size_multiplier *= 0.75
-        confidence_penalty += 0.04
+        size_multiplier *= WATCH_EVENT_SIZE_MULTIPLIER
+        confidence_penalty += WATCH_EVENT_CONFIDENCE_PENALTY
         risk_reasons.append("elevated_news_risk")
     if session_event_state == "major_session_event_overlap":
-        size_multiplier *= 0.8
-        confidence_penalty += 0.04
+        size_multiplier *= SESSION_EVENT_SIZE_MULTIPLIER
+        confidence_penalty += SESSION_EVENT_CONFIDENCE_PENALTY
         risk_reasons.append("session_event_overlap")
 
     feed_unavailable = []
@@ -164,7 +182,7 @@ def collect_xauusd_macro_state(
 
     macro_states = {
         "dxy_state": dxy_state,
-        "yield_state": yield_pressure if yield_pressure != "neutral" else ("steepening" if isinstance(curve_10y_2y, (int, float)) and curve_10y_2y > 0 else "flat_or_inverted"),
+        "yield_state": _derive_yield_state(yield_pressure=yield_pressure, curve_10y_2y=curve_10y_2y),
         "inflation_real_rate_state": real_rate_state if real_rate_state != "unknown" else ("inflation_rising" if inflation_change > 0.03 else "inflation_stable"),
         "event_news_state": event_state,
     }

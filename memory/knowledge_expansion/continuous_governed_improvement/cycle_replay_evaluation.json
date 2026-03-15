@@ -396,6 +396,60 @@
       "mutation_candidates": "memory/live_trade_feedback/mutation_candidates.json"
     }
   },
+  "evolution_parameter_control": {
+    "parameter_state": {
+      "promotion_threshold": 0.6,
+      "quarantine_strictness": 0.55,
+      "mutation_rate": 0.45,
+      "exploration_vs_stability_balance": 0.5
+    },
+    "parameter_changes": [
+      {
+        "parameter": "mutation_rate",
+        "previous": 0.5,
+        "updated": 0.45,
+        "delta": -0.05,
+        "reason": "mutation usefulness is below noise under replay evaluation",
+        "replay_evaluated": true,
+        "governed": true
+      }
+    ],
+    "adaptation_reasons": [
+      "mutation usefulness is below noise under replay evaluation"
+    ],
+    "performance": {
+      "promoted_modules_total": 2,
+      "promoted_modules_later_failed": 0,
+      "promoted_modules_later_failed_ids": [],
+      "quarantined_modules_total": 0,
+      "quarantined_modules_later_would_work": 0,
+      "quarantined_modules_later_would_work_ids": [],
+      "mutation_usefulness": 0.0,
+      "mutation_noise": 0.38,
+      "promotion_precision_by_regime": {
+        "medium_volatility": 1.0
+      },
+      "quarantine_precision_by_regime": {
+        "medium_volatility": 1.0
+      },
+      "replay_evaluated": true,
+      "governed": true
+    },
+    "regime_context": {
+      "volatility_ratio": 1.0,
+      "volatility_regime": "medium_volatility",
+      "structure_state": "range",
+      "confidence": 0.5,
+      "replay_scope": "evaluation_replay",
+      "weak_module_cluster_size": 0,
+      "weak_module_cluster_detected": false
+    },
+    "parameter_state_path": "memory/knowledge_expansion/continuous_governed_improvement/evolution_parameter_control/parameter_state_replay_evaluation.json",
+    "parameter_changes_path": "memory/knowledge_expansion/continuous_governed_improvement/evolution_parameter_control/parameter_changes_replay_evaluation.json",
+    "adaptation_reasons_path": "memory/knowledge_expansion/continuous_governed_improvement/evolution_parameter_control/adaptation_reasons_replay_evaluation.json",
+    "parameter_performance_by_regime_path": "memory/knowledge_expansion/continuous_governed_improvement/evolution_parameter_control/parameter_performance_by_regime.json",
+    "registry_path": "memory/knowledge_expansion/continuous_governed_improvement/evolution_parameter_control/evolution_parameter_control_registry.json"
+  },
   "autonomous_behavior_layer": {
     "market_regime_classifier": {
       "regime": "range",
@@ -986,15 +1040,49 @@
       "path": "memory/capability_registry/strategy_evolution_engine.json"
     },
     "survival_intelligence_layer": {
-      "pause_after_consecutive_losses_n": 3,
-      "consecutive_losses": 0,
-      "drawdown_points": 0.0,
-      "pause_trading": false,
-      "reduce_risk_after_drawdown": false,
-      "survival_mode": false,
-      "resume_only_after_stable_conditions": false,
-      "risk_multiplier": 1.0,
-      "path": "memory/autonomous_behavior/capital_survival.json"
+      "capital_survival_engine": {
+        "pause_after_consecutive_losses_n": 3,
+        "consecutive_losses": 0,
+        "drawdown_points": 0.0,
+        "pause_trading": false,
+        "reduce_risk_after_drawdown": false,
+        "survival_mode": false,
+        "resume_only_after_stable_conditions": false,
+        "risk_multiplier": 1.0,
+        "path": "memory/autonomous_behavior/capital_survival.json"
+      },
+      "pain_memory_survival_layer": {
+        "loss_cluster_contexts": [],
+        "extracted_pain_patterns": [],
+        "generated_detectors": [],
+        "validation_results": [],
+        "promotion_decisions": {
+          "promoted": [],
+          "quarantined": []
+        },
+        "paths": {
+          "loss_clusters": "memory/capability_candidates/pain_loss_clusters.json",
+          "pain_patterns": "memory/capability_candidates/pain_patterns.json",
+          "generated_detectors": "memory/capability_candidates/pain_survival_detectors.json",
+          "registry": "memory/capability_registry/pain_survival_rules.json"
+        }
+      }
+    },
+    "pain_memory_survival_layer": {
+      "loss_cluster_contexts": [],
+      "extracted_pain_patterns": [],
+      "generated_detectors": [],
+      "validation_results": [],
+      "promotion_decisions": {
+        "promoted": [],
+        "quarantined": []
+      },
+      "paths": {
+        "loss_clusters": "memory/capability_candidates/pain_loss_clusters.json",
+        "pain_patterns": "memory/capability_candidates/pain_patterns.json",
+        "generated_detectors": "memory/capability_candidates/pain_survival_detectors.json",
+        "registry": "memory/capability_registry/pain_survival_rules.json"
+      }
     },
     "meta_learning_loop": {
       "loop": [

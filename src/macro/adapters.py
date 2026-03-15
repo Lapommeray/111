@@ -5,12 +5,28 @@ from datetime import datetime, timezone
 from typing import Any, Callable
 import json
 from urllib.parse import urlencode
+from urllib.parse import urlparse
 from urllib.request import urlopen
 
 JsonFetcher = Callable[[str], Any]
+ALLOWED_MACRO_FEED_HOSTS = {
+    "www.alphavantage.co",
+    "api.stlouisfed.org",
+    "moneymatter.me",
+    "nfs.faireconomy.media",
+}
+
+
+def _validate_feed_url(url: str) -> None:
+    parsed = urlparse(url)
+    if parsed.scheme != "https":
+        raise ValueError("macro_feed_url_invalid_scheme")
+    if (parsed.netloc or "").lower() not in ALLOWED_MACRO_FEED_HOSTS:
+        raise ValueError("macro_feed_url_host_not_allowed")
 
 
 def _default_fetch_json(url: str) -> Any:
+    _validate_feed_url(url)
     with urlopen(url, timeout=3.0) as response:  # nosec: B310
         return json.loads(response.read().decode("utf-8"))
 
