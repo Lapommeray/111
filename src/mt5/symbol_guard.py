@@ -38,3 +38,15 @@ class SymbolGuard:
             "symbol": normalized,
             "primary_symbol": self.config.primary_symbol,
         }
+
+    def validate_for_mt5(self, symbol: str) -> dict[str, Any]:
+        validation = self.validate(symbol)
+        symbol_validity = bool(validation["ready"])
+        return {
+            "symbol": validation["symbol"],
+            "primary_symbol": validation["primary_symbol"],
+            "symbol_validity": symbol_validity,
+            "symbol_subscription_ready": symbol_validity,
+            "symbol_status": validation["status"],
+            "symbol_reasons": list(validation["reasons"]),
+        }
