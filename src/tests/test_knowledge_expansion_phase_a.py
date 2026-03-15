@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from src.evolution.knowledge_expansion_orchestrator import run_knowledge_expansion_phase_a
@@ -53,6 +54,11 @@ def test_phase_a_orchestrator_writes_governance_artifacts(tmp_path: Path) -> Non
     assert result["candidate_count"] == 6
     assert "decision_summary" in result
     assert result["decision_summary"]["total_candidates"] == 6
+    assert result["sandbox_candidates_path"] == result["artifact_paths"]["sandbox_candidates"]
+    assert (
+        result["validated_knowledge_registry_path"]
+        == result["artifact_paths"]["validated_knowledge_registry"]
+    )
 
     decisions = result["decisions"]
     assert any(item["decision"] == "HOLD_FOR_MORE_DATA" for item in decisions)
@@ -69,6 +75,14 @@ def test_phase_a_orchestrator_writes_governance_artifacts(tmp_path: Path) -> Non
 
     for _, path in result["artifact_paths"].items():
         assert Path(path).exists()
+
+    sandbox_payload = json.loads(Path(result["sandbox_candidates_path"]).read_text(encoding="utf-8"))
+    assert "sandbox_candidates" in sandbox_payload
+
+    validated_payload = json.loads(
+        Path(result["validated_knowledge_registry_path"]).read_text(encoding="utf-8")
+    )
+    assert "validated_knowledge" in validated_payload
 
 
 def test_phase_a_overlap_includes_structural_components(tmp_path: Path) -> None:
@@ -151,3 +165,33 @@ def test_existing_signatures_use_richer_replay_metadata(tmp_path: Path) -> None:
     assert "payload_keys=state,window" in overlap_text
     assert "session=london" in overlap_text
     assert "replay_only_governance_comparison" in overlap_text
+
+
+def test_phase_a_merges_near_duplicate_hypotheses_with_evidence_history(tmp_path: Path) -> None:
+    replay_report = {
+        "module_contribution_report": {"modules": {}},
+        "blocker_effect_report": {
+            "blocked_total": 6,
+            "protective_proxy_hits": 6,
+            "top_reasons": [
+                {"reason": "spread_too_wide", "count": 4},
+                {"reason": "spread_too_wide", "count": 4},
+            ],
+        },
+        "session_report": {"sessions": {}},
+    }
+
+    result = run_knowledge_expansion_phase_a(
+        replay_report=replay_report,
+        root=tmp_path / "knowledge_expansion4",
+        candidate_limit=6,
+    )
+
+    assert result["candidate_count"] == 1
+
+    validated_payload = json.loads(
+        Path(result["validated_knowledge_registry_path"]).read_text(encoding="utf-8")
+    )
+    validated_items = validated_payload.get("validated_knowledge", [])
+    if validated_items:
+        assert len(validated_items[0].get("evidence_history", [])) >= 2
