@@ -13,6 +13,8 @@ class ExecutionState:
     data_source: str
     ready: bool
     reasons: list[str]
+    controlled_mt5_readiness: dict[str, Any] | None = None
+    live_execution_blocked: bool = True
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -23,4 +25,6 @@ class ExecutionState:
             "data_source": self.data_source,
             "ready": self.ready,
             "reasons": self.reasons,
+            "controlled_mt5_readiness": dict(self.controlled_mt5_readiness or {}),
+            "live_execution_blocked": bool(self.live_execution_blocked),
         }

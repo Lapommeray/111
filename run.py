@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -31,7 +32,7 @@ from src.mt5.execution_state import ExecutionState
 from src.mt5.symbol_guard import SymbolGuard
 from src.pipeline import OversoulDirector, run_advanced_modules, state_to_dict
 from src.scoring.confidence_score import compute_confidence
-from src.utils import normalize_reasons, register_generated_artifact
+from src.utils import normalize_reasons, register_generated_artifact, write_json_atomic
 
 
 SUPPORTED_TIMEFRAMES = {"M1", "M5", "M15", "H1", "H4"}
@@ -190,6 +191,51 @@ def load_bars_from_memory(store: PatternStore, bars: int) -> list[dict[str, Any]
     return snapshot_bars[-bars:]
 
 
+def _assess_data_freshness(bars: list[dict[str, Any]], *, max_age_seconds: int) -> tuple[bool, int | None]:
+    if not bars:
+        return False, None
+    latest_time = int(bars[-1].get("time", 0))
+    if latest_time <= 0:
+        return False, None
+    now_ts = int(datetime.now(tz=timezone.utc).timestamp())
+    data_age_seconds = max(0, now_ts - latest_time)
+    return data_age_seconds <= int(max_age_seconds), data_age_seconds
+
+
+def _build_non_live_mt5_readiness(
+    *,
+    symbol: str,
+    bars: list[dict[str, Any]],
+    data_source: str,
+) -> dict[str, Any]:
+    symbol_validation = SymbolGuard().validate_for_mt5(symbol)
+    data_freshness, data_age_seconds = _assess_data_freshness(bars, max_age_seconds=900)
+    reasons = list(symbol_validation["symbol_reasons"])
+    reasons.extend(["non_live_mode", "live_execution_blocked_by_default"])
+    if not data_freshness:
+        reasons.append("data_stale_or_missing")
+    return {
+        "readiness_timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        "data_source": data_source,
+        "terminal_connectivity": False,
+        "symbol_validity": bool(symbol_validation["symbol_validity"]),
+        "account_trading_permission": False,
+        "data_freshness": bool(data_freshness),
+        "data_age_seconds": data_age_seconds,
+        "fail_safe_blocked_state": True,
+        "live_execution_blocked": True,
+        "order_execution_enabled": False,
+        "ready_for_controlled_usage": False,
+        "reason_codes": sorted({str(reason) for reason in reasons if str(reason).strip()}),
+    }
+
+
+def _persist_controlled_mt5_readiness(memory_root: str, payload: dict[str, Any]) -> str:
+    readiness_path = Path(memory_root) / "mt5_controlled_readiness_state.json"
+    write_json_atomic(readiness_path, payload)
+    return str(readiness_path)
+
+
 def run_evolution_kernel(config: RuntimeConfig) -> dict[str, Any]:
     if not config.evolution_enabled:
         return {
@@ -325,17 +371,32 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         else:
             raise ValueError(f"Unsupported replay_source: {config.replay_source}")
         mt5_attempted = False
+        controlled_mt5_readiness = _build_non_live_mt5_readiness(
+            symbol=config.symbol,
+            bars=bars,
+            data_source=data_source,
+        )
     else:
-        bars = MT5Adapter(
+        adapter = MT5Adapter(
             MT5Config(
                 symbol=config.symbol,
                 timeframe=config.timeframe,
                 bars=config.bars,
                 csv_fallback_path=str(sample_path),
             )
-        ).get_bars()
+        )
+        bars = adapter.get_bars()
+        controlled_mt5_readiness = adapter.get_controlled_readiness_state()
         data_source = "mt5_or_csv_fallback"
         mt5_attempted = True
+    controlled_mt5_readiness_path = _persist_controlled_mt5_readiness(
+        config.memory_root,
+        controlled_mt5_readiness,
+    )
+    controlled_mt5_readiness = {
+        **controlled_mt5_readiness,
+        "artifact_path": controlled_mt5_readiness_path,
+    }
 
     execution_state = ExecutionState(
         symbol=config.symbol,
@@ -344,7 +405,13 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         mt5_attempted=mt5_attempted,
         data_source=data_source,
         ready=True,
-        reasons=["validated", f"data_source={data_source}"],
+        reasons=[
+            "validated",
+            f"data_source={data_source}",
+            f"mt5_controlled_ready={controlled_mt5_readiness.get('ready_for_controlled_usage', False)}",
+        ],
+        controlled_mt5_readiness=controlled_mt5_readiness,
+        live_execution_blocked=True,
     )
 
     structure = classify_market_structure(bars)

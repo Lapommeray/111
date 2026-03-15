@@ -170,6 +170,37 @@ def test_replay_from_memory_uses_stored_bars(tmp_path: Path) -> None:
     assert replay_output["symbol"] == "XAUUSD"
 
 
+def test_run_pipeline_persists_controlled_mt5_readiness_state(tmp_path: Path) -> None:
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+    memory_root = tmp_path / "memory"
+
+    output = run_pipeline(
+        RuntimeConfig(
+            symbol="XAUUSD",
+            timeframe="M5",
+            bars=120,
+            sample_path=str(sample_path),
+            memory_root=str(memory_root),
+            mode="replay",
+            replay_source="csv",
+            replay_csv_path=str(sample_path),
+        )
+    )
+
+    execution_state = output["status_panel"]["execution_state"]
+    readiness = execution_state["controlled_mt5_readiness"]
+    assert execution_state["live_execution_blocked"] is True
+    assert readiness["live_execution_blocked"] is True
+    assert readiness["order_execution_enabled"] is False
+    assert readiness["fail_safe_blocked_state"] is True
+    assert readiness["ready_for_controlled_usage"] is False
+    artifact_path = Path(readiness["artifact_path"])
+    assert artifact_path.exists()
+    artifact_payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    assert artifact_payload["live_execution_blocked"] is True
+
+
 def test_config_validation_xauusd_first_and_timeframe() -> None:
     validate_runtime_config(RuntimeConfig(symbol="XAUUSD", timeframe="M5"))
 
