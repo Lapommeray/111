@@ -373,6 +373,7 @@
       "trade_id": "",
       "mutation_type": "feature_weight_adjustment",
       "weak_features": [],
+      "mutation_score": 0.38,
       "replay_validation": {
         "required": true,
         "scope": "evaluation_replay",
@@ -385,6 +386,9 @@
           "replay_validation_pending"
         ]
       }
+    },
+    "cleanup": {
+      "deleted_artifacts": []
     },
     "paths": {
       "trade_outcomes": "memory/live_trade_feedback/trade_outcomes.json",
