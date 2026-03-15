@@ -1,0 +1,40 @@
+{
+  "candidate_id": "cand_phase_a_020",
+  "module_name": "sandbox_cand_phase_a_020",
+  "truth_class": "failure",
+  "hypothesis_statement": "Assess blocker reason session_filter:off_hours_block in off_hours context: count 4, protective ratio 1.00; useful only when this failure pattern recurs.",
+  "evidence_summary": {
+    "evidence_points": 1,
+    "latest_evidence": {
+      "reason": "session_filter:off_hours_block",
+      "count": 4,
+      "blocked_total": 4,
+      "protective_proxy_hits": 4,
+      "protective_ratio": 1.0,
+      "context": {
+        "dominant_session": "off_hours",
+        "dominant_session_ratio": 1.0,
+        "top_blocker_reason": "structure_liquidity_conflict",
+        "regime_proxy": "high_confidence_bias",
+        "action_distribution": {
+          "BUY": 0,
+          "SELL": 0,
+          "WAIT": 4
+        },
+        "confidence_distribution": {
+          "low": 0,
+          "medium": 0,
+          "high": 4
+        }
+      }
+    },
+    "decision_reasons": [
+      "conditional usefulness supported for failure context",
+      "material contribution and non-duplicate profile"
+    ]
+  },
+  "source_spec_path": "memory/knowledge_expansion/experimental_module_specs/cand_phase_a_020.json",
+  "generation_timestamp": "2026-03-15T06:01:56.951186+00:00",
+  "sandbox_status": "replay_only",
+  "module_version": "1.0"
+}
