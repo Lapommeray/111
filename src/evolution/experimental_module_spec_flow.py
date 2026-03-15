@@ -7,8 +7,11 @@ from pathlib import Path
 from typing import Any
 
 from src.learning.live_feedback import process_live_trade_feedback
-from src.learning.autonomous_behavior_layer import run_autonomous_behavior_layer
+from src.learning.self_evolving_indicator_layer import run_self_evolving_indicator_layer
 from src.utils import read_json_safe, write_json_atomic
+
+_SPREAD_RATIO_ON_GOVERNED_REFUSAL = 2.2
+_SLIPPAGE_RATIO_ON_GOVERNED_ROLLBACK = 1.8
 
 
 def _safe_candidate_filename(candidate_id: str) -> str:
@@ -3290,9 +3293,7 @@ def run_continuous_governed_improvement_cycle(
     mutation_candidates = mutation_candidate_payload.get("mutation_candidates", [])
     if not isinstance(mutation_candidates, list):
         mutation_candidates = []
-    spread_ratio_on_refusal = 2.2
-    slippage_ratio_on_rollback = 1.8
-    autonomous_behavior = run_autonomous_behavior_layer(
+    self_evolving_indicator = run_self_evolving_indicator_layer(
         memory_root=root / "memory",
         trade_outcomes=feedback_outcomes,
         market_state={
@@ -3301,8 +3302,10 @@ def run_continuous_governed_improvement_cycle(
                 baseline_summary.get("volatility_ratio", 1.0) if isinstance(baseline_summary, dict) else 1.0,
                 default=1.0,
             ),
-            "spread_ratio": 1.0 if not governed_refusal.get("refused", False) else spread_ratio_on_refusal,
-            "slippage_ratio": 1.0 if not governed_rollback.get("triggered", False) else slippage_ratio_on_rollback,
+            "spread_ratio": 1.0 if not governed_refusal.get("refused", False) else _SPREAD_RATIO_ON_GOVERNED_REFUSAL,
+            "slippage_ratio": (
+                1.0 if not governed_rollback.get("triggered", False) else _SLIPPAGE_RATIO_ON_GOVERNED_ROLLBACK
+            ),
             "stale_price_data": not bool(artifact_integrity.get("all_checks_passed", False)),
             "mt5_ready": not bool(governed_refusal.get("refused", False)),
             "recent_setup_confidence": _to_float(
@@ -3317,7 +3320,11 @@ def run_continuous_governed_improvement_cycle(
         },
         feature_contributors={},
         mutation_candidates=mutation_candidates,
+        replay_scope=replay_scope,
     )
+    autonomous_behavior = self_evolving_indicator.get("autonomous_behavior_layer", {})
+    if not isinstance(autonomous_behavior, dict):
+        autonomous_behavior = {}
     if autonomous_behavior.get("continuous_survival_loop", {}).get("decision") == "pause":
         live_activation_blocked = True
 
@@ -3338,6 +3345,7 @@ def run_continuous_governed_improvement_cycle(
         "governed_refusal": governed_refusal,
         "live_learning_feedback": live_learning_feedback,
         "autonomous_behavior_layer": autonomous_behavior,
+        "self_evolving_indicator_layer": self_evolving_indicator,
         "cycle_recovery": {
             "interrupted_cycle_recovered": recovering_interrupted_cycle,
             "stale_artifacts_detected": stale_detected,
@@ -3452,6 +3460,7 @@ def run_continuous_governed_improvement_cycle(
         "governed_refusal": governed_refusal,
         "live_learning_feedback": live_learning_feedback,
         "autonomous_behavior_layer": autonomous_behavior,
+        "self_evolving_indicator_layer": self_evolving_indicator,
         "self_audit_artifact": self_audit_artifact,
         "cycle_recovery": cycle_payload["cycle_recovery"],
         "phase_results": phase_results,

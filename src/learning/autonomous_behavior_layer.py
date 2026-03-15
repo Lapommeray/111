@@ -274,7 +274,7 @@ def _behavior_adjustment(
 ) -> dict[str, Any]:
     drawdown_points = _drawdown_points(closed)
     loss_streak = _loss_streak(closed)
-    recent_setup_confidence = float(market_state.get("recent_setup_confidence", regime_payload["adjusted_signal_confidence"]))
+    recent_setup_confidence = float(market_state.get("recent_setup_confidence", regime_payload.get("adjusted_signal_confidence", 0.5)))
     repeated_failures = sum(1 for outcome in closed[-5:] if str(outcome.get("result", "")).lower() == "loss")
     bad_regime = regime_payload.get("regime") in {"unstable", "expansion"}
     position_size_multiplier = 1.0

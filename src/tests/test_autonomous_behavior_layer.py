@@ -76,7 +76,7 @@ def test_autonomous_behavior_layer_pauses_and_logs_on_anomalies(tmp_path: Path) 
     assert result["environment_anomaly_detection"]["trigger_refusal"] is True
     assert result["capital_survival_engine"]["pause_trading"] is True
     assert result["continuous_survival_loop"]["decision"] == "pause"
-    assert Path(result["trade_review_engine"]["path"]).parts[-2:] == ("trade_review", "trade_reviews.json")
+    assert Path(result["trade_review_engine"]["path"]).match("*/trade_review/trade_reviews.json")
 
     strategy_payload = json.loads(Path(result["strategy_comparison_engine"]["path"]).read_text(encoding="utf-8"))
     assert strategy_payload["promoted_strategies"] == []
