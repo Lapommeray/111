@@ -6,6 +6,12 @@ from typing import Any
 from src.learning.autonomous_behavior_layer import run_autonomous_behavior_layer
 from src.utils import read_json_safe, write_json_atomic
 
+_PAIN_MEMORY_CLUSTER_MIN_SIZE = 2
+_PAIN_REPLAY_BASE_SCORE = 0.5
+_PAIN_REPLAY_RECURRENCE_WEIGHT = 0.4
+_PAIN_REPLAY_SEVERITY_WEIGHT = 0.05
+_PAIN_REPLAY_PROMOTION_THRESHOLD = 0.6
+
 
 def _closed_outcomes(trade_outcomes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [item for item in trade_outcomes if str(item.get("status", "")).lower() == "closed"]
@@ -266,6 +272,148 @@ def _meta_learning_loop(
     return {"loop": loop, "path": str(history_path), "latest_cycle": cycles[-1]}
 
 
+def _pain_memory_survival_layer(*, memory_root: Path, closed: list[dict[str, Any]], replay_scope: str) -> dict[str, Any]:
+    candidate_dir = memory_root / "capability_candidates"
+    registry_dir = memory_root / "capability_registry"
+    candidate_dir.mkdir(parents=True, exist_ok=True)
+    registry_dir.mkdir(parents=True, exist_ok=True)
+
+    losses = [item for item in closed if str(item.get("result", "")).lower() == "loss"]
+    cluster_map: dict[tuple[str, str, str, str], dict[str, Any]] = {}
+    for loss in losses:
+        context = {
+            "setup_type": str(loss.get("setup_type", "unknown")),
+            "session": str(loss.get("session", "unknown")),
+            "failure_cause": str(loss.get("failure_cause", "unknown")),
+            "direction": str(loss.get("direction", "unknown")).upper(),
+        }
+        key = (
+            context["setup_type"],
+            context["session"],
+            context["failure_cause"],
+            context["direction"],
+        )
+        if key not in cluster_map:
+            cluster_map[key] = {"context": context, "trades": []}
+        cluster_map[key]["trades"].append(
+            {
+                "trade_id": str(loss.get("trade_id", "")),
+                "pnl_points": float(loss.get("pnl_points", 0.0)),
+            }
+        )
+
+    loss_clusters: list[dict[str, Any]] = []
+    pain_patterns: list[dict[str, Any]] = []
+    detectors: list[dict[str, Any]] = []
+    promoted: list[dict[str, Any]] = []
+    quarantined: list[dict[str, Any]] = []
+    for index, key in enumerate(sorted(cluster_map)):
+        cluster = cluster_map[key]
+        trades = cluster["trades"]
+        cluster_size = len(trades)
+        if cluster_size < _PAIN_MEMORY_CLUSTER_MIN_SIZE:
+            continue
+        average_pnl = round(sum(float(item["pnl_points"]) for item in trades) / cluster_size, 4)
+        cluster_payload = {
+            "cluster_id": f"loss_cluster_{index + 1}",
+            "context": cluster["context"],
+            "cluster_size": cluster_size,
+            "average_pnl_points": average_pnl,
+            "trade_ids": [item["trade_id"] for item in trades],
+        }
+        loss_clusters.append(cluster_payload)
+        pain_pattern = {
+            "pattern_id": f"pain_pattern_{index + 1}",
+            "source_cluster_id": cluster_payload["cluster_id"],
+            "recurring_context": cluster_payload["context"],
+            "recurrence_strength": round(cluster_size / max(1, len(losses)), 4),
+            "pain_score": round(abs(average_pnl) * cluster_size, 4),
+        }
+        pain_patterns.append(pain_pattern)
+        replay_score = round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    _PAIN_REPLAY_BASE_SCORE
+                    + (pain_pattern["recurrence_strength"] * _PAIN_REPLAY_RECURRENCE_WEIGHT)
+                    + (pain_pattern["pain_score"] * _PAIN_REPLAY_SEVERITY_WEIGHT),
+                ),
+            ),
+            4,
+        )
+        replay_validation_passed = replay_score >= _PAIN_REPLAY_PROMOTION_THRESHOLD
+        detector = {
+            "detector_id": f"pain_survival_detector_{index + 1}",
+            "source_pattern_id": pain_pattern["pattern_id"],
+            "sandbox_detector_logic": {
+                "match_context": pain_pattern["recurring_context"],
+                "action": "tighten_execution_and_refuse_setup",
+            },
+            "validation": {
+                "scope": replay_scope,
+                "replay_score": replay_score,
+                "replay_validation_required": True,
+                "replay_validation_passed": replay_validation_passed,
+            },
+            "decision": "promote" if replay_validation_passed else "quarantine",
+        }
+        detectors.append(detector)
+        rule = {
+            "rule_id": f"pain_survival_rule_{index + 1}",
+            "detector_id": detector["detector_id"],
+            "context": pain_pattern["recurring_context"],
+            "governance": {
+                "replay_validation_required": True,
+                "replay_validation_passed": replay_validation_passed,
+                "live_activation_governed": True,
+            },
+            "action": "reduce_risk_and_refuse_context",
+        }
+        if replay_validation_passed:
+            promoted.append(rule)
+        else:
+            quarantined.append(rule)
+
+    cluster_path = candidate_dir / "pain_loss_clusters.json"
+    pattern_path = candidate_dir / "pain_patterns.json"
+    detector_path = candidate_dir / "pain_survival_detectors.json"
+    registry_path = registry_dir / "pain_survival_rules.json"
+    write_json_atomic(cluster_path, {"loss_cluster_contexts": loss_clusters})
+    write_json_atomic(pattern_path, {"extracted_pain_patterns": pain_patterns})
+    write_json_atomic(detector_path, {"generated_detectors": detectors})
+    write_json_atomic(
+        registry_path,
+        {
+            "promoted_survival_rules": promoted,
+            "quarantined_survival_rules": quarantined,
+        },
+    )
+    return {
+        "loss_cluster_contexts": loss_clusters,
+        "extracted_pain_patterns": pain_patterns,
+        "generated_detectors": detectors,
+        "validation_results": [
+            {
+                "detector_id": detector["detector_id"],
+                "replay_score": detector["validation"]["replay_score"],
+                "replay_validation_passed": detector["validation"]["replay_validation_passed"],
+            }
+            for detector in detectors
+        ],
+        "promotion_decisions": {
+            "promoted": promoted,
+            "quarantined": quarantined,
+        },
+        "paths": {
+            "loss_clusters": str(cluster_path),
+            "pain_patterns": str(pattern_path),
+            "generated_detectors": str(detector_path),
+            "registry": str(registry_path),
+        },
+    }
+
+
 def run_self_evolving_indicator_layer(
     *,
     memory_root: Path,
@@ -301,7 +449,15 @@ def run_self_evolving_indicator_layer(
         closed=closed,
         autonomous_behavior=autonomous_behavior,
     )
-    survival_intelligence = autonomous_behavior.get("capital_survival_engine", {})
+    pain_memory_survival = _pain_memory_survival_layer(
+        memory_root=memory_root,
+        closed=closed,
+        replay_scope=replay_scope,
+    )
+    survival_intelligence = {
+        "capital_survival_engine": autonomous_behavior.get("capital_survival_engine", {}),
+        "pain_memory_survival_layer": pain_memory_survival,
+    }
     meta_learning_loop = _meta_learning_loop(
         memory_root=memory_root,
         capability_generator=capability_generator,
@@ -316,5 +472,6 @@ def run_self_evolving_indicator_layer(
         "knowledge_compression_system": knowledge_compression,
         "strategy_evolution_engine": strategy_evolution,
         "survival_intelligence_layer": survival_intelligence,
+        "pain_memory_survival_layer": pain_memory_survival,
         "meta_learning_loop": meta_learning_loop,
     }
