@@ -2275,7 +2275,7 @@ def _replay_governance_traceability_report(
         execution_record = execution_by_candidate.get(candidate_id)
         if replay_record and promotion_record:
             replay_path, replay_payload = replay_record
-            promotion_path, promotion_payload = promotion_record
+            _, promotion_payload = promotion_record
             source_judgment_path = str(promotion_payload.get("source_judgment_path", "")).strip()
             if source_judgment_path != replay_path:
                 issues.append("promotion_source_judgment_path_mismatch")
@@ -2290,7 +2290,6 @@ def _replay_governance_traceability_report(
             replay_decision = str(replay_payload.get("decision", "")).strip()
             if promotion_phase_d_decision and replay_decision and promotion_phase_d_decision != replay_decision:
                 issues.append("promotion_phase_d_decision_trace_mismatch")
-            _ = promotion_path
         if promotion_record and execution_record:
             promotion_path, promotion_payload = promotion_record
             _, execution_payload = execution_record
@@ -2618,7 +2617,8 @@ def _quarantine_invalid_artifacts(
         issue_parts = issue_text.split(":")
         if len(issue_parts) < 3:
             continue
-        check_key, candidate_id, reason = issue_parts[0], issue_parts[1], ":".join(issue_parts[2:])
+        check_key, candidate_id, *reason_parts = issue_parts
+        reason = ":".join(reason_parts)
         quarantine_records.append(
             {
                 "phase": "chain_verification",
