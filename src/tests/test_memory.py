@@ -461,6 +461,15 @@ def test_run_pipeline_persists_macro_state_and_trade_tags(tmp_path: Path) -> Non
     assert "macro_state" in signal
     assert "trade_tags" in signal
     assert execution_state["macro_state"]["macro_states"]["dxy_state"] == "unavailable"
+    assert "strategy_promotion_policy" in signal
+    assert Path(signal["strategy_promotion_policy"]["path"]).exists()
+    assert signal["trade_tags"]["session"] in {"asia", "london", "new_york", "off_hours"}
+    assert signal["trade_tags"]["event_type"] in {
+        "major_macro_release",
+        "high_impact_release",
+        "routine_calendar",
+        "unknown",
+    }
     outcomes = json.loads((memory_root / "trade_outcomes.json").read_text(encoding="utf-8"))
     assert outcomes[-1]["trade_tags"]["session"] in {"asia", "london", "new_york", "off_hours"}
 

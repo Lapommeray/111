@@ -2,8 +2,19 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from datetime import datetime, timedelta, timezone
 
-from src.macro.adapters import AlphaVantageAdapter, EconomicCalendarAdapter, FREDAdapter, TreasuryYieldsAdapter
+from src.macro.adapters import (
+    AlphaVantageAdapter,
+    COMEXOpenInterestAdapter,
+    CentralBankReserveAdapter,
+    EconomicCalendarAdapter,
+    FREDAdapter,
+    GoldEtfFlowsAdapter,
+    GoldOptionMagnetAdapter,
+    GoldPhysicalPremiumAdapter,
+    TreasuryYieldsAdapter,
+)
 from src.macro.gold_macro import MacroFeedConfig, collect_xauusd_macro_state
 
 
@@ -47,11 +58,20 @@ def test_fred_adapter_and_treasury_calendar_adapters_parse_payloads() -> None:
 
     calendar = EconomicCalendarAdapter(
         endpoint="https://example.com/calendar",
-        fetcher=lambda _url: [{"impact": "High", "event": "US CPI"}, {"impact": "Medium", "event": "Retail Sales"}],
+        fetcher=lambda _url: [
+            {
+                "impact": "High",
+                "event": "US CPI",
+                "datetime": (datetime.now(tz=timezone.utc) + timedelta(minutes=20)).isoformat(),
+            },
+            {"impact": "Medium", "event": "Retail Sales"},
+        ],
     ).fetch_events()
     assert calendar["available"] is True
     assert calendar["state"] == "elevated"
     assert calendar["metrics"]["high_impact_count"] == 1
+    assert calendar["metrics"]["upcoming_major_events_60m"] >= 1
+    assert calendar["metrics"]["event_type"] == "major_macro_release"
 
 
 def test_collect_xauusd_macro_state_logs_unavailable_feeds_and_tags(tmp_path: Path) -> None:
@@ -88,3 +108,47 @@ def test_collect_xauusd_macro_state_logs_unavailable_feeds_and_tags(tmp_path: Pa
     latest_payload = json.loads(latest_path.read_text(encoding="utf-8"))
     assert "feed_states" in latest_payload
     assert latest_payload["feed_states"]["alpha_vantage"]["available"] is False
+    assert latest_payload["feed_states"]["comex_open_interest"]["available"] is False
+    assert latest_payload["feed_states"]["gold_etf_flows"]["available"] is False
+    assert latest_payload["feed_states"]["gold_option_magnet_levels"]["available"] is False
+    assert latest_payload["feed_states"]["gold_physical_premium_discount"]["available"] is False
+    assert latest_payload["feed_states"]["central_bank_gold_reserves"]["available"] is False
+    assert macro["trade_tags"]["macro_state"] in {"risk_off", "balanced"}
+    assert macro["session_policy"]["state"] in {
+        "asia_reduced_size",
+        "london_normal_size",
+        "new_york_moderate_size",
+        "normal_size",
+    }
+
+
+def test_external_gold_feed_stubs_mark_unavailable_when_endpoint_missing() -> None:
+    assert COMEXOpenInterestAdapter().fetch_state()["available"] is False
+    assert GoldEtfFlowsAdapter().fetch_state()["available"] is False
+    assert GoldOptionMagnetAdapter().fetch_state()["available"] is False
+    assert GoldPhysicalPremiumAdapter().fetch_state()["available"] is False
+    assert CentralBankReserveAdapter().fetch_state()["available"] is False
+
+
+def test_friday_policy_and_major_round_number_risk_are_enforced(tmp_path: Path) -> None:
+    friday = datetime(2026, 3, 13, 17, 0, tzinfo=timezone.utc)
+    bars = [
+        {"time": int((friday - timedelta(minutes=5)).timestamp()), "close": 1900.1},
+        {"time": int(friday.timestamp()), "close": 1900.3},
+    ]
+    macro = collect_xauusd_macro_state(
+        memory_root=str(tmp_path / "memory"),
+        bars=bars,
+        session_state="london",
+        volatility_regime="compression",
+        config=MacroFeedConfig(
+            alpha_vantage_api_key="",
+            fred_api_key="",
+            treasury_endpoint="https://example.com/treasury",
+            economic_calendar_endpoint="https://example.com/calendar",
+            enabled=False,
+        ),
+    )
+    assert macro["risk_behavior"]["pause_trading"] is True
+    assert "friday_afternoon_trading_disabled" in macro["risk_behavior"]["reasons"]
+    assert macro["major_round_number"]["state"] == "near_major_round_number"

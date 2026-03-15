@@ -48,6 +48,9 @@ def evaluate_capital_protection(
     latest_outcome: dict[str, Any],
     stop_loss_points: float = 2.0,
     max_daily_loss_points: float = 3.0,
+    max_total_drawdown_points: float = 12.0,
+    max_consecutive_loss_streak: int = 3,
+    max_anomaly_clusters: int = 2,
 ) -> dict[str, Any]:
     risk_root = Path(memory_root) / "risk_state"
     risk_root.mkdir(parents=True, exist_ok=True)
@@ -56,14 +59,37 @@ def evaluate_capital_protection(
 
     tracker = read_json_safe(
         tracker_path,
-        default={"trading_day": "", "daily_loss_points": 0.0, "last_trade_id": "", "trade_count": 0},
+        default={
+            "trading_day": "",
+            "daily_loss_points": 0.0,
+            "last_trade_id": "",
+            "trade_count": 0,
+            "equity_peak_points": 0.0,
+            "equity_points": 0.0,
+            "consecutive_loss_streak": 0,
+            "anomaly_cluster_count": 0,
+            "emergency_stop_active": False,
+        },
     )
     if not isinstance(tracker, dict):
-        tracker = {"trading_day": "", "daily_loss_points": 0.0, "last_trade_id": "", "trade_count": 0}
+        tracker = {
+            "trading_day": "",
+            "daily_loss_points": 0.0,
+            "last_trade_id": "",
+            "trade_count": 0,
+            "equity_peak_points": 0.0,
+            "equity_points": 0.0,
+            "consecutive_loss_streak": 0,
+            "anomaly_cluster_count": 0,
+            "emergency_stop_active": False,
+        }
 
     trading_day = str(latest_bar_time // 86400)
     if str(tracker.get("trading_day", "")) != trading_day:
-        tracker = {"trading_day": trading_day, "daily_loss_points": 0.0, "last_trade_id": "", "trade_count": 0}
+        tracker["trading_day"] = trading_day
+        tracker["daily_loss_points"] = 0.0
+        tracker["last_trade_id"] = ""
+        tracker["trade_count"] = 0
 
     latest_trade_id = str(latest_outcome.get("trade_id", ""))
     if latest_trade_id and latest_trade_id != str(tracker.get("last_trade_id", "")):
@@ -71,6 +97,16 @@ def evaluate_capital_protection(
             pnl_points = float(latest_outcome.get("pnl_points", 0.0))
             if pnl_points < 0:
                 tracker["daily_loss_points"] = round(float(tracker.get("daily_loss_points", 0.0)) + abs(pnl_points), 4)
+                tracker["consecutive_loss_streak"] = int(tracker.get("consecutive_loss_streak", 0)) + 1
+            else:
+                tracker["consecutive_loss_streak"] = 0
+            tracker["equity_points"] = round(float(tracker.get("equity_points", 0.0)) + pnl_points, 4)
+            tracker["equity_peak_points"] = max(
+                float(tracker.get("equity_peak_points", 0.0)),
+                float(tracker.get("equity_points", 0.0)),
+            )
+            if bool(latest_outcome.get("anomaly_cluster", False)):
+                tracker["anomaly_cluster_count"] = int(tracker.get("anomaly_cluster_count", 0)) + 1
             tracker["trade_count"] = int(tracker.get("trade_count", 0)) + 1
         tracker["last_trade_id"] = latest_trade_id
 
@@ -89,6 +125,26 @@ def evaluate_capital_protection(
         daily_loss_points=float(tracker.get("daily_loss_points", 0.0)),
         max_daily_loss_points=max_daily_loss_points,
     )
+    equity_peak = float(tracker.get("equity_peak_points", 0.0))
+    equity_now = float(tracker.get("equity_points", 0.0))
+    drawdown_points = round(max(0.0, equity_peak - equity_now), 4)
+    drawdown_limit_exceeded = drawdown_points >= float(max_total_drawdown_points)
+    consecutive_loss_streak = int(tracker.get("consecutive_loss_streak", 0))
+    consecutive_loss_exceeded = consecutive_loss_streak >= int(max_consecutive_loss_streak)
+    anomaly_cluster_count = int(tracker.get("anomaly_cluster_count", 0))
+    anomaly_cluster_exceeded = anomaly_cluster_count >= int(max_anomaly_clusters)
+    emergency_stop_active = bool(tracker.get("emergency_stop_active", False)) or anomaly_cluster_exceeded
+    tracker["emergency_stop_active"] = emergency_stop_active
+    trigger_reasons: list[str] = []
+    if bool(loss_check["limit_exceeded"]):
+        trigger_reasons.append("max_daily_loss_triggered")
+    if drawdown_limit_exceeded:
+        trigger_reasons.append("max_total_drawdown_triggered")
+    if consecutive_loss_exceeded:
+        trigger_reasons.append("max_consecutive_loss_streak_triggered")
+    if anomaly_cluster_exceeded:
+        trigger_reasons.append("emergency_stop_anomaly_cluster_triggered")
+    trade_refused = bool(trigger_reasons)
     guard_state = {
         "trading_day": trading_day,
         "requested_volume": round(requested_volume, 4),
@@ -96,7 +152,18 @@ def evaluate_capital_protection(
         "volatility_ratio": round(volatility_ratio, 4),
         "volatility_scale": scale,
         "daily_loss_check": loss_check,
-        "trade_refused": not bool(loss_check["allowed_to_trade"]),
+        "drawdown_points": drawdown_points,
+        "max_total_drawdown_points": float(max_total_drawdown_points),
+        "drawdown_limit_exceeded": drawdown_limit_exceeded,
+        "consecutive_loss_streak": consecutive_loss_streak,
+        "max_consecutive_loss_streak": int(max_consecutive_loss_streak),
+        "consecutive_loss_limit_exceeded": consecutive_loss_exceeded,
+        "anomaly_cluster_count": anomaly_cluster_count,
+        "max_anomaly_clusters": int(max_anomaly_clusters),
+        "anomaly_cluster_limit_exceeded": anomaly_cluster_exceeded,
+        "emergency_stop_active": emergency_stop_active,
+        "trigger_reasons": trigger_reasons,
+        "trade_refused": trade_refused,
     }
     write_json_atomic(tracker_path, tracker)
     write_json_atomic(state_path, guard_state)
@@ -104,7 +171,8 @@ def evaluate_capital_protection(
     return {
         "effective_volume": effective_size,
         "daily_loss_check": loss_check,
-        "trade_refused": bool(guard_state["trade_refused"]),
+        "trade_refused": trade_refused,
+        "trigger_reasons": trigger_reasons,
         "paths": {
             "capital_guard_state": str(state_path),
             "daily_loss_tracker": str(tracker_path),

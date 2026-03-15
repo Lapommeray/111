@@ -16,6 +16,7 @@ from src.evolution.code_generator import CodeGenerator
 from src.evolution.duplication_audit import DuplicationAudit
 from src.evolution.evolution_registry import EvolutionRegistry
 from src.evolution.gap_discovery import GapDiscovery
+from src.evolution.promotion_policy import PromotionThresholds, evaluate_module_promotion_policy
 from src.evolution.promoter import Promoter
 from src.evolution.self_inspector import SelfInspector
 from src.evolution.verifier import Verifier
@@ -76,8 +77,21 @@ class RuntimeConfig:
     fred_api_key: str = ""
     treasury_yields_endpoint: str = "https://moneymatter.me/api/treasury/interest-rates"
     economic_calendar_endpoint: str = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+    comex_open_interest_endpoint: str = ""
+    gold_etf_flows_endpoint: str = ""
+    option_magnet_levels_endpoint: str = ""
+    physical_premium_discount_endpoint: str = ""
+    central_bank_reserve_endpoint: str = ""
     macro_feed_enabled: bool = True
     macro_feed_allow_replay_fetch: bool = False
+    max_daily_loss_points: float = 3.0
+    max_total_drawdown_points: float = 12.0
+    max_consecutive_loss_streak: int = 3
+    max_anomaly_clusters: int = 2
+    promotion_minimum_replay_sample_size: int = 30
+    promotion_minimum_expectancy_points: float = 0.05
+    promotion_maximum_drawdown_points: float = 4.0
+    promotion_minimum_stability_score: float = 0.55
 
 
 def ensure_sample_data(path: Path) -> None:
@@ -159,8 +173,21 @@ def load_runtime_config(path: Path) -> RuntimeConfig:
         economic_calendar_endpoint=str(
             data.get("economic_calendar_endpoint", "https://nfs.faireconomy.media/ff_calendar_thisweek.json")
         ),
+        comex_open_interest_endpoint=str(data.get("comex_open_interest_endpoint", "")),
+        gold_etf_flows_endpoint=str(data.get("gold_etf_flows_endpoint", "")),
+        option_magnet_levels_endpoint=str(data.get("option_magnet_levels_endpoint", "")),
+        physical_premium_discount_endpoint=str(data.get("physical_premium_discount_endpoint", "")),
+        central_bank_reserve_endpoint=str(data.get("central_bank_reserve_endpoint", "")),
         macro_feed_enabled=bool(data.get("macro_feed_enabled", True)),
         macro_feed_allow_replay_fetch=bool(data.get("macro_feed_allow_replay_fetch", False)),
+        max_daily_loss_points=float(data.get("max_daily_loss_points", 3.0)),
+        max_total_drawdown_points=float(data.get("max_total_drawdown_points", 12.0)),
+        max_consecutive_loss_streak=int(data.get("max_consecutive_loss_streak", 3)),
+        max_anomaly_clusters=int(data.get("max_anomaly_clusters", 2)),
+        promotion_minimum_replay_sample_size=int(data.get("promotion_minimum_replay_sample_size", 30)),
+        promotion_minimum_expectancy_points=float(data.get("promotion_minimum_expectancy_points", 0.05)),
+        promotion_maximum_drawdown_points=float(data.get("promotion_maximum_drawdown_points", 4.0)),
+        promotion_minimum_stability_score=float(data.get("promotion_minimum_stability_score", 0.55)),
     )
 
 
@@ -189,6 +216,14 @@ def validate_runtime_config(config: RuntimeConfig) -> None:
         raise ValueError("evaluation_stride must be > 0")
     if config.live_order_volume <= 0:
         raise ValueError("live_order_volume must be > 0")
+    if config.max_daily_loss_points <= 0:
+        raise ValueError("max_daily_loss_points must be > 0")
+    if config.max_total_drawdown_points <= 0:
+        raise ValueError("max_total_drawdown_points must be > 0")
+    if config.max_consecutive_loss_streak <= 0:
+        raise ValueError("max_consecutive_loss_streak must be > 0")
+    if config.max_anomaly_clusters <= 0:
+        raise ValueError("max_anomaly_clusters must be > 0")
 
 
 def load_bars_from_csv(csv_path: Path, bars: int) -> list[dict[str, Any]]:
@@ -894,6 +929,7 @@ def _build_compact_signal_payload(signal_payload: dict[str, Any]) -> dict[str, A
         },
         "generated_code_visibility": signal_payload.get("generated_code_visibility", {}),
         "capital_guard": signal_payload.get("capital_guard", {}),
+        "strategy_promotion_policy": signal_payload.get("strategy_promotion_policy", {}),
         "live_learning_loop": signal_payload.get("live_learning_loop", {}),
         "evolution_kernel": {
             "enabled": signal_payload.get("evolution_kernel", {}).get("enabled", False),
@@ -1091,6 +1127,11 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
             fred_api_key=config.fred_api_key,
             treasury_endpoint=config.treasury_yields_endpoint,
             economic_calendar_endpoint=config.economic_calendar_endpoint,
+            comex_open_interest_endpoint=config.comex_open_interest_endpoint,
+            gold_etf_flows_endpoint=config.gold_etf_flows_endpoint,
+            option_magnet_levels_endpoint=config.option_magnet_levels_endpoint,
+            physical_premium_discount_endpoint=config.physical_premium_discount_endpoint,
+            central_bank_reserve_endpoint=config.central_bank_reserve_endpoint,
             enabled=bool(config.macro_feed_enabled)
             and (config.mode == "live" or bool(config.macro_feed_allow_replay_fetch)),
         ),
@@ -1133,6 +1174,10 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
             advanced_state.module_results.get("volatility", {}).payload.get("volatility_ratio", 1.0)
         ),
         latest_outcome=trade_outcomes[-1] if trade_outcomes else {},
+        max_daily_loss_points=float(config.max_daily_loss_points),
+        max_total_drawdown_points=float(config.max_total_drawdown_points),
+        max_consecutive_loss_streak=int(config.max_consecutive_loss_streak),
+        max_anomaly_clusters=int(config.max_anomaly_clusters),
     )
 
     refusal_reasons = [
@@ -1159,6 +1204,7 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
                 "capital_guard_daily_loss_limit_exceeded",
                 f"capital_guard_volume={capital_guard.get('effective_volume', 0.0)}",
             ]
+            + [f"capital_guard:{reason}" for reason in capital_guard.get("trigger_reasons", [])]
         )
     if bool(macro_risk.get("pause_trading", False)):
         combined_blocked = True
@@ -1301,6 +1347,16 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         trade_tags=macro_tags,
     )
     updated_trade_outcomes = store.load("trade_outcomes")
+    promotion_policy = evaluate_module_promotion_policy(
+        memory_root=config.memory_root,
+        outcomes=updated_trade_outcomes,
+        thresholds=PromotionThresholds(
+            minimum_replay_sample_size=int(config.promotion_minimum_replay_sample_size),
+            minimum_expectancy_points=float(config.promotion_minimum_expectancy_points),
+            maximum_drawdown_points=float(config.promotion_maximum_drawdown_points),
+            minimum_stability_score=float(config.promotion_minimum_stability_score),
+        ),
+    )
     live_learning = process_live_trade_feedback(
         memory_root=Path(config.memory_root),
         trade_outcomes=updated_trade_outcomes,
@@ -1379,10 +1435,12 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         "latest_trade_evaluation": live_learning["latest_trade_evaluation"],
         "mutation_candidate": live_learning["mutation_candidate"],
     }
+    signal_payload["strategy_promotion_policy"] = promotion_policy
     signal_payload["capital_guard"] = {
         "effective_volume": capital_guard["effective_volume"],
         "trade_refused": capital_guard["trade_refused"],
         "daily_loss_check": capital_guard["daily_loss_check"],
+        "trigger_reasons": capital_guard.get("trigger_reasons", []),
         "macro_size_multiplier": float(macro_risk.get("size_multiplier", 1.0) or 1.0),
     }
 
@@ -1439,6 +1497,7 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     status_panel["system_monitor"] = monitoring_state["system_state"]
     status_panel["macro_state"] = macro_state
     status_panel["trade_tags"] = macro_tags
+    status_panel["strategy_promotion_policy"] = promotion_policy
 
     return build_indicator_output(
         symbol=config.symbol,

@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from urllib.request import urlopen
 
 JsonFetcher = Callable[[str], Any]
+MILLISECOND_TIMESTAMP_THRESHOLD = 10_000_000_000
 ALLOWED_MACRO_FEED_HOSTS = {
     "www.alphavantage.co",
     "api.stlouisfed.org",
@@ -43,6 +44,18 @@ def _safe_float(value: Any) -> float | None:
         return float(text)
     except Exception:
         return None
+
+
+def _default_unavailable_feed_state(feed_name: str, reason_code: str = "feed_unavailable") -> dict[str, Any]:
+    return {
+        "feed": feed_name,
+        "available": False,
+        "stale": True,
+        "state": "unavailable",
+        "reason_codes": [reason_code],
+        "metrics": {},
+        "timestamp": _now_iso(),
+    }
 
 
 @dataclass(frozen=True)
@@ -317,6 +330,9 @@ class EconomicCalendarAdapter:
                 }
             high_impact_count = 0
             major_event_count = 0
+            upcoming_major_events_60m = 0
+            recent_major_events_30m = 0
+            now = datetime.now(tz=timezone.utc)
             for event in events:
                 if not isinstance(event, dict):
                     continue
@@ -324,9 +340,23 @@ class EconomicCalendarAdapter:
                 if "high" in impact_text:
                     high_impact_count += 1
                 title = str(event.get("title") or event.get("event") or "").lower()
-                if any(token in title for token in ("fomc", "cpi", "nfp", "fed", "powell")):
+                is_major = any(token in title for token in ("fomc", "cpi", "nfp", "fed", "powell"))
+                if is_major:
                     major_event_count += 1
+                    event_time = self._parse_event_time(event)
+                    if event_time is not None:
+                        minutes_delta = (event_time - now).total_seconds() / 60.0
+                        if 0 <= minutes_delta <= 60:
+                            upcoming_major_events_60m += 1
+                        if -30 <= minutes_delta < 0:
+                            recent_major_events_30m += 1
             state = "elevated" if (high_impact_count > 0 or major_event_count > 0) else "calm"
+            if major_event_count > 0:
+                event_type = "major_macro_release"
+            elif high_impact_count > 0:
+                event_type = "high_impact_release"
+            else:
+                event_type = "routine_calendar"
             return {
                 "feed": "economic_calendar",
                 "available": True,
@@ -337,6 +367,9 @@ class EconomicCalendarAdapter:
                     "high_impact_count": high_impact_count,
                     "major_event_count": major_event_count,
                     "event_count": len(events),
+                    "upcoming_major_events_60m": upcoming_major_events_60m,
+                    "recent_major_events_30m": recent_major_events_30m,
+                    "event_type": event_type,
                 },
                 "timestamp": _now_iso(),
             }
@@ -350,3 +383,160 @@ class EconomicCalendarAdapter:
                 "metrics": {},
                 "timestamp": _now_iso(),
             }
+
+    def _parse_event_time(self, event: dict[str, Any]) -> datetime | None:
+        for key in ("timestamp", "datetime", "date", "time"):
+            raw = event.get(key)
+            if raw is None:
+                continue
+            text = str(raw).strip()
+            if not text:
+                continue
+            try:
+                if text.isdigit():
+                    ts = int(text)
+                    if ts > MILLISECOND_TIMESTAMP_THRESHOLD:
+                        ts = ts // 1000
+                    return datetime.fromtimestamp(ts, tz=timezone.utc)
+                normalized = text.replace("Z", "+00:00")
+                parsed = datetime.fromisoformat(normalized)
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=timezone.utc)
+                return parsed.astimezone(timezone.utc)
+            except Exception:
+                continue
+        return None
+
+
+@dataclass(frozen=True)
+class COMEXOpenInterestAdapter:
+    endpoint: str = ""
+    fetcher: JsonFetcher = _default_fetch_json
+
+    def fetch_state(self) -> dict[str, Any]:
+        if not self.endpoint:
+            return _default_unavailable_feed_state("comex_open_interest", "endpoint_not_configured")
+        try:
+            payload = self.fetcher(self.endpoint)
+            value = _safe_float(payload.get("open_interest") if isinstance(payload, dict) else None)
+            if value is None:
+                return _default_unavailable_feed_state("comex_open_interest", "value_missing")
+            return {
+                "feed": "comex_open_interest",
+                "available": True,
+                "stale": False,
+                "state": "available",
+                "reason_codes": [],
+                "metrics": {"open_interest": round(value, 4)},
+                "timestamp": _now_iso(),
+            }
+        except Exception as exc:
+            return _default_unavailable_feed_state("comex_open_interest", f"request_failed:{type(exc).__name__}")
+
+
+@dataclass(frozen=True)
+class GoldEtfFlowsAdapter:
+    endpoint: str = ""
+    fetcher: JsonFetcher = _default_fetch_json
+
+    def fetch_state(self) -> dict[str, Any]:
+        if not self.endpoint:
+            return _default_unavailable_feed_state("gold_etf_flows", "endpoint_not_configured")
+        try:
+            payload = self.fetcher(self.endpoint)
+            gld_flow = _safe_float(payload.get("gld") if isinstance(payload, dict) else None)
+            iau_flow = _safe_float(payload.get("iau") if isinstance(payload, dict) else None)
+            if gld_flow is None and iau_flow is None:
+                return _default_unavailable_feed_state("gold_etf_flows", "value_missing")
+            return {
+                "feed": "gold_etf_flows",
+                "available": True,
+                "stale": False,
+                "state": "available",
+                "reason_codes": [],
+                "metrics": {"gld_flow": gld_flow, "iau_flow": iau_flow},
+                "timestamp": _now_iso(),
+            }
+        except Exception as exc:
+            return _default_unavailable_feed_state("gold_etf_flows", f"request_failed:{type(exc).__name__}")
+
+
+@dataclass(frozen=True)
+class GoldOptionMagnetAdapter:
+    endpoint: str = ""
+    fetcher: JsonFetcher = _default_fetch_json
+
+    def fetch_state(self) -> dict[str, Any]:
+        if not self.endpoint:
+            return _default_unavailable_feed_state("gold_option_magnet_levels", "endpoint_not_configured")
+        try:
+            payload = self.fetcher(self.endpoint)
+            levels = payload.get("levels") if isinstance(payload, dict) else None
+            if not isinstance(levels, list) or not levels:
+                return _default_unavailable_feed_state("gold_option_magnet_levels", "levels_missing")
+            return {
+                "feed": "gold_option_magnet_levels",
+                "available": True,
+                "stale": False,
+                "state": "available",
+                "reason_codes": [],
+                "metrics": {"levels": levels[:20]},
+                "timestamp": _now_iso(),
+            }
+        except Exception as exc:
+            return _default_unavailable_feed_state("gold_option_magnet_levels", f"request_failed:{type(exc).__name__}")
+
+
+@dataclass(frozen=True)
+class GoldPhysicalPremiumAdapter:
+    endpoint: str = ""
+    fetcher: JsonFetcher = _default_fetch_json
+
+    def fetch_state(self) -> dict[str, Any]:
+        if not self.endpoint:
+            return _default_unavailable_feed_state("gold_physical_premium_discount", "endpoint_not_configured")
+        try:
+            payload = self.fetcher(self.endpoint)
+            premium = _safe_float(payload.get("premium_discount") if isinstance(payload, dict) else None)
+            if premium is None:
+                return _default_unavailable_feed_state("gold_physical_premium_discount", "value_missing")
+            return {
+                "feed": "gold_physical_premium_discount",
+                "available": True,
+                "stale": False,
+                "state": "available",
+                "reason_codes": [],
+                "metrics": {"premium_discount": round(premium, 6)},
+                "timestamp": _now_iso(),
+            }
+        except Exception as exc:
+            return _default_unavailable_feed_state(
+                "gold_physical_premium_discount",
+                f"request_failed:{type(exc).__name__}",
+            )
+
+
+@dataclass(frozen=True)
+class CentralBankReserveAdapter:
+    endpoint: str = ""
+    fetcher: JsonFetcher = _default_fetch_json
+
+    def fetch_state(self) -> dict[str, Any]:
+        if not self.endpoint:
+            return _default_unavailable_feed_state("central_bank_gold_reserves", "endpoint_not_configured")
+        try:
+            payload = self.fetcher(self.endpoint)
+            reserve_change = _safe_float(payload.get("reserve_change_tonnes") if isinstance(payload, dict) else None)
+            if reserve_change is None:
+                return _default_unavailable_feed_state("central_bank_gold_reserves", "value_missing")
+            return {
+                "feed": "central_bank_gold_reserves",
+                "available": True,
+                "stale": False,
+                "state": "available",
+                "reason_codes": [],
+                "metrics": {"reserve_change_tonnes": round(reserve_change, 6)},
+                "timestamp": _now_iso(),
+            }
+        except Exception as exc:
+            return _default_unavailable_feed_state("central_bank_gold_reserves", f"request_failed:{type(exc).__name__}")

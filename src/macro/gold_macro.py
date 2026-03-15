@@ -5,7 +5,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from src.macro.adapters import AlphaVantageAdapter, EconomicCalendarAdapter, FREDAdapter, TreasuryYieldsAdapter
+from src.macro.adapters import (
+    AlphaVantageAdapter,
+    CentralBankReserveAdapter,
+    COMEXOpenInterestAdapter,
+    EconomicCalendarAdapter,
+    FREDAdapter,
+    GoldEtfFlowsAdapter,
+    GoldOptionMagnetAdapter,
+    GoldPhysicalPremiumAdapter,
+    TreasuryYieldsAdapter,
+)
 from src.utils import clamp, normalize_reasons, read_json_safe, write_json_atomic
 
 _MACRO_STATE_CACHE: dict[str, Any] = {}
@@ -19,6 +29,16 @@ WATCH_EVENT_SIZE_MULTIPLIER = 0.75
 WATCH_EVENT_CONFIDENCE_PENALTY = 0.04
 SESSION_EVENT_SIZE_MULTIPLIER = 0.8
 SESSION_EVENT_CONFIDENCE_PENALTY = 0.04
+ASIA_SESSION_SIZE_MULTIPLIER = 0.7
+LONDON_SESSION_SIZE_MULTIPLIER = 1.0
+NEW_YORK_SESSION_SIZE_MULTIPLIER = 0.85
+FRIDAY_AFTERNOON_DISABLE_HOUR_UTC = 16
+NEWS_BLACKOUT_SIZE_MULTIPLIER = 0.25
+NEWS_POST_RELEASE_SIZE_MULTIPLIER = 0.6
+MAJOR_ROUND_LEVELS = [1800.0, 1850.0, 1900.0, 1950.0, 2000.0]
+MAJOR_ROUND_NEAR_THRESHOLD = 1.5
+FEED_UNAVAILABLE_CONFIDENCE_STEP = 0.03
+FEED_UNAVAILABLE_CONFIDENCE_CAP = 0.18
 
 
 @dataclass(frozen=True)
@@ -27,6 +47,11 @@ class MacroFeedConfig:
     fred_api_key: str
     treasury_endpoint: str
     economic_calendar_endpoint: str
+    comex_open_interest_endpoint: str = ""
+    gold_etf_flows_endpoint: str = ""
+    option_magnet_levels_endpoint: str = ""
+    physical_premium_discount_endpoint: str = ""
+    central_bank_reserve_endpoint: str = ""
     enabled: bool = True
 
 
@@ -74,6 +99,15 @@ def _derive_yield_state(*, yield_pressure: str, curve_10y_2y: Any) -> str:
     return "flat_or_inverted"
 
 
+def _major_round_number_proximity(price: float) -> dict[str, Any]:
+    if not MAJOR_ROUND_LEVELS:
+        return {"state": "unknown", "distance": None, "nearest_level": None}
+    nearest = min(MAJOR_ROUND_LEVELS, key=lambda level: abs(price - level))
+    distance = abs(price - nearest)
+    state = "near_major_round_number" if distance <= MAJOR_ROUND_NEAR_THRESHOLD else "clear_major_round_number"
+    return {"state": state, "distance": round(distance, 4), "nearest_level": round(nearest, 4)}
+
+
 def collect_xauusd_macro_state(
     *,
     memory_root: str,
@@ -87,6 +121,11 @@ def collect_xauusd_macro_state(
         fred_state = FREDAdapter(config.fred_api_key).fetch_core_macro()
         treasury_state = TreasuryYieldsAdapter(config.treasury_endpoint).fetch_yields()
         calendar_state = EconomicCalendarAdapter(config.economic_calendar_endpoint).fetch_events()
+        comex_oi_state = COMEXOpenInterestAdapter(config.comex_open_interest_endpoint).fetch_state()
+        etf_flow_state = GoldEtfFlowsAdapter(config.gold_etf_flows_endpoint).fetch_state()
+        option_magnet_state = GoldOptionMagnetAdapter(config.option_magnet_levels_endpoint).fetch_state()
+        physical_premium_state = GoldPhysicalPremiumAdapter(config.physical_premium_discount_endpoint).fetch_state()
+        central_bank_reserve_state = CentralBankReserveAdapter(config.central_bank_reserve_endpoint).fetch_state()
     else:
         alpha_state = _feed_disabled_state("alpha_vantage", "external_fetch_disabled")
         fred_state = {
@@ -97,6 +136,11 @@ def collect_xauusd_macro_state(
         }
         treasury_state = _feed_disabled_state("treasury", "external_fetch_disabled")
         calendar_state = _feed_disabled_state("economic_calendar", "external_fetch_disabled")
+        comex_oi_state = _feed_disabled_state("comex_open_interest", "external_fetch_disabled")
+        etf_flow_state = _feed_disabled_state("gold_etf_flows", "external_fetch_disabled")
+        option_magnet_state = _feed_disabled_state("gold_option_magnet_levels", "external_fetch_disabled")
+        physical_premium_state = _feed_disabled_state("gold_physical_premium_discount", "external_fetch_disabled")
+        central_bank_reserve_state = _feed_disabled_state("central_bank_gold_reserves", "external_fetch_disabled")
 
     price_change = _price_change(bars)
     last_price = float(bars[-1].get("close", 0.0)) if bars else 0.0
@@ -133,6 +177,21 @@ def collect_xauusd_macro_state(
         else "no_overlap"
     )
     round_number_state = _round_number_proximity(last_price)
+    major_round_state = _major_round_number_proximity(last_price)
+    last_bar_time = int(bars[-1].get("time", 0)) if bars else 0
+    bar_dt = datetime.fromtimestamp(last_bar_time, tz=timezone.utc) if last_bar_time > 0 else datetime.now(tz=timezone.utc)
+    is_friday_afternoon = bar_dt.weekday() == 4 and bar_dt.hour >= FRIDAY_AFTERNOON_DISABLE_HOUR_UTC
+    session_policy_state = "normal_size"
+    session_size_multiplier = 1.0
+    if session_state == "asia":
+        session_policy_state = "asia_reduced_size"
+        session_size_multiplier = ASIA_SESSION_SIZE_MULTIPLIER
+    elif session_state == "new_york":
+        session_policy_state = "new_york_moderate_size"
+        session_size_multiplier = NEW_YORK_SESSION_SIZE_MULTIPLIER
+    elif session_state == "london":
+        session_policy_state = "london_normal_size"
+        session_size_multiplier = LONDON_SESSION_SIZE_MULTIPLIER
 
     size_multiplier = 1.0
     confidence_penalty = 0.0
@@ -153,6 +212,20 @@ def collect_xauusd_macro_state(
         size_multiplier *= SESSION_EVENT_SIZE_MULTIPLIER
         confidence_penalty += SESSION_EVENT_CONFIDENCE_PENALTY
         risk_reasons.append("session_event_overlap")
+    size_multiplier *= session_size_multiplier
+    if is_friday_afternoon:
+        risk_reasons.append("friday_afternoon_trading_disabled")
+    upcoming_major_events_60m = int(calendar_state.get("metrics", {}).get("upcoming_major_events_60m", 0) or 0)
+    recent_major_events_30m = int(calendar_state.get("metrics", {}).get("recent_major_events_30m", 0) or 0)
+    if upcoming_major_events_60m > 0:
+        size_multiplier *= NEWS_BLACKOUT_SIZE_MULTIPLIER
+        risk_reasons.append("news_blackout_before_major_event")
+    elif recent_major_events_30m > 0:
+        size_multiplier *= NEWS_POST_RELEASE_SIZE_MULTIPLIER
+        risk_reasons.append("size_reduced_post_major_release")
+    if major_round_state.get("state") == "near_major_round_number":
+        size_multiplier *= 0.7
+        risk_reasons.append("near_major_round_number")
 
     feed_unavailable = []
     if not bool(alpha_state.get("available", False)):
@@ -167,8 +240,18 @@ def collect_xauusd_macro_state(
         feed_unavailable.append("economic_calendar")
     if not bool(treasury_state.get("available", False)):
         feed_unavailable.append("treasury")
+    if not bool(comex_oi_state.get("available", False)):
+        feed_unavailable.append("comex_open_interest")
+    if not bool(etf_flow_state.get("available", False)):
+        feed_unavailable.append("gold_etf_flows")
+    if not bool(option_magnet_state.get("available", False)):
+        feed_unavailable.append("gold_option_magnet_levels")
+    if not bool(physical_premium_state.get("available", False)):
+        feed_unavailable.append("gold_physical_premium_discount")
+    if not bool(central_bank_reserve_state.get("available", False)):
+        feed_unavailable.append("central_bank_gold_reserves")
     if feed_unavailable:
-        confidence_penalty += min(0.18, 0.03 * len(feed_unavailable))
+        confidence_penalty += min(FEED_UNAVAILABLE_CONFIDENCE_CAP, FEED_UNAVAILABLE_CONFIDENCE_STEP * len(feed_unavailable))
         risk_reasons.append(f"feeds_unavailable:{','.join(sorted(feed_unavailable))}")
 
     feed_stale_or_unsafe = (
@@ -176,8 +259,8 @@ def collect_xauusd_macro_state(
         and bool(fred_state.get("DGS10", {}).get("stale", False))
         and bool(fred_state.get("T10YIE", {}).get("stale", False))
     )
-    pause_trading = bool(feed_stale_or_unsafe)
-    if pause_trading:
+    pause_trading = bool(feed_stale_or_unsafe) or bool(is_friday_afternoon) or bool(upcoming_major_events_60m > 0)
+    if feed_stale_or_unsafe:
         risk_reasons.append("macro_feed_state_unsafe_or_stale")
 
     macro_states = {
@@ -217,10 +300,16 @@ def collect_xauusd_macro_state(
     trade_tags = {
         "session": session_state,
         "volatility_regime": volatility_regime,
+        "macro_state": (
+            "risk_off" if dxy_state == "strong_usd" and macro_states["yield_state"] in {"bearish_gold", "steepening"} else "balanced"
+        ),
         "dxy_state": macro_states["dxy_state"],
         "yield_state": macro_states["yield_state"],
         "event_news_state": macro_states["event_news_state"],
         "round_number_proximity": round_number_state["state"],
+        "major_round_number_proximity": major_round_state["state"],
+        "event_type": str(calendar_state.get("metrics", {}).get("event_type", "unknown")),
+        "session_policy": session_policy_state,
     }
     risk_behavior = {
         "size_multiplier": round(clamp(size_multiplier, 0.1, 1.0), 4),
@@ -235,12 +324,28 @@ def collect_xauusd_macro_state(
             "fred": fred_state,
             "treasury": treasury_state,
             "economic_calendar": calendar_state,
+            "comex_open_interest": comex_oi_state,
+            "gold_etf_flows": etf_flow_state,
+            "gold_option_magnet_levels": option_magnet_state,
+            "gold_physical_premium_discount": physical_premium_state,
+            "central_bank_gold_reserves": central_bank_reserve_state,
         },
         "macro_states": macro_states,
         "detectors": detectors,
         "risk_behavior": risk_behavior,
         "trade_tags": trade_tags,
         "round_number": round_number_state,
+        "major_round_number": major_round_state,
+        "session_policy": {
+            "state": session_policy_state,
+            "size_multiplier": round(session_size_multiplier, 4),
+            "friday_afternoon_disabled": is_friday_afternoon,
+        },
+        "news_policy": {
+            "pause_before_major_events": upcoming_major_events_60m > 0,
+            "reduce_after_major_release": recent_major_events_30m > 0,
+            "event_type": str(calendar_state.get("metrics", {}).get("event_type", "unknown")),
+        },
         "logged_at": datetime.now(tz=timezone.utc).isoformat(),
     }
 
@@ -264,6 +369,11 @@ def collect_xauusd_macro_state(
                 "fred_t10yie": bool(fred_state.get("T10YIE", {}).get("available", False)),
                 "treasury": bool(treasury_state.get("available", False)),
                 "economic_calendar": bool(calendar_state.get("available", False)),
+                "comex_open_interest": bool(comex_oi_state.get("available", False)),
+                "gold_etf_flows": bool(etf_flow_state.get("available", False)),
+                "gold_option_magnet_levels": bool(option_magnet_state.get("available", False)),
+                "gold_physical_premium_discount": bool(physical_premium_state.get("available", False)),
+                "central_bank_gold_reserves": bool(central_bank_reserve_state.get("available", False)),
             },
         }
     )

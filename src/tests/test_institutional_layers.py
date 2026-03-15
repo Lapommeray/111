@@ -217,3 +217,32 @@ def test_capital_guard_runtime_refuses_when_limit_exceeded(tmp_path: Path) -> No
     assert blocked["trade_refused"] is True
     assert Path(blocked["paths"]["capital_guard_state"]).exists()
     assert Path(blocked["paths"]["daily_loss_tracker"]).exists()
+
+
+def test_capital_guard_hard_policies_trigger_pause_and_reasons(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory_hard_limits"
+    evaluate_capital_protection(
+        memory_root=str(memory_root),
+        latest_bar_time=4_000_000_000,
+        requested_volume=0.05,
+        volatility_value=1.2,
+        latest_outcome={"trade_id": "l1", "status": "closed", "pnl_points": -1.5, "anomaly_cluster": True},
+        max_daily_loss_points=5.0,
+        max_total_drawdown_points=20.0,
+        max_consecutive_loss_streak=5,
+        max_anomaly_clusters=2,
+    )
+    blocked = evaluate_capital_protection(
+        memory_root=str(memory_root),
+        latest_bar_time=4_000_000_060,
+        requested_volume=0.05,
+        volatility_value=1.2,
+        latest_outcome={"trade_id": "l2", "status": "closed", "pnl_points": -1.4, "anomaly_cluster": True},
+        max_daily_loss_points=5.0,
+        max_total_drawdown_points=20.0,
+        max_consecutive_loss_streak=2,
+        max_anomaly_clusters=2,
+    )
+    assert blocked["trade_refused"] is True
+    assert "max_consecutive_loss_streak_triggered" in blocked["trigger_reasons"]
+    assert "emergency_stop_anomaly_cluster_triggered" in blocked["trigger_reasons"]
