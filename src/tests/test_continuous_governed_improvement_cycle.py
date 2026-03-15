@@ -29,6 +29,32 @@ def _seed_validated_knowledge(tmp_path: Path) -> None:
     )
 
 
+def _seed_multi_validated_knowledge(tmp_path: Path) -> None:
+    _write_validated_registry(
+        tmp_path / "memory" / "knowledge_expansion" / "validated_knowledge_registry.json",
+        {
+            "validated_knowledge": [
+                {
+                    "candidate_id": "cand_alpha",
+                    "truth_class": "timing",
+                    "statement": "Session compression precedes continuation.",
+                    "evidence_history": [{"signal": "compression"}, {"signal": "breakout"}],
+                    "decision": "PROMOTE_TO_EXPERIMENT",
+                    "decision_reasons": ["replay_gain"],
+                },
+                {
+                    "candidate_id": "cand_beta",
+                    "truth_class": "risk",
+                    "statement": "Volatility burst often invalidates weak continuation setups.",
+                    "evidence_history": [{"signal": "volatility_spike"}, {"signal": "failed_breakout"}],
+                    "decision": "PROMOTE_TO_EXPERIMENT",
+                    "decision_reasons": ["replay_guardrail"],
+                },
+            ]
+        },
+    )
+
+
 def _write_in_progress_cycle_state(tmp_path: Path, iteration_id: str, phase_results: dict) -> Path:
     cycle_dir = tmp_path / "memory" / "knowledge_expansion" / "continuous_governed_improvement"
     cycle_dir.mkdir(parents=True, exist_ok=True)
@@ -81,6 +107,19 @@ def test_continuous_cycle_executes_governed_phases(tmp_path: Path) -> None:
     capability_paths = result["self_evolving_indicator_layer"]["capability_generator"]["paths"]
     assert Path(capability_paths["candidates"]).exists()
     assert Path(capability_paths["registry"]).exists()
+    parameter_control = result["evolution_parameter_control"]
+    assert Path(parameter_control["parameter_state_path"]).exists()
+    assert Path(parameter_control["parameter_changes_path"]).exists()
+    assert Path(parameter_control["adaptation_reasons_path"]).exists()
+    assert Path(parameter_control["parameter_performance_by_regime_path"]).exists()
+    parameter_state_payload = json.loads(Path(parameter_control["parameter_state_path"]).read_text(encoding="utf-8"))
+    assert parameter_state_payload["regime_context"]["volatility_regime"] in {
+        "low_volatility",
+        "medium_volatility",
+        "high_volatility",
+    }
+    assert parameter_state_payload["replay_evaluated"] is True
+    assert parameter_state_payload["governed"] is True
     assert Path(result["cycle_artifact_path"]).exists()
 
 
@@ -383,3 +422,39 @@ def test_continuous_cycle_quarantines_invalid_artifacts_and_refuses_unsafe_conti
     assert second["governed_refusal"]["refused"] is True
     assert second["governed_refusal"]["safe_to_continue"] is False
     assert cycle_state_payload["status"] == "refused_unsafe_continuation"
+
+
+def test_continuous_cycle_adapts_parameters_by_regime_and_weak_module_clusters(tmp_path: Path) -> None:
+    _seed_multi_validated_knowledge(tmp_path)
+
+    low_volatility = run_continuous_governed_improvement_cycle(
+        tmp_path,
+        mode="replay",
+        baseline_summary={"score": 10.0, "volatility_ratio": 0.85},
+        iteration_id="params-low",
+    )
+    high_volatility = run_continuous_governed_improvement_cycle(
+        tmp_path,
+        mode="replay",
+        baseline_summary={"score": 10.0, "volatility_ratio": 1.35},
+        iteration_id="params-high",
+    )
+
+    low_control = low_volatility["evolution_parameter_control"]
+    high_control = high_volatility["evolution_parameter_control"]
+    low_state = json.loads(Path(low_control["parameter_state_path"]).read_text(encoding="utf-8"))
+    high_state = json.loads(Path(high_control["parameter_state_path"]).read_text(encoding="utf-8"))
+    low_reasons = json.loads(Path(low_control["adaptation_reasons_path"]).read_text(encoding="utf-8"))
+    high_reasons = json.loads(Path(high_control["adaptation_reasons_path"]).read_text(encoding="utf-8"))
+    performance_by_regime = json.loads(Path(high_control["parameter_performance_by_regime_path"]).read_text(encoding="utf-8"))
+
+    assert low_state["regime_context"]["volatility_regime"] == "low_volatility"
+    assert high_state["regime_context"]["volatility_regime"] == "high_volatility"
+    assert low_state["regime_context"]["weak_module_cluster_detected"] is True
+    assert high_state["parameter_state"]["quarantine_strictness"] >= low_state["parameter_state"]["quarantine_strictness"]
+    assert high_state["parameter_state"]["mutation_rate"] > low_state["parameter_state"]["mutation_rate"]
+    assert "strict promotion works better in low volatility" in low_reasons["adaptation_reasons"]
+    assert "faster mutation works better in high volatility" in high_reasons["adaptation_reasons"]
+    assert "quarantine should tighten after weak-module clusters" in high_reasons["adaptation_reasons"]
+    assert "low_volatility" in performance_by_regime["by_regime"]
+    assert "high_volatility" in performance_by_regime["by_regime"]

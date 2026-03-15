@@ -12,6 +12,12 @@ from src.utils import read_json_safe, write_json_atomic
 
 _SPREAD_RATIO_ON_GOVERNED_REFUSAL = 2.2
 _SLIPPAGE_RATIO_ON_GOVERNED_ROLLBACK = 1.8
+_DEFAULT_EVOLUTION_PARAMETERS = {
+    "promotion_threshold": 0.6,
+    "quarantine_strictness": 0.55,
+    "mutation_rate": 0.5,
+    "exploration_vs_stability_balance": 0.5,
+}
 
 
 def _safe_candidate_filename(candidate_id: str) -> str:
@@ -2985,6 +2991,379 @@ def _governed_refusal_state(
     }
 
 
+def _clamp_parameter(value: Any) -> float:
+    return round(max(0.05, min(0.95, _to_float(value, default=0.5))), 4)
+
+
+def _evolution_regime_context(
+    *,
+    baseline_summary: dict[str, Any] | None,
+    replay_paths: list[str],
+    replay_scope: str,
+) -> dict[str, Any]:
+    baseline = baseline_summary if isinstance(baseline_summary, dict) else {}
+    volatility_ratio = _to_float(baseline.get("volatility_ratio", 1.0), default=1.0)
+    if volatility_ratio <= 0.9:
+        volatility_regime = "low_volatility"
+    elif volatility_ratio >= 1.2:
+        volatility_regime = "high_volatility"
+    else:
+        volatility_regime = "medium_volatility"
+    replay_by_candidate = _candidate_artifact_payloads(replay_paths)
+    weak_module_cluster_size = sum(
+        1
+        for _, payload in replay_by_candidate.values()
+        if str(payload.get("decision", "")).strip() != PHASE_D_PROMOTION_CANDIDATE
+    )
+    return {
+        "volatility_ratio": volatility_ratio,
+        "volatility_regime": volatility_regime,
+        "structure_state": str(baseline.get("structure_state", "range")),
+        "confidence": round(_to_float(baseline.get("confidence", 0.5), default=0.5), 4),
+        "replay_scope": replay_scope,
+        "weak_module_cluster_size": weak_module_cluster_size,
+        "weak_module_cluster_detected": weak_module_cluster_size >= 1,
+    }
+
+
+def _evolution_parameter_performance(
+    *,
+    regime_context: dict[str, Any],
+    replay_paths: list[str],
+    promotion_paths: list[str],
+    execution_paths: list[str],
+    governed_rollback: dict[str, Any],
+    live_learning_feedback: dict[str, Any],
+) -> dict[str, Any]:
+    replay_by_candidate = _candidate_artifact_payloads(replay_paths)
+    promotion_by_candidate = _candidate_artifact_payloads(promotion_paths)
+    execution_by_candidate = _candidate_artifact_payloads(execution_paths)
+    promoted_ids: set[str] = set()
+    quarantined_ids: set[str] = set()
+    quarantined_later_would_work_ids: set[str] = set()
+    promoted_later_failed_ids: set[str] = set()
+    rollback_ids = {
+        str(item).strip()
+        for item in governed_rollback.get("invalid_candidate_ids", [])
+        if str(item).strip()
+    }
+    for candidate_id in sorted(set(replay_by_candidate) | set(promotion_by_candidate)):
+        replay_payload = replay_by_candidate.get(candidate_id, ("", {}))[1]
+        promotion_payload = promotion_by_candidate.get(candidate_id, ("", {}))[1]
+        execution_payload = execution_by_candidate.get(candidate_id, ("", {}))[1]
+        governance_decision = str(promotion_payload.get("governance_decision", "")).strip()
+        replay_decision = str(replay_payload.get("decision", "")).strip()
+        execution_decision = str(execution_payload.get("execution_decision", "")).strip()
+        if governance_decision == PHASE_E_PROMOTION_CANDIDATE:
+            promoted_ids.add(candidate_id)
+            if execution_decision and execution_decision != PHASE_F_ELIGIBLE_FOR_CONTROLLED_EXECUTION_REVIEW:
+                promoted_later_failed_ids.add(candidate_id)
+            if candidate_id in rollback_ids:
+                promoted_later_failed_ids.add(candidate_id)
+        elif governance_decision in {PHASE_E_REJECTED, PHASE_E_RETAINED_FOR_FURTHER_REPLAY}:
+            quarantined_ids.add(candidate_id)
+            if replay_decision == PHASE_D_PROMOTION_CANDIDATE:
+                quarantined_later_would_work_ids.add(candidate_id)
+    mutation_candidate = live_learning_feedback.get("mutation_candidate", {})
+    if not isinstance(mutation_candidate, dict):
+        mutation_candidate = {}
+    mutation_score = _to_float(mutation_candidate.get("mutation_score", 0.0), default=0.0)
+    promotion_state = str((mutation_candidate.get("governance", {}) or {}).get("promotion_state", "pending")).lower()
+    mutation_usefulness = mutation_score if promotion_state == "promoted" else 0.0
+    mutation_noise = mutation_score if promotion_state in {"quarantined", "pending"} else 0.0
+    promoted_total = len(promoted_ids)
+    quarantined_total = len(quarantined_ids)
+    promoted_later_failed = len(promoted_later_failed_ids)
+    quarantined_later_would_work = len(quarantined_later_would_work_ids)
+    promotion_precision = round(
+        (promoted_total - promoted_later_failed) / promoted_total,
+        4,
+    ) if promoted_total else 1.0
+    quarantine_precision = round(
+        (quarantined_total - quarantined_later_would_work) / quarantined_total,
+        4,
+    ) if quarantined_total else 1.0
+    regime = str(regime_context.get("volatility_regime", "unknown"))
+    return {
+        "promoted_modules_total": promoted_total,
+        "promoted_modules_later_failed": promoted_later_failed,
+        "promoted_modules_later_failed_ids": sorted(promoted_later_failed_ids),
+        "quarantined_modules_total": quarantined_total,
+        "quarantined_modules_later_would_work": quarantined_later_would_work,
+        "quarantined_modules_later_would_work_ids": sorted(quarantined_later_would_work_ids),
+        "mutation_usefulness": round(mutation_usefulness, 4),
+        "mutation_noise": round(mutation_noise, 4),
+        "promotion_precision_by_regime": {regime: promotion_precision},
+        "quarantine_precision_by_regime": {regime: quarantine_precision},
+        "replay_evaluated": True,
+        "governed": True,
+    }
+
+
+def _adapt_evolution_parameters(
+    *,
+    previous_state: dict[str, Any],
+    regime_context: dict[str, Any],
+    performance: dict[str, Any],
+) -> tuple[dict[str, Any], list[dict[str, Any]], list[str]]:
+    next_state = {
+        key: _clamp_parameter(previous_state.get(key, default_value))
+        for key, default_value in _DEFAULT_EVOLUTION_PARAMETERS.items()
+    }
+    changes: list[dict[str, Any]] = []
+    reasons: list[str] = []
+
+    def _apply(name: str, delta: float, reason: str) -> None:
+        before = _clamp_parameter(next_state.get(name))
+        after = _clamp_parameter(before + delta)
+        if after == before:
+            return
+        next_state[name] = after
+        reasons.append(reason)
+        changes.append(
+            {
+                "parameter": name,
+                "previous": before,
+                "updated": after,
+                "delta": round(after - before, 4),
+                "reason": reason,
+                "replay_evaluated": True,
+                "governed": True,
+            }
+        )
+
+    volatility_regime = str(regime_context.get("volatility_regime", "medium_volatility"))
+    if volatility_regime == "low_volatility":
+        _apply(
+            "promotion_threshold",
+            0.05,
+            "strict promotion works better in low volatility",
+        )
+        _apply(
+            "exploration_vs_stability_balance",
+            -0.05,
+            "low volatility favors stability over exploration",
+        )
+    elif volatility_regime == "high_volatility":
+        _apply(
+            "mutation_rate",
+            0.1,
+            "faster mutation works better in high volatility",
+        )
+        _apply(
+            "exploration_vs_stability_balance",
+            0.08,
+            "high volatility favors exploration for adaptation",
+        )
+
+    if bool(regime_context.get("weak_module_cluster_detected", False)):
+        _apply(
+            "quarantine_strictness",
+            0.1,
+            "quarantine should tighten after weak-module clusters",
+        )
+
+    if int(performance.get("promoted_modules_later_failed", 0)) > 0:
+        _apply(
+            "promotion_threshold",
+            0.05,
+            "promoted modules later failed under replay-governed execution",
+        )
+    if int(performance.get("quarantined_modules_later_would_work", 0)) > 0:
+        _apply(
+            "quarantine_strictness",
+            -0.05,
+            "quarantined modules later showed replay potential",
+        )
+
+    mutation_noise = _to_float(performance.get("mutation_noise", 0.0), default=0.0)
+    mutation_usefulness = _to_float(performance.get("mutation_usefulness", 0.0), default=0.0)
+    if mutation_noise > mutation_usefulness:
+        _apply(
+            "mutation_rate",
+            -0.05,
+            "mutation usefulness is below noise under replay evaluation",
+        )
+    elif mutation_usefulness > mutation_noise:
+        _apply(
+            "mutation_rate",
+            0.03,
+            "mutation usefulness exceeds noise under replay evaluation",
+        )
+
+    return next_state, changes, sorted(set(reasons))
+
+
+def _update_evolution_parameter_control(
+    *,
+    cycle_dir: Path,
+    iteration_id: str,
+    baseline_summary: dict[str, Any] | None,
+    replay_scope: str,
+    replay_paths: list[str],
+    promotion_paths: list[str],
+    execution_paths: list[str],
+    live_learning_feedback: dict[str, Any],
+    governed_rollback: dict[str, Any],
+    governed_refusal: dict[str, Any],
+) -> dict[str, Any]:
+    control_dir = cycle_dir / "evolution_parameter_control"
+    control_dir.mkdir(parents=True, exist_ok=True)
+    registry_path = control_dir / "evolution_parameter_control_registry.json"
+    registry_payload = read_json_safe(registry_path, default={"iterations": []})
+    if not isinstance(registry_payload, dict):
+        registry_payload = {"iterations": []}
+    iterations = registry_payload.get("iterations", [])
+    if not isinstance(iterations, list):
+        iterations = []
+    previous_state = dict(_DEFAULT_EVOLUTION_PARAMETERS)
+    latest_iteration = None
+    for item in iterations:
+        if not isinstance(item, dict):
+            continue
+        item_iteration = str(item.get("iteration_id", "")).strip()
+        if not item_iteration:
+            continue
+        if item_iteration == iteration_id:
+            continue
+        if latest_iteration is None or item_iteration > latest_iteration:
+            latest_iteration = item_iteration
+            item_state = item.get("parameter_state", {})
+            if isinstance(item_state, dict):
+                previous_state = {
+                    key: _clamp_parameter(item_state.get(key, default_value))
+                    for key, default_value in _DEFAULT_EVOLUTION_PARAMETERS.items()
+                }
+
+    regime_context = _evolution_regime_context(
+        baseline_summary=baseline_summary,
+        replay_paths=replay_paths,
+        replay_scope=replay_scope,
+    )
+    performance = _evolution_parameter_performance(
+        regime_context=regime_context,
+        replay_paths=replay_paths,
+        promotion_paths=promotion_paths,
+        execution_paths=execution_paths,
+        governed_rollback=governed_rollback,
+        live_learning_feedback=live_learning_feedback,
+    )
+    next_state, changes, reasons = _adapt_evolution_parameters(
+        previous_state=previous_state,
+        regime_context=regime_context,
+        performance=performance,
+    )
+    governance_context = {
+        "governed_refusal": governed_refusal,
+        "governed_rollback": governed_rollback,
+        "replay_evaluated": True,
+        "governed": True,
+    }
+    iteration_record = {
+        "iteration_id": iteration_id,
+        "regime_context": regime_context,
+        "performance": performance,
+        "parameter_state": next_state,
+        "parameter_changes": changes,
+        "adaptation_reasons": reasons,
+        "governance_context": governance_context,
+    }
+    iterations_by_id: dict[str, dict[str, Any]] = {}
+    for item in iterations:
+        if not isinstance(item, dict):
+            continue
+        item_iteration = str(item.get("iteration_id", "")).strip()
+        if not item_iteration:
+            continue
+        iterations_by_id[item_iteration] = item
+    iterations_by_id[iteration_id] = iteration_record
+    ordered_iterations = [iterations_by_id[key] for key in sorted(iterations_by_id)]
+    updated_registry_payload = {"iterations": ordered_iterations}
+    write_json_atomic(registry_path, updated_registry_payload)
+
+    by_regime: dict[str, dict[str, Any]] = {}
+    for item in ordered_iterations:
+        regime = str((item.get("regime_context", {}) or {}).get("volatility_regime", "unknown"))
+        regime_bucket = by_regime.setdefault(
+            regime,
+            {
+                "iterations": 0,
+                "promoted_modules_total": 0,
+                "promoted_modules_later_failed": 0,
+                "quarantined_modules_total": 0,
+                "quarantined_modules_later_would_work": 0,
+            },
+        )
+        perf = item.get("performance", {})
+        if not isinstance(perf, dict):
+            perf = {}
+        regime_bucket["iterations"] += 1
+        regime_bucket["promoted_modules_total"] += int(perf.get("promoted_modules_total", 0))
+        regime_bucket["promoted_modules_later_failed"] += int(perf.get("promoted_modules_later_failed", 0))
+        regime_bucket["quarantined_modules_total"] += int(perf.get("quarantined_modules_total", 0))
+        regime_bucket["quarantined_modules_later_would_work"] += int(perf.get("quarantined_modules_later_would_work", 0))
+    for regime, item in by_regime.items():
+        promoted_total = int(item.get("promoted_modules_total", 0))
+        failed_promotions = int(item.get("promoted_modules_later_failed", 0))
+        quarantined_total = int(item.get("quarantined_modules_total", 0))
+        quarantined_misses = int(item.get("quarantined_modules_later_would_work", 0))
+        item["promotion_precision"] = round(
+            (promoted_total - failed_promotions) / promoted_total,
+            4,
+        ) if promoted_total else 1.0
+        item["quarantine_precision"] = round(
+            (quarantined_total - quarantined_misses) / quarantined_total,
+            4,
+        ) if quarantined_total else 1.0
+        item["regime"] = regime
+        item["replay_evaluated"] = True
+        item["governed"] = True
+    parameter_performance_by_regime = {
+        "iteration_id": iteration_id,
+        "by_regime": {key: by_regime[key] for key in sorted(by_regime)},
+    }
+
+    state_path = control_dir / f"parameter_state_{iteration_id}.json"
+    changes_path = control_dir / f"parameter_changes_{iteration_id}.json"
+    adaptation_reasons_path = control_dir / f"adaptation_reasons_{iteration_id}.json"
+    performance_by_regime_path = control_dir / "parameter_performance_by_regime.json"
+    state_payload = {
+        "iteration_id": iteration_id,
+        "parameter_state": next_state,
+        "previous_parameter_state": previous_state,
+        "regime_context": regime_context,
+        "replay_evaluated": True,
+        "governed": True,
+    }
+    changes_payload = {
+        "iteration_id": iteration_id,
+        "parameter_changes": changes,
+        "replay_evaluated": True,
+        "governed": True,
+    }
+    reasons_payload = {
+        "iteration_id": iteration_id,
+        "adaptation_reasons": reasons,
+        "governance_context": governance_context,
+    }
+    write_json_atomic(state_path, state_payload)
+    write_json_atomic(changes_path, changes_payload)
+    write_json_atomic(adaptation_reasons_path, reasons_payload)
+    write_json_atomic(performance_by_regime_path, parameter_performance_by_regime)
+    return {
+        "parameter_state": next_state,
+        "parameter_changes": changes,
+        "adaptation_reasons": reasons,
+        "performance": performance,
+        "regime_context": regime_context,
+        "parameter_state_path": str(state_path),
+        "parameter_changes_path": str(changes_path),
+        "adaptation_reasons_path": str(adaptation_reasons_path),
+        "parameter_performance_by_regime_path": str(performance_by_regime_path),
+        "registry_path": str(registry_path),
+    }
+
+
 def _write_cycle_self_audit_artifact(
     *,
     cycle_dir: Path,
@@ -3286,6 +3665,18 @@ def run_continuous_governed_improvement_cycle(
         feature_contributors={},
         replay_scope=replay_scope,
     )
+    evolution_parameter_control = _update_evolution_parameter_control(
+        cycle_dir=cycle_dir,
+        iteration_id=normalized_iteration_id,
+        baseline_summary=baseline_summary,
+        replay_scope=replay_scope,
+        replay_paths=replay_judgment.get("sandbox_judgments", []),
+        promotion_paths=promotion_governance.get("promotion_governance_artifacts", []),
+        execution_paths=execution_governance.get("execution_governance_artifacts", []),
+        live_learning_feedback=live_learning_feedback,
+        governed_rollback=governed_rollback,
+        governed_refusal=governed_refusal,
+    )
     mutation_candidates_path = Path(str(live_learning_feedback.get("paths", {}).get("mutation_candidates", "")))
     mutation_candidate_payload = read_json_safe(mutation_candidates_path, default={"mutation_candidates": []})
     if not isinstance(mutation_candidate_payload, dict):
@@ -3344,6 +3735,7 @@ def run_continuous_governed_improvement_cycle(
         "invalid_artifact_quarantine": invalid_artifact_quarantine,
         "governed_refusal": governed_refusal,
         "live_learning_feedback": live_learning_feedback,
+        "evolution_parameter_control": evolution_parameter_control,
         "autonomous_behavior_layer": autonomous_behavior,
         "self_evolving_indicator_layer": self_evolving_indicator,
         "cycle_recovery": {
@@ -3459,6 +3851,7 @@ def run_continuous_governed_improvement_cycle(
         "invalid_artifact_quarantine": invalid_artifact_quarantine,
         "governed_refusal": governed_refusal,
         "live_learning_feedback": live_learning_feedback,
+        "evolution_parameter_control": evolution_parameter_control,
         "autonomous_behavior_layer": autonomous_behavior,
         "self_evolving_indicator_layer": self_evolving_indicator,
         "self_audit_artifact": self_audit_artifact,
