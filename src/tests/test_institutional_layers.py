@@ -35,10 +35,23 @@ def test_strategy_intelligence_signal_fields_and_artifacts(tmp_path: Path) -> No
         )
     )
     signal = output["signal"]
+    advanced_modules = signal["advanced_modules"]["module_results"]
 
     assert "signal_score" in signal
     assert "confidence" in signal
     assert isinstance(signal["feature_contributors"], dict)
+    for detector_name in (
+        "liquidity_sweep",
+        "compression_expansion",
+        "session_behavior",
+        "market_regime",
+        "execution_quality",
+    ):
+        assert detector_name in advanced_modules
+        payload = advanced_modules[detector_name]["payload"]
+        assert "confidence" in payload
+        assert "confidence_level" in payload
+        assert detector_name in signal["feature_contributors"]
     assert (memory_root / "strategy_intelligence" / "signal_quality_registry.json").exists()
     assert (memory_root / "strategy_intelligence" / "signal_feature_scores.json").exists()
     assert (memory_root / "strategy_intelligence" / "strategy_confidence_state.json").exists()
