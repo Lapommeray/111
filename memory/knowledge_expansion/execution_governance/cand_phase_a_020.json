@@ -1,0 +1,19 @@
+{
+  "candidate_id": "cand_phase_a_020",
+  "module_name": "sandbox_cand_phase_a_020",
+  "truth_class": "failure",
+  "governance_source_path": "memory/knowledge_expansion/promotion_governance/cand_phase_a_020.json",
+  "execution_governance_timestamp": "2026-03-15T06:39:16.190224+00:00",
+  "governance_decision": "promotion_candidate",
+  "execution_decision": "eligible_for_controlled_execution_review",
+  "execution_reason": "Sandbox module improved replay outcome versus baseline.",
+  "execution_status": "pending_controlled_execution_review",
+  "manual_approval_required": true,
+  "live_activation_allowed": false,
+  "risk_constraints": {
+    "live_execution_blocked": true,
+    "auto_live_activation": false,
+    "controlled_execution_review_required": true
+  },
+  "governor_version": "phase_f_governor_v1"
+}
