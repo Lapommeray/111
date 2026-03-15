@@ -137,6 +137,10 @@ def test_execution_state_to_dict_shape() -> None:
         mt5_live_execution_enabled=False,
         mt5_auto_stop_active=False,
         mt5_controlled_execution={"order_result": {"status": "refused"}},
+        capital_guard={"trade_refused": False},
+        strategy_intelligence={"signal_score": 0.7},
+        live_learning_loop={"mutation_candidate": {"candidate_id": "cand_1"}},
+        monitoring_state={"system_health": "healthy"},
     )
     payload = state.to_dict()
     assert payload["symbol"] == "XAUUSD"
@@ -153,3 +157,7 @@ def test_execution_state_to_dict_shape() -> None:
     assert payload["mt5_live_execution_enabled"] is False
     assert payload["mt5_auto_stop_active"] is False
     assert payload["mt5_controlled_execution"]["order_result"]["status"] == "refused"
+    assert payload["capital_guard"]["trade_refused"] is False
+    assert payload["strategy_intelligence"]["signal_score"] == 0.7
+    assert payload["live_learning_loop"]["mutation_candidate"]["candidate_id"] == "cand_1"
+    assert payload["monitoring_state"]["system_health"] == "healthy"

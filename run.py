@@ -18,6 +18,7 @@ from src.evolution.gap_discovery import GapDiscovery
 from src.evolution.promoter import Promoter
 from src.evolution.self_inspector import SelfInspector
 from src.evolution.verifier import Verifier
+from src.evolution.experimental_module_spec_flow import run_continuous_governed_improvement_cycle
 from src.evolution.knowledge_expansion_orchestrator import run_knowledge_expansion_phase_a
 from src.features.liquidity import assess_liquidity_state
 from src.features.market_structure import classify_market_structure
@@ -28,11 +29,15 @@ from src.indicator.signal_model import build_signal_output
 from src.memory.pattern_store import PatternStore, PatternStoreConfig
 from src.memory.self_coder import SelfCoder
 from src.memory.tracker import OutcomeTracker
+from src.monitoring.system_state import update_system_monitor_state
 from src.mt5.adapter import MT5Adapter, MT5Config
 from src.mt5.execution_state import ExecutionState
 from src.mt5.symbol_guard import SymbolGuard
 from src.pipeline import OversoulDirector, run_advanced_modules, state_to_dict
+from src.learning.live_feedback import process_live_trade_feedback
+from src.risk.capital_guard import evaluate_capital_protection
 from src.scoring.confidence_score import compute_confidence
+from src.strategy.intelligence import score_signal_intelligence
 from src.utils import normalize_reasons, register_generated_artifact, write_json_atomic
 
 
@@ -839,7 +844,9 @@ def _build_compact_signal_payload(signal_payload: dict[str, Any]) -> dict[str, A
     compact = {
         "symbol": signal_payload.get("symbol", "XAUUSD"),
         "action": signal_payload.get("action", "WAIT"),
+        "signal_score": signal_payload.get("signal_score", 0.0),
         "confidence": signal_payload.get("confidence", 0.0),
+        "feature_contributors": signal_payload.get("feature_contributors", {}),
         "reasons": signal_payload.get("reasons", []),
         "blocked": signal_payload.get("blocked", False),
         "setup_classification": signal_payload.get("setup_classification", "observe"),
@@ -859,6 +866,8 @@ def _build_compact_signal_payload(signal_payload: dict[str, Any]) -> dict[str, A
             ),
         },
         "generated_code_visibility": signal_payload.get("generated_code_visibility", {}),
+        "capital_guard": signal_payload.get("capital_guard", {}),
+        "live_learning_loop": signal_payload.get("live_learning_loop", {}),
         "evolution_kernel": {
             "enabled": signal_payload.get("evolution_kernel", {}).get("enabled", False),
             "gap_count": signal_payload.get("evolution_kernel", {}).get("gap_count", 0),
@@ -1054,6 +1063,23 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         liquidity=liquidity,
         spread_points=spread_points,
     )
+    strategy_intelligence = score_signal_intelligence(
+        memory_root=config.memory_root,
+        symbol=config.symbol,
+        decision=advanced_state.final_direction,
+        base_confidence=advanced_state.final_confidence,
+        module_results=advanced_state.as_module_payload(),
+        outcomes=trade_outcomes,
+    )
+    capital_guard = evaluate_capital_protection(
+        memory_root=config.memory_root,
+        latest_bar_time=int(bars[-1].get("time", 0)) if bars else 0,
+        requested_volume=float(config.live_order_volume),
+        volatility_value=float(
+            advanced_state.module_results.get("volatility", {}).payload.get("volatility_ratio", 1.0)
+        ),
+        latest_outcome=trade_outcomes[-1] if trade_outcomes else {},
+    )
 
     refusal_reasons = [
         "mt5_execution_refused_unsafe_readiness",
@@ -1071,6 +1097,15 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     combined_reasons = normalize_reasons(
         block["reasons"] + advanced_state.blocked_reasons + (refusal_reasons if mt5_unsafe_refusal else [])
     )
+    if bool(capital_guard.get("trade_refused", False)):
+        combined_blocked = True
+        combined_reasons = normalize_reasons(
+            combined_reasons
+            + [
+                "capital_guard_daily_loss_limit_exceeded",
+                f"capital_guard_volume={capital_guard.get('effective_volume', 0.0)}",
+            ]
+        )
 
     decision = advanced_state.final_direction
     reasons = (
@@ -1080,16 +1115,16 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         decision = "WAIT"
 
     fail_safe_state_clear = len(controlled_mt5_readiness.get("fail_safe_blocked_reasons", [])) == 0
-    risk_state_valid = not bool(block.get("blocked", False))
+    risk_state_valid = not bool(block.get("blocked", False)) and not bool(capital_guard.get("trade_refused", False))
     controlled_execution, controlled_execution_state, controlled_execution_paths = _run_controlled_mt5_live_execution(
         memory_root=config.memory_root,
         mode=config.mode,
         symbol=config.symbol,
         decision=decision,
-        confidence=advanced_state.final_confidence,
+        confidence=strategy_intelligence["confidence"],
         bars=bars,
         live_execution_enabled=config.live_execution_enabled,
-        live_order_volume=config.live_order_volume,
+        live_order_volume=float(capital_guard.get("effective_volume", config.live_order_volume)),
         controlled_mt5_readiness=controlled_mt5_readiness,
         readiness_chain=readiness_chain,
         quarantine_state=quarantine_state,
@@ -1148,6 +1183,12 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         mt5_live_execution_enabled=bool(config.live_execution_enabled),
         mt5_auto_stop_active=bool(controlled_execution_state.get("auto_stop_active", False)),
         mt5_controlled_execution=dict(controlled_execution),
+        capital_guard=dict(capital_guard),
+        strategy_intelligence={
+            "signal_score": strategy_intelligence["signal_score"],
+            "confidence": strategy_intelligence["confidence"],
+            "feature_contributors": strategy_intelligence["feature_contributors"],
+        },
     )
 
     snapshot_id = store.record_snapshot(
@@ -1189,8 +1230,15 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         trade_id=trade_id,
         decision=decision,
         bars=bars,
-        confidence=advanced_state.final_confidence,
+        confidence=strategy_intelligence["confidence"],
         reasons=reasons,
+    )
+    updated_trade_outcomes = store.load("trade_outcomes")
+    live_learning = process_live_trade_feedback(
+        memory_root=Path(config.memory_root),
+        trade_outcomes=updated_trade_outcomes,
+        feature_contributors=strategy_intelligence["feature_contributors"],
+        replay_scope="full_replay" if config.mode == "replay" else "recent_live_window",
     )
 
     generated_rules = SelfCoder(store).generate_rules_from_outcomes()
@@ -1226,7 +1274,7 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     signal = build_signal_output(
         symbol=config.symbol,
         action=decision,
-        confidence=advanced_state.final_confidence,
+        confidence=strategy_intelligence["confidence"],
         reasons=reasons,
         block_result={"blocked": combined_blocked, "reasons": combined_reasons},
         structure=structure,
@@ -1254,6 +1302,18 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         "inspection": evolution_result["inspection"],
         "gap_count": len(evolution_result["gaps"]),
         "lifecycle": evolution_result["lifecycle"],
+    }
+    signal_payload["signal_score"] = strategy_intelligence["signal_score"]
+    signal_payload["confidence"] = strategy_intelligence["confidence"]
+    signal_payload["feature_contributors"] = strategy_intelligence["feature_contributors"]
+    signal_payload["live_learning_loop"] = {
+        "latest_trade_evaluation": live_learning["latest_trade_evaluation"],
+        "mutation_candidate": live_learning["mutation_candidate"],
+    }
+    signal_payload["capital_guard"] = {
+        "effective_volume": capital_guard["effective_volume"],
+        "trade_refused": capital_guard["trade_refused"],
+        "daily_loss_check": capital_guard["daily_loss_check"],
     }
 
     if config.compact_output:
@@ -1293,7 +1353,20 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         "rejected": int(status_counts.get("rejected", 0)),
         "archived": int(status_counts.get("archived", 0)),
     }
+    monitoring_state = update_system_monitor_state(
+        memory_root=config.memory_root,
+        execution_state=execution_state.to_dict(),
+        controlled_execution=controlled_execution,
+        trade_outcomes=updated_trade_outcomes,
+        strategy_version="institutional_v1",
+    )
+    execution_state.monitoring_state = monitoring_state["system_state"]
+    execution_state.live_learning_loop = {
+        "latest_trade_evaluation": live_learning["latest_trade_evaluation"],
+        "mutation_candidate": live_learning["mutation_candidate"],
+    }
     status_panel["execution_state"] = execution_state.to_dict()
+    status_panel["system_monitor"] = monitoring_state["system_state"]
 
     return build_indicator_output(
         symbol=config.symbol,
@@ -1337,6 +1410,13 @@ def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
             replay_report=report,
             root=Path(config.knowledge_expansion_root),
             candidate_limit=config.knowledge_candidate_limit,
+        )
+        report["continuous_governed_improvement_cycle"] = run_continuous_governed_improvement_cycle(
+            Path("."),
+            mode="replay",
+            baseline_summary=report.get("summary", {}),
+            replay_scope="evaluation_replay",
+            iteration_id="replay_evaluation",
         )
 
     Path(config.evaluation_output_path).write_text(json.dumps(report, indent=2), encoding="utf-8")

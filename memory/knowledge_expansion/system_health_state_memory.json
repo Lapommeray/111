@@ -1,0 +1,27 @@
+{
+  "governor_version": "phase_j_governor_v1",
+  "latest_health_state": {
+    "timestamp": "2026-03-15T10:27:00.904610+00:00",
+    "health_score": 1.0,
+    "failed_checks": 0,
+    "unsafe_condition": false,
+    "rollback_requested": false,
+    "incident_signals": [],
+    "incident_count": 0,
+    "source_component": "phase_j_monitor"
+  },
+  "state_history": [
+    {
+      "update_id": "014334ac81f3905a",
+      "source_path": "default",
+      "timestamp": "2026-03-15T10:27:00.904610+00:00",
+      "health_score": 1.0,
+      "failed_checks": 0,
+      "unsafe_condition": false,
+      "rollback_requested": false,
+      "incident_signals": [],
+      "incident_count": 0,
+      "source_component": "phase_j_monitor"
+    }
+  ]
+}
