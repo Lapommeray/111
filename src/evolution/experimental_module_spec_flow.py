@@ -3070,7 +3070,7 @@ def _evolution_parameter_performance(
     mutation_score = _to_float(mutation_candidate.get("mutation_score", 0.0), default=0.0)
     promotion_state = str((mutation_candidate.get("governance", {}) or {}).get("promotion_state", "pending")).lower()
     mutation_usefulness = mutation_score if promotion_state == "promoted" else 0.0
-    mutation_noise = (1.0 - mutation_score) if promotion_state in {"quarantined", "pending"} else 0.0
+    mutation_noise = mutation_score if promotion_state in {"quarantined", "pending"} else 0.0
     promoted_total = len(promoted_ids)
     quarantined_total = len(quarantined_ids)
     promoted_later_failed = len(promoted_later_failed_ids)
