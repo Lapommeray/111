@@ -1,1 +1,58 @@
-[]
+[
+  {
+    "timestamp": "2026-03-15T04:30:44.858101+00:00",
+    "trade_id": "blocked_snap_20260315043044855570",
+    "symbol": "XAUUSD",
+    "direction": "WAIT",
+    "status": "skipped",
+    "result": "n/a",
+    "pnl_points": 0.0,
+    "source_reasons": [
+      "structure_liquidity_conflict",
+      "session_filter:off_hours_block"
+    ],
+    "confidence": 0.9983
+  },
+  {
+    "timestamp": "2026-03-15T04:30:44.866762+00:00",
+    "trade_id": "blocked_snap_20260315043044861553",
+    "symbol": "XAUUSD",
+    "direction": "WAIT",
+    "status": "skipped",
+    "result": "n/a",
+    "pnl_points": 0.0,
+    "source_reasons": [
+      "structure_liquidity_conflict",
+      "session_filter:off_hours_block"
+    ],
+    "confidence": 0.9983
+  },
+  {
+    "timestamp": "2026-03-15T04:30:44.877984+00:00",
+    "trade_id": "blocked_snap_20260315043044870269",
+    "symbol": "XAUUSD",
+    "direction": "WAIT",
+    "status": "skipped",
+    "result": "n/a",
+    "pnl_points": 0.0,
+    "source_reasons": [
+      "structure_liquidity_conflict",
+      "session_filter:off_hours_block"
+    ],
+    "confidence": 0.9983
+  },
+  {
+    "timestamp": "2026-03-15T04:30:44.891779+00:00",
+    "trade_id": "blocked_snap_20260315043044881691",
+    "symbol": "XAUUSD",
+    "direction": "WAIT",
+    "status": "skipped",
+    "result": "n/a",
+    "pnl_points": 0.0,
+    "source_reasons": [
+      "structure_liquidity_conflict",
+      "session_filter:off_hours_block"
+    ],
+    "confidence": 0.9983
+  }
+]

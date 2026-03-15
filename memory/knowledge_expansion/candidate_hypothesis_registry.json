@@ -1,0 +1,258 @@
+{
+  "hypotheses": [
+    {
+      "hypothesis_id": "phase_a_019",
+      "created_at": "2026-03-15T04:30:44.894180+00:00",
+      "truth_class": "failure",
+      "truth_class_rationale": "Blocker reasons map to failure truth because they represent risk conditions that prevented execution.",
+      "usefulness_scope": "conditional",
+      "statement": "Assess blocker reason structure_liquidity_conflict in off_hours context: count 4, protective ratio 1.00; useful only when this failure pattern recurs.",
+      "evidence": {
+        "reason": "structure_liquidity_conflict",
+        "count": 4,
+        "blocked_total": 4,
+        "protective_proxy_hits": 4,
+        "protective_ratio": 1.0,
+        "context": {
+          "dominant_session": "off_hours",
+          "dominant_session_ratio": 1.0,
+          "top_blocker_reason": "structure_liquidity_conflict",
+          "regime_proxy": "high_confidence_bias",
+          "action_distribution": {
+            "BUY": 0,
+            "SELL": 0,
+            "WAIT": 4
+          },
+          "confidence_distribution": {
+            "low": 0,
+            "medium": 0,
+            "high": 4
+          }
+        }
+      },
+      "source": "blocker_effect_report",
+      "status": "candidate"
+    },
+    {
+      "hypothesis_id": "phase_a_017",
+      "created_at": "2026-03-15T04:30:44.894436+00:00",
+      "truth_class": "meta-intelligence",
+      "truth_class_rationale": "Module contributes routing/fusion/diagnostic behavior used to govern other evidence. source=meta_conscious_routing.",
+      "usefulness_scope": "conditional",
+      "statement": "Evaluate meta_conscious_routing as meta-intelligence truth in session=off_hours with regime_proxy=high_confidence_bias: avg confidence delta 0.100, alignment strength 0.00, consistency 1.00. Usefulness scope=conditional; validate this as condition-bound contribution.",
+      "evidence": {
+        "module_name": "meta_conscious_routing",
+        "samples": 4,
+        "avg_confidence_delta": 0.1,
+        "directional_alignment": 0,
+        "misalignment": 4,
+        "alignment_strength": 0.0,
+        "directional_consistency": 1.0,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 0.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": -0.1,
+        "drawdown_prevention_proxy": 0.0,
+        "context": {
+          "dominant_session": "off_hours",
+          "dominant_session_ratio": 1.0,
+          "top_blocker_reason": "structure_liquidity_conflict",
+          "regime_proxy": "high_confidence_bias",
+          "action_distribution": {
+            "BUY": 0,
+            "SELL": 0,
+            "WAIT": 4
+          },
+          "confidence_distribution": {
+            "low": 0,
+            "medium": 0,
+            "high": 4
+          }
+        }
+      },
+      "source": "module_contribution_report",
+      "status": "candidate"
+    },
+    {
+      "hypothesis_id": "phase_a_021",
+      "created_at": "2026-03-15T04:30:44.894750+00:00",
+      "truth_class": "timing",
+      "truth_class_rationale": "Session-derived behavior belongs to timing truth because it conditions when actions are reliable.",
+      "usefulness_scope": "conditional",
+      "statement": "Assess timing rule for session=off_hours: blocked 4/4 (rate 1.00) under regime_proxy=high_confidence_bias; usefulness is conditional to this session context.",
+      "evidence": {
+        "session": "off_hours",
+        "blocked": 4,
+        "total": 4,
+        "block_rate": 1.0,
+        "context": {
+          "dominant_session": "off_hours",
+          "dominant_session_ratio": 1.0,
+          "top_blocker_reason": "structure_liquidity_conflict",
+          "regime_proxy": "high_confidence_bias",
+          "action_distribution": {
+            "BUY": 0,
+            "SELL": 0,
+            "WAIT": 4
+          },
+          "confidence_distribution": {
+            "low": 0,
+            "medium": 0,
+            "high": 4
+          }
+        }
+      },
+      "source": "session_report",
+      "status": "candidate"
+    },
+    {
+      "hypothesis_id": "phase_a_020",
+      "created_at": "2026-03-15T04:30:44.895100+00:00",
+      "truth_class": "failure",
+      "truth_class_rationale": "Blocker reasons map to failure truth because they represent risk conditions that prevented execution.",
+      "usefulness_scope": "conditional",
+      "statement": "Assess blocker reason session_filter:off_hours_block in off_hours context: count 4, protective ratio 1.00; useful only when this failure pattern recurs.",
+      "evidence": {
+        "reason": "session_filter:off_hours_block",
+        "count": 4,
+        "blocked_total": 4,
+        "protective_proxy_hits": 4,
+        "protective_ratio": 1.0,
+        "context": {
+          "dominant_session": "off_hours",
+          "dominant_session_ratio": 1.0,
+          "top_blocker_reason": "structure_liquidity_conflict",
+          "regime_proxy": "high_confidence_bias",
+          "action_distribution": {
+            "BUY": 0,
+            "SELL": 0,
+            "WAIT": 4
+          },
+          "confidence_distribution": {
+            "low": 0,
+            "medium": 0,
+            "high": 4
+          }
+        }
+      },
+      "source": "blocker_effect_report",
+      "status": "candidate"
+    },
+    {
+      "hypothesis_id": "phase_a_006",
+      "created_at": "2026-03-15T04:30:44.895500+00:00",
+      "truth_class": "meta-intelligence",
+      "truth_class_rationale": "Module contributes routing/fusion/diagnostic behavior used to govern other evidence. source=invisible_data_miner.",
+      "usefulness_scope": "conditional",
+      "statement": "Evaluate invisible_data_miner as meta-intelligence truth in session=off_hours with regime_proxy=high_confidence_bias: avg confidence delta 0.080, alignment strength 0.00, consistency 1.00. Usefulness scope=conditional; validate this as condition-bound contribution.",
+      "evidence": {
+        "module_name": "invisible_data_miner",
+        "samples": 4,
+        "avg_confidence_delta": 0.08,
+        "directional_alignment": 0,
+        "misalignment": 4,
+        "alignment_strength": 0.0,
+        "directional_consistency": 1.0,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 0.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": -0.08,
+        "drawdown_prevention_proxy": 0.0,
+        "context": {
+          "dominant_session": "off_hours",
+          "dominant_session_ratio": 1.0,
+          "top_blocker_reason": "structure_liquidity_conflict",
+          "regime_proxy": "high_confidence_bias",
+          "action_distribution": {
+            "BUY": 0,
+            "SELL": 0,
+            "WAIT": 4
+          },
+          "confidence_distribution": {
+            "low": 0,
+            "medium": 0,
+            "high": 4
+          }
+        }
+      },
+      "source": "module_contribution_report",
+      "status": "candidate"
+    },
+    {
+      "hypothesis_id": "phase_a_009",
+      "created_at": "2026-03-15T04:30:44.895923+00:00",
+      "truth_class": "timing",
+      "truth_class_rationale": "Module relates to session/time-window behavior, so it is timing truth. source=session_filter.",
+      "usefulness_scope": "conditional",
+      "statement": "Evaluate session_filter as timing truth in session=off_hours with regime_proxy=high_confidence_bias: avg confidence delta -0.080, alignment strength 0.00, consistency 1.00. Usefulness scope=conditional; validate this as condition-bound contribution.",
+      "evidence": {
+        "module_name": "session_filter",
+        "samples": 4,
+        "avg_confidence_delta": -0.08,
+        "directional_alignment": 0,
+        "misalignment": 4,
+        "alignment_strength": 0.0,
+        "directional_consistency": 1.0,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 4,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 1.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": 0.08,
+        "drawdown_prevention_proxy": 0.0,
+        "context": {
+          "dominant_session": "off_hours",
+          "dominant_session_ratio": 1.0,
+          "top_blocker_reason": "structure_liquidity_conflict",
+          "regime_proxy": "high_confidence_bias",
+          "action_distribution": {
+            "BUY": 0,
+            "SELL": 0,
+            "WAIT": 4
+          },
+          "confidence_distribution": {
+            "low": 0,
+            "medium": 0,
+            "high": 4
+          }
+        }
+      },
+      "source": "module_contribution_report",
+      "status": "candidate"
+    }
+  ]
+}
