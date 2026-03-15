@@ -1,0 +1,129 @@
+{
+  "generated_at": "20260315044725",
+  "sandbox_candidates": [
+    {
+      "candidate_id": "cand_phase_a_003",
+      "hypothesis_id": "phase_a_003",
+      "decision": "HOLD_FOR_MORE_DATA",
+      "truth_class": "failure",
+      "candidate_spec": {
+        "purpose": "Assess blocker reason spread_too_wide in london context: count 2, protective ratio 0.67; useful only when this failure pattern recurs.",
+        "inputs": [
+          "advanced_modules",
+          "signal",
+          "status_panel"
+        ],
+        "outputs": [
+          "direction_vote",
+          "confidence_delta",
+          "reasons",
+          "payload"
+        ],
+        "constraints": [
+          "xauusd_first_only",
+          "no_core_strategy_mutation",
+          "json_friendly_artifact_only"
+        ]
+      },
+      "evidence_history": [
+        {
+          "reason": "spread_too_wide",
+          "count": 2,
+          "blocked_total": 3,
+          "protective_proxy_hits": 3,
+          "protective_ratio": 0.6667,
+          "context": {
+            "dominant_session": "london",
+            "dominant_session_ratio": 0.6,
+            "top_blocker_reason": "spread_too_wide",
+            "regime_proxy": "low_confidence_bias",
+            "action_distribution": {},
+            "confidence_distribution": {}
+          }
+        }
+      ]
+    },
+    {
+      "candidate_id": "cand_phase_a_006",
+      "hypothesis_id": "phase_a_006",
+      "decision": "HOLD_FOR_MORE_DATA",
+      "truth_class": "timing",
+      "candidate_spec": {
+        "purpose": "Assess timing rule for session=off_hours: blocked 2/2 (rate 1.00) under regime_proxy=low_confidence_bias; usefulness is conditional to this session context.",
+        "inputs": [
+          "advanced_modules",
+          "signal",
+          "status_panel"
+        ],
+        "outputs": [
+          "direction_vote",
+          "confidence_delta",
+          "reasons",
+          "payload"
+        ],
+        "constraints": [
+          "xauusd_first_only",
+          "no_core_strategy_mutation",
+          "json_friendly_artifact_only"
+        ]
+      },
+      "evidence_history": [
+        {
+          "session": "off_hours",
+          "blocked": 2,
+          "total": 2,
+          "block_rate": 1.0,
+          "context": {
+            "dominant_session": "london",
+            "dominant_session_ratio": 0.6,
+            "top_blocker_reason": "spread_too_wide",
+            "regime_proxy": "low_confidence_bias",
+            "action_distribution": {},
+            "confidence_distribution": {}
+          }
+        }
+      ]
+    },
+    {
+      "candidate_id": "cand_phase_a_005",
+      "hypothesis_id": "phase_a_005",
+      "decision": "HOLD_FOR_MORE_DATA",
+      "truth_class": "timing",
+      "candidate_spec": {
+        "purpose": "Assess timing rule for session=london: blocked 1/3 (rate 0.33) under regime_proxy=low_confidence_bias; usefulness is conditional to this session context.",
+        "inputs": [
+          "advanced_modules",
+          "signal",
+          "status_panel"
+        ],
+        "outputs": [
+          "direction_vote",
+          "confidence_delta",
+          "reasons",
+          "payload"
+        ],
+        "constraints": [
+          "xauusd_first_only",
+          "no_core_strategy_mutation",
+          "json_friendly_artifact_only"
+        ]
+      },
+      "evidence_history": [
+        {
+          "session": "london",
+          "blocked": 1,
+          "total": 3,
+          "block_rate": 0.3333,
+          "context": {
+            "dominant_session": "london",
+            "dominant_session_ratio": 0.6,
+            "top_blocker_reason": "spread_too_wide",
+            "regime_proxy": "low_confidence_bias",
+            "action_distribution": {},
+            "confidence_distribution": {}
+          }
+        }
+      ]
+    }
+  ]
+}

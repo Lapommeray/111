@@ -1,0 +1,691 @@
+{
+  "generated_at": "20260315044725",
+  "hypotheses": [
+    {
+      "hypothesis_id": "phase_a_003",
+      "created_at": "2026-03-15T04:47:25.281795+00:00",
+      "truth_class": "failure",
+      "truth_class_rationale": "Blocker reasons map to failure truth because they represent risk conditions that prevented execution.",
+      "usefulness_scope": "conditional",
+      "statement": "Assess blocker reason spread_too_wide in london context: count 2, protective ratio 0.67; useful only when this failure pattern recurs.",
+      "evidence": {
+        "reason": "spread_too_wide",
+        "count": 2,
+        "blocked_total": 3,
+        "protective_proxy_hits": 3,
+        "protective_ratio": 0.6667,
+        "context": {
+          "dominant_session": "london",
+          "dominant_session_ratio": 0.6,
+          "top_blocker_reason": "spread_too_wide",
+          "regime_proxy": "low_confidence_bias",
+          "action_distribution": {},
+          "confidence_distribution": {}
+        }
+      },
+      "source": "blocker_effect_report",
+      "status": "candidate",
+      "evidence_history": [
+        {
+          "reason": "spread_too_wide",
+          "count": 2,
+          "blocked_total": 3,
+          "protective_proxy_hits": 3,
+          "protective_ratio": 0.6667,
+          "context": {
+            "dominant_session": "london",
+            "dominant_session_ratio": 0.6,
+            "top_blocker_reason": "spread_too_wide",
+            "regime_proxy": "low_confidence_bias",
+            "action_distribution": {},
+            "confidence_distribution": {}
+          }
+        }
+      ],
+      "merged_hypothesis_ids": [
+        "phase_a_003"
+      ]
+    },
+    {
+      "hypothesis_id": "phase_a_002",
+      "created_at": "2026-03-15T04:47:25.282380+00:00",
+      "truth_class": "meta-intelligence",
+      "truth_class_rationale": "Module contributes routing/fusion/diagnostic behavior used to govern other evidence. source=spectral_signal_fusion.",
+      "usefulness_scope": "conditional",
+      "statement": "Evaluate spectral_signal_fusion as meta-intelligence truth in session=london with regime_proxy=low_confidence_bias: avg confidence delta 0.080, alignment strength 0.67, consistency 0.67. Usefulness scope=conditional; validate this as condition-bound contribution.",
+      "evidence": {
+        "module_name": "spectral_signal_fusion",
+        "samples": 3,
+        "avg_confidence_delta": 0.08,
+        "directional_alignment": 2,
+        "misalignment": 1,
+        "alignment_strength": 0.6667,
+        "directional_consistency": 0.6667,
+        "action_alignment": {
+          "aligned": 2,
+          "misaligned": 1,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.666667,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {},
+        "contradiction_reduction_proxy": 0.0,
+        "blocker_protection_strength": 0.0,
+        "confidence_calibration_shift": 0.0,
+        "drawdown_prevention_proxy": 0.0,
+        "context": {
+          "dominant_session": "london",
+          "dominant_session_ratio": 0.6,
+          "top_blocker_reason": "spread_too_wide",
+          "regime_proxy": "low_confidence_bias",
+          "action_distribution": {},
+          "confidence_distribution": {}
+        }
+      },
+      "source": "module_contribution_report",
+      "status": "candidate",
+      "evidence_history": [
+        {
+          "module_name": "spectral_signal_fusion",
+          "samples": 3,
+          "avg_confidence_delta": 0.08,
+          "directional_alignment": 2,
+          "misalignment": 1,
+          "alignment_strength": 0.6667,
+          "directional_consistency": 0.6667,
+          "action_alignment": {
+            "aligned": 2,
+            "misaligned": 1,
+            "wait_aligned": 0,
+            "alignment_ratio": 0.666667,
+            "count_wait_alignment": false
+          },
+          "regime_specific_alignment": {},
+          "contradiction_reduction_proxy": 0.0,
+          "blocker_protection_strength": 0.0,
+          "confidence_calibration_shift": 0.0,
+          "drawdown_prevention_proxy": 0.0,
+          "context": {
+            "dominant_session": "london",
+            "dominant_session_ratio": 0.6,
+            "top_blocker_reason": "spread_too_wide",
+            "regime_proxy": "low_confidence_bias",
+            "action_distribution": {},
+            "confidence_distribution": {}
+          }
+        }
+      ],
+      "merged_hypothesis_ids": [
+        "phase_a_002"
+      ]
+    },
+    {
+      "hypothesis_id": "phase_a_006",
+      "created_at": "2026-03-15T04:47:25.282934+00:00",
+      "truth_class": "timing",
+      "truth_class_rationale": "Session-derived behavior belongs to timing truth because it conditions when actions are reliable.",
+      "usefulness_scope": "conditional",
+      "statement": "Assess timing rule for session=off_hours: blocked 2/2 (rate 1.00) under regime_proxy=low_confidence_bias; usefulness is conditional to this session context.",
+      "evidence": {
+        "session": "off_hours",
+        "blocked": 2,
+        "total": 2,
+        "block_rate": 1.0,
+        "context": {
+          "dominant_session": "london",
+          "dominant_session_ratio": 0.6,
+          "top_blocker_reason": "spread_too_wide",
+          "regime_proxy": "low_confidence_bias",
+          "action_distribution": {},
+          "confidence_distribution": {}
+        }
+      },
+      "source": "session_report",
+      "status": "candidate",
+      "evidence_history": [
+        {
+          "session": "off_hours",
+          "blocked": 2,
+          "total": 2,
+          "block_rate": 1.0,
+          "context": {
+            "dominant_session": "london",
+            "dominant_session_ratio": 0.6,
+            "top_blocker_reason": "spread_too_wide",
+            "regime_proxy": "low_confidence_bias",
+            "action_distribution": {},
+            "confidence_distribution": {}
+          }
+        }
+      ],
+      "merged_hypothesis_ids": [
+        "phase_a_006"
+      ]
+    },
+    {
+      "hypothesis_id": "phase_a_001",
+      "created_at": "2026-03-15T04:47:25.283513+00:00",
+      "truth_class": "timing",
+      "truth_class_rationale": "Module relates to session/time-window behavior, so it is timing truth. source=sessions.",
+      "usefulness_scope": "conditional",
+      "statement": "Evaluate sessions as timing truth in session=london with regime_proxy=low_confidence_bias: avg confidence delta -0.010, alignment strength 0.00, consistency 1.00. Usefulness scope=conditional; validate this as condition-bound contribution.",
+      "evidence": {
+        "module_name": "sessions",
+        "samples": 3,
+        "avg_confidence_delta": -0.01,
+        "directional_alignment": 0,
+        "misalignment": 3,
+        "alignment_strength": 0.0,
+        "directional_consistency": 1.0,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 3,
+          "wait_aligned": 3,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {},
+        "contradiction_reduction_proxy": 0.0,
+        "blocker_protection_strength": 0.0,
+        "confidence_calibration_shift": 0.0,
+        "drawdown_prevention_proxy": 0.0,
+        "context": {
+          "dominant_session": "london",
+          "dominant_session_ratio": 0.6,
+          "top_blocker_reason": "spread_too_wide",
+          "regime_proxy": "low_confidence_bias",
+          "action_distribution": {},
+          "confidence_distribution": {}
+        }
+      },
+      "source": "module_contribution_report",
+      "status": "candidate",
+      "evidence_history": [
+        {
+          "module_name": "sessions",
+          "samples": 3,
+          "avg_confidence_delta": -0.01,
+          "directional_alignment": 0,
+          "misalignment": 3,
+          "alignment_strength": 0.0,
+          "directional_consistency": 1.0,
+          "action_alignment": {
+            "aligned": 0,
+            "misaligned": 3,
+            "wait_aligned": 3,
+            "alignment_ratio": 0.0,
+            "count_wait_alignment": false
+          },
+          "regime_specific_alignment": {},
+          "contradiction_reduction_proxy": 0.0,
+          "blocker_protection_strength": 0.0,
+          "confidence_calibration_shift": 0.0,
+          "drawdown_prevention_proxy": 0.0,
+          "context": {
+            "dominant_session": "london",
+            "dominant_session_ratio": 0.6,
+            "top_blocker_reason": "spread_too_wide",
+            "regime_proxy": "low_confidence_bias",
+            "action_distribution": {},
+            "confidence_distribution": {}
+          }
+        }
+      ],
+      "merged_hypothesis_ids": [
+        "phase_a_001"
+      ]
+    },
+    {
+      "hypothesis_id": "phase_a_005",
+      "created_at": "2026-03-15T04:47:25.284112+00:00",
+      "truth_class": "timing",
+      "truth_class_rationale": "Session-derived behavior belongs to timing truth because it conditions when actions are reliable.",
+      "usefulness_scope": "conditional",
+      "statement": "Assess timing rule for session=london: blocked 1/3 (rate 0.33) under regime_proxy=low_confidence_bias; usefulness is conditional to this session context.",
+      "evidence": {
+        "session": "london",
+        "blocked": 1,
+        "total": 3,
+        "block_rate": 0.3333,
+        "context": {
+          "dominant_session": "london",
+          "dominant_session_ratio": 0.6,
+          "top_blocker_reason": "spread_too_wide",
+          "regime_proxy": "low_confidence_bias",
+          "action_distribution": {},
+          "confidence_distribution": {}
+        }
+      },
+      "source": "session_report",
+      "status": "candidate",
+      "evidence_history": [
+        {
+          "session": "london",
+          "blocked": 1,
+          "total": 3,
+          "block_rate": 0.3333,
+          "context": {
+            "dominant_session": "london",
+            "dominant_session_ratio": 0.6,
+            "top_blocker_reason": "spread_too_wide",
+            "regime_proxy": "low_confidence_bias",
+            "action_distribution": {},
+            "confidence_distribution": {}
+          }
+        }
+      ],
+      "merged_hypothesis_ids": [
+        "phase_a_005"
+      ]
+    },
+    {
+      "hypothesis_id": "phase_a_004",
+      "created_at": "2026-03-15T04:47:25.284718+00:00",
+      "truth_class": "failure",
+      "truth_class_rationale": "Blocker reasons map to failure truth because they represent risk conditions that prevented execution.",
+      "usefulness_scope": "conditional",
+      "statement": "Assess blocker reason low_confidence in london context: count 1, protective ratio 0.33; useful only when this failure pattern recurs.",
+      "evidence": {
+        "reason": "low_confidence",
+        "count": 1,
+        "blocked_total": 3,
+        "protective_proxy_hits": 3,
+        "protective_ratio": 0.3333,
+        "context": {
+          "dominant_session": "london",
+          "dominant_session_ratio": 0.6,
+          "top_blocker_reason": "spread_too_wide",
+          "regime_proxy": "low_confidence_bias",
+          "action_distribution": {},
+          "confidence_distribution": {}
+        }
+      },
+      "source": "blocker_effect_report",
+      "status": "candidate",
+      "evidence_history": [
+        {
+          "reason": "low_confidence",
+          "count": 1,
+          "blocked_total": 3,
+          "protective_proxy_hits": 3,
+          "protective_ratio": 0.3333,
+          "context": {
+            "dominant_session": "london",
+            "dominant_session_ratio": 0.6,
+            "top_blocker_reason": "spread_too_wide",
+            "regime_proxy": "low_confidence_bias",
+            "action_distribution": {},
+            "confidence_distribution": {}
+          }
+        }
+      ],
+      "merged_hypothesis_ids": [
+        "phase_a_004"
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "candidate_id": "cand_phase_a_003",
+      "hypothesis_id": "phase_a_003",
+      "decision": "HOLD_FOR_MORE_DATA",
+      "gates": {
+        "hypothesis_clarity": true,
+        "replay_usefulness": false,
+        "non_duplication": true,
+        "measurable_contribution": true,
+        "no_forbidden_core_mutation": true
+      },
+      "decision_reasons": [
+        "blocker signal emerging",
+        "hold due to unstable evidence"
+      ],
+      "overlap": {
+        "candidate_id": "cand_phase_a_003",
+        "candidate_name": "failure_assess_blocker_reason_spread",
+        "best_existing_match": "sessions",
+        "existing_overlap_score": 0.115,
+        "best_candidate_match": "failure_assess_blocker_reason_low",
+        "candidate_overlap_score": 0.3,
+        "overlap_score": 0.3,
+        "overlap_components": {
+          "truth_class": 0.0,
+          "purpose": 0.0,
+          "inputs": 0.75,
+          "outputs": 0.8,
+          "constraints": 0.75
+        },
+        "is_duplicate_risk": false,
+        "merge_candidate": false,
+        "structural_redundancy": false,
+        "best_existing_signature": {
+          "name": "sessions",
+          "truth_class": "timing",
+          "truth_class_rationale": "Module relates to session/time-window behavior, so it is timing truth. source=sessions.",
+          "purpose": "Existing module sessions classified as timing; Module relates to session/time-window behavior, so it is timing truth. source=sessions. Observed in replay session=london regime_proxy=low_confidence_bias with samples=3, avg_delta=-0.010, dominant_vote=neutral, mean_delta=0.000, payload_keys=none.",
+          "inputs": [
+            "advanced_modules",
+            "bars_context",
+            "signal",
+            "status_panel"
+          ],
+          "outputs": [
+            "confidence_delta",
+            "direction_vote",
+            "health",
+            "payload",
+            "reasons"
+          ],
+          "constraints": [
+            "json_friendly_artifact_only",
+            "no_core_strategy_mutation",
+            "replay_only_governance_comparison",
+            "xauusd_first_only"
+          ]
+        }
+      }
+    },
+    {
+      "candidate_id": "cand_phase_a_002",
+      "hypothesis_id": "phase_a_002",
+      "decision": "REJECT",
+      "gates": {
+        "hypothesis_clarity": true,
+        "replay_usefulness": false,
+        "non_duplication": true,
+        "measurable_contribution": true,
+        "no_forbidden_core_mutation": true
+      },
+      "decision_reasons": [
+        "insufficient directional alignment",
+        "insufficient sample support",
+        "weak contribution delta"
+      ],
+      "overlap": {
+        "candidate_id": "cand_phase_a_002",
+        "candidate_name": "meta-intelligence_evaluate_spectral_signal_fusion",
+        "best_existing_match": "spectral_signal_fusion",
+        "existing_overlap_score": 0.3885,
+        "best_candidate_match": "timing_evaluate_sessions_as_timing",
+        "candidate_overlap_score": 0.3409,
+        "overlap_score": 0.3885,
+        "overlap_components": {
+          "truth_class": 1.0,
+          "purpose": 0.1765,
+          "inputs": 0.75,
+          "outputs": 0.8,
+          "constraints": 0.75
+        },
+        "is_duplicate_risk": false,
+        "merge_candidate": false,
+        "structural_redundancy": false,
+        "best_existing_signature": {
+          "name": "spectral_signal_fusion",
+          "truth_class": "meta-intelligence",
+          "truth_class_rationale": "Module contributes routing/fusion/diagnostic behavior used to govern other evidence. source=spectral_signal_fusion.",
+          "purpose": "Existing module spectral_signal_fusion classified as meta-intelligence; Module contributes routing/fusion/diagnostic behavior used to govern other evidence. source=spectral_signal_fusion. Observed in replay session=london regime_proxy=low_confidence_bias with samples=3, avg_delta=0.080, dominant_vote=neutral, mean_delta=0.000, payload_keys=none.",
+          "inputs": [
+            "advanced_modules",
+            "bars_context",
+            "signal",
+            "status_panel"
+          ],
+          "outputs": [
+            "confidence_delta",
+            "direction_vote",
+            "health",
+            "payload",
+            "reasons"
+          ],
+          "constraints": [
+            "json_friendly_artifact_only",
+            "no_core_strategy_mutation",
+            "replay_only_governance_comparison",
+            "xauusd_first_only"
+          ]
+        }
+      }
+    },
+    {
+      "candidate_id": "cand_phase_a_006",
+      "hypothesis_id": "phase_a_006",
+      "decision": "HOLD_FOR_MORE_DATA",
+      "gates": {
+        "hypothesis_clarity": true,
+        "replay_usefulness": false,
+        "non_duplication": true,
+        "measurable_contribution": true,
+        "no_forbidden_core_mutation": true
+      },
+      "decision_reasons": [
+        "hold due to unstable evidence",
+        "insufficient sample support"
+      ],
+      "overlap": {
+        "candidate_id": "cand_phase_a_006",
+        "candidate_name": "timing_assess_timing_rule_for",
+        "best_existing_match": "sessions",
+        "existing_overlap_score": 0.3727,
+        "best_candidate_match": "timing_assess_timing_rule_for",
+        "candidate_overlap_score": 0.65,
+        "overlap_score": 0.65,
+        "overlap_components": {
+          "truth_class": 1.0,
+          "purpose": 0.1538,
+          "inputs": 0.75,
+          "outputs": 0.8,
+          "constraints": 0.75
+        },
+        "is_duplicate_risk": false,
+        "merge_candidate": false,
+        "structural_redundancy": false,
+        "best_existing_signature": {
+          "name": "sessions",
+          "truth_class": "timing",
+          "truth_class_rationale": "Module relates to session/time-window behavior, so it is timing truth. source=sessions.",
+          "purpose": "Existing module sessions classified as timing; Module relates to session/time-window behavior, so it is timing truth. source=sessions. Observed in replay session=london regime_proxy=low_confidence_bias with samples=3, avg_delta=-0.010, dominant_vote=neutral, mean_delta=0.000, payload_keys=none.",
+          "inputs": [
+            "advanced_modules",
+            "bars_context",
+            "signal",
+            "status_panel"
+          ],
+          "outputs": [
+            "confidence_delta",
+            "direction_vote",
+            "health",
+            "payload",
+            "reasons"
+          ],
+          "constraints": [
+            "json_friendly_artifact_only",
+            "no_core_strategy_mutation",
+            "replay_only_governance_comparison",
+            "xauusd_first_only"
+          ]
+        }
+      }
+    },
+    {
+      "candidate_id": "cand_phase_a_001",
+      "hypothesis_id": "phase_a_001",
+      "decision": "REJECT",
+      "gates": {
+        "hypothesis_clarity": true,
+        "replay_usefulness": false,
+        "non_duplication": true,
+        "measurable_contribution": true,
+        "no_forbidden_core_mutation": true
+      },
+      "decision_reasons": [
+        "insufficient directional alignment",
+        "insufficient sample support",
+        "weak contribution delta"
+      ],
+      "overlap": {
+        "candidate_id": "cand_phase_a_001",
+        "candidate_name": "timing_evaluate_sessions_as_timing",
+        "best_existing_match": "sessions",
+        "existing_overlap_score": 0.365,
+        "best_candidate_match": "timing_assess_timing_rule_for",
+        "candidate_overlap_score": 0.475,
+        "overlap_score": 0.475,
+        "overlap_components": {
+          "truth_class": 1.0,
+          "purpose": 0.1429,
+          "inputs": 0.75,
+          "outputs": 0.8,
+          "constraints": 0.75
+        },
+        "is_duplicate_risk": false,
+        "merge_candidate": false,
+        "structural_redundancy": false,
+        "best_existing_signature": {
+          "name": "sessions",
+          "truth_class": "timing",
+          "truth_class_rationale": "Module relates to session/time-window behavior, so it is timing truth. source=sessions.",
+          "purpose": "Existing module sessions classified as timing; Module relates to session/time-window behavior, so it is timing truth. source=sessions. Observed in replay session=london regime_proxy=low_confidence_bias with samples=3, avg_delta=-0.010, dominant_vote=neutral, mean_delta=0.000, payload_keys=none.",
+          "inputs": [
+            "advanced_modules",
+            "bars_context",
+            "signal",
+            "status_panel"
+          ],
+          "outputs": [
+            "confidence_delta",
+            "direction_vote",
+            "health",
+            "payload",
+            "reasons"
+          ],
+          "constraints": [
+            "json_friendly_artifact_only",
+            "no_core_strategy_mutation",
+            "replay_only_governance_comparison",
+            "xauusd_first_only"
+          ]
+        }
+      }
+    },
+    {
+      "candidate_id": "cand_phase_a_005",
+      "hypothesis_id": "phase_a_005",
+      "decision": "HOLD_FOR_MORE_DATA",
+      "gates": {
+        "hypothesis_clarity": true,
+        "replay_usefulness": false,
+        "non_duplication": true,
+        "measurable_contribution": true,
+        "no_forbidden_core_mutation": true
+      },
+      "decision_reasons": [
+        "hold due to unstable evidence",
+        "insufficient sample support"
+      ],
+      "overlap": {
+        "candidate_id": "cand_phase_a_005",
+        "candidate_name": "timing_assess_timing_rule_for",
+        "best_existing_match": "sessions",
+        "existing_overlap_score": 0.3817,
+        "best_candidate_match": "timing_assess_timing_rule_for",
+        "candidate_overlap_score": 0.65,
+        "overlap_score": 0.65,
+        "overlap_components": {
+          "truth_class": 1.0,
+          "purpose": 0.1667,
+          "inputs": 0.75,
+          "outputs": 0.8,
+          "constraints": 0.75
+        },
+        "is_duplicate_risk": false,
+        "merge_candidate": false,
+        "structural_redundancy": false,
+        "best_existing_signature": {
+          "name": "sessions",
+          "truth_class": "timing",
+          "truth_class_rationale": "Module relates to session/time-window behavior, so it is timing truth. source=sessions.",
+          "purpose": "Existing module sessions classified as timing; Module relates to session/time-window behavior, so it is timing truth. source=sessions. Observed in replay session=london regime_proxy=low_confidence_bias with samples=3, avg_delta=-0.010, dominant_vote=neutral, mean_delta=0.000, payload_keys=none.",
+          "inputs": [
+            "advanced_modules",
+            "bars_context",
+            "signal",
+            "status_panel"
+          ],
+          "outputs": [
+            "confidence_delta",
+            "direction_vote",
+            "health",
+            "payload",
+            "reasons"
+          ],
+          "constraints": [
+            "json_friendly_artifact_only",
+            "no_core_strategy_mutation",
+            "replay_only_governance_comparison",
+            "xauusd_first_only"
+          ]
+        }
+      }
+    },
+    {
+      "candidate_id": "cand_phase_a_004",
+      "hypothesis_id": "phase_a_004",
+      "decision": "REJECT",
+      "gates": {
+        "hypothesis_clarity": true,
+        "replay_usefulness": false,
+        "non_duplication": true,
+        "measurable_contribution": true,
+        "no_forbidden_core_mutation": true
+      },
+      "decision_reasons": [
+        "blocker-protective association too weak",
+        "insufficient sample support"
+      ],
+      "overlap": {
+        "candidate_id": "cand_phase_a_004",
+        "candidate_name": "failure_assess_blocker_reason_low",
+        "best_existing_match": "sessions",
+        "existing_overlap_score": 0.115,
+        "best_candidate_match": "failure_assess_blocker_reason_spread",
+        "candidate_overlap_score": 0.3,
+        "overlap_score": 0.3,
+        "overlap_components": {
+          "truth_class": 0.0,
+          "purpose": 0.0,
+          "inputs": 0.75,
+          "outputs": 0.8,
+          "constraints": 0.75
+        },
+        "is_duplicate_risk": false,
+        "merge_candidate": false,
+        "structural_redundancy": false,
+        "best_existing_signature": {
+          "name": "sessions",
+          "truth_class": "timing",
+          "truth_class_rationale": "Module relates to session/time-window behavior, so it is timing truth. source=sessions.",
+          "purpose": "Existing module sessions classified as timing; Module relates to session/time-window behavior, so it is timing truth. source=sessions. Observed in replay session=london regime_proxy=low_confidence_bias with samples=3, avg_delta=-0.010, dominant_vote=neutral, mean_delta=0.000, payload_keys=none.",
+          "inputs": [
+            "advanced_modules",
+            "bars_context",
+            "signal",
+            "status_panel"
+          ],
+          "outputs": [
+            "confidence_delta",
+            "direction_vote",
+            "health",
+            "payload",
+            "reasons"
+          ],
+          "constraints": [
+            "json_friendly_artifact_only",
+            "no_core_strategy_mutation",
+            "replay_only_governance_comparison",
+            "xauusd_first_only"
+          ]
+        }
+      }
+    }
+  ]
+}
