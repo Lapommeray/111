@@ -577,8 +577,6 @@ def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
             candidate_limit=config.knowledge_candidate_limit,
         )
 
-    )
-
     Path(config.evaluation_output_path).write_text(json.dumps(report, indent=2), encoding="utf-8")
     return report
 
