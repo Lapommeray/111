@@ -12,8 +12,10 @@ from src.evolution.knowledge_expansion_orchestrator import (
 )
 from src.evolution.experimental_module_spec_flow import run_knowledge_expansion_phase_b
 from src.evolution.experimental_module_spec_flow import (
+    generate_sandbox_judgments,
     load_sandbox_module_artifacts,
     run_knowledge_expansion_phase_c,
+    run_knowledge_expansion_phase_d,
 )
 
 __all__ = [
@@ -29,5 +31,7 @@ __all__ = [
     "run_knowledge_expansion_phase_a",
     "run_knowledge_expansion_phase_b",
     "run_knowledge_expansion_phase_c",
+    "run_knowledge_expansion_phase_d",
     "load_sandbox_module_artifacts",
+    "generate_sandbox_judgments",
 ]
