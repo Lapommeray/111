@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from src.evolution.experimental_module_spec_flow import generate_experimental_module_specs
+from src.evolution.experimental_module_spec_flow import run_knowledge_expansion_phase_b
 
 
 REQUIRED_SPEC_KEYS = {
@@ -26,20 +26,19 @@ def _write_validated_registry(path: Path, entries: list[dict]) -> None:
 
 def test_phase_b_creates_experimental_spec_directory(tmp_path: Path) -> None:
     registry_path = tmp_path / "memory" / "knowledge_expansion" / "validated_knowledge_registry.json"
-    output_dir = tmp_path / "memory" / "knowledge_expansion" / "experimental_module_specs"
     _write_validated_registry(
         registry_path,
         entries=[{"candidate_id": "cand_001", "truth_class": "timing", "statement": "test", "decision": "KEEP"}],
     )
 
-    generate_experimental_module_specs(registry_path, output_dir)
+    result = run_knowledge_expansion_phase_b(tmp_path)
+    output_dir = Path(result["experimental_module_specs_dir"])
     assert output_dir.exists()
     assert output_dir.is_dir()
 
 
 def test_phase_b_generates_specs_from_validated_knowledge(tmp_path: Path) -> None:
     registry_path = tmp_path / "memory" / "knowledge_expansion" / "validated_knowledge_registry.json"
-    output_dir = tmp_path / "memory" / "knowledge_expansion" / "experimental_module_specs"
     _write_validated_registry(
         registry_path,
         entries=[
@@ -63,9 +62,10 @@ def test_phase_b_generates_specs_from_validated_knowledge(tmp_path: Path) -> Non
         ],
     )
 
-    result = generate_experimental_module_specs(registry_path, output_dir)
+    result = run_knowledge_expansion_phase_b(tmp_path)
     assert result["experimental_spec_count"] == 2
 
+    output_dir = Path(result["experimental_module_specs_dir"])
     artifacts = sorted(output_dir.glob("*.json"))
     assert len(artifacts) == 2
     assert [path.name for path in artifacts] == ["cand_alpha.json", "cand_beta.json"]
@@ -76,7 +76,6 @@ def test_phase_b_generates_specs_from_validated_knowledge(tmp_path: Path) -> Non
 
 def test_phase_b_deduplicates_by_candidate_id(tmp_path: Path) -> None:
     registry_path = tmp_path / "memory" / "knowledge_expansion" / "validated_knowledge_registry.json"
-    output_dir = tmp_path / "memory" / "knowledge_expansion" / "experimental_module_specs"
     _write_validated_registry(
         registry_path,
         entries=[
@@ -95,18 +94,18 @@ def test_phase_b_deduplicates_by_candidate_id(tmp_path: Path) -> None:
         ],
     )
 
-    result = generate_experimental_module_specs(registry_path, output_dir)
+    result = run_knowledge_expansion_phase_b(tmp_path)
     assert result["experimental_spec_count"] == 1
 
+    output_dir = Path(result["experimental_module_specs_dir"])
     spec_path = output_dir / "cand_repeat.json"
     payload = json.loads(spec_path.read_text(encoding="utf-8"))
     assert payload["hypothesis_statement"] == "updated"
     assert payload["promotion_status"] == "KEEP"
 
 
-def test_phase_b_artifacts_are_governance_json_only(tmp_path: Path) -> None:
+def test_phase_b_artifacts_are_governance_json_only_and_do_not_mutate_execution_path(tmp_path: Path) -> None:
     registry_path = tmp_path / "memory" / "knowledge_expansion" / "validated_knowledge_registry.json"
-    output_dir = tmp_path / "memory" / "knowledge_expansion" / "experimental_module_specs"
     _write_validated_registry(
         registry_path,
         entries=[
@@ -118,9 +117,15 @@ def test_phase_b_artifacts_are_governance_json_only(tmp_path: Path) -> None:
             }
         ],
     )
+    execution_path = tmp_path / "src" / "execution_pipeline.py"
+    execution_path.parent.mkdir(parents=True, exist_ok=True)
+    execution_path.write_text("EXECUTION_PATH = 'stable'\n", encoding="utf-8")
+    before_execution_contents = execution_path.read_text(encoding="utf-8")
 
-    generate_experimental_module_specs(registry_path, output_dir)
+    result = run_knowledge_expansion_phase_b(tmp_path)
+    output_dir = Path(result["experimental_module_specs_dir"])
 
     assert list(output_dir.glob("*.py")) == []
     payload = json.loads((output_dir / "cand_safe.json").read_text(encoding="utf-8"))
     assert set(payload.keys()) == REQUIRED_SPEC_KEYS
+    assert execution_path.read_text(encoding="utf-8") == before_execution_contents
