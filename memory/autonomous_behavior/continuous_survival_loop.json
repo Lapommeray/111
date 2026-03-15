@@ -1,0 +1,45 @@
+{
+  "loop": [
+    "trade",
+    "review_results",
+    "detect_mistakes",
+    "adjust_aggression",
+    "resume_or_pause_trading"
+  ],
+  "decision": "resume",
+  "reasons": {
+    "behavior_adjustment": {
+      "position_size_multiplier": 1.0,
+      "drawdown_points": 0.0,
+      "loss_streak": 0,
+      "refuse_weak_setups": false,
+      "tighten_execution_after_failures": false,
+      "switch_off_trading_in_bad_regimes": false,
+      "trading_enabled": true,
+      "path": "memory/autonomous_behavior/behavior_adjustment.json"
+    },
+    "capital_survival": {
+      "pause_after_consecutive_losses_n": 3,
+      "consecutive_losses": 0,
+      "drawdown_points": 0.0,
+      "pause_trading": false,
+      "reduce_risk_after_drawdown": false,
+      "survival_mode": false,
+      "resume_only_after_stable_conditions": false,
+      "risk_multiplier": 1.0,
+      "path": "memory/autonomous_behavior/capital_survival.json"
+    },
+    "environment_anomalies": {
+      "anomalies": {
+        "stale_price_data": false,
+        "mt5_readiness_failures": false,
+        "abnormal_spreads": false,
+        "repeated_execution_failures": false,
+        "slippage_deterioration": false
+      },
+      "trigger_refusal": false,
+      "trigger_pause": false,
+      "path": "memory/autonomous_behavior/environment_anomalies.json"
+    }
+  }
+}

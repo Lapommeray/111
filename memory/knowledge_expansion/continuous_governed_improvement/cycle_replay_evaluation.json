@@ -396,6 +396,635 @@
       "mutation_candidates": "memory/live_trade_feedback/mutation_candidates.json"
     }
   },
+  "autonomous_behavior_layer": {
+    "market_regime_classifier": {
+      "regime": "range",
+      "base_signal_confidence": 0.5,
+      "adjusted_signal_confidence": 0.475,
+      "base_risk_size": 1.0,
+      "adjusted_risk_size": 0.85,
+      "confidence_multiplier": 0.95,
+      "risk_multiplier": 0.85,
+      "path": "memory/autonomous_behavior/market_regime_classifier.json"
+    },
+    "behavior_adjustment_engine": {
+      "position_size_multiplier": 1.0,
+      "drawdown_points": 0.0,
+      "loss_streak": 0,
+      "refuse_weak_setups": false,
+      "tighten_execution_after_failures": false,
+      "switch_off_trading_in_bad_regimes": false,
+      "trading_enabled": true,
+      "path": "memory/autonomous_behavior/behavior_adjustment.json"
+    },
+    "trade_review_engine": {
+      "trade_reviews": [],
+      "repeated_failure_patterns": [],
+      "path": "memory/trade_review/trade_reviews.json"
+    },
+    "strategy_comparison_engine": {
+      "current_strategy_score": 0.0,
+      "promoted_strategies": [],
+      "quarantined_strategies": [
+        {
+          "candidate_id": "b4cfc0eeaa7cc29e",
+          "decision": "quarantine",
+          "reason": "weaker_or_unvalidated_strategy_logic",
+          "replay_validation_required": true,
+          "replay_validation_passed": false
+        }
+      ],
+      "path": "memory/autonomous_behavior/strategy_comparison.json"
+    },
+    "memory_maintenance_engine": {
+      "low_value_patterns_pruned": 0,
+      "history_compression": {
+        "before": 0,
+        "after": 0
+      },
+      "deleted_stale_artifacts": [],
+      "retained_high_performance_patterns": [],
+      "path": "memory/autonomous_behavior/memory_maintenance.json"
+    },
+    "environment_anomaly_detection": {
+      "anomalies": {
+        "stale_price_data": false,
+        "mt5_readiness_failures": false,
+        "abnormal_spreads": false,
+        "repeated_execution_failures": false,
+        "slippage_deterioration": false
+      },
+      "trigger_refusal": false,
+      "trigger_pause": false,
+      "path": "memory/autonomous_behavior/environment_anomalies.json"
+    },
+    "capital_survival_engine": {
+      "pause_after_consecutive_losses_n": 3,
+      "consecutive_losses": 0,
+      "drawdown_points": 0.0,
+      "pause_trading": false,
+      "reduce_risk_after_drawdown": false,
+      "survival_mode": false,
+      "resume_only_after_stable_conditions": false,
+      "risk_multiplier": 1.0,
+      "path": "memory/autonomous_behavior/capital_survival.json"
+    },
+    "internal_ranking_systems": {
+      "setup_performance": [],
+      "session_performance": [],
+      "regime_performance": [],
+      "detector_contribution": [],
+      "path": "memory/autonomous_behavior/internal_rankings.json"
+    },
+    "research_generator": {
+      "new_detector_ideas": [
+        "detector_for_execution_quality_drift"
+      ],
+      "new_feature_combinations": [
+        "regime+execution_quality"
+      ],
+      "mutation_candidates": [
+        {
+          "candidate_id": "b4cfc0eeaa7cc29e",
+          "source": "strategy_comparison"
+        }
+      ],
+      "replay_experiments": [
+        {
+          "experiment_id": "replay_1",
+          "candidate_target": "b4cfc0eeaa7cc29e",
+          "sandbox_governance": {
+            "sandbox_status": "replay_only",
+            "replay_validation_required": true,
+            "promotion_allowed": false
+          }
+        }
+      ],
+      "path": "memory/autonomous_behavior/research_generator.json"
+    },
+    "continuous_survival_loop": {
+      "loop": [
+        "trade",
+        "review_results",
+        "detect_mistakes",
+        "adjust_aggression",
+        "resume_or_pause_trading"
+      ],
+      "decision": "resume",
+      "reasons": {
+        "behavior_adjustment": {
+          "position_size_multiplier": 1.0,
+          "drawdown_points": 0.0,
+          "loss_streak": 0,
+          "refuse_weak_setups": false,
+          "tighten_execution_after_failures": false,
+          "switch_off_trading_in_bad_regimes": false,
+          "trading_enabled": true,
+          "path": "memory/autonomous_behavior/behavior_adjustment.json"
+        },
+        "capital_survival": {
+          "pause_after_consecutive_losses_n": 3,
+          "consecutive_losses": 0,
+          "drawdown_points": 0.0,
+          "pause_trading": false,
+          "reduce_risk_after_drawdown": false,
+          "survival_mode": false,
+          "resume_only_after_stable_conditions": false,
+          "risk_multiplier": 1.0,
+          "path": "memory/autonomous_behavior/capital_survival.json"
+        },
+        "environment_anomalies": {
+          "anomalies": {
+            "stale_price_data": false,
+            "mt5_readiness_failures": false,
+            "abnormal_spreads": false,
+            "repeated_execution_failures": false,
+            "slippage_deterioration": false
+          },
+          "trigger_refusal": false,
+          "trigger_pause": false,
+          "path": "memory/autonomous_behavior/environment_anomalies.json"
+        }
+      },
+      "path": "memory/autonomous_behavior/continuous_survival_loop.json"
+    },
+    "state_path": "memory/autonomous_behavior/autonomous_behavior_state.json"
+  },
+  "self_evolving_indicator_layer": {
+    "autonomous_behavior_layer": {
+      "market_regime_classifier": {
+        "regime": "range",
+        "base_signal_confidence": 0.5,
+        "adjusted_signal_confidence": 0.475,
+        "base_risk_size": 1.0,
+        "adjusted_risk_size": 0.85,
+        "confidence_multiplier": 0.95,
+        "risk_multiplier": 0.85,
+        "path": "memory/autonomous_behavior/market_regime_classifier.json"
+      },
+      "behavior_adjustment_engine": {
+        "position_size_multiplier": 1.0,
+        "drawdown_points": 0.0,
+        "loss_streak": 0,
+        "refuse_weak_setups": false,
+        "tighten_execution_after_failures": false,
+        "switch_off_trading_in_bad_regimes": false,
+        "trading_enabled": true,
+        "path": "memory/autonomous_behavior/behavior_adjustment.json"
+      },
+      "trade_review_engine": {
+        "trade_reviews": [],
+        "repeated_failure_patterns": [],
+        "path": "memory/trade_review/trade_reviews.json"
+      },
+      "strategy_comparison_engine": {
+        "current_strategy_score": 0.0,
+        "promoted_strategies": [],
+        "quarantined_strategies": [
+          {
+            "candidate_id": "b4cfc0eeaa7cc29e",
+            "decision": "quarantine",
+            "reason": "weaker_or_unvalidated_strategy_logic",
+            "replay_validation_required": true,
+            "replay_validation_passed": false
+          }
+        ],
+        "path": "memory/autonomous_behavior/strategy_comparison.json"
+      },
+      "memory_maintenance_engine": {
+        "low_value_patterns_pruned": 0,
+        "history_compression": {
+          "before": 0,
+          "after": 0
+        },
+        "deleted_stale_artifacts": [],
+        "retained_high_performance_patterns": [],
+        "path": "memory/autonomous_behavior/memory_maintenance.json"
+      },
+      "environment_anomaly_detection": {
+        "anomalies": {
+          "stale_price_data": false,
+          "mt5_readiness_failures": false,
+          "abnormal_spreads": false,
+          "repeated_execution_failures": false,
+          "slippage_deterioration": false
+        },
+        "trigger_refusal": false,
+        "trigger_pause": false,
+        "path": "memory/autonomous_behavior/environment_anomalies.json"
+      },
+      "capital_survival_engine": {
+        "pause_after_consecutive_losses_n": 3,
+        "consecutive_losses": 0,
+        "drawdown_points": 0.0,
+        "pause_trading": false,
+        "reduce_risk_after_drawdown": false,
+        "survival_mode": false,
+        "resume_only_after_stable_conditions": false,
+        "risk_multiplier": 1.0,
+        "path": "memory/autonomous_behavior/capital_survival.json"
+      },
+      "internal_ranking_systems": {
+        "setup_performance": [],
+        "session_performance": [],
+        "regime_performance": [],
+        "detector_contribution": [],
+        "path": "memory/autonomous_behavior/internal_rankings.json"
+      },
+      "research_generator": {
+        "new_detector_ideas": [
+          "detector_for_execution_quality_drift"
+        ],
+        "new_feature_combinations": [
+          "regime+execution_quality"
+        ],
+        "mutation_candidates": [
+          {
+            "candidate_id": "b4cfc0eeaa7cc29e",
+            "source": "strategy_comparison"
+          }
+        ],
+        "replay_experiments": [
+          {
+            "experiment_id": "replay_1",
+            "candidate_target": "b4cfc0eeaa7cc29e",
+            "sandbox_governance": {
+              "sandbox_status": "replay_only",
+              "replay_validation_required": true,
+              "promotion_allowed": false
+            }
+          }
+        ],
+        "path": "memory/autonomous_behavior/research_generator.json"
+      },
+      "continuous_survival_loop": {
+        "loop": [
+          "trade",
+          "review_results",
+          "detect_mistakes",
+          "adjust_aggression",
+          "resume_or_pause_trading"
+        ],
+        "decision": "resume",
+        "reasons": {
+          "behavior_adjustment": {
+            "position_size_multiplier": 1.0,
+            "drawdown_points": 0.0,
+            "loss_streak": 0,
+            "refuse_weak_setups": false,
+            "tighten_execution_after_failures": false,
+            "switch_off_trading_in_bad_regimes": false,
+            "trading_enabled": true,
+            "path": "memory/autonomous_behavior/behavior_adjustment.json"
+          },
+          "capital_survival": {
+            "pause_after_consecutive_losses_n": 3,
+            "consecutive_losses": 0,
+            "drawdown_points": 0.0,
+            "pause_trading": false,
+            "reduce_risk_after_drawdown": false,
+            "survival_mode": false,
+            "resume_only_after_stable_conditions": false,
+            "risk_multiplier": 1.0,
+            "path": "memory/autonomous_behavior/capital_survival.json"
+          },
+          "environment_anomalies": {
+            "anomalies": {
+              "stale_price_data": false,
+              "mt5_readiness_failures": false,
+              "abnormal_spreads": false,
+              "repeated_execution_failures": false,
+              "slippage_deterioration": false
+            },
+            "trigger_refusal": false,
+            "trigger_pause": false,
+            "path": "memory/autonomous_behavior/environment_anomalies.json"
+          }
+        },
+        "path": "memory/autonomous_behavior/continuous_survival_loop.json"
+      },
+      "state_path": "memory/autonomous_behavior/autonomous_behavior_state.json"
+    },
+    "capability_generator": {
+      "market_problems": [
+        "feature_gap_detected"
+      ],
+      "capability_candidates": [
+        {
+          "capability_id": "cap_feature_detector",
+          "kind": "new_feature_detector",
+          "problem": "feature_gap_detected",
+          "sandbox_module": "sandbox_cap_feature_detector",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "score": 0.5
+          },
+          "evaluation": {
+            "decision": "quarantine",
+            "reason": "replay_failed"
+          },
+          "governance": {
+            "replay_validation_required": true,
+            "rollback_guarded": true,
+            "quarantine_supported": true
+          }
+        },
+        {
+          "capability_id": "cap_signal_combo",
+          "kind": "new_signal_combination",
+          "problem": "feature_gap_detected",
+          "sandbox_module": "sandbox_cap_signal_combo",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "score": 0.45
+          },
+          "evaluation": {
+            "decision": "quarantine",
+            "reason": "replay_failed"
+          },
+          "governance": {
+            "replay_validation_required": true,
+            "rollback_guarded": true,
+            "quarantine_supported": true
+          }
+        },
+        {
+          "capability_id": "cap_regime_model",
+          "kind": "new_regime_model",
+          "problem": "feature_gap_detected",
+          "sandbox_module": "sandbox_cap_regime_model",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "score": 0.4
+          },
+          "evaluation": {
+            "decision": "quarantine",
+            "reason": "replay_failed"
+          },
+          "governance": {
+            "replay_validation_required": true,
+            "rollback_guarded": true,
+            "quarantine_supported": true
+          }
+        },
+        {
+          "capability_id": "cap_execution_opt",
+          "kind": "new_execution_optimization",
+          "problem": "feature_gap_detected",
+          "sandbox_module": "sandbox_cap_execution_opt",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "score": 0.35
+          },
+          "evaluation": {
+            "decision": "quarantine",
+            "reason": "replay_failed"
+          },
+          "governance": {
+            "replay_validation_required": true,
+            "rollback_guarded": true,
+            "quarantine_supported": true
+          }
+        }
+      ],
+      "promoted_capabilities": [],
+      "quarantined_capabilities": [
+        {
+          "capability_id": "cap_feature_detector",
+          "kind": "new_feature_detector",
+          "problem": "feature_gap_detected",
+          "sandbox_module": "sandbox_cap_feature_detector",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "score": 0.5
+          },
+          "evaluation": {
+            "decision": "quarantine",
+            "reason": "replay_failed"
+          },
+          "governance": {
+            "replay_validation_required": true,
+            "rollback_guarded": true,
+            "quarantine_supported": true
+          }
+        },
+        {
+          "capability_id": "cap_signal_combo",
+          "kind": "new_signal_combination",
+          "problem": "feature_gap_detected",
+          "sandbox_module": "sandbox_cap_signal_combo",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "score": 0.45
+          },
+          "evaluation": {
+            "decision": "quarantine",
+            "reason": "replay_failed"
+          },
+          "governance": {
+            "replay_validation_required": true,
+            "rollback_guarded": true,
+            "quarantine_supported": true
+          }
+        },
+        {
+          "capability_id": "cap_regime_model",
+          "kind": "new_regime_model",
+          "problem": "feature_gap_detected",
+          "sandbox_module": "sandbox_cap_regime_model",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "score": 0.4
+          },
+          "evaluation": {
+            "decision": "quarantine",
+            "reason": "replay_failed"
+          },
+          "governance": {
+            "replay_validation_required": true,
+            "rollback_guarded": true,
+            "quarantine_supported": true
+          }
+        },
+        {
+          "capability_id": "cap_execution_opt",
+          "kind": "new_execution_optimization",
+          "problem": "feature_gap_detected",
+          "sandbox_module": "sandbox_cap_execution_opt",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "score": 0.35
+          },
+          "evaluation": {
+            "decision": "quarantine",
+            "reason": "replay_failed"
+          },
+          "governance": {
+            "replay_validation_required": true,
+            "rollback_guarded": true,
+            "quarantine_supported": true
+          }
+        }
+      ],
+      "paths": {
+        "candidates": "memory/capability_candidates/capability_candidates.json",
+        "registry": "memory/capability_registry/capability_registry.json"
+      }
+    },
+    "self_architecture_engine": {
+      "architectures": [
+        {
+          "architecture": "features_ensemble_scoring",
+          "score": 0.55
+        },
+        {
+          "architecture": "features_regime_split_scoring",
+          "score": 0.51
+        },
+        {
+          "architecture": "features_reinforcement_scoring",
+          "score": 0.47
+        },
+        {
+          "architecture": "features_execution_refinement_layer",
+          "score": 0.43
+        }
+      ],
+      "strongest_architecture": {
+        "architecture": "features_ensemble_scoring",
+        "score": 0.55
+      },
+      "path": "memory/capability_registry/self_architecture_engine.json"
+    },
+    "detector_generator": {
+      "detector_candidates": [
+        {
+          "detector_id": "liquidity_cluster_detector",
+          "linked_capability": "cap_feature_detector",
+          "sandbox_test_passed": false,
+          "governance": {
+            "sandbox_only": true,
+            "replay_required": true
+          }
+        },
+        {
+          "detector_id": "micro_compression_detector",
+          "linked_capability": "cap_feature_detector",
+          "sandbox_test_passed": false,
+          "governance": {
+            "sandbox_only": true,
+            "replay_required": true
+          }
+        },
+        {
+          "detector_id": "trap_probability_detector",
+          "linked_capability": "cap_regime_model",
+          "sandbox_test_passed": false,
+          "governance": {
+            "sandbox_only": true,
+            "replay_required": true
+          }
+        },
+        {
+          "detector_id": "session_imbalance_detector",
+          "linked_capability": "cap_regime_model",
+          "sandbox_test_passed": false,
+          "governance": {
+            "sandbox_only": true,
+            "replay_required": true
+          }
+        },
+        {
+          "detector_id": "volatility_phase_shift_detector",
+          "linked_capability": "cap_regime_model",
+          "sandbox_test_passed": false,
+          "governance": {
+            "sandbox_only": true,
+            "replay_required": true
+          }
+        }
+      ],
+      "path": "memory/capability_candidates/detector_candidates.json"
+    },
+    "knowledge_compression_system": {
+      "deleted_low_value_artifacts": 0,
+      "compressed_history_size": 0,
+      "active_signal_count": 0,
+      "paths": {
+        "compressed_patterns": "memory/compressed_patterns/compressed_patterns.json",
+        "active_patterns": "memory/active_patterns/active_patterns.json",
+        "pruned_patterns": "memory/pruned_patterns/pruned_patterns.json"
+      }
+    },
+    "strategy_evolution_engine": {
+      "strategy_branches": [
+        {
+          "branch_id": "current_strategy",
+          "expectancy": 0.0,
+          "drawdown": 0.0,
+          "stability": 0.0,
+          "trade_frequency": 0,
+          "regime_performance": []
+        },
+        {
+          "branch_id": "mutated_strategy_a",
+          "expectancy": 0.05,
+          "drawdown": 0.0,
+          "stability": 0.03,
+          "trade_frequency": 1,
+          "regime_performance": []
+        }
+      ],
+      "strongest_branch": {
+        "branch_id": "mutated_strategy_a",
+        "expectancy": 0.05,
+        "drawdown": 0.0,
+        "stability": 0.03,
+        "trade_frequency": 1,
+        "regime_performance": []
+      },
+      "path": "memory/capability_registry/strategy_evolution_engine.json"
+    },
+    "survival_intelligence_layer": {
+      "pause_after_consecutive_losses_n": 3,
+      "consecutive_losses": 0,
+      "drawdown_points": 0.0,
+      "pause_trading": false,
+      "reduce_risk_after_drawdown": false,
+      "survival_mode": false,
+      "resume_only_after_stable_conditions": false,
+      "risk_multiplier": 1.0,
+      "path": "memory/autonomous_behavior/capital_survival.json"
+    },
+    "meta_learning_loop": {
+      "loop": [
+        "trade",
+        "review_outcome",
+        "update_feature_ranking",
+        "generate_capability_and_detector_ideas",
+        "mutate_strategy",
+        "replay_test_mutations",
+        "promote_improvements",
+        "repeat"
+      ],
+      "path": "memory/capability_registry/meta_learning_loop.json",
+      "latest_cycle": {
+        "loop": [
+          "trade",
+          "review_outcome",
+          "update_feature_ranking",
+          "generate_capability_and_detector_ideas",
+          "mutate_strategy",
+          "replay_test_mutations",
+          "promote_improvements",
+          "repeat"
+        ],
+        "promoted_capabilities": 0,
+        "detector_candidates": 5,
+        "active_strategy_branch": "mutated_strategy_a"
+      }
+    }
+  },
   "cycle_recovery": {
     "interrupted_cycle_recovered": false,
     "stale_artifacts_detected": false,

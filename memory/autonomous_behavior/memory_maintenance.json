@@ -1,0 +1,9 @@
+{
+  "low_value_patterns_pruned": 0,
+  "history_compression": {
+    "before": 0,
+    "after": 0
+  },
+  "deleted_stale_artifacts": [],
+  "retained_high_performance_patterns": []
+}

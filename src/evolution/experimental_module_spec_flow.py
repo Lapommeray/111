@@ -7,7 +7,11 @@ from pathlib import Path
 from typing import Any
 
 from src.learning.live_feedback import process_live_trade_feedback
+from src.learning.self_evolving_indicator_layer import run_self_evolving_indicator_layer
 from src.utils import read_json_safe, write_json_atomic
+
+_SPREAD_RATIO_ON_GOVERNED_REFUSAL = 2.2
+_SLIPPAGE_RATIO_ON_GOVERNED_ROLLBACK = 1.8
 
 
 def _safe_candidate_filename(candidate_id: str) -> str:
@@ -242,6 +246,7 @@ PHASE_J_DECISION_SEQUENCE = (
 PHASE_J_GOVERNOR_VERSION = "phase_j_governor_v1"
 PHASE_K_MEMORY_VERSION = "phase_k_memory_v1"
 PHASE_L_DISCOVERY_VERSION = "phase_l_discovery_v1"
+PHASE_M_EXPANSION_VERSION = "phase_m_expansion_v1"
 
 
 def _to_float(value: Any, default: float = 0.0) -> float:
@@ -2013,6 +2018,303 @@ def run_knowledge_expansion_phase_l(
     )
 
 
+def generate_autonomous_capability_expansion_artifacts(
+    validated_knowledge_registry_path: Path,
+    output_dir: Path,
+    *,
+    mode: str,
+    registry_path: Path,
+    governance_registry_path: Path,
+    expansion_version: str = PHASE_M_EXPANSION_VERSION,
+) -> dict[str, Any]:
+    feature_dir = output_dir / "feature_modules"
+    detector_dir = output_dir / "market_structure_detectors"
+    adapter_dir = output_dir / "data_source_adapters"
+    validation_dir = output_dir / "sandbox_validations"
+    governance_dir = output_dir / "governance"
+
+    if str(mode).lower() != "replay":
+        return {
+            "autonomous_capability_expansion_enabled": False,
+            "feature_module_proposal_count": 0,
+            "market_structure_detector_proposal_count": 0,
+            "data_source_adapter_stub_count": 0,
+            "sandbox_validation_count": 0,
+            "governance_record_count": 0,
+            "pruned_capability_count": 0,
+            "feature_module_proposals": [],
+            "market_structure_detector_proposals": [],
+            "data_source_adapter_stubs": [],
+            "sandbox_validations": [],
+            "governance_records": [],
+            "feature_module_dir": str(feature_dir),
+            "market_structure_detector_dir": str(detector_dir),
+            "data_source_adapter_dir": str(adapter_dir),
+            "sandbox_validation_dir": str(validation_dir),
+            "governance_dir": str(governance_dir),
+            "autonomous_capability_registry_path": str(registry_path),
+            "autonomous_capability_governance_registry_path": str(governance_registry_path),
+        }
+
+    feature_dir.mkdir(parents=True, exist_ok=True)
+    detector_dir.mkdir(parents=True, exist_ok=True)
+    adapter_dir.mkdir(parents=True, exist_ok=True)
+    validation_dir.mkdir(parents=True, exist_ok=True)
+    governance_dir.mkdir(parents=True, exist_ok=True)
+
+    payload = read_json_safe(validated_knowledge_registry_path, default={"validated_knowledge": []})
+    if not isinstance(payload, dict):
+        payload = {"validated_knowledge": []}
+    validated_items = payload.get("validated_knowledge", [])
+    if not isinstance(validated_items, list):
+        validated_items = []
+
+    deduplicated_by_candidate: dict[str, dict[str, Any]] = {}
+    for item in validated_items:
+        if not isinstance(item, dict):
+            continue
+        candidate_id = str(item.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        deduplicated_by_candidate[candidate_id] = item
+
+    feature_paths: list[str] = []
+    detector_paths: list[str] = []
+    adapter_paths: list[str] = []
+    validation_paths: list[str] = []
+    governance_paths: list[str] = []
+    pruned_count = 0
+
+    generated_capabilities: list[dict[str, Any]] = []
+    now_iso = datetime.now(tz=timezone.utc).isoformat()
+    for candidate_id, item in sorted(deduplicated_by_candidate.items(), key=lambda pair: pair[0]):
+        candidate_slug = _safe_candidate_filename(candidate_id)
+        truth_class = str(item.get("truth_class", "meta-intelligence")).strip() or "meta-intelligence"
+        statement = str(item.get("statement", item.get("hypothesis_statement", ""))).strip()
+        evidence_history = item.get("evidence_history", [])
+        if not isinstance(evidence_history, list):
+            evidence_history = []
+        evidence_points = len(evidence_history)
+
+        feature_path = feature_dir / f"{candidate_slug}.json"
+        feature_payload = {
+            "candidate_id": candidate_id,
+            "capability_kind": "feature_module",
+            "module_name": f"feature_module_{candidate_slug}",
+            "truth_class": truth_class,
+            "hypothesis_statement": statement,
+            "evidence_points": evidence_points,
+            "proposal_timestamp": now_iso,
+            "expansion_version": expansion_version,
+            "sandbox_status": "replay_only",
+            "live_activation_allowed": False,
+        }
+        write_json_atomic(feature_path, feature_payload)
+        feature_paths.append(str(feature_path))
+        generated_capabilities.append(
+            {
+                "candidate_id": candidate_id,
+                "capability_kind": "feature_module",
+                "artifact_path": str(feature_path),
+                "payload": feature_payload,
+            }
+        )
+
+        detector_path = detector_dir / f"{candidate_slug}.json"
+        detector_payload = {
+            "candidate_id": candidate_id,
+            "capability_kind": "market_structure_detector",
+            "detector_name": f"detector_{candidate_slug}",
+            "structure_focus": truth_class,
+            "hypothesis_statement": statement,
+            "evidence_points": evidence_points,
+            "proposal_timestamp": now_iso,
+            "expansion_version": expansion_version,
+            "sandbox_status": "replay_only",
+            "live_activation_allowed": False,
+        }
+        write_json_atomic(detector_path, detector_payload)
+        detector_paths.append(str(detector_path))
+        generated_capabilities.append(
+            {
+                "candidate_id": candidate_id,
+                "capability_kind": "market_structure_detector",
+                "artifact_path": str(detector_path),
+                "payload": detector_payload,
+            }
+        )
+
+        required_data_sources = item.get("required_data_sources", [])
+        if not isinstance(required_data_sources, list):
+            required_data_sources = []
+        available_data_sources = item.get("available_data_sources", [])
+        if not isinstance(available_data_sources, list):
+            available_data_sources = []
+        available_set = {str(source).strip() for source in available_data_sources if str(source).strip()}
+
+        for source_name in sorted({str(source).strip() for source in required_data_sources if str(source).strip()}):
+            if source_name in available_set:
+                continue
+            adapter_slug = _safe_candidate_filename(f"{candidate_id}_{source_name}")
+            adapter_path = adapter_dir / f"{adapter_slug}.json"
+            adapter_payload = {
+                "candidate_id": candidate_id,
+                "capability_kind": "data_source_adapter_stub",
+                "adapter_name": f"adapter_{_safe_candidate_filename(source_name)}",
+                "source_name": source_name,
+                "adapter_status": "inactive_stub",
+                "active": False,
+                "external_data_access": False,
+                "proposal_timestamp": now_iso,
+                "expansion_version": expansion_version,
+                "sandbox_status": "replay_only",
+                "live_activation_allowed": False,
+            }
+            write_json_atomic(adapter_path, adapter_payload)
+            adapter_paths.append(str(adapter_path))
+            generated_capabilities.append(
+                {
+                    "candidate_id": candidate_id,
+                    "capability_kind": "data_source_adapter_stub",
+                    "artifact_path": str(adapter_path),
+                    "payload": adapter_payload,
+                }
+            )
+
+    registry_payload = {
+        "expansion_version": expansion_version,
+        "generated_capabilities": [
+            {
+                "candidate_id": item["candidate_id"],
+                "capability_kind": item["capability_kind"],
+                "artifact_path": item["artifact_path"],
+            }
+            for item in generated_capabilities
+        ],
+    }
+    write_json_atomic(registry_path, registry_payload)
+
+    governance_records: list[dict[str, Any]] = []
+    for item in generated_capabilities:
+        capability_payload = item["payload"]
+        capability_kind = str(item["capability_kind"])
+        candidate_id = str(item["candidate_id"])
+        artifact_path = str(item["artifact_path"])
+        capability_slug = _safe_candidate_filename(f"{candidate_id}_{capability_kind}")
+
+        sandbox_enforced = (
+            str(capability_payload.get("sandbox_status", "")).strip() == "replay_only"
+            and not bool(capability_payload.get("live_activation_allowed", False))
+        )
+        inactive_stub_ok = True
+        if capability_kind == "data_source_adapter_stub":
+            inactive_stub_ok = (
+                str(capability_payload.get("adapter_status", "")).strip() == "inactive_stub"
+                and not bool(capability_payload.get("active", True))
+                and not bool(capability_payload.get("external_data_access", True))
+            )
+
+        validation_passed = sandbox_enforced and inactive_stub_ok
+        validation_payload = {
+            "candidate_id": candidate_id,
+            "capability_kind": capability_kind,
+            "capability_path": artifact_path,
+            "validation_timestamp": now_iso,
+            "validation_scope": "sandbox_only",
+            "checks": {
+                "sandbox_enforced": sandbox_enforced,
+                "inactive_stub_ok": inactive_stub_ok,
+            },
+            "validation_passed": validation_passed,
+        }
+        validation_path = validation_dir / f"{capability_slug}.json"
+        write_json_atomic(validation_path, validation_payload)
+        validation_paths.append(str(validation_path))
+
+        evidence_points = int(capability_payload.get("evidence_points", 0))
+        weak_capability = capability_kind != "data_source_adapter_stub" and evidence_points < 2
+        if not validation_passed:
+            governance_decision = "pruned_invalid_sandbox_state"
+            governance_reason = "sandbox validation failed"
+            pruned = True
+        elif weak_capability:
+            governance_decision = "pruned_weak_capability"
+            governance_reason = "insufficient replay evidence for autonomous expansion"
+            pruned = True
+        elif capability_kind == "data_source_adapter_stub":
+            governance_decision = "retained_inactive_stub"
+            governance_reason = "stub kept inactive pending verified data-source access"
+            pruned = False
+        else:
+            governance_decision = "retained_for_sandbox_replay"
+            governance_reason = "eligible for additional sandbox replay only"
+            pruned = False
+
+        if pruned:
+            pruned_count += 1
+        governance_payload = {
+            "candidate_id": candidate_id,
+            "capability_kind": capability_kind,
+            "capability_path": artifact_path,
+            "sandbox_validation_path": str(validation_path),
+            "governance_timestamp": now_iso,
+            "governance_decision": governance_decision,
+            "governance_reason": governance_reason,
+            "pruned": pruned,
+            "sandbox_status": "replay_only",
+            "live_activation_allowed": False,
+            "governor_version": expansion_version,
+        }
+        governance_path = governance_dir / f"{capability_slug}.json"
+        write_json_atomic(governance_path, governance_payload)
+        governance_paths.append(str(governance_path))
+        governance_records.append(governance_payload)
+
+    governance_registry = {
+        "expansion_version": expansion_version,
+        "governance_records": governance_records,
+    }
+    write_json_atomic(governance_registry_path, governance_registry)
+
+    return {
+        "autonomous_capability_expansion_enabled": True,
+        "feature_module_proposal_count": len(feature_paths),
+        "market_structure_detector_proposal_count": len(detector_paths),
+        "data_source_adapter_stub_count": len(adapter_paths),
+        "sandbox_validation_count": len(validation_paths),
+        "governance_record_count": len(governance_paths),
+        "pruned_capability_count": pruned_count,
+        "feature_module_proposals": feature_paths,
+        "market_structure_detector_proposals": detector_paths,
+        "data_source_adapter_stubs": adapter_paths,
+        "sandbox_validations": validation_paths,
+        "governance_records": governance_paths,
+        "feature_module_dir": str(feature_dir),
+        "market_structure_detector_dir": str(detector_dir),
+        "data_source_adapter_dir": str(adapter_dir),
+        "sandbox_validation_dir": str(validation_dir),
+        "governance_dir": str(governance_dir),
+        "autonomous_capability_registry_path": str(registry_path),
+        "autonomous_capability_governance_registry_path": str(governance_registry_path),
+    }
+
+
+def run_autonomous_capability_expansion_layer(
+    root: Path,
+    *,
+    mode: str,
+) -> dict[str, Any]:
+    knowledge_root = root / "memory" / "knowledge_expansion"
+    output_dir = knowledge_root / "autonomous_capability_expansion"
+    return generate_autonomous_capability_expansion_artifacts(
+        validated_knowledge_registry_path=knowledge_root / "validated_knowledge_registry.json",
+        output_dir=output_dir,
+        mode=mode,
+        registry_path=output_dir / "autonomous_capability_registry.json",
+        governance_registry_path=output_dir / "autonomous_capability_governance_registry.json",
+    )
+
+
 def _deterministic_payload_digest(payload: Any) -> str:
     serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.blake2b(serialized.encode("utf-8"), digest_size=16).hexdigest()
@@ -2984,6 +3286,47 @@ def run_continuous_governed_improvement_cycle(
         feature_contributors={},
         replay_scope=replay_scope,
     )
+    mutation_candidates_path = Path(str(live_learning_feedback.get("paths", {}).get("mutation_candidates", "")))
+    mutation_candidate_payload = read_json_safe(mutation_candidates_path, default={"mutation_candidates": []})
+    if not isinstance(mutation_candidate_payload, dict):
+        mutation_candidate_payload = {"mutation_candidates": []}
+    mutation_candidates = mutation_candidate_payload.get("mutation_candidates", [])
+    if not isinstance(mutation_candidates, list):
+        mutation_candidates = []
+    self_evolving_indicator = run_self_evolving_indicator_layer(
+        memory_root=root / "memory",
+        trade_outcomes=feedback_outcomes,
+        market_state={
+            "structure_state": str(baseline_summary.get("structure_state", "range")) if isinstance(baseline_summary, dict) else "range",
+            "volatility_ratio": _to_float(
+                baseline_summary.get("volatility_ratio", 1.0) if isinstance(baseline_summary, dict) else 1.0,
+                default=1.0,
+            ),
+            "spread_ratio": 1.0 if not governed_refusal.get("refused", False) else _SPREAD_RATIO_ON_GOVERNED_REFUSAL,
+            "slippage_ratio": (
+                1.0 if not governed_rollback.get("triggered", False) else _SLIPPAGE_RATIO_ON_GOVERNED_ROLLBACK
+            ),
+            "stale_price_data": not bool(artifact_integrity.get("all_checks_passed", False)),
+            "mt5_ready": not bool(governed_refusal.get("refused", False)),
+            "recent_setup_confidence": _to_float(
+                baseline_summary.get("confidence", 0.5) if isinstance(baseline_summary, dict) else 0.5,
+                default=0.5,
+            ),
+            "base_signal_confidence": _to_float(
+                baseline_summary.get("confidence", 0.5) if isinstance(baseline_summary, dict) else 0.5,
+                default=0.5,
+            ),
+            "base_risk_size": 1.0,
+        },
+        feature_contributors={},
+        mutation_candidates=mutation_candidates,
+        replay_scope=replay_scope,
+    )
+    autonomous_behavior = self_evolving_indicator.get("autonomous_behavior_layer", {})
+    if not isinstance(autonomous_behavior, dict):
+        autonomous_behavior = {}
+    if autonomous_behavior.get("continuous_survival_loop", {}).get("decision") == "pause":
+        live_activation_blocked = True
 
     cycle_payload = {
         "iteration_id": normalized_iteration_id,
@@ -3001,6 +3344,8 @@ def run_continuous_governed_improvement_cycle(
         "invalid_artifact_quarantine": invalid_artifact_quarantine,
         "governed_refusal": governed_refusal,
         "live_learning_feedback": live_learning_feedback,
+        "autonomous_behavior_layer": autonomous_behavior,
+        "self_evolving_indicator_layer": self_evolving_indicator,
         "cycle_recovery": {
             "interrupted_cycle_recovered": recovering_interrupted_cycle,
             "stale_artifacts_detected": stale_detected,
@@ -3114,6 +3459,8 @@ def run_continuous_governed_improvement_cycle(
         "invalid_artifact_quarantine": invalid_artifact_quarantine,
         "governed_refusal": governed_refusal,
         "live_learning_feedback": live_learning_feedback,
+        "autonomous_behavior_layer": autonomous_behavior,
+        "self_evolving_indicator_layer": self_evolving_indicator,
         "self_audit_artifact": self_audit_artifact,
         "cycle_recovery": cycle_payload["cycle_recovery"],
         "phase_results": phase_results,
