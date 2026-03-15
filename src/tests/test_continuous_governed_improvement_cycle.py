@@ -68,6 +68,11 @@ def test_continuous_cycle_executes_governed_phases(tmp_path: Path) -> None:
     assert phase_results["replay_judgment"]["sandbox_judgment_count"] == 1
     assert phase_results["promotion_governance"]["governance_artifact_count"] == 1
     assert phase_results["execution_governance"]["execution_governance_artifact_count"] == 1
+    assert phase_results["decision_orchestration"]["decision_artifact_count"] == 1
+    assert phase_results["execution_supervision"]["supervision_artifact_count"] == 1
+    assert phase_results["adaptive_portfolio"]["portfolio_artifact_count"] == 1
+    assert phase_results["incident_control"]["incident_artifact_count"] == 1
+    assert phase_results["long_horizon_memory"]["long_horizon_memory_count"] == 1
     assert Path(result["cycle_artifact_path"]).exists()
 
 
@@ -310,3 +315,63 @@ def test_continuous_cycle_partial_resume_reruns_from_first_unsafe_phase(tmp_path
     assert second["cycle_recovery"]["partial_resume_applied"] is True
     assert second["cycle_recovery"]["resumed_phases"] == ["discovery", "experimental_specs"]
     assert second["cycle_recovery"]["rerun_from_phase"] == "sandbox_generation"
+
+
+def test_continuous_cycle_generates_end_to_end_chain_verification_and_self_audit(tmp_path: Path) -> None:
+    _seed_validated_knowledge(tmp_path)
+
+    first = run_continuous_governed_improvement_cycle(
+        tmp_path,
+        mode="replay",
+        baseline_summary={"score": 0.0},
+        iteration_id="pack3-audit",
+    )
+    second = run_continuous_governed_improvement_cycle(
+        tmp_path,
+        mode="replay",
+        baseline_summary={"score": 0.0},
+        iteration_id="pack3-audit",
+    )
+
+    chain_report = first["end_to_end_governance_chain"]
+    assert chain_report["all_checks_passed"] is True
+    assert chain_report["phase_candidate_counts"]["phase_a"] == 1
+    assert chain_report["phase_candidate_counts"]["phase_l"] == 1
+    assert chain_report["traceability_checks"]["phase_k_phase_i_source_paths_valid"] is True
+
+    self_audit_path = Path(first["self_audit_artifact"]["self_audit_path"])
+    self_audit_payload = json.loads(self_audit_path.read_text(encoding="utf-8"))
+    assert self_audit_payload["self_audit_signature"] == first["self_audit_artifact"]["self_audit_signature"]
+    assert second["self_audit_artifact"]["self_audit_signature"] == first["self_audit_artifact"]["self_audit_signature"]
+
+
+def test_continuous_cycle_quarantines_invalid_artifacts_and_refuses_unsafe_continuation(tmp_path: Path) -> None:
+    _seed_validated_knowledge(tmp_path)
+    first = run_continuous_governed_improvement_cycle(
+        tmp_path,
+        mode="replay",
+        baseline_summary={"score": 0.0},
+        iteration_id="pack3-quarantine",
+    )
+    _write_in_progress_cycle_state(tmp_path, "pack3-quarantine", first["phase_results"])
+    _neutralize_cycle_artifact_stale_detection(first["cycle_artifact_path"])
+
+    phase_k_artifact_path = Path(first["phase_results"]["long_horizon_memory"]["long_horizon_memory_artifacts"][0])
+    phase_k_payload = json.loads(phase_k_artifact_path.read_text(encoding="utf-8"))
+    phase_k_payload["phase_i_source_path"] = str(tmp_path / "missing_phase_i_artifact.json")
+    phase_k_artifact_path.write_text(json.dumps(phase_k_payload, indent=2), encoding="utf-8")
+
+    second = run_continuous_governed_improvement_cycle(
+        tmp_path,
+        mode="replay",
+        baseline_summary={"score": 0.0},
+        iteration_id="pack3-quarantine",
+    )
+    cycle_state_payload = json.loads(Path(second["cycle_state_path"]).read_text(encoding="utf-8"))
+
+    assert second["end_to_end_governance_chain"]["all_checks_passed"] is False
+    assert second["invalid_artifact_quarantine"]["quarantine_required"] is True
+    assert second["invalid_artifact_quarantine"]["quarantined_record_count"] >= 1
+    assert second["governed_refusal"]["refused"] is True
+    assert second["governed_refusal"]["safe_to_continue"] is False
+    assert cycle_state_payload["status"] == "refused_unsafe_continuation"
