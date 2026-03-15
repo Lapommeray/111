@@ -29,6 +29,28 @@ def _seed_validated_knowledge(tmp_path: Path) -> None:
     )
 
 
+def _write_in_progress_cycle_state(tmp_path: Path, iteration_id: str, phase_results: dict) -> Path:
+    cycle_dir = tmp_path / "memory" / "knowledge_expansion" / "continuous_governed_improvement"
+    cycle_dir.mkdir(parents=True, exist_ok=True)
+    cycle_state_path = cycle_dir / f"cycle_state_{iteration_id}.json"
+    cycle_state_path.write_text(
+        json.dumps(
+            {
+                "iteration_id": iteration_id,
+                "status": "in_progress",
+                "phase_results": phase_results,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    return cycle_state_path
+
+
+def _neutralize_cycle_artifact_stale_detection(cycle_artifact_path: str) -> None:
+    Path(cycle_artifact_path).write_text(json.dumps({"stale_detection": "disabled_for_resume_test"}, indent=2), encoding="utf-8")
+
+
 def test_continuous_cycle_executes_governed_phases(tmp_path: Path) -> None:
     _seed_validated_knowledge(tmp_path)
 
@@ -202,3 +224,89 @@ def test_continuous_cycle_detects_stale_artifacts_and_applies_safe_refresh(tmp_p
     assert second["cycle_recovery"]["safe_refresh_applied"] is True
     second_cycle_payload = json.loads(Path(second["cycle_artifact_path"]).read_text(encoding="utf-8"))
     assert any("digest_mismatch" in reason for reason in second_cycle_payload["stale_artifact_reasons"])
+
+
+def test_continuous_cycle_detects_decision_chain_anomaly_and_triggers_rollback(tmp_path: Path) -> None:
+    _seed_validated_knowledge(tmp_path)
+    first = run_continuous_governed_improvement_cycle(
+        tmp_path,
+        mode="replay",
+        baseline_summary={"score": 0.0},
+        iteration_id="anomaly",
+    )
+    _write_in_progress_cycle_state(tmp_path, "anomaly", first["phase_results"])
+    _neutralize_cycle_artifact_stale_detection(first["cycle_artifact_path"])
+
+    execution_artifact_path = Path(first["phase_results"]["execution_governance"]["execution_governance_artifacts"][0])
+    execution_payload = json.loads(execution_artifact_path.read_text(encoding="utf-8"))
+    execution_payload["execution_decision"] = "blocked"
+    execution_artifact_path.write_text(json.dumps(execution_payload, indent=2), encoding="utf-8")
+
+    second = run_continuous_governed_improvement_cycle(
+        tmp_path,
+        mode="replay",
+        baseline_summary={"score": 0.0},
+        iteration_id="anomaly",
+    )
+    rolled_back_execution = json.loads(execution_artifact_path.read_text(encoding="utf-8"))
+
+    assert second["cross_phase_anomaly_detection"]["has_anomalies"] is True
+    assert second["governed_rollback"]["triggered"] is True
+    assert rolled_back_execution["execution_decision"] == "blocked"
+    assert rolled_back_execution["live_activation_allowed"] is False
+    assert rolled_back_execution["governed_rollback"]["triggered"] is True
+
+
+def test_continuous_cycle_detects_traceability_issues_and_triggers_rollback(tmp_path: Path) -> None:
+    _seed_validated_knowledge(tmp_path)
+    first = run_continuous_governed_improvement_cycle(
+        tmp_path,
+        mode="replay",
+        baseline_summary={"score": 0.0},
+        iteration_id="trace",
+    )
+    _write_in_progress_cycle_state(tmp_path, "trace", first["phase_results"])
+    _neutralize_cycle_artifact_stale_detection(first["cycle_artifact_path"])
+
+    promotion_artifact_path = Path(first["phase_results"]["promotion_governance"]["promotion_governance_artifacts"][0])
+    promotion_payload = json.loads(promotion_artifact_path.read_text(encoding="utf-8"))
+    promotion_payload["source_judgment_path"] = str(tmp_path / "missing_judgment.json")
+    promotion_artifact_path.write_text(json.dumps(promotion_payload, indent=2), encoding="utf-8")
+
+    second = run_continuous_governed_improvement_cycle(
+        tmp_path,
+        mode="replay",
+        baseline_summary={"score": 0.0},
+        iteration_id="trace",
+    )
+
+    assert second["replay_governance_traceability"]["has_issues"] is True
+    assert second["governed_rollback"]["triggered"] is True
+    assert "replay_to_governance_traceability_failed" in second["governed_rollback"]["trigger_reasons"]
+
+
+def test_continuous_cycle_partial_resume_reruns_from_first_unsafe_phase(tmp_path: Path) -> None:
+    _seed_validated_knowledge(tmp_path)
+    first = run_continuous_governed_improvement_cycle(
+        tmp_path,
+        mode="replay",
+        baseline_summary={"score": 0.0},
+        iteration_id="resume-safe",
+    )
+    _write_in_progress_cycle_state(tmp_path, "resume-safe", first["phase_results"])
+    _neutralize_cycle_artifact_stale_detection(first["cycle_artifact_path"])
+
+    sandbox_artifact_path = Path(first["phase_results"]["sandbox_generation"]["sandbox_module_artifacts"][0])
+    sandbox_artifact_path.write_text("{not-json", encoding="utf-8")
+
+    second = run_continuous_governed_improvement_cycle(
+        tmp_path,
+        mode="replay",
+        baseline_summary={"score": 0.0},
+        iteration_id="resume-safe",
+    )
+
+    assert second["cycle_recovery"]["interrupted_cycle_recovered"] is True
+    assert second["cycle_recovery"]["partial_resume_applied"] is True
+    assert second["cycle_recovery"]["resumed_phases"] == ["discovery", "experimental_specs"]
+    assert second["cycle_recovery"]["rerun_from_phase"] == "sandbox_generation"

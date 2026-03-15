@@ -2126,6 +2126,274 @@ def _refresh_stale_artifacts(
     return True
 
 
+def _phase_result_artifact_paths(phase_name: str, phase_result: Any) -> list[str]:
+    if not isinstance(phase_result, dict):
+        return []
+    artifact_key_by_phase = {
+        "discovery": "advanced_discovery_artifacts",
+        "experimental_specs": "experimental_spec_artifacts",
+        "sandbox_generation": "sandbox_module_artifacts",
+        "replay_judgment": "sandbox_judgments",
+        "promotion_governance": "promotion_governance_artifacts",
+        "execution_governance": "execution_governance_artifacts",
+    }
+    artifact_key = artifact_key_by_phase.get(phase_name, "")
+    artifact_paths = phase_result.get(artifact_key, [])
+    if not isinstance(artifact_paths, list):
+        return []
+    return [str(path) for path in artifact_paths]
+
+
+def _phase_result_safe_to_resume(phase_name: str, phase_result: Any) -> bool:
+    if not isinstance(phase_result, dict):
+        return False
+    count_key_by_phase = {
+        "discovery": "advanced_discovery_count",
+        "experimental_specs": "experimental_spec_count",
+        "sandbox_generation": "sandbox_module_count",
+        "replay_judgment": "sandbox_judgment_count",
+        "promotion_governance": "governance_artifact_count",
+        "execution_governance": "execution_governance_artifact_count",
+    }
+    artifact_paths = _phase_result_artifact_paths(phase_name, phase_result)
+    expected_count = int(phase_result.get(count_key_by_phase.get(phase_name, ""), 0))
+    if expected_count != len(artifact_paths):
+        return False
+    for artifact_path in artifact_paths:
+        artifact_file = Path(artifact_path)
+        if not artifact_file.exists():
+            return False
+        payload = read_json_safe(artifact_file, default=None)
+        if not isinstance(payload, dict):
+            return False
+    return True
+
+
+def _candidate_artifact_payloads(paths: list[str]) -> dict[str, tuple[str, dict[str, Any]]]:
+    candidate_payloads: dict[str, tuple[str, dict[str, Any]]] = {}
+    for path_str in sorted(paths):
+        artifact_path = Path(path_str)
+        payload = read_json_safe(artifact_path, default={})
+        if not isinstance(payload, dict):
+            continue
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        candidate_payloads[candidate_id] = (str(artifact_path), payload)
+    return candidate_payloads
+
+
+def _decision_chain_anomaly_report(
+    replay_paths: list[str],
+    promotion_paths: list[str],
+    execution_paths: list[str],
+) -> dict[str, Any]:
+    replay_by_candidate = _candidate_artifact_payloads(replay_paths)
+    promotion_by_candidate = _candidate_artifact_payloads(promotion_paths)
+    execution_by_candidate = _candidate_artifact_payloads(execution_paths)
+    expected_replay_to_promotion = {
+        PHASE_D_REJECT: PHASE_E_REJECTED,
+        PHASE_D_RETAIN_FOR_FURTHER_REPLAY: PHASE_E_RETAINED_FOR_FURTHER_REPLAY,
+        PHASE_D_PROMOTION_CANDIDATE: PHASE_E_PROMOTION_CANDIDATE,
+    }
+    expected_promotion_to_execution = {
+        PHASE_E_REJECTED: PHASE_F_BLOCKED,
+        PHASE_E_RETAINED_FOR_FURTHER_REPLAY: PHASE_F_MANUAL_REVIEW_REQUIRED,
+        PHASE_E_PROMOTION_CANDIDATE: PHASE_F_ELIGIBLE_FOR_CONTROLLED_EXECUTION_REVIEW,
+    }
+
+    anomalies_by_candidate: dict[str, list[str]] = {}
+    all_candidates = sorted(set(replay_by_candidate) | set(promotion_by_candidate) | set(execution_by_candidate))
+    for candidate_id in all_candidates:
+        anomalies: list[str] = []
+        replay_record = replay_by_candidate.get(candidate_id)
+        promotion_record = promotion_by_candidate.get(candidate_id)
+        execution_record = execution_by_candidate.get(candidate_id)
+        if replay_record is None:
+            anomalies.append("missing_replay_judgment")
+        if promotion_record is None:
+            anomalies.append("missing_promotion_governance")
+        if execution_record is None:
+            anomalies.append("missing_execution_governance")
+        if replay_record and promotion_record:
+            replay_decision = str(replay_record[1].get("decision", "")).strip()
+            promotion_decision = str(promotion_record[1].get("governance_decision", "")).strip()
+            expected_promotion_decision = expected_replay_to_promotion.get(replay_decision, "")
+            if expected_promotion_decision and promotion_decision != expected_promotion_decision:
+                anomalies.append(
+                    f"replay_to_promotion_decision_mismatch:{replay_decision}->{promotion_decision}"
+                )
+        if promotion_record and execution_record:
+            promotion_decision = str(promotion_record[1].get("governance_decision", "")).strip()
+            execution_decision = str(execution_record[1].get("execution_decision", "")).strip()
+            expected_execution_decision = expected_promotion_to_execution.get(promotion_decision, "")
+            if expected_execution_decision and execution_decision != expected_execution_decision:
+                anomalies.append(
+                    f"promotion_to_execution_decision_mismatch:{promotion_decision}->{execution_decision}"
+                )
+        if anomalies:
+            anomalies_by_candidate[candidate_id] = anomalies
+
+    return {
+        "has_anomalies": bool(anomalies_by_candidate),
+        "anomaly_count": sum(len(items) for items in anomalies_by_candidate.values()),
+        "invalid_candidate_ids": sorted(anomalies_by_candidate),
+        "candidate_anomalies": anomalies_by_candidate,
+    }
+
+
+def _replay_governance_traceability_report(
+    replay_paths: list[str],
+    promotion_paths: list[str],
+    execution_paths: list[str],
+) -> dict[str, Any]:
+    replay_by_candidate = _candidate_artifact_payloads(replay_paths)
+    promotion_by_candidate = _candidate_artifact_payloads(promotion_paths)
+    execution_by_candidate = _candidate_artifact_payloads(execution_paths)
+
+    issues_by_candidate: dict[str, list[str]] = {}
+    all_candidates = sorted(set(replay_by_candidate) | set(promotion_by_candidate) | set(execution_by_candidate))
+    for candidate_id in all_candidates:
+        issues: list[str] = []
+        replay_record = replay_by_candidate.get(candidate_id)
+        promotion_record = promotion_by_candidate.get(candidate_id)
+        execution_record = execution_by_candidate.get(candidate_id)
+        if replay_record and promotion_record:
+            replay_path, replay_payload = replay_record
+            promotion_path, promotion_payload = promotion_record
+            source_judgment_path = str(promotion_payload.get("source_judgment_path", "")).strip()
+            if source_judgment_path != replay_path:
+                issues.append("promotion_source_judgment_path_mismatch")
+            source_payload = read_json_safe(Path(source_judgment_path), default={})
+            if not isinstance(source_payload, dict):
+                issues.append("promotion_source_judgment_path_unreadable")
+            elif str(source_payload.get("candidate_id", "")).strip() != candidate_id:
+                issues.append("promotion_source_candidate_mismatch")
+            promotion_phase_d_decision = str(
+                (promotion_payload.get("judgment_summary", {}) or {}).get("phase_d_decision", "")
+            ).strip()
+            replay_decision = str(replay_payload.get("decision", "")).strip()
+            if promotion_phase_d_decision and replay_decision and promotion_phase_d_decision != replay_decision:
+                issues.append("promotion_phase_d_decision_trace_mismatch")
+            _ = promotion_path
+        if promotion_record and execution_record:
+            promotion_path, promotion_payload = promotion_record
+            _, execution_payload = execution_record
+            governance_source_path = str(execution_payload.get("governance_source_path", "")).strip()
+            if governance_source_path != promotion_path:
+                issues.append("execution_governance_source_path_mismatch")
+            source_payload = read_json_safe(Path(governance_source_path), default={})
+            if not isinstance(source_payload, dict):
+                issues.append("execution_governance_source_unreadable")
+            elif str(source_payload.get("candidate_id", "")).strip() != candidate_id:
+                issues.append("execution_governance_source_candidate_mismatch")
+            traced_governance_decision = str(execution_payload.get("governance_decision", "")).strip()
+            expected_governance_decision = str(promotion_payload.get("governance_decision", "")).strip()
+            if traced_governance_decision != expected_governance_decision:
+                issues.append("execution_governance_decision_trace_mismatch")
+        if issues:
+            issues_by_candidate[candidate_id] = issues
+
+    return {
+        "has_issues": bool(issues_by_candidate),
+        "issue_count": sum(len(items) for items in issues_by_candidate.values()),
+        "invalid_candidate_ids": sorted(issues_by_candidate),
+        "candidate_issues": issues_by_candidate,
+    }
+
+
+def _apply_governed_rollback_for_invalid_downstream_chain(
+    *,
+    execution_governance: dict[str, Any],
+    invalid_candidate_ids: set[str],
+    cycle_dir: Path,
+    iteration_id: str,
+    trigger_reasons: list[str],
+) -> dict[str, Any]:
+    if not invalid_candidate_ids:
+        return {
+            "triggered": False,
+            "trigger_reasons": trigger_reasons,
+            "invalid_candidate_ids": [],
+            "rollback_report_path": "",
+            "affected_execution_artifacts": [],
+        }
+
+    rollback_timestamp = datetime.now(tz=timezone.utc).isoformat()
+    affected_execution_artifacts: list[str] = []
+    for artifact_path in execution_governance.get("execution_governance_artifacts", []):
+        path_obj = Path(str(artifact_path))
+        payload = read_json_safe(path_obj, default={})
+        if not isinstance(payload, dict):
+            continue
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        if candidate_id not in invalid_candidate_ids:
+            continue
+        payload["execution_decision"] = PHASE_F_BLOCKED
+        payload["execution_status"] = "blocked_non_live"
+        payload["execution_reason"] = "Governed rollback blocked invalid downstream artifact chain."
+        payload["manual_approval_required"] = True
+        payload["live_activation_allowed"] = False
+        payload["risk_constraints"] = {
+            "live_execution_blocked": True,
+            "auto_live_activation": False,
+            "controlled_execution_review_required": True,
+        }
+        payload["governed_rollback"] = {
+            "triggered": True,
+            "rollback_timestamp": rollback_timestamp,
+            "trigger_reasons": list(trigger_reasons),
+        }
+        write_json_atomic(path_obj, payload)
+        affected_execution_artifacts.append(str(path_obj))
+
+    registry_path = Path(str(execution_governance.get("controlled_execution_registry_path", "")))
+    registry_payload = read_json_safe(registry_path, default={})
+    if isinstance(registry_payload, dict):
+        records = registry_payload.get("execution_records", [])
+        if isinstance(records, list):
+            for record in records:
+                if not isinstance(record, dict):
+                    continue
+                candidate_id = str(record.get("candidate_id", "")).strip()
+                if candidate_id not in invalid_candidate_ids:
+                    continue
+                record["execution_decision"] = PHASE_F_BLOCKED
+                record["execution_status"] = "blocked_non_live"
+                record["execution_reason"] = "Governed rollback blocked invalid downstream artifact chain."
+                record["manual_approval_required"] = True
+                record["live_activation_allowed"] = False
+                record["risk_constraints"] = {
+                    "live_execution_blocked": True,
+                    "auto_live_activation": False,
+                    "controlled_execution_review_required": True,
+                }
+                record["governed_rollback"] = {
+                    "triggered": True,
+                    "rollback_timestamp": rollback_timestamp,
+                    "trigger_reasons": list(trigger_reasons),
+                }
+            write_json_atomic(registry_path, registry_payload)
+
+    rollback_report = {
+        "iteration_id": iteration_id,
+        "rollback_timestamp": rollback_timestamp,
+        "trigger_reasons": list(trigger_reasons),
+        "invalid_candidate_ids": sorted(invalid_candidate_ids),
+        "affected_execution_artifacts": affected_execution_artifacts,
+        "live_activation_allowed": False,
+    }
+    rollback_report_path = cycle_dir / f"governed_rollback_{iteration_id}.json"
+    write_json_atomic(rollback_report_path, rollback_report)
+    return {
+        "triggered": True,
+        "trigger_reasons": list(trigger_reasons),
+        "invalid_candidate_ids": sorted(invalid_candidate_ids),
+        "rollback_report_path": str(rollback_report_path),
+        "affected_execution_artifacts": affected_execution_artifacts,
+    }
+
+
 def run_continuous_governed_improvement_cycle(
     root: Path,
     *,
@@ -2155,31 +2423,83 @@ def run_continuous_governed_improvement_cycle(
         baseline_summary=baseline_summary,
         replay_scope=replay_scope,
     )
-    write_json_atomic(
-        cycle_state_path,
-        {
-            "iteration_id": normalized_iteration_id,
-            "status": "in_progress",
-            "recovery": {"interrupted_cycle_recovered": recovering_interrupted_cycle},
-            "stale_detection": {
-                "detected": stale_detected,
-                "reasons": stale_reasons,
-                "safe_refresh_applied": stale_refreshed,
-            },
-        },
-    )
+    previous_phase_results = {}
+    if recovering_interrupted_cycle and isinstance(previous_state_payload, dict):
+        candidate_previous_results = previous_state_payload.get("phase_results", {})
+        if isinstance(candidate_previous_results, dict):
+            previous_phase_results = candidate_previous_results
 
-    discovery = run_knowledge_expansion_phase_l(root, mode=mode)
-    experimental_specs = run_knowledge_expansion_phase_b(root)
-    sandbox = run_knowledge_expansion_phase_c(root)
-    replay_judgment = run_knowledge_expansion_phase_d(
-        root,
-        mode=mode,
-        baseline_summary=baseline_summary,
-        replay_scope=replay_scope,
-    )
-    promotion_governance = run_knowledge_expansion_phase_e(root, mode=mode)
-    execution_governance = run_knowledge_expansion_phase_f(root, mode=mode)
+    phase_results: dict[str, dict[str, Any]] = {}
+    phase_status: dict[str, str] = {}
+    resumed_phases: list[str] = []
+    rerun_from_phase = ""
+    force_rerun_downstream = False
+
+    def _persist_in_progress_state() -> None:
+        write_json_atomic(
+            cycle_state_path,
+            {
+                "iteration_id": normalized_iteration_id,
+                "status": "in_progress",
+                "recovery": {
+                    "interrupted_cycle_recovered": recovering_interrupted_cycle,
+                    "partial_resume_applied": bool(resumed_phases),
+                    "resumed_phases": list(resumed_phases),
+                    "rerun_from_phase": rerun_from_phase,
+                },
+                "stale_detection": {
+                    "detected": stale_detected,
+                    "reasons": stale_reasons,
+                    "safe_refresh_applied": stale_refreshed,
+                },
+                "phase_status": dict(phase_status),
+                "phase_results": phase_results,
+            },
+        )
+
+    phase_plan: list[tuple[str, Any]] = [
+        ("discovery", lambda: run_knowledge_expansion_phase_l(root, mode=mode)),
+        ("experimental_specs", lambda: run_knowledge_expansion_phase_b(root)),
+        ("sandbox_generation", lambda: run_knowledge_expansion_phase_c(root)),
+        (
+            "replay_judgment",
+            lambda: run_knowledge_expansion_phase_d(
+                root,
+                mode=mode,
+                baseline_summary=baseline_summary,
+                replay_scope=replay_scope,
+            ),
+        ),
+        ("promotion_governance", lambda: run_knowledge_expansion_phase_e(root, mode=mode)),
+        ("execution_governance", lambda: run_knowledge_expansion_phase_f(root, mode=mode)),
+    ]
+
+    for phase_name, runner in phase_plan:
+        previous_phase_result = previous_phase_results.get(phase_name)
+        if (
+            recovering_interrupted_cycle
+            and not force_rerun_downstream
+            and _phase_result_safe_to_resume(phase_name, previous_phase_result)
+        ):
+            phase_results[phase_name] = previous_phase_result
+            phase_status[phase_name] = "resumed"
+            resumed_phases.append(phase_name)
+            _persist_in_progress_state()
+            continue
+
+        if recovering_interrupted_cycle and not rerun_from_phase:
+            rerun_from_phase = phase_name
+        force_rerun_downstream = force_rerun_downstream or recovering_interrupted_cycle
+        phase_results[phase_name] = runner()
+        phase_status[phase_name] = "completed"
+        _persist_in_progress_state()
+
+    discovery = phase_results["discovery"]
+    experimental_specs = phase_results["experimental_specs"]
+    sandbox = phase_results["sandbox_generation"]
+    replay_judgment = phase_results["replay_judgment"]
+    promotion_governance = phase_results["promotion_governance"]
+    execution_governance = phase_results["execution_governance"]
 
     replay_candidate_ids = _artifact_candidate_ids(replay_judgment.get("sandbox_judgments", []))
     promotion_candidate_ids = _artifact_candidate_ids(promotion_governance.get("promotion_governance_artifacts", []))
@@ -2211,6 +2531,34 @@ def run_continuous_governed_improvement_cycle(
         bool(value)
         for key, value in phase_registry_consistency.items()
         if key not in {"candidate_counts"}
+    )
+
+    cross_phase_anomaly_detection = _decision_chain_anomaly_report(
+        replay_judgment.get("sandbox_judgments", []),
+        promotion_governance.get("promotion_governance_artifacts", []),
+        execution_governance.get("execution_governance_artifacts", []),
+    )
+    replay_governance_traceability = _replay_governance_traceability_report(
+        replay_judgment.get("sandbox_judgments", []),
+        promotion_governance.get("promotion_governance_artifacts", []),
+        execution_governance.get("execution_governance_artifacts", []),
+    )
+    rollback_trigger_reasons: list[str] = []
+    if cross_phase_anomaly_detection.get("has_anomalies", False):
+        rollback_trigger_reasons.append("cross_phase_decision_chain_anomaly_detected")
+    if replay_governance_traceability.get("has_issues", False):
+        rollback_trigger_reasons.append("replay_to_governance_traceability_failed")
+    if not phase_registry_consistency.get("all_checks_passed", False):
+        rollback_trigger_reasons.append("cross_phase_registry_consistency_failed")
+
+    rollback_candidates = set(cross_phase_anomaly_detection.get("invalid_candidate_ids", []))
+    rollback_candidates.update(replay_governance_traceability.get("invalid_candidate_ids", []))
+    governed_rollback = _apply_governed_rollback_for_invalid_downstream_chain(
+        execution_governance=execution_governance,
+        invalid_candidate_ids=rollback_candidates if rollback_trigger_reasons else set(),
+        cycle_dir=cycle_dir,
+        iteration_id=normalized_iteration_id,
+        trigger_reasons=rollback_trigger_reasons,
     )
 
     artifact_integrity = {
@@ -2258,6 +2606,8 @@ def run_continuous_governed_improvement_cycle(
         if isinstance(artifact_payload, dict):
             live_flags.append(bool(artifact_payload.get("live_activation_allowed", False)))
     live_activation_blocked = not any(live_flags)
+    if governed_rollback.get("triggered", False):
+        live_activation_blocked = True
 
     cycle_payload = {
         "iteration_id": normalized_iteration_id,
@@ -2268,10 +2618,16 @@ def run_continuous_governed_improvement_cycle(
         "phase_artifact_digests": phase_artifact_digests,
         "artifact_integrity": artifact_integrity,
         "phase_registry_consistency": phase_registry_consistency,
+        "cross_phase_anomaly_detection": cross_phase_anomaly_detection,
+        "replay_governance_traceability": replay_governance_traceability,
+        "governed_rollback": governed_rollback,
         "cycle_recovery": {
             "interrupted_cycle_recovered": recovering_interrupted_cycle,
             "stale_artifacts_detected": stale_detected,
             "safe_refresh_applied": stale_refreshed,
+            "partial_resume_applied": bool(resumed_phases),
+            "resumed_phases": resumed_phases,
+            "rerun_from_phase": rerun_from_phase,
         },
         "stale_artifact_reasons": stale_reasons,
         "phase_counts": {
@@ -2327,6 +2683,14 @@ def run_continuous_governed_improvement_cycle(
                 "reasons": stale_reasons,
                 "safe_refresh_applied": stale_refreshed,
             },
+            "partial_resume": {
+                "applied": bool(resumed_phases),
+                "resumed_phases": resumed_phases,
+                "rerun_from_phase": rerun_from_phase,
+            },
+            "governed_rollback": governed_rollback,
+            "phase_status": phase_status,
+            "phase_results": phase_results,
             "live_activation_blocked": live_activation_blocked,
         },
     )
@@ -2341,13 +2705,9 @@ def run_continuous_governed_improvement_cycle(
         "live_activation_blocked": live_activation_blocked,
         "artifact_integrity": artifact_integrity,
         "phase_registry_consistency": phase_registry_consistency,
+        "cross_phase_anomaly_detection": cross_phase_anomaly_detection,
+        "replay_governance_traceability": replay_governance_traceability,
+        "governed_rollback": governed_rollback,
         "cycle_recovery": cycle_payload["cycle_recovery"],
-        "phase_results": {
-            "discovery": discovery,
-            "experimental_specs": experimental_specs,
-            "sandbox_generation": sandbox,
-            "replay_judgment": replay_judgment,
-            "promotion_governance": promotion_governance,
-            "execution_governance": execution_governance,
-        },
+        "phase_results": phase_results,
     }
