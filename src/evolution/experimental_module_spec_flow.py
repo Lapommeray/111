@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -96,7 +97,7 @@ def generate_sandbox_module_artifacts(
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     generated_paths: list[str] = []
-    generation_timestamp = datetime.now(tz=timezone.utc).isoformat()
+    default_generation_timestamp = datetime.now(tz=timezone.utc).isoformat()
 
     deduplicated_by_candidate: dict[str, tuple[Path, dict[str, Any]]] = {}
     for spec_path in sorted(experimental_specs_dir.glob("*.json")):
@@ -111,6 +112,18 @@ def generate_sandbox_module_artifacts(
     used_filenames: set[str] = set()
     for candidate_id, (spec_path, payload) in sorted(deduplicated_by_candidate.items(), key=lambda pair: pair[0]):
         module_name = f"sandbox_{_safe_candidate_filename(candidate_id)}"
+        target_name = _safe_candidate_filename(candidate_id)
+        if target_name in used_filenames:
+            suffix = hashlib.blake2b(candidate_id.encode("utf-8"), digest_size=6).hexdigest()
+            target_name = f"{target_name}_{suffix}"
+        used_filenames.add(target_name)
+        target_path = output_dir / f"{target_name}.json"
+        existing_artifact = read_json_safe(target_path, default={})
+        generation_timestamp = (
+            str(existing_artifact.get("generation_timestamp", "")).strip()
+            if isinstance(existing_artifact, dict)
+            else ""
+        ) or default_generation_timestamp
         artifact = {
             "candidate_id": candidate_id,
             "module_name": module_name,
@@ -123,12 +136,6 @@ def generate_sandbox_module_artifacts(
             "module_version": "1.0",
         }
 
-        target_name = _safe_candidate_filename(candidate_id)
-        if target_name in used_filenames:
-            suffix = hashlib.blake2b(candidate_id.encode("utf-8"), digest_size=6).hexdigest()
-            target_name = f"{target_name}_{suffix}"
-        used_filenames.add(target_name)
-        target_path = output_dir / f"{target_name}.json"
         write_json_atomic(target_path, artifact)
         generated_paths.append(str(target_path))
 
@@ -324,7 +331,7 @@ def generate_sandbox_judgments(
         deduplicated_by_candidate[candidate_id] = payload
 
     judgment_paths: list[str] = []
-    judgment_timestamp = datetime.now(tz=timezone.utc).isoformat()
+    default_judgment_timestamp = datetime.now(tz=timezone.utc).isoformat()
     used_filenames: set[str] = set()
     for candidate_id, module_payload in sorted(deduplicated_by_candidate.items(), key=lambda pair: pair[0]):
         module_name = str(module_payload.get("module_name", f"sandbox_{_safe_candidate_filename(candidate_id)}"))
@@ -332,6 +339,18 @@ def generate_sandbox_judgments(
         score_delta = module_score - baseline_score
         effect = _phase_d_effect_from_delta(score_delta)
         decision, decision_reason, promotion_status = _phase_d_decision_from_delta(score_delta)
+        target_name = _safe_candidate_filename(candidate_id)
+        if target_name in used_filenames:
+            suffix = hashlib.blake2b(candidate_id.encode("utf-8"), digest_size=6).hexdigest()
+            target_name = f"{target_name}_{suffix}"
+        used_filenames.add(target_name)
+        target_path = output_dir / f"{target_name}.json"
+        existing_artifact = read_json_safe(target_path, default={})
+        judgment_timestamp = (
+            str(existing_artifact.get("judgment_timestamp", "")).strip()
+            if isinstance(existing_artifact, dict)
+            else ""
+        ) or default_judgment_timestamp
 
         artifact = {
             "candidate_id": candidate_id,
@@ -356,12 +375,6 @@ def generate_sandbox_judgments(
             "promotion_status": promotion_status,
         }
 
-        target_name = _safe_candidate_filename(candidate_id)
-        if target_name in used_filenames:
-            suffix = hashlib.blake2b(candidate_id.encode("utf-8"), digest_size=6).hexdigest()
-            target_name = f"{target_name}_{suffix}"
-        used_filenames.add(target_name)
-        target_path = output_dir / f"{target_name}.json"
         write_json_atomic(target_path, artifact)
         judgment_paths.append(str(target_path))
 
@@ -1919,7 +1932,14 @@ def generate_advanced_discovery_artifacts(
         if not isinstance(decision_reasons, list):
             decision_reasons = []
         support_ratio = min(1.0, round(len(evidence_history) / 5.0, 6))
-        discovery_timestamp = str(item.get("timestamp", "")).strip() or now_iso
+        target_path = output_dir / f"{_safe_candidate_filename(candidate_id)}.json"
+        existing_artifact = read_json_safe(target_path, default={})
+        existing_discovery_timestamp = (
+            str(existing_artifact.get("discovery_timestamp", "")).strip()
+            if isinstance(existing_artifact, dict)
+            else ""
+        )
+        discovery_timestamp = str(item.get("timestamp", "")).strip() or existing_discovery_timestamp or now_iso
         pattern_signature = hashlib.blake2b(
             f"{candidate_id}|{truth_class}|{statement}".encode("utf-8"),
             digest_size=12,
@@ -1944,7 +1964,6 @@ def generate_advanced_discovery_artifacts(
             "sandbox_status": "replay_only",
             "live_activation_allowed": False,
         }
-        target_path = output_dir / f"{_safe_candidate_filename(candidate_id)}.json"
         write_json_atomic(target_path, artifact)
         generated_paths.append(str(target_path))
         generated_entries[candidate_id] = artifact
@@ -1991,3 +2010,1099 @@ def run_knowledge_expansion_phase_l(
         mode=mode,
         registry_path=(knowledge_root / "advanced_discovery" / "advanced_discovery_registry.json"),
     )
+
+
+def _deterministic_payload_digest(payload: Any) -> str:
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.blake2b(serialized.encode("utf-8"), digest_size=16).hexdigest()
+
+
+def _artifact_digests(paths: list[str]) -> dict[str, str]:
+    digests: dict[str, str] = {}
+    for path_str in sorted(paths):
+        artifact_path = Path(path_str)
+        payload = read_json_safe(artifact_path, default={})
+        digests[str(artifact_path)] = _deterministic_payload_digest(payload)
+    return digests
+
+
+def _load_registry_candidate_ids(registry_path: Path, records_key: str) -> set[str]:
+    payload = read_json_safe(registry_path, default={})
+    if not isinstance(payload, dict):
+        return set()
+    records = payload.get(records_key, [])
+    if not isinstance(records, list):
+        return set()
+    candidate_ids: set[str] = set()
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        candidate_id = str(record.get("candidate_id", "")).strip()
+        if candidate_id:
+            candidate_ids.add(candidate_id)
+    return candidate_ids
+
+
+def _artifact_candidate_ids(artifact_paths: list[str]) -> set[str]:
+    candidate_ids: set[str] = set()
+    for artifact_path in artifact_paths:
+        payload = read_json_safe(Path(artifact_path), default={})
+        if not isinstance(payload, dict):
+            continue
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        if candidate_id:
+            candidate_ids.add(candidate_id)
+    return candidate_ids
+
+
+def _artifact_integrity_report(paths: list[str]) -> dict[str, Any]:
+    artifacts: list[dict[str, Any]] = []
+    for path_str in sorted(paths):
+        artifact_path = Path(path_str)
+        raw_payload = artifact_path.read_text(encoding="utf-8") if artifact_path.exists() else ""
+        parsed_payload = read_json_safe(artifact_path, default=None)
+        parse_ok = isinstance(parsed_payload, dict)
+        canonical_digest = _deterministic_payload_digest(parsed_payload if parse_ok else {})
+        artifacts.append(
+            {
+                "artifact_path": str(artifact_path),
+                "exists": artifact_path.exists(),
+                "parse_ok": parse_ok,
+                "canonical_digest": canonical_digest,
+                "raw_digest": hashlib.blake2b(raw_payload.encode("utf-8"), digest_size=16).hexdigest(),
+            }
+        )
+    return {
+        "artifact_count": len(artifacts),
+        "all_present": all(bool(item["exists"]) for item in artifacts),
+        "all_parse_ok": all(bool(item["parse_ok"]) for item in artifacts),
+        "artifacts": artifacts,
+    }
+
+
+def _is_cycle_artifact_stale(existing_cycle_payload: Any) -> tuple[bool, list[str]]:
+    if not isinstance(existing_cycle_payload, dict):
+        return False, []
+    stale_reasons: list[str] = []
+    phase_artifact_digests = existing_cycle_payload.get("phase_artifact_digests", {})
+    if not isinstance(phase_artifact_digests, dict):
+        return False, []
+    for phase_name, digest_map in phase_artifact_digests.items():
+        if not isinstance(digest_map, dict):
+            continue
+        for artifact_path, expected_digest in digest_map.items():
+            path_obj = Path(str(artifact_path))
+            if not path_obj.exists():
+                stale_reasons.append(f"{phase_name}:missing:{artifact_path}")
+                continue
+            current_payload = read_json_safe(path_obj, default={})
+            current_digest = _deterministic_payload_digest(current_payload)
+            if current_digest != str(expected_digest):
+                stale_reasons.append(f"{phase_name}:digest_mismatch:{artifact_path}")
+    return (len(stale_reasons) > 0, stale_reasons)
+
+
+def _refresh_stale_artifacts(
+    stale_reasons: list[str],
+    *,
+    mode: str,
+    root: Path,
+    baseline_summary: dict[str, Any] | None,
+    replay_scope: str,
+) -> bool:
+    if str(mode).lower() != "replay" or not stale_reasons:
+        return False
+    run_knowledge_expansion_phase_l(root, mode=mode)
+    run_knowledge_expansion_phase_b(root)
+    run_knowledge_expansion_phase_c(root)
+    run_knowledge_expansion_phase_d(
+        root,
+        mode=mode,
+        baseline_summary=baseline_summary,
+        replay_scope=replay_scope,
+    )
+    run_knowledge_expansion_phase_e(root, mode=mode)
+    run_knowledge_expansion_phase_f(root, mode=mode)
+    run_knowledge_expansion_phase_g(root, mode=mode)
+    run_knowledge_expansion_phase_h(root, mode=mode)
+    run_knowledge_expansion_phase_i(root, mode=mode)
+    run_knowledge_expansion_phase_j(root, mode=mode)
+    run_knowledge_expansion_phase_k(root, mode=mode)
+    return True
+
+
+def _phase_result_artifact_paths(phase_name: str, phase_result: Any) -> list[str]:
+    if not isinstance(phase_result, dict):
+        return []
+    artifact_key_by_phase = {
+        "discovery": "advanced_discovery_artifacts",
+        "experimental_specs": "experimental_spec_artifacts",
+        "sandbox_generation": "sandbox_module_artifacts",
+        "replay_judgment": "sandbox_judgments",
+        "promotion_governance": "promotion_governance_artifacts",
+        "execution_governance": "execution_governance_artifacts",
+        "decision_orchestration": "decision_artifacts",
+        "execution_supervision": "supervision_artifacts",
+        "adaptive_portfolio": "portfolio_artifacts",
+        "incident_control": "incident_artifacts",
+        "long_horizon_memory": "long_horizon_memory_artifacts",
+    }
+    artifact_key = artifact_key_by_phase.get(phase_name, "")
+    artifact_paths = phase_result.get(artifact_key, [])
+    if not isinstance(artifact_paths, list):
+        return []
+    return [str(path) for path in artifact_paths]
+
+
+def _phase_result_safe_to_resume(phase_name: str, phase_result: Any) -> bool:
+    if not isinstance(phase_result, dict):
+        return False
+    count_key_by_phase = {
+        "discovery": "advanced_discovery_count",
+        "experimental_specs": "experimental_spec_count",
+        "sandbox_generation": "sandbox_module_count",
+        "replay_judgment": "sandbox_judgment_count",
+        "promotion_governance": "governance_artifact_count",
+        "execution_governance": "execution_governance_artifact_count",
+        "decision_orchestration": "decision_artifact_count",
+        "execution_supervision": "supervision_artifact_count",
+        "adaptive_portfolio": "portfolio_artifact_count",
+        "incident_control": "incident_artifact_count",
+        "long_horizon_memory": "long_horizon_memory_count",
+    }
+    artifact_paths = _phase_result_artifact_paths(phase_name, phase_result)
+    expected_count = int(phase_result.get(count_key_by_phase.get(phase_name, ""), 0))
+    if expected_count != len(artifact_paths):
+        return False
+    for artifact_path in artifact_paths:
+        artifact_file = Path(artifact_path)
+        if not artifact_file.exists():
+            return False
+        payload = read_json_safe(artifact_file, default=None)
+        if not isinstance(payload, dict):
+            return False
+    return True
+
+
+def _candidate_artifact_payloads(paths: list[str]) -> dict[str, tuple[str, dict[str, Any]]]:
+    candidate_payloads: dict[str, tuple[str, dict[str, Any]]] = {}
+    for path_str in sorted(paths):
+        artifact_path = Path(path_str)
+        payload = read_json_safe(artifact_path, default={})
+        if not isinstance(payload, dict):
+            continue
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        candidate_payloads[candidate_id] = (str(artifact_path), payload)
+    return candidate_payloads
+
+
+def _decision_chain_anomaly_report(
+    replay_paths: list[str],
+    promotion_paths: list[str],
+    execution_paths: list[str],
+) -> dict[str, Any]:
+    replay_by_candidate = _candidate_artifact_payloads(replay_paths)
+    promotion_by_candidate = _candidate_artifact_payloads(promotion_paths)
+    execution_by_candidate = _candidate_artifact_payloads(execution_paths)
+    expected_replay_to_promotion = {
+        PHASE_D_REJECT: PHASE_E_REJECTED,
+        PHASE_D_RETAIN_FOR_FURTHER_REPLAY: PHASE_E_RETAINED_FOR_FURTHER_REPLAY,
+        PHASE_D_PROMOTION_CANDIDATE: PHASE_E_PROMOTION_CANDIDATE,
+    }
+    expected_promotion_to_execution = {
+        PHASE_E_REJECTED: PHASE_F_BLOCKED,
+        PHASE_E_RETAINED_FOR_FURTHER_REPLAY: PHASE_F_MANUAL_REVIEW_REQUIRED,
+        PHASE_E_PROMOTION_CANDIDATE: PHASE_F_ELIGIBLE_FOR_CONTROLLED_EXECUTION_REVIEW,
+    }
+
+    anomalies_by_candidate: dict[str, list[str]] = {}
+    all_candidates = sorted(set(replay_by_candidate) | set(promotion_by_candidate) | set(execution_by_candidate))
+    for candidate_id in all_candidates:
+        anomalies: list[str] = []
+        replay_record = replay_by_candidate.get(candidate_id)
+        promotion_record = promotion_by_candidate.get(candidate_id)
+        execution_record = execution_by_candidate.get(candidate_id)
+        if replay_record is None:
+            anomalies.append("missing_replay_judgment")
+        if promotion_record is None:
+            anomalies.append("missing_promotion_governance")
+        if execution_record is None:
+            anomalies.append("missing_execution_governance")
+        if replay_record and promotion_record:
+            replay_decision = str(replay_record[1].get("decision", "")).strip()
+            promotion_decision = str(promotion_record[1].get("governance_decision", "")).strip()
+            expected_promotion_decision = expected_replay_to_promotion.get(replay_decision, "")
+            if expected_promotion_decision and promotion_decision != expected_promotion_decision:
+                anomalies.append(
+                    f"replay_to_promotion_decision_mismatch:{replay_decision}->{promotion_decision}"
+                )
+        if promotion_record and execution_record:
+            promotion_decision = str(promotion_record[1].get("governance_decision", "")).strip()
+            execution_decision = str(execution_record[1].get("execution_decision", "")).strip()
+            expected_execution_decision = expected_promotion_to_execution.get(promotion_decision, "")
+            if expected_execution_decision and execution_decision != expected_execution_decision:
+                anomalies.append(
+                    f"promotion_to_execution_decision_mismatch:{promotion_decision}->{execution_decision}"
+                )
+        if anomalies:
+            anomalies_by_candidate[candidate_id] = anomalies
+
+    return {
+        "has_anomalies": bool(anomalies_by_candidate),
+        "anomaly_count": sum(len(items) for items in anomalies_by_candidate.values()),
+        "invalid_candidate_ids": sorted(anomalies_by_candidate),
+        "candidate_anomalies": anomalies_by_candidate,
+    }
+
+
+def _replay_governance_traceability_report(
+    replay_paths: list[str],
+    promotion_paths: list[str],
+    execution_paths: list[str],
+) -> dict[str, Any]:
+    replay_by_candidate = _candidate_artifact_payloads(replay_paths)
+    promotion_by_candidate = _candidate_artifact_payloads(promotion_paths)
+    execution_by_candidate = _candidate_artifact_payloads(execution_paths)
+
+    issues_by_candidate: dict[str, list[str]] = {}
+    all_candidates = sorted(set(replay_by_candidate) | set(promotion_by_candidate) | set(execution_by_candidate))
+    for candidate_id in all_candidates:
+        issues: list[str] = []
+        replay_record = replay_by_candidate.get(candidate_id)
+        promotion_record = promotion_by_candidate.get(candidate_id)
+        execution_record = execution_by_candidate.get(candidate_id)
+        if replay_record and promotion_record:
+            replay_path, replay_payload = replay_record
+            _, promotion_payload = promotion_record
+            source_judgment_path = str(promotion_payload.get("source_judgment_path", "")).strip()
+            if source_judgment_path != replay_path:
+                issues.append("promotion_source_judgment_path_mismatch")
+            source_payload = read_json_safe(Path(source_judgment_path), default={})
+            if not isinstance(source_payload, dict):
+                issues.append("promotion_source_judgment_path_unreadable")
+            elif str(source_payload.get("candidate_id", "")).strip() != candidate_id:
+                issues.append("promotion_source_candidate_mismatch")
+            promotion_phase_d_decision = str(
+                (promotion_payload.get("judgment_summary", {}) or {}).get("phase_d_decision", "")
+            ).strip()
+            replay_decision = str(replay_payload.get("decision", "")).strip()
+            if promotion_phase_d_decision and replay_decision and promotion_phase_d_decision != replay_decision:
+                issues.append("promotion_phase_d_decision_trace_mismatch")
+        if promotion_record and execution_record:
+            promotion_path, promotion_payload = promotion_record
+            _, execution_payload = execution_record
+            governance_source_path = str(execution_payload.get("governance_source_path", "")).strip()
+            if governance_source_path != promotion_path:
+                issues.append("execution_governance_source_path_mismatch")
+            source_payload = read_json_safe(Path(governance_source_path), default={})
+            if not isinstance(source_payload, dict):
+                issues.append("execution_governance_source_unreadable")
+            elif str(source_payload.get("candidate_id", "")).strip() != candidate_id:
+                issues.append("execution_governance_source_candidate_mismatch")
+            traced_governance_decision = str(execution_payload.get("governance_decision", "")).strip()
+            expected_governance_decision = str(promotion_payload.get("governance_decision", "")).strip()
+            if traced_governance_decision != expected_governance_decision:
+                issues.append("execution_governance_decision_trace_mismatch")
+        if issues:
+            issues_by_candidate[candidate_id] = issues
+
+    return {
+        "has_issues": bool(issues_by_candidate),
+        "issue_count": sum(len(items) for items in issues_by_candidate.values()),
+        "invalid_candidate_ids": sorted(issues_by_candidate),
+        "candidate_issues": issues_by_candidate,
+    }
+
+
+def _apply_governed_rollback_for_invalid_downstream_chain(
+    *,
+    execution_governance: dict[str, Any],
+    invalid_candidate_ids: set[str],
+    cycle_dir: Path,
+    iteration_id: str,
+    trigger_reasons: list[str],
+) -> dict[str, Any]:
+    if not invalid_candidate_ids:
+        return {
+            "triggered": False,
+            "trigger_reasons": trigger_reasons,
+            "invalid_candidate_ids": [],
+            "rollback_report_path": "",
+            "affected_execution_artifacts": [],
+        }
+
+    rollback_timestamp = datetime.now(tz=timezone.utc).isoformat()
+    affected_execution_artifacts: list[str] = []
+    for artifact_path in execution_governance.get("execution_governance_artifacts", []):
+        path_obj = Path(str(artifact_path))
+        payload = read_json_safe(path_obj, default={})
+        if not isinstance(payload, dict):
+            continue
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        if candidate_id not in invalid_candidate_ids:
+            continue
+        payload["execution_decision"] = PHASE_F_BLOCKED
+        payload["execution_status"] = "blocked_non_live"
+        payload["execution_reason"] = "Governed rollback blocked invalid downstream artifact chain."
+        payload["manual_approval_required"] = True
+        payload["live_activation_allowed"] = False
+        payload["risk_constraints"] = {
+            "live_execution_blocked": True,
+            "auto_live_activation": False,
+            "controlled_execution_review_required": True,
+        }
+        payload["governed_rollback"] = {
+            "triggered": True,
+            "rollback_timestamp": rollback_timestamp,
+            "trigger_reasons": list(trigger_reasons),
+        }
+        write_json_atomic(path_obj, payload)
+        affected_execution_artifacts.append(str(path_obj))
+
+    registry_path = Path(str(execution_governance.get("controlled_execution_registry_path", "")))
+    registry_payload = read_json_safe(registry_path, default={})
+    if isinstance(registry_payload, dict):
+        records = registry_payload.get("execution_records", [])
+        if isinstance(records, list):
+            for record in records:
+                if not isinstance(record, dict):
+                    continue
+                candidate_id = str(record.get("candidate_id", "")).strip()
+                if candidate_id not in invalid_candidate_ids:
+                    continue
+                record["execution_decision"] = PHASE_F_BLOCKED
+                record["execution_status"] = "blocked_non_live"
+                record["execution_reason"] = "Governed rollback blocked invalid downstream artifact chain."
+                record["manual_approval_required"] = True
+                record["live_activation_allowed"] = False
+                record["risk_constraints"] = {
+                    "live_execution_blocked": True,
+                    "auto_live_activation": False,
+                    "controlled_execution_review_required": True,
+                }
+                record["governed_rollback"] = {
+                    "triggered": True,
+                    "rollback_timestamp": rollback_timestamp,
+                    "trigger_reasons": list(trigger_reasons),
+                }
+            write_json_atomic(registry_path, registry_payload)
+
+    rollback_report = {
+        "iteration_id": iteration_id,
+        "rollback_timestamp": rollback_timestamp,
+        "trigger_reasons": list(trigger_reasons),
+        "invalid_candidate_ids": sorted(invalid_candidate_ids),
+        "affected_execution_artifacts": affected_execution_artifacts,
+        "live_activation_allowed": False,
+    }
+    rollback_report_path = cycle_dir / f"governed_rollback_{iteration_id}.json"
+    write_json_atomic(rollback_report_path, rollback_report)
+    return {
+        "triggered": True,
+        "trigger_reasons": list(trigger_reasons),
+        "invalid_candidate_ids": sorted(invalid_candidate_ids),
+        "rollback_report_path": str(rollback_report_path),
+        "affected_execution_artifacts": affected_execution_artifacts,
+    }
+
+
+def _candidate_payloads_from_validated_registry(registry_path: Path) -> dict[str, tuple[str, dict[str, Any]]]:
+    payload = read_json_safe(registry_path, default={"validated_knowledge": []})
+    if not isinstance(payload, dict):
+        payload = {"validated_knowledge": []}
+    records = payload.get("validated_knowledge", [])
+    if not isinstance(records, list):
+        records = []
+    candidates: dict[str, tuple[str, dict[str, Any]]] = {}
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        candidate_id = str(record.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        candidates[candidate_id] = (str(registry_path), record)
+    return candidates
+
+
+def _end_to_end_governance_chain_report(
+    *,
+    root: Path,
+    phase_results: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    knowledge_root = root / "memory" / "knowledge_expansion"
+    phase_payloads: dict[str, dict[str, tuple[str, dict[str, Any]]]] = {
+        "phase_a": _candidate_payloads_from_validated_registry(knowledge_root / "validated_knowledge_registry.json"),
+        "phase_b": _candidate_artifact_payloads(
+            phase_results.get("experimental_specs", {}).get("experimental_spec_artifacts", [])
+        ),
+        "phase_c": _candidate_artifact_payloads(
+            phase_results.get("sandbox_generation", {}).get("sandbox_module_artifacts", [])
+        ),
+        "phase_d": _candidate_artifact_payloads(phase_results.get("replay_judgment", {}).get("sandbox_judgments", [])),
+        "phase_e": _candidate_artifact_payloads(
+            phase_results.get("promotion_governance", {}).get("promotion_governance_artifacts", [])
+        ),
+        "phase_f": _candidate_artifact_payloads(
+            phase_results.get("execution_governance", {}).get("execution_governance_artifacts", [])
+        ),
+        "phase_g": _candidate_artifact_payloads(
+            phase_results.get("decision_orchestration", {}).get("decision_artifacts", [])
+        ),
+        "phase_h": _candidate_artifact_payloads(
+            phase_results.get("execution_supervision", {}).get("supervision_artifacts", [])
+        ),
+        "phase_i": _candidate_artifact_payloads(phase_results.get("adaptive_portfolio", {}).get("portfolio_artifacts", [])),
+        "phase_j": _candidate_artifact_payloads(phase_results.get("incident_control", {}).get("incident_artifacts", [])),
+        "phase_k": _candidate_artifact_payloads(
+            phase_results.get("long_horizon_memory", {}).get("long_horizon_memory_artifacts", [])
+        ),
+        "phase_l": _candidate_artifact_payloads(phase_results.get("discovery", {}).get("advanced_discovery_artifacts", [])),
+    }
+
+    phase_sequence = [
+        "phase_a",
+        "phase_b",
+        "phase_c",
+        "phase_d",
+        "phase_e",
+        "phase_f",
+        "phase_g",
+        "phase_h",
+        "phase_i",
+        "phase_j",
+        "phase_k",
+        "phase_l",
+    ]
+    phase_candidate_counts = {
+        phase_name: len(phase_payloads.get(phase_name, {}))
+        for phase_name in phase_sequence
+    }
+    phase_set_flow_checks: dict[str, bool] = {}
+    issues: list[str] = []
+    invalid_candidate_ids: set[str] = set()
+    for upstream_phase, downstream_phase in zip(phase_sequence, phase_sequence[1:]):
+        upstream_candidates = set(phase_payloads.get(upstream_phase, {}))
+        downstream_candidates = set(phase_payloads.get(downstream_phase, {}))
+        check_key = f"{upstream_phase}_to_{downstream_phase}_downstream_subset"
+        phase_set_flow_checks[check_key] = downstream_candidates.issubset(upstream_candidates)
+        if not phase_set_flow_checks[check_key]:
+            issues.append(f"{check_key}_failed")
+            invalid_candidate_ids.update(sorted(downstream_candidates - upstream_candidates))
+
+    traceability_checks = {
+        "phase_c_source_spec_paths_valid": True,
+        "phase_d_source_spec_paths_valid": True,
+        "phase_e_source_judgment_paths_valid": True,
+        "phase_f_governance_source_paths_valid": True,
+        "phase_g_execution_source_paths_valid": True,
+        "phase_h_orchestrator_source_paths_valid": True,
+        "phase_i_supervision_source_paths_valid": True,
+        "phase_j_portfolio_source_paths_valid": True,
+        "phase_k_phase_g_source_paths_valid": True,
+        "phase_k_phase_i_source_paths_valid": True,
+    }
+
+    def _record_trace_issue(
+        check_key: str,
+        candidate_id: str,
+        reason: str,
+    ) -> None:
+        traceability_checks[check_key] = False
+        invalid_candidate_ids.add(candidate_id)
+        issues.append(f"{check_key}:{candidate_id}:{reason}")
+
+    phase_b_paths = {candidate_id: payload[0] for candidate_id, payload in phase_payloads["phase_b"].items()}
+    phase_d_paths = {candidate_id: payload[0] for candidate_id, payload in phase_payloads["phase_d"].items()}
+    phase_e_paths = {candidate_id: payload[0] for candidate_id, payload in phase_payloads["phase_e"].items()}
+    phase_f_paths = {candidate_id: payload[0] for candidate_id, payload in phase_payloads["phase_f"].items()}
+    phase_g_paths = {candidate_id: payload[0] for candidate_id, payload in phase_payloads["phase_g"].items()}
+    phase_h_paths = {candidate_id: payload[0] for candidate_id, payload in phase_payloads["phase_h"].items()}
+    phase_i_paths = {candidate_id: payload[0] for candidate_id, payload in phase_payloads["phase_i"].items()}
+
+    for candidate_id, (_, payload) in phase_payloads["phase_c"].items():
+        source_path = str(payload.get("source_spec_path", "")).strip()
+        if source_path != phase_b_paths.get(candidate_id, ""):
+            _record_trace_issue("phase_c_source_spec_paths_valid", candidate_id, "source_spec_path_mismatch")
+    for candidate_id, (_, payload) in phase_payloads["phase_d"].items():
+        module_source = payload.get("module_summary", {})
+        source_payload = module_source.get("source", {}) if isinstance(module_source, dict) else {}
+        source_path = str(source_payload.get("source_spec_path", "")).strip() if isinstance(source_payload, dict) else ""
+        if source_path != phase_b_paths.get(candidate_id, ""):
+            _record_trace_issue("phase_d_source_spec_paths_valid", candidate_id, "module_summary_source_spec_mismatch")
+    for candidate_id, (_, payload) in phase_payloads["phase_e"].items():
+        source_path = str(payload.get("source_judgment_path", "")).strip()
+        if source_path != phase_d_paths.get(candidate_id, ""):
+            _record_trace_issue("phase_e_source_judgment_paths_valid", candidate_id, "source_judgment_path_mismatch")
+    for candidate_id, (_, payload) in phase_payloads["phase_f"].items():
+        source_path = str(payload.get("governance_source_path", "")).strip()
+        if source_path != phase_e_paths.get(candidate_id, ""):
+            _record_trace_issue("phase_f_governance_source_paths_valid", candidate_id, "governance_source_path_mismatch")
+    for candidate_id, (_, payload) in phase_payloads["phase_g"].items():
+        source_path = str(payload.get("execution_source_path", "")).strip()
+        if source_path != phase_f_paths.get(candidate_id, ""):
+            _record_trace_issue("phase_g_execution_source_paths_valid", candidate_id, "execution_source_path_mismatch")
+    for candidate_id, (_, payload) in phase_payloads["phase_h"].items():
+        source_path = str(payload.get("orchestrator_source_path", "")).strip()
+        if source_path != phase_g_paths.get(candidate_id, ""):
+            _record_trace_issue("phase_h_orchestrator_source_paths_valid", candidate_id, "orchestrator_source_path_mismatch")
+    for candidate_id, (_, payload) in phase_payloads["phase_i"].items():
+        source_path = str(payload.get("supervision_source_path", "")).strip()
+        if source_path != phase_h_paths.get(candidate_id, ""):
+            _record_trace_issue("phase_i_supervision_source_paths_valid", candidate_id, "supervision_source_path_mismatch")
+    for candidate_id, (_, payload) in phase_payloads["phase_j"].items():
+        source_path = str(payload.get("portfolio_source_path", "")).strip()
+        if source_path != phase_i_paths.get(candidate_id, ""):
+            _record_trace_issue("phase_j_portfolio_source_paths_valid", candidate_id, "portfolio_source_path_mismatch")
+    for candidate_id, (_, payload) in phase_payloads["phase_k"].items():
+        source_g_path = str(payload.get("phase_g_source_path", "")).strip()
+        source_i_path = str(payload.get("phase_i_source_path", "")).strip()
+        if source_g_path != phase_g_paths.get(candidate_id, ""):
+            _record_trace_issue("phase_k_phase_g_source_paths_valid", candidate_id, "phase_g_source_path_mismatch")
+        if source_i_path != phase_i_paths.get(candidate_id, ""):
+            _record_trace_issue("phase_k_phase_i_source_paths_valid", candidate_id, "phase_i_source_path_mismatch")
+
+    all_checks_passed = all(phase_set_flow_checks.values()) and all(traceability_checks.values())
+    return {
+        "phase_sequence": phase_sequence,
+        "phase_candidate_counts": phase_candidate_counts,
+        "phase_set_flow_checks": phase_set_flow_checks,
+        "traceability_checks": traceability_checks,
+        "issues": sorted(issues),
+        "invalid_candidate_ids": sorted(invalid_candidate_ids),
+        "all_checks_passed": all_checks_passed,
+    }
+
+
+def _quarantine_invalid_artifacts(
+    *,
+    cycle_dir: Path,
+    iteration_id: str,
+    artifact_integrity: dict[str, Any],
+    end_to_end_governance_chain: dict[str, Any],
+) -> dict[str, Any]:
+    quarantine_dir = cycle_dir / "quarantine" / iteration_id
+    quarantine_dir.mkdir(parents=True, exist_ok=True)
+    quarantine_records: list[dict[str, Any]] = []
+
+    for phase_name, phase_report in artifact_integrity.items():
+        if phase_name == "all_checks_passed" or not isinstance(phase_report, dict):
+            continue
+        artifacts = phase_report.get("artifacts", [])
+        if not isinstance(artifacts, list):
+            continue
+        for artifact in artifacts:
+            if not isinstance(artifact, dict):
+                continue
+            if bool(artifact.get("exists", False)) and bool(artifact.get("parse_ok", False)):
+                continue
+            artifact_path = str(artifact.get("artifact_path", "")).strip()
+            quarantine_records.append(
+                {
+                    "phase": phase_name,
+                    "reason": "artifact_missing_or_unparseable",
+                    "artifact_path": artifact_path,
+                    "exists": bool(artifact.get("exists", False)),
+                    "parse_ok": bool(artifact.get("parse_ok", False)),
+                    "raw_digest": str(artifact.get("raw_digest", "")),
+                    "canonical_digest": str(artifact.get("canonical_digest", "")),
+                }
+            )
+
+    for issue in end_to_end_governance_chain.get("issues", []):
+        issue_text = str(issue)
+        if ":" not in issue_text:
+            continue
+        issue_parts = issue_text.split(":")
+        if len(issue_parts) < 3:
+            continue
+        check_key, candidate_id, *reason_parts = issue_parts
+        reason = ":".join(reason_parts)
+        quarantine_records.append(
+            {
+                "phase": "chain_verification",
+                "reason": f"{check_key}:{reason}",
+                "candidate_id": candidate_id,
+                "artifact_path": "",
+                "exists": False,
+                "parse_ok": False,
+            }
+        )
+
+    unique_records: dict[str, dict[str, Any]] = {}
+    for record in quarantine_records:
+        record_key = _deterministic_payload_digest(record)
+        unique_records[record_key] = record
+    ordered_records = [unique_records[key] for key in sorted(unique_records)]
+    quarantine_payload = {
+        "iteration_id": iteration_id,
+        "quarantined_record_count": len(ordered_records),
+        "quarantined_records": ordered_records,
+    }
+    quarantine_report_path = quarantine_dir / "quarantine_report.json"
+    write_json_atomic(quarantine_report_path, quarantine_payload)
+    return {
+        "quarantine_required": bool(ordered_records),
+        "quarantined_record_count": len(ordered_records),
+        "quarantine_report_path": str(quarantine_report_path),
+        "quarantine_records": ordered_records,
+    }
+
+
+def _governed_refusal_state(
+    *,
+    end_to_end_governance_chain: dict[str, Any],
+    invalid_artifact_quarantine: dict[str, Any],
+    governed_rollback: dict[str, Any],
+) -> dict[str, Any]:
+    refusal_reasons: list[str] = []
+    if not bool(end_to_end_governance_chain.get("all_checks_passed", False)):
+        refusal_reasons.append("end_to_end_chain_verification_failed")
+    if bool(invalid_artifact_quarantine.get("quarantine_required", False)):
+        refusal_reasons.append("invalid_artifact_quarantine_required")
+    if bool(governed_rollback.get("triggered", False)):
+        refusal_reasons.append("downstream_rollback_triggered")
+
+    refusal_state = "continue_governed_non_live"
+    if refusal_reasons:
+        if len(refusal_reasons) > 1:
+            refusal_state = "refuse_cycle_continuation_multiple_unsafe_conditions"
+        elif refusal_reasons[0] == "end_to_end_chain_verification_failed":
+            refusal_state = "refuse_cycle_continuation_chain_verification_failed"
+        elif refusal_reasons[0] == "invalid_artifact_quarantine_required":
+            refusal_state = "refuse_cycle_continuation_quarantine_required"
+        else:
+            refusal_state = "refuse_cycle_continuation_rollback_required"
+    return {
+        "refused": bool(refusal_reasons),
+        "refusal_state": refusal_state,
+        "refusal_reasons": refusal_reasons,
+        "safe_to_continue": not bool(refusal_reasons),
+    }
+
+
+def _write_cycle_self_audit_artifact(
+    *,
+    cycle_dir: Path,
+    iteration_id: str,
+    cycle_payload: dict[str, Any],
+) -> dict[str, Any]:
+    deterministic_scope = {
+        "iteration_id": str(cycle_payload.get("iteration_id", "")),
+        "mode": str(cycle_payload.get("mode", "")),
+        "replay_scope": str(cycle_payload.get("replay_scope", "")),
+        "phase_artifact_digests": cycle_payload.get("phase_artifact_digests", {}),
+        "phase_registry_consistency": cycle_payload.get("phase_registry_consistency", {}),
+        "end_to_end_governance_chain": cycle_payload.get("end_to_end_governance_chain", {}),
+        "cross_phase_anomaly_detection": cycle_payload.get("cross_phase_anomaly_detection", {}),
+        "replay_governance_traceability": cycle_payload.get("replay_governance_traceability", {}),
+        "governed_rollback": cycle_payload.get("governed_rollback", {}),
+        "invalid_artifact_quarantine": cycle_payload.get("invalid_artifact_quarantine", {}),
+        "governed_refusal": cycle_payload.get("governed_refusal", {}),
+        "live_activation_blocked": bool(cycle_payload.get("live_activation_blocked", True)),
+    }
+    self_audit_signature = _deterministic_payload_digest(deterministic_scope)
+    self_audit_payload = {
+        "iteration_id": iteration_id,
+        "self_audit_version": "governed_cycle_self_audit_v1",
+        "deterministic_scope": deterministic_scope,
+        "self_audit_signature": self_audit_signature,
+    }
+    self_audit_path = cycle_dir / f"self_audit_{iteration_id}.json"
+    write_json_atomic(self_audit_path, self_audit_payload)
+    return {
+        "self_audit_path": str(self_audit_path),
+        "self_audit_signature": self_audit_signature,
+    }
+
+
+def run_continuous_governed_improvement_cycle(
+    root: Path,
+    *,
+    mode: str,
+    baseline_summary: dict[str, Any] | None = None,
+    replay_scope: str = "full_replay",
+    iteration_id: str = "default",
+) -> dict[str, Any]:
+    knowledge_root = root / "memory" / "knowledge_expansion"
+    cycle_dir = knowledge_root / "continuous_governed_improvement"
+    cycle_dir.mkdir(parents=True, exist_ok=True)
+    normalized_iteration_id = _safe_candidate_filename(iteration_id)
+    cycle_artifact_path = cycle_dir / f"cycle_{normalized_iteration_id}.json"
+    cycle_state_path = cycle_dir / f"cycle_state_{normalized_iteration_id}.json"
+
+    previous_state_payload = read_json_safe(cycle_state_path, default={})
+    recovering_interrupted_cycle = (
+        isinstance(previous_state_payload, dict)
+        and str(previous_state_payload.get("status", "")).strip().lower() == "in_progress"
+    )
+    existing_cycle_payload = read_json_safe(cycle_artifact_path, default={})
+    stale_detected, stale_reasons = _is_cycle_artifact_stale(existing_cycle_payload)
+    stale_refreshed = _refresh_stale_artifacts(
+        stale_reasons,
+        mode=mode,
+        root=root,
+        baseline_summary=baseline_summary,
+        replay_scope=replay_scope,
+    )
+    previous_phase_results = {}
+    if recovering_interrupted_cycle and isinstance(previous_state_payload, dict):
+        candidate_previous_results = previous_state_payload.get("phase_results", {})
+        if isinstance(candidate_previous_results, dict):
+            previous_phase_results = candidate_previous_results
+
+    phase_results: dict[str, dict[str, Any]] = {}
+    phase_status: dict[str, str] = {}
+    resumed_phases: list[str] = []
+    rerun_from_phase = ""
+    force_rerun_downstream = False
+
+    def _persist_in_progress_state() -> None:
+        write_json_atomic(
+            cycle_state_path,
+            {
+                "iteration_id": normalized_iteration_id,
+                "status": "in_progress",
+                "recovery": {
+                    "interrupted_cycle_recovered": recovering_interrupted_cycle,
+                    "partial_resume_applied": bool(resumed_phases),
+                    "resumed_phases": list(resumed_phases),
+                    "rerun_from_phase": rerun_from_phase,
+                },
+                "stale_detection": {
+                    "detected": stale_detected,
+                    "reasons": stale_reasons,
+                    "safe_refresh_applied": stale_refreshed,
+                },
+                "phase_status": dict(phase_status),
+                "phase_results": phase_results,
+            },
+        )
+
+    phase_plan: list[tuple[str, Any]] = [
+        ("discovery", lambda: run_knowledge_expansion_phase_l(root, mode=mode)),
+        ("experimental_specs", lambda: run_knowledge_expansion_phase_b(root)),
+        ("sandbox_generation", lambda: run_knowledge_expansion_phase_c(root)),
+        (
+            "replay_judgment",
+            lambda: run_knowledge_expansion_phase_d(
+                root,
+                mode=mode,
+                baseline_summary=baseline_summary,
+                replay_scope=replay_scope,
+            ),
+        ),
+        ("promotion_governance", lambda: run_knowledge_expansion_phase_e(root, mode=mode)),
+        ("execution_governance", lambda: run_knowledge_expansion_phase_f(root, mode=mode)),
+        ("decision_orchestration", lambda: run_knowledge_expansion_phase_g(root, mode=mode)),
+        ("execution_supervision", lambda: run_knowledge_expansion_phase_h(root, mode=mode)),
+        ("adaptive_portfolio", lambda: run_knowledge_expansion_phase_i(root, mode=mode)),
+        ("incident_control", lambda: run_knowledge_expansion_phase_j(root, mode=mode)),
+        ("long_horizon_memory", lambda: run_knowledge_expansion_phase_k(root, mode=mode)),
+    ]
+
+    for phase_name, runner in phase_plan:
+        previous_phase_result = previous_phase_results.get(phase_name)
+        if (
+            recovering_interrupted_cycle
+            and not force_rerun_downstream
+            and _phase_result_safe_to_resume(phase_name, previous_phase_result)
+        ):
+            phase_results[phase_name] = previous_phase_result
+            phase_status[phase_name] = "resumed"
+            resumed_phases.append(phase_name)
+            _persist_in_progress_state()
+            continue
+
+        if recovering_interrupted_cycle and not rerun_from_phase:
+            rerun_from_phase = phase_name
+        force_rerun_downstream = force_rerun_downstream or recovering_interrupted_cycle
+        phase_results[phase_name] = runner()
+        phase_status[phase_name] = "completed"
+        _persist_in_progress_state()
+
+    discovery = phase_results["discovery"]
+    experimental_specs = phase_results["experimental_specs"]
+    sandbox = phase_results["sandbox_generation"]
+    replay_judgment = phase_results["replay_judgment"]
+    promotion_governance = phase_results["promotion_governance"]
+    execution_governance = phase_results["execution_governance"]
+    decision_orchestration = phase_results["decision_orchestration"]
+    execution_supervision = phase_results["execution_supervision"]
+    adaptive_portfolio = phase_results["adaptive_portfolio"]
+    incident_control = phase_results["incident_control"]
+    long_horizon_memory = phase_results["long_horizon_memory"]
+
+    replay_candidate_ids = _artifact_candidate_ids(replay_judgment.get("sandbox_judgments", []))
+    promotion_candidate_ids = _artifact_candidate_ids(promotion_governance.get("promotion_governance_artifacts", []))
+    execution_candidate_ids = _artifact_candidate_ids(
+        execution_governance.get("execution_governance_artifacts", [])
+    )
+    promotion_registry_path = Path(str(promotion_governance.get("promotion_registry_path", "")))
+    execution_registry_path = Path(str(execution_governance.get("controlled_execution_registry_path", "")))
+    promotion_registry_candidates = _load_registry_candidate_ids(
+        promotion_registry_path,
+        "governance_records",
+    )
+    execution_registry_candidates = _load_registry_candidate_ids(
+        execution_registry_path,
+        "execution_records",
+    )
+    phase_registry_consistency = {
+        "replay_to_promotion_artifacts_match": replay_candidate_ids == promotion_candidate_ids,
+        "promotion_to_execution_artifacts_match": promotion_candidate_ids == execution_candidate_ids,
+        "promotion_artifacts_in_registry": promotion_candidate_ids.issubset(promotion_registry_candidates),
+        "execution_artifacts_in_registry": execution_candidate_ids.issubset(execution_registry_candidates),
+        "candidate_counts": {
+            "replay_judgment": len(replay_candidate_ids),
+            "promotion_governance": len(promotion_candidate_ids),
+            "execution_governance": len(execution_candidate_ids),
+        },
+    }
+    phase_registry_consistency["all_checks_passed"] = all(
+        bool(value)
+        for key, value in phase_registry_consistency.items()
+        if key not in {"candidate_counts"}
+    )
+
+    cross_phase_anomaly_detection = _decision_chain_anomaly_report(
+        replay_judgment.get("sandbox_judgments", []),
+        promotion_governance.get("promotion_governance_artifacts", []),
+        execution_governance.get("execution_governance_artifacts", []),
+    )
+    replay_governance_traceability = _replay_governance_traceability_report(
+        replay_judgment.get("sandbox_judgments", []),
+        promotion_governance.get("promotion_governance_artifacts", []),
+        execution_governance.get("execution_governance_artifacts", []),
+    )
+    rollback_trigger_reasons: list[str] = []
+    if cross_phase_anomaly_detection.get("has_anomalies", False):
+        rollback_trigger_reasons.append("cross_phase_decision_chain_anomaly_detected")
+    if replay_governance_traceability.get("has_issues", False):
+        rollback_trigger_reasons.append("replay_to_governance_traceability_failed")
+    if not phase_registry_consistency.get("all_checks_passed", False):
+        rollback_trigger_reasons.append("cross_phase_registry_consistency_failed")
+
+    rollback_candidates = set(cross_phase_anomaly_detection.get("invalid_candidate_ids", []))
+    rollback_candidates.update(replay_governance_traceability.get("invalid_candidate_ids", []))
+    end_to_end_governance_chain = _end_to_end_governance_chain_report(root=root, phase_results=phase_results)
+    if not end_to_end_governance_chain.get("all_checks_passed", False):
+        rollback_trigger_reasons.append("end_to_end_governance_chain_failed")
+    rollback_candidates.update(end_to_end_governance_chain.get("invalid_candidate_ids", []))
+    governed_rollback = _apply_governed_rollback_for_invalid_downstream_chain(
+        execution_governance=execution_governance,
+        invalid_candidate_ids=rollback_candidates if rollback_trigger_reasons else set(),
+        cycle_dir=cycle_dir,
+        iteration_id=normalized_iteration_id,
+        trigger_reasons=rollback_trigger_reasons,
+    )
+
+    artifact_integrity = {
+        "discovery": _artifact_integrity_report(discovery.get("advanced_discovery_artifacts", [])),
+        "sandbox_generation": _artifact_integrity_report(sandbox.get("sandbox_module_artifacts", [])),
+        "replay_judgment": _artifact_integrity_report(replay_judgment.get("sandbox_judgments", [])),
+        "promotion_governance": _artifact_integrity_report(
+            promotion_governance.get("promotion_governance_artifacts", [])
+        ),
+        "execution_governance": _artifact_integrity_report(
+            execution_governance.get("execution_governance_artifacts", [])
+        ),
+        "decision_orchestration": _artifact_integrity_report(
+            decision_orchestration.get("decision_artifacts", [])
+        ),
+        "execution_supervision": _artifact_integrity_report(
+            execution_supervision.get("supervision_artifacts", [])
+        ),
+        "adaptive_portfolio": _artifact_integrity_report(adaptive_portfolio.get("portfolio_artifacts", [])),
+        "incident_control": _artifact_integrity_report(incident_control.get("incident_artifacts", [])),
+        "long_horizon_memory": _artifact_integrity_report(
+            long_horizon_memory.get("long_horizon_memory_artifacts", [])
+        ),
+    }
+    artifact_integrity["all_checks_passed"] = all(
+        bool(item.get("all_present", False)) and bool(item.get("all_parse_ok", False))
+        for phase_name, item in artifact_integrity.items()
+        if phase_name != "all_checks_passed" and isinstance(item, dict)
+    )
+
+    phase_artifact_digests = {
+        "discovery": _artifact_digests(discovery.get("advanced_discovery_artifacts", [])),
+        "sandbox_generation": _artifact_digests(sandbox.get("sandbox_module_artifacts", [])),
+        "replay_judgment": _artifact_digests(replay_judgment.get("sandbox_judgments", [])),
+        "promotion_governance": _artifact_digests(
+            promotion_governance.get("promotion_governance_artifacts", [])
+        ),
+        "execution_governance": _artifact_digests(
+            execution_governance.get("execution_governance_artifacts", [])
+        ),
+        "decision_orchestration": _artifact_digests(decision_orchestration.get("decision_artifacts", [])),
+        "execution_supervision": _artifact_digests(execution_supervision.get("supervision_artifacts", [])),
+        "adaptive_portfolio": _artifact_digests(adaptive_portfolio.get("portfolio_artifacts", [])),
+        "incident_control": _artifact_digests(incident_control.get("incident_artifacts", [])),
+        "long_horizon_memory": _artifact_digests(long_horizon_memory.get("long_horizon_memory_artifacts", [])),
+    }
+    cycle_signature = _deterministic_payload_digest(
+        {
+            "iteration_id": normalized_iteration_id,
+            "mode": str(mode).lower(),
+            "replay_scope": replay_scope,
+            "phase_artifact_digests": phase_artifact_digests,
+            "artifact_integrity": artifact_integrity,
+            "phase_registry_consistency": phase_registry_consistency,
+        }
+    )
+
+    live_flags: list[bool] = []
+    for artifact_path in execution_governance.get("execution_governance_artifacts", []):
+        artifact_payload = read_json_safe(Path(artifact_path), default={})
+        if isinstance(artifact_payload, dict):
+            live_flags.append(bool(artifact_payload.get("live_activation_allowed", False)))
+    live_activation_blocked = not any(live_flags)
+    if governed_rollback.get("triggered", False):
+        live_activation_blocked = True
+    invalid_artifact_quarantine = _quarantine_invalid_artifacts(
+        cycle_dir=cycle_dir,
+        iteration_id=normalized_iteration_id,
+        artifact_integrity=artifact_integrity,
+        end_to_end_governance_chain=end_to_end_governance_chain,
+    )
+    governed_refusal = _governed_refusal_state(
+        end_to_end_governance_chain=end_to_end_governance_chain,
+        invalid_artifact_quarantine=invalid_artifact_quarantine,
+        governed_rollback=governed_rollback,
+    )
+    if governed_refusal.get("refused", False):
+        live_activation_blocked = True
+
+    cycle_payload = {
+        "iteration_id": normalized_iteration_id,
+        "mode": str(mode).lower(),
+        "replay_scope": replay_scope,
+        "cycle_signature": cycle_signature,
+        "live_activation_blocked": live_activation_blocked,
+        "phase_artifact_digests": phase_artifact_digests,
+        "artifact_integrity": artifact_integrity,
+        "phase_registry_consistency": phase_registry_consistency,
+        "end_to_end_governance_chain": end_to_end_governance_chain,
+        "cross_phase_anomaly_detection": cross_phase_anomaly_detection,
+        "replay_governance_traceability": replay_governance_traceability,
+        "governed_rollback": governed_rollback,
+        "invalid_artifact_quarantine": invalid_artifact_quarantine,
+        "governed_refusal": governed_refusal,
+        "cycle_recovery": {
+            "interrupted_cycle_recovered": recovering_interrupted_cycle,
+            "stale_artifacts_detected": stale_detected,
+            "safe_refresh_applied": stale_refreshed,
+            "partial_resume_applied": bool(resumed_phases),
+            "resumed_phases": resumed_phases,
+            "rerun_from_phase": rerun_from_phase,
+        },
+        "stale_artifact_reasons": stale_reasons,
+        "phase_counts": {
+            "discovery": int(discovery.get("advanced_discovery_count", 0)),
+            "sandbox_generation": int(sandbox.get("sandbox_module_count", 0)),
+            "replay_judgment": int(replay_judgment.get("sandbox_judgment_count", 0)),
+            "promotion_governance": int(promotion_governance.get("governance_artifact_count", 0)),
+            "execution_governance": int(execution_governance.get("execution_governance_artifact_count", 0)),
+            "decision_orchestration": int(decision_orchestration.get("decision_artifact_count", 0)),
+            "execution_supervision": int(execution_supervision.get("supervision_artifact_count", 0)),
+            "adaptive_portfolio": int(adaptive_portfolio.get("portfolio_artifact_count", 0)),
+            "incident_control": int(incident_control.get("incident_artifact_count", 0)),
+            "long_horizon_memory": int(long_horizon_memory.get("long_horizon_memory_count", 0)),
+        },
+        "registry_paths": {
+            "advanced_discovery": str(discovery.get("advanced_discovery_registry_path", "")),
+            "promotion_governance": str(promotion_governance.get("promotion_registry_path", "")),
+            "execution_governance": str(execution_governance.get("controlled_execution_registry_path", "")),
+            "decision_orchestration": str(decision_orchestration.get("decision_registry_path", "")),
+            "execution_supervision": str(execution_supervision.get("supervision_registry_path", "")),
+            "adaptive_portfolio": str(adaptive_portfolio.get("portfolio_registry_path", "")),
+            "incident_control": str(incident_control.get("incident_registry_path", "")),
+            "long_horizon_memory": str(long_horizon_memory.get("long_horizon_memory_registry_path", "")),
+        },
+    }
+    self_audit_artifact = _write_cycle_self_audit_artifact(
+        cycle_dir=cycle_dir,
+        iteration_id=normalized_iteration_id,
+        cycle_payload=cycle_payload,
+    )
+    cycle_payload["self_audit_artifact"] = self_audit_artifact
+
+    write_json_atomic(cycle_artifact_path, cycle_payload)
+
+    registry_path = cycle_dir / "continuous_governed_improvement_registry.json"
+    registry_payload = read_json_safe(registry_path, default={"cycles": []})
+    if not isinstance(registry_payload, dict):
+        registry_payload = {"cycles": []}
+    cycles = registry_payload.get("cycles", [])
+    if not isinstance(cycles, list):
+        cycles = []
+    cycles_by_iteration: dict[str, dict[str, Any]] = {}
+    for cycle in cycles:
+        if not isinstance(cycle, dict):
+            continue
+        existing_iteration_id = str(cycle.get("iteration_id", "")).strip()
+        if not existing_iteration_id:
+            continue
+        cycles_by_iteration[existing_iteration_id] = cycle
+    cycles_by_iteration[normalized_iteration_id] = {
+        "iteration_id": normalized_iteration_id,
+        "cycle_signature": cycle_signature,
+        "cycle_artifact_path": str(cycle_artifact_path),
+        "live_activation_blocked": live_activation_blocked,
+    }
+    registry_payload = {
+        "cycles": [cycles_by_iteration[cycle_id] for cycle_id in sorted(cycles_by_iteration)],
+    }
+    write_json_atomic(registry_path, registry_payload)
+    write_json_atomic(
+        cycle_state_path,
+        {
+            "iteration_id": normalized_iteration_id,
+            "status": (
+                "refused_unsafe_continuation"
+                if bool(governed_refusal.get("refused", False))
+                else "completed"
+            ),
+            "cycle_signature": cycle_signature,
+            "recovery": {"interrupted_cycle_recovered": recovering_interrupted_cycle},
+            "stale_detection": {
+                "detected": stale_detected,
+                "reasons": stale_reasons,
+                "safe_refresh_applied": stale_refreshed,
+            },
+            "partial_resume": {
+                "applied": bool(resumed_phases),
+                "resumed_phases": resumed_phases,
+                "rerun_from_phase": rerun_from_phase,
+            },
+            "governed_rollback": governed_rollback,
+            "governed_refusal": governed_refusal,
+            "self_audit_artifact": self_audit_artifact,
+            "phase_status": phase_status,
+            "phase_results": phase_results,
+            "live_activation_blocked": live_activation_blocked,
+        },
+    )
+
+    return {
+        "continuous_governed_improvement_enabled": str(mode).lower() == "replay",
+        "iteration_id": normalized_iteration_id,
+        "cycle_signature": cycle_signature,
+        "cycle_artifact_path": str(cycle_artifact_path),
+        "cycle_registry_path": str(registry_path),
+        "cycle_state_path": str(cycle_state_path),
+        "live_activation_blocked": live_activation_blocked,
+        "artifact_integrity": artifact_integrity,
+        "phase_registry_consistency": phase_registry_consistency,
+        "end_to_end_governance_chain": end_to_end_governance_chain,
+        "cross_phase_anomaly_detection": cross_phase_anomaly_detection,
+        "replay_governance_traceability": replay_governance_traceability,
+        "governed_rollback": governed_rollback,
+        "invalid_artifact_quarantine": invalid_artifact_quarantine,
+        "governed_refusal": governed_refusal,
+        "self_audit_artifact": self_audit_artifact,
+        "cycle_recovery": cycle_payload["cycle_recovery"],
+        "phase_results": phase_results,
+    }
