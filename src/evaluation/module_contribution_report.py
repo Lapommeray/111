@@ -1,5 +1,28 @@
 from __future__ import annotations
 
+from collections import Counter
+from typing import Any
+
+
+COUNT_WAIT_ALIGNMENT = False
+
+
+def build_module_contribution_report(records: list[dict[str, Any]]) -> dict[str, Any]:
+    """Summarize module vote/delta behavior across replay records."""
+    module_stats: dict[str, dict[str, Any]] = {}
+    regime_counter = Counter(_derive_regime(record) for record in records)
+    dominant_regime = regime_counter.most_common(1)[0][0] if regime_counter else "unknown"
+
+    for record in records:
+        signal = record.get("signal", {}) if isinstance(record.get("signal"), dict) else {}
+        action = str(signal.get("action", "WAIT")).upper()
+        confidence = float(signal.get("confidence", 0.0))
+        blocked = bool(signal.get("blocked", False))
+        blocker_reasons = signal.get("blocker_reasons", []) if isinstance(signal.get("blocker_reasons"), list) else []
+        regime_label = _derive_regime(record)
+
+        advanced = signal.get("advanced_modules", {}) if isinstance(signal.get("advanced_modules"), dict) else {}
+        module_results = advanced.get("module_results", {}) if isinstance(advanced.get("module_results"), dict) else {}
 from typing import Any
 
 
