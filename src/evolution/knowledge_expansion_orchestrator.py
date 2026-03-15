@@ -863,6 +863,9 @@ class KnowledgeExpansionOrchestrator:
             )
             if not evidence_history and hypothesis.get("evidence", {}):
                 evidence_history = [hypothesis.get("evidence", {})]
+            overlap_info = decision.get("overlap", {})
+            if not isinstance(overlap_info, dict):
+                overlap_info = {}
 
             entry = {
                 "hypothesis_id": hypothesis_id,
@@ -871,10 +874,7 @@ class KnowledgeExpansionOrchestrator:
                 "truth_class": hypothesis.get("truth_class", candidate.get("truth_class", "meta-intelligence")),
                 "statement": hypothesis.get("statement", ""),
                 "decision_reasons": decision.get("decision_reasons", []),
-                "overlap_score": (decision.get("overlap", {}) if isinstance(decision.get("overlap"), dict) else {}).get(
-                    "overlap_score",
-                    0.0,
-                ),
+                "overlap_score": overlap_info.get("overlap_score", 0.0),
                 "evidence_history": evidence_history,
                 "updated_at": datetime.now(tz=timezone.utc).isoformat(),
             }
