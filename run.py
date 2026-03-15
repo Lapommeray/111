@@ -577,6 +577,8 @@ def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
             candidate_limit=config.knowledge_candidate_limit,
         )
 
+    )
+
     Path(config.evaluation_output_path).write_text(json.dumps(report, indent=2), encoding="utf-8")
     return report
 
@@ -616,13 +618,6 @@ def main() -> None:
         config = RuntimeConfig(**{**config.__dict__, "evaluation_steps": int(args.evaluation_steps)})
     if args.evaluation_stride is not None:
         config = RuntimeConfig(**{**config.__dict__, "evaluation_stride": int(args.evaluation_stride)})
-    if args.knowledge_expansion_enabled is not None:
-        config = RuntimeConfig(
-            **{
-                **config.__dict__,
-                "knowledge_expansion_enabled": args.knowledge_expansion_enabled.lower() == "true",
-            }
-        )
 
     evaluate_replay_mode = args.evaluate_replay is not None and args.evaluate_replay.lower() == "true"
     if evaluate_replay_mode:
