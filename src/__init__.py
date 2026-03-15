@@ -1,0 +1,1 @@
+"""XAUUSD indicator package."""
