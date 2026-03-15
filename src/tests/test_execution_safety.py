@@ -134,6 +134,9 @@ def test_execution_state_to_dict_shape() -> None:
         mt5_chain_verified=True,
         mt5_quarantined=False,
         mt5_safe_resume_state="stable",
+        mt5_live_execution_enabled=False,
+        mt5_auto_stop_active=False,
+        mt5_controlled_execution={"order_result": {"status": "refused"}},
     )
     payload = state.to_dict()
     assert payload["symbol"] == "XAUUSD"
@@ -147,3 +150,6 @@ def test_execution_state_to_dict_shape() -> None:
     assert payload["mt5_chain_verified"] is True
     assert payload["mt5_quarantined"] is False
     assert payload["mt5_safe_resume_state"] == "stable"
+    assert payload["mt5_live_execution_enabled"] is False
+    assert payload["mt5_auto_stop_active"] is False
+    assert payload["mt5_controlled_execution"]["order_result"]["status"] == "refused"

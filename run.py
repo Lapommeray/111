@@ -62,6 +62,8 @@ class RuntimeConfig:
     knowledge_expansion_enabled: bool = False
     knowledge_expansion_root: str = "memory/knowledge_expansion"
     knowledge_candidate_limit: int = 6
+    live_execution_enabled: bool = False
+    live_order_volume: float = 0.01
 
 
 def ensure_sample_data(path: Path) -> None:
@@ -131,6 +133,8 @@ def load_runtime_config(path: Path) -> RuntimeConfig:
         knowledge_expansion_enabled=bool(data.get("knowledge_expansion_enabled", False)),
         knowledge_expansion_root=str(data.get("knowledge_expansion_root", "memory/knowledge_expansion")),
         knowledge_candidate_limit=int(data.get("knowledge_candidate_limit", 6)),
+        live_execution_enabled=bool(data.get("live_execution_enabled", False)),
+        live_order_volume=float(data.get("live_order_volume", 0.01)),
     )
 
 
@@ -157,6 +161,8 @@ def validate_runtime_config(config: RuntimeConfig) -> None:
         raise ValueError("evaluation_steps must be > 0")
     if config.evaluation_stride <= 0:
         raise ValueError("evaluation_stride must be > 0")
+    if config.live_order_volume <= 0:
+        raise ValueError("live_order_volume must be > 0")
 
 
 def load_bars_from_csv(csv_path: Path, bars: int) -> list[dict[str, Any]]:
@@ -429,6 +435,320 @@ def _persist_mt5_pack3_artifacts(
     return {name: str(path) for name, path in paths.items()}
 
 
+def _load_mt5_controlled_execution_state(memory_root: str) -> dict[str, Any]:
+    path = Path(memory_root) / "mt5_controlled_execution_state.json"
+    if not path.exists():
+        return {
+            "consecutive_failed_executions": 0,
+            "auto_stop_active": False,
+            "last_failure_reasons": [],
+            "total_execution_attempts": 0,
+        }
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {
+            "consecutive_failed_executions": 0,
+            "auto_stop_active": False,
+            "last_failure_reasons": [],
+            "total_execution_attempts": 0,
+        }
+    if not isinstance(payload, dict):
+        return {
+            "consecutive_failed_executions": 0,
+            "auto_stop_active": False,
+            "last_failure_reasons": [],
+            "total_execution_attempts": 0,
+        }
+    return payload
+
+
+def _classify_mt5_execution_failure(reasons: list[str]) -> str:
+    joined = "|".join(sorted({str(reason) for reason in reasons if str(reason).strip()}))
+    if "auto_stop_active" in joined or "auto_stop_triggered" in joined:
+        return "auto_stop_protection"
+    if "pretrade_check_failed:live_execution_enabled" in joined or "live_execution_not_enabled" in joined:
+        return "explicit_gate_disabled"
+    if "pretrade_check_failed" in joined or "readiness" in joined:
+        return "pretrade_safety_failure"
+    if "mt5_module_unavailable" in joined or "mt5_initialize_failed" in joined:
+        return "execution_infrastructure_unavailable"
+    return "governed_refusal"
+
+
+def _place_controlled_mt5_order(
+    *,
+    order_request: dict[str, Any],
+    mt5_module: Any | None = None,
+) -> dict[str, Any]:
+    mt5 = mt5_module
+    if mt5 is None:
+        try:
+            import MetaTrader5 as mt5  # type: ignore
+        except Exception:
+            return {
+                "status": "refused",
+                "order_sent": False,
+                "error_reason": "mt5_module_unavailable",
+                "retcode": None,
+            }
+
+    if not bool(mt5.initialize()):
+        return {
+            "status": "failed",
+            "order_sent": False,
+            "error_reason": "mt5_initialize_failed",
+            "retcode": None,
+        }
+    try:
+        order_send = getattr(mt5, "order_send", None)
+        if not callable(order_send):
+            return {
+                "status": "failed",
+                "order_sent": False,
+                "error_reason": "mt5_order_send_unavailable",
+                "retcode": None,
+            }
+        result = order_send(order_request)
+        retcode = getattr(result, "retcode", None)
+        retcode_done = getattr(mt5, "TRADE_RETCODE_DONE", None)
+        if retcode_done is not None and retcode == retcode_done:
+            return {
+                "status": "accepted",
+                "order_sent": True,
+                "error_reason": "",
+                "retcode": retcode,
+                "order_id": int(getattr(result, "order", 0) or 0),
+            }
+        return {
+            "status": "rejected",
+            "order_sent": True,
+            "error_reason": f"mt5_retcode_{retcode}",
+            "retcode": retcode,
+            "order_id": int(getattr(result, "order", 0) or 0),
+        }
+    finally:
+        mt5.shutdown()
+
+
+def _run_controlled_mt5_live_execution(
+    *,
+    memory_root: str,
+    mode: str,
+    symbol: str,
+    decision: str,
+    confidence: float,
+    bars: list[dict[str, Any]],
+    live_execution_enabled: bool,
+    live_order_volume: float,
+    controlled_mt5_readiness: dict[str, Any],
+    readiness_chain: dict[str, Any],
+    quarantine_state: dict[str, Any],
+    risk_state_valid: bool,
+    fail_safe_state_clear: bool,
+    mt5_module: Any | None = None,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, str]]:
+    persistent_state = _load_mt5_controlled_execution_state(memory_root)
+    pre_trade_checks = [
+        {"name": "live_execution_enabled", "passed": bool(live_execution_enabled)},
+        {
+            "name": "mt5_readiness_valid",
+            "passed": bool(readiness_chain.get("all_checks_passed", False))
+            and bool(controlled_mt5_readiness.get("ready_for_controlled_usage", False)),
+        },
+        {"name": "symbol_valid", "passed": bool(controlled_mt5_readiness.get("symbol_validity", False))},
+        {
+            "name": "account_trading_permission_valid",
+            "passed": bool(controlled_mt5_readiness.get("account_trading_permission", False))
+            and bool(controlled_mt5_readiness.get("account_readiness", False)),
+        },
+        {
+            "name": "data_freshness_valid",
+            "passed": bool(controlled_mt5_readiness.get("data_freshness", False))
+            and bool(controlled_mt5_readiness.get("tick_data_freshness", False)),
+        },
+        {"name": "risk_state_valid", "passed": bool(risk_state_valid)},
+        {"name": "fail_safe_state_clear", "passed": bool(fail_safe_state_clear)},
+        {
+            "name": "quarantine_clear",
+            "passed": not bool(quarantine_state.get("quarantine_required", False)),
+        },
+        {
+            "name": "auto_stop_inactive",
+            "passed": not bool(persistent_state.get("auto_stop_active", False)),
+        },
+    ]
+    failed_checks = sorted(check["name"] for check in pre_trade_checks if not bool(check["passed"]))
+    entry_decision = {
+        "entry_timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        "mode": mode,
+        "symbol": symbol,
+        "decision": decision,
+        "confidence": float(confidence),
+        "eligible_for_order": mode == "live" and decision in {"BUY", "SELL"},
+    }
+
+    order_request: dict[str, Any] = {}
+    order_result: dict[str, Any] = {}
+    rejection_reasons: list[str] = []
+    rollback_reasons: list[str] = []
+    stop_loss_take_profit = {"stop_loss": None, "take_profit": None}
+
+    if mode != "live":
+        rejection_reasons = ["non_live_mode"]
+    elif decision not in {"BUY", "SELL"}:
+        rejection_reasons = ["no_trade_signal"]
+    elif failed_checks:
+        rejection_reasons = [f"pretrade_check_failed:{name}" for name in failed_checks]
+    else:
+        last_price = float(bars[-1]["close"]) if bars else 0.0
+        sl_offset = 2.0
+        tp_offset = 4.0
+        stop_loss = round(last_price - sl_offset, 5) if decision == "BUY" else round(last_price + sl_offset, 5)
+        take_profit = round(last_price + tp_offset, 5) if decision == "BUY" else round(last_price - tp_offset, 5)
+        stop_loss_take_profit = {"stop_loss": stop_loss, "take_profit": take_profit}
+        order_request = {
+            "action": "deal",
+            "symbol": symbol,
+            "volume": float(live_order_volume),
+            "type": decision,
+            "price": last_price,
+            "sl": stop_loss,
+            "tp": take_profit,
+            "deviation": 20,
+            "comment": "governed_controlled_execution",
+        }
+        order_result = _place_controlled_mt5_order(order_request=order_request, mt5_module=mt5_module)
+        if order_result.get("status") != "accepted":
+            rejection_reasons = [str(order_result.get("error_reason") or "order_send_refused")]
+
+    if rejection_reasons:
+        rollback_reasons = sorted(set(rejection_reasons))
+        order_result = {
+            **order_result,
+            "status": order_result.get("status", "refused"),
+            "order_sent": bool(order_result.get("order_sent", False)),
+            "rejection_reason": rollback_reasons[0],
+        }
+    else:
+        order_result = {
+            **order_result,
+            "status": "accepted",
+            "order_sent": True,
+            "rejection_reason": "",
+        }
+
+    is_live_trade_attempt = mode == "live" and decision in {"BUY", "SELL"}
+    is_failure_state = is_live_trade_attempt and order_result.get("status") != "accepted"
+    consecutive_failed = int(persistent_state.get("consecutive_failed_executions", 0))
+    if is_failure_state:
+        consecutive_failed += 1
+    elif is_live_trade_attempt:
+        consecutive_failed = 0
+    auto_stop_active = bool(persistent_state.get("auto_stop_active", False)) or consecutive_failed >= 3
+    if consecutive_failed >= 3:
+        rollback_reasons = sorted(set(rollback_reasons + ["auto_stop_triggered_repeated_failures"]))
+
+    open_position_state = (
+        {
+            "status": "open",
+            "position_id": int(order_result.get("order_id", 0) or 0),
+            "symbol": symbol,
+            "side": decision,
+            "entry_price": float(order_request.get("price", 0.0)),
+            "stop_loss": stop_loss_take_profit["stop_loss"],
+            "take_profit": stop_loss_take_profit["take_profit"],
+        }
+        if order_result.get("status") == "accepted"
+        else {
+            "status": "flat",
+            "position_id": None,
+            "symbol": symbol,
+            "side": "NONE",
+            "entry_price": None,
+            "stop_loss": None,
+            "take_profit": None,
+        }
+    )
+    exit_decision = (
+        {"decision": "hold_open_position", "reason": "position_active_under_governed_controls"}
+        if open_position_state["status"] == "open"
+        else {"decision": "no_position_exit", "reason": "no_open_position"}
+    )
+    pnl_snapshot = {
+        "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        "symbol": symbol,
+        "realized_pnl": 0.0,
+        "unrealized_pnl": 0.0,
+        "position_open": open_position_state["status"] == "open",
+    }
+    failure_classification = (
+        _classify_mt5_execution_failure(rollback_reasons) if rollback_reasons else "none"
+    )
+    replay_feedback_hook = {
+        "enabled": True,
+        "hook_status": "queued_for_feedback",
+        "mistake_classification": failure_classification,
+    }
+
+    controlled_execution_artifact = {
+        "entry_decision": entry_decision,
+        "pre_trade_checks": {
+            "checks": pre_trade_checks,
+            "failed_checks": failed_checks,
+            "all_checks_passed": not failed_checks,
+        },
+        "order_request": order_request,
+        "order_result": order_result,
+        "stop_loss_take_profit": stop_loss_take_profit,
+        "rejection_reason": rollback_reasons[0] if rollback_reasons else "",
+        "rollback_refusal_reasons": rollback_reasons,
+        "open_position_state": open_position_state,
+        "exit_decision": exit_decision,
+        "pnl_snapshot": pnl_snapshot,
+        "mistake_failure_classification": failure_classification,
+        "replay_feedback_hook": replay_feedback_hook,
+        "auto_stop_active": auto_stop_active,
+    }
+
+    updated_state = {
+        "consecutive_failed_executions": consecutive_failed,
+        "auto_stop_active": auto_stop_active,
+        "last_failure_reasons": rollback_reasons,
+        "total_execution_attempts": int(persistent_state.get("total_execution_attempts", 0))
+        + (1 if is_live_trade_attempt else 0),
+    }
+
+    root = Path(memory_root)
+    artifact_paths = {
+        "execution_artifact_path": root / "mt5_controlled_execution_artifact.json",
+        "execution_state_path": root / "mt5_controlled_execution_state.json",
+        "execution_history_path": root / "mt5_controlled_execution_history.json",
+    }
+    write_json_atomic(artifact_paths["execution_artifact_path"], controlled_execution_artifact)
+    write_json_atomic(artifact_paths["execution_state_path"], updated_state)
+    history_path = artifact_paths["execution_history_path"]
+    history: list[dict[str, Any]] = []
+    if history_path.exists():
+        try:
+            loaded = json.loads(history_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, list):
+                history = loaded
+        except Exception:
+            history = []
+    history.append(controlled_execution_artifact)
+    write_json_atomic(history_path, history[-100:])
+
+    return (
+        {
+            **controlled_execution_artifact,
+            **{name: str(path) for name, path in artifact_paths.items()},
+        },
+        updated_state,
+        {name: str(path) for name, path in artifact_paths.items()},
+    )
+
+
 def run_evolution_kernel(config: RuntimeConfig) -> dict[str, Any]:
     if not config.evolution_enabled:
         return {
@@ -696,6 +1016,11 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         mt5_chain_verified=bool(readiness_chain.get("all_checks_passed", False)),
         mt5_quarantined=bool(quarantine_state.get("quarantine_required", False)),
         mt5_safe_resume_state=str(resume_state.get("status", "unknown")),
+        mt5_live_execution_enabled=bool(config.live_execution_enabled),
+        mt5_auto_stop_active=bool(
+            controlled_mt5_readiness.get("controlled_execution_state", {}).get("auto_stop_active", False)
+        ),
+        mt5_controlled_execution=dict(controlled_mt5_readiness.get("controlled_execution_artifact", {})),
     )
 
     structure = classify_market_structure(bars)
@@ -747,6 +1072,84 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         block["reasons"] + advanced_state.blocked_reasons + (refusal_reasons if mt5_unsafe_refusal else [])
     )
 
+    decision = advanced_state.final_direction
+    reasons = (
+        combined_reasons if combined_blocked else [f"advanced_direction={decision}"] + score["reasons"]
+    )
+    if combined_blocked:
+        decision = "WAIT"
+
+    fail_safe_state_clear = len(controlled_mt5_readiness.get("fail_safe_blocked_reasons", [])) == 0
+    risk_state_valid = not bool(block.get("blocked", False))
+    controlled_execution, controlled_execution_state, controlled_execution_paths = _run_controlled_mt5_live_execution(
+        memory_root=config.memory_root,
+        mode=config.mode,
+        symbol=config.symbol,
+        decision=decision,
+        confidence=advanced_state.final_confidence,
+        bars=bars,
+        live_execution_enabled=config.live_execution_enabled,
+        live_order_volume=config.live_order_volume,
+        controlled_mt5_readiness=controlled_mt5_readiness,
+        readiness_chain=readiness_chain,
+        quarantine_state=quarantine_state,
+        risk_state_valid=risk_state_valid,
+        fail_safe_state_clear=fail_safe_state_clear,
+    )
+    if decision in {"BUY", "SELL"} and controlled_execution.get("order_result", {}).get("status") != "accepted":
+        decision = "WAIT"
+        reasons = normalize_reasons(
+            reasons
+            + ["mt5_controlled_execution_refused"]
+            + [
+                f"mt5_controlled_refusal:{reason}"
+                for reason in controlled_execution.get("rollback_refusal_reasons", [])
+            ]
+        )
+    controlled_mt5_readiness = {
+        **controlled_mt5_readiness,
+        "live_execution_enabled": bool(config.live_execution_enabled),
+        "controlled_execution_state": controlled_execution_state,
+        "controlled_execution_artifact": controlled_execution,
+        "controlled_execution_paths": controlled_execution_paths,
+    }
+    execution_state = ExecutionState(
+        symbol=config.symbol,
+        mode=config.mode,
+        replay_source=config.replay_source,
+        mt5_attempted=mt5_attempted,
+        data_source=data_source,
+        ready=not mt5_unsafe_refusal,
+        reasons=[
+            "validated",
+            f"data_source={data_source}",
+            f"mt5_controlled_ready={controlled_mt5_readiness.get('ready_for_controlled_usage', False)}",
+            (
+                "mt5_execution_refused_unsafe_readiness"
+                if mt5_unsafe_refusal
+                else "mt5_execution_refusal_not_required"
+            ),
+        ]
+        + (
+            [
+                f"refusal:{reason}"
+                for reason in controlled_mt5_readiness.get("fail_safe_blocked_reasons", [])
+            ]
+            if mt5_unsafe_refusal
+            else []
+        ),
+        controlled_mt5_readiness=controlled_mt5_readiness,
+        live_execution_blocked=True,
+        mt5_execution_gate=str(controlled_mt5_readiness.get("execution_gate", "blocked")),
+        mt5_execution_refused=bool(controlled_mt5_readiness.get("execution_refused", True)),
+        mt5_chain_verified=bool(readiness_chain.get("all_checks_passed", False)),
+        mt5_quarantined=bool(quarantine_state.get("quarantine_required", False)),
+        mt5_safe_resume_state=str(resume_state.get("status", "unknown")),
+        mt5_live_execution_enabled=bool(config.live_execution_enabled),
+        mt5_auto_stop_active=bool(controlled_execution_state.get("auto_stop_active", False)),
+        mt5_controlled_execution=dict(controlled_execution),
+    )
+
     snapshot_id = store.record_snapshot(
         {
             "symbol": config.symbol,
@@ -757,16 +1160,10 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
             "base_confidence": score,
             "advanced_state": state_to_dict(advanced_state),
             "bars": bars,
+            "controlled_mt5_execution": controlled_execution,
         }
     )
-
-    decision = advanced_state.final_direction
-    reasons = (
-        combined_reasons if combined_blocked else [f"advanced_direction={decision}"] + score["reasons"]
-    )
-
-    if combined_blocked:
-        decision = "WAIT"
+    if decision == "WAIT":
         store.record_blocked(
             {
                 "symbol": config.symbol,
@@ -957,6 +1354,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--evaluation-steps", type=int, default=None)
     parser.add_argument("--evaluation-stride", type=int, default=None)
     parser.add_argument("--knowledge-expansion-enabled", choices=["true", "false"], default=None)
+    parser.add_argument("--live-execution-enabled", choices=["true", "false"], default=None)
+    parser.add_argument("--live-order-volume", type=float, default=None)
     return parser.parse_args()
 
 
@@ -986,6 +1385,20 @@ def main() -> None:
             **{
                 **config.__dict__,
                 "knowledge_expansion_enabled": args.knowledge_expansion_enabled.lower() == "true",
+            }
+        )
+    if args.live_execution_enabled is not None:
+        config = RuntimeConfig(
+            **{
+                **config.__dict__,
+                "live_execution_enabled": args.live_execution_enabled.lower() == "true",
+            }
+        )
+    if args.live_order_volume is not None:
+        config = RuntimeConfig(
+            **{
+                **config.__dict__,
+                "live_order_volume": float(args.live_order_volume),
             }
         )
 

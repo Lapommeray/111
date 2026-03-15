@@ -4,7 +4,13 @@ import csv
 import json
 from pathlib import Path
 
-from run import RuntimeConfig, ensure_sample_data, run_pipeline, validate_runtime_config
+from run import (
+    RuntimeConfig,
+    _run_controlled_mt5_live_execution,
+    ensure_sample_data,
+    run_pipeline,
+    validate_runtime_config,
+)
 from src.memory.pattern_store import PatternStore, PatternStoreConfig
 
 
@@ -367,6 +373,99 @@ def test_mt5_pack3_safe_resume_after_readiness_interruption(tmp_path: Path) -> N
     assert resumed_execution_state["mt5_safe_resume_state"] == "resumed_safe"
 
 
+def test_run_pipeline_persists_controlled_mt5_execution_artifacts(tmp_path: Path) -> None:
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+    memory_root = tmp_path / "memory_execution_artifacts"
+
+    output = run_pipeline(
+        RuntimeConfig(
+            symbol="XAUUSD",
+            timeframe="M5",
+            bars=120,
+            sample_path=str(sample_path),
+            memory_root=str(memory_root),
+            mode="replay",
+            replay_source="csv",
+            replay_csv_path=str(sample_path),
+        )
+    )
+
+    execution_state = output["status_panel"]["execution_state"]
+    controlled_execution = execution_state["mt5_controlled_execution"]
+    assert controlled_execution["entry_decision"]["mode"] == "replay"
+    assert controlled_execution["order_result"]["status"] in {"refused", "failed", "rejected"}
+    assert controlled_execution["rejection_reason"] == "non_live_mode"
+    assert Path(controlled_execution["execution_artifact_path"]).exists()
+    assert Path(controlled_execution["execution_state_path"]).exists()
+    assert Path(controlled_execution["execution_history_path"]).exists()
+
+
+def test_controlled_mt5_execution_requires_explicit_live_gate(tmp_path: Path) -> None:
+    controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(
+        memory_root=str(tmp_path / "memory_gate"),
+        mode="live",
+        symbol="XAUUSD",
+        decision="BUY",
+        confidence=0.8,
+        bars=[{"close": 2000.0}],
+        live_execution_enabled=False,
+        live_order_volume=0.01,
+        controlled_mt5_readiness={
+            "ready_for_controlled_usage": True,
+            "symbol_validity": True,
+            "account_trading_permission": True,
+            "account_readiness": True,
+            "data_freshness": True,
+            "tick_data_freshness": True,
+            "fail_safe_blocked_reasons": [],
+        },
+        readiness_chain={"all_checks_passed": True},
+        quarantine_state={"quarantine_required": False},
+        risk_state_valid=True,
+        fail_safe_state_clear=True,
+    )
+
+    assert controlled_execution["order_result"]["status"] == "refused"
+    assert "pretrade_check_failed:live_execution_enabled" in controlled_execution["rollback_refusal_reasons"]
+    assert controlled_execution["mistake_failure_classification"] == "explicit_gate_disabled"
+
+
+def test_controlled_mt5_execution_auto_stop_after_repeated_failures(tmp_path: Path) -> None:
+    memory_root = str(tmp_path / "memory_auto_stop")
+    base_kwargs = {
+        "memory_root": memory_root,
+        "mode": "live",
+        "symbol": "XAUUSD",
+        "decision": "BUY",
+        "confidence": 0.9,
+        "bars": [{"close": 2100.0}],
+        "live_execution_enabled": True,
+        "live_order_volume": 0.01,
+        "controlled_mt5_readiness": {
+            "ready_for_controlled_usage": True,
+            "symbol_validity": True,
+            "account_trading_permission": True,
+            "account_readiness": True,
+            "data_freshness": True,
+            "tick_data_freshness": True,
+            "fail_safe_blocked_reasons": [],
+        },
+        "readiness_chain": {"all_checks_passed": True},
+        "quarantine_state": {"quarantine_required": False},
+        "risk_state_valid": True,
+        "fail_safe_state_clear": True,
+    }
+
+    for _ in range(3):
+        _run_controlled_mt5_live_execution(**base_kwargs)
+    fourth_execution, state, _ = _run_controlled_mt5_live_execution(**base_kwargs)
+
+    assert state["auto_stop_active"] is True
+    assert fourth_execution["auto_stop_active"] is True
+    assert "pretrade_check_failed:auto_stop_inactive" in fourth_execution["rollback_refusal_reasons"]
+
+
 def test_config_validation_xauusd_first_and_timeframe() -> None:
     validate_runtime_config(RuntimeConfig(symbol="XAUUSD", timeframe="M5"))
 
@@ -381,6 +480,12 @@ def test_config_validation_xauusd_first_and_timeframe() -> None:
         assert False, "Expected ValueError for unsupported timeframe"
     except ValueError as exc:
         assert "Unsupported timeframe" in str(exc)
+
+    try:
+        validate_runtime_config(RuntimeConfig(symbol="XAUUSD", timeframe="M5", live_order_volume=0))
+        assert False, "Expected ValueError for invalid live order volume"
+    except ValueError as exc:
+        assert "live_order_volume" in str(exc)
 
 
 def test_json_seed_file_shapes_are_safe() -> None:

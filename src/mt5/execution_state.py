@@ -20,6 +20,9 @@ class ExecutionState:
     mt5_chain_verified: bool = False
     mt5_quarantined: bool = False
     mt5_safe_resume_state: str = "unknown"
+    mt5_live_execution_enabled: bool = False
+    mt5_auto_stop_active: bool = False
+    mt5_controlled_execution: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -37,4 +40,7 @@ class ExecutionState:
             "mt5_chain_verified": self.mt5_chain_verified,
             "mt5_quarantined": self.mt5_quarantined,
             "mt5_safe_resume_state": self.mt5_safe_resume_state,
+            "mt5_live_execution_enabled": self.mt5_live_execution_enabled,
+            "mt5_auto_stop_active": self.mt5_auto_stop_active,
+            "mt5_controlled_execution": dict(self.mt5_controlled_execution or {}),
         }
