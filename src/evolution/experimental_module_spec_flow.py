@@ -214,6 +214,26 @@ PHASE_H_DECISION_SEQUENCE = (
     PHASE_H_SUPERVISED_NON_LIVE,
 )
 PHASE_H_GOVERNOR_VERSION = "phase_h_governor_v1"
+PHASE_I_CAPITAL_PRESERVATION_MODE = "capital_preservation_mode"
+PHASE_I_CONSTRAINED_NON_LIVE = "constrained_non_live"
+PHASE_I_ADAPTIVE_PAPER_ONLY = "adaptive_paper_only"
+PHASE_I_DECISION_SEQUENCE = (
+    PHASE_I_CAPITAL_PRESERVATION_MODE,
+    PHASE_I_CONSTRAINED_NON_LIVE,
+    PHASE_I_ADAPTIVE_PAPER_ONLY,
+)
+PHASE_I_GOVERNOR_VERSION = "phase_i_governor_v1"
+PHASE_J_ROLLBACK_IMMEDIATE = "rollback_immediate"
+PHASE_J_ROLLBACK_CONTROLLED_NON_LIVE = "rollback_controlled_non_live"
+PHASE_J_MONITOR_CONTINUE_PAPER_ONLY = "monitor_continue_paper_only"
+PHASE_J_DECISION_SEQUENCE = (
+    PHASE_J_ROLLBACK_IMMEDIATE,
+    PHASE_J_ROLLBACK_CONTROLLED_NON_LIVE,
+    PHASE_J_MONITOR_CONTINUE_PAPER_ONLY,
+)
+PHASE_J_GOVERNOR_VERSION = "phase_j_governor_v1"
+PHASE_K_MEMORY_VERSION = "phase_k_memory_v1"
+PHASE_L_DISCOVERY_VERSION = "phase_l_discovery_v1"
 
 
 def _to_float(value: Any, default: float = 0.0) -> float:
@@ -1077,4 +1097,897 @@ def run_knowledge_expansion_phase_h(
         mode=mode,
         interface_state_memory_path=knowledge_root / "broker_exchange_state_memory.json",
         registry_path=(knowledge_root / "execution_supervision" / "broker_exchange_supervision_registry.json"),
+    )
+
+
+def _phase_i_portfolio_decision(
+    supervision_payload: dict[str, Any],
+    portfolio_state: dict[str, Any],
+) -> tuple[str, str, str, str, str, str]:
+    supervision_decision = str(supervision_payload.get("supervision_decision", "")).strip()
+    fail_safe_status = str(supervision_payload.get("fail_safe_status", "")).strip()
+    execution_readiness = str(supervision_payload.get("execution_readiness", "not_ready")).strip() or "not_ready"
+
+    open_exposure_pct = max(0.0, _to_float(portfolio_state.get("open_exposure_pct", 0.0)))
+    max_exposure_pct = max(0.0, _to_float(portfolio_state.get("max_exposure_pct", 0.35)))
+    suggested_position_size_pct = max(0.0, _to_float(portfolio_state.get("suggested_position_size_pct", 0.0)))
+    max_position_size_pct = max(0.0, _to_float(portfolio_state.get("max_position_size_pct", 0.03)))
+    max_drawdown_pct = max(0.0, _to_float(portfolio_state.get("max_drawdown_pct", 8.0)))
+    capital_budget_pct = max(0.0, _to_float(portfolio_state.get("capital_budget_pct", 0.25)))
+    capital_allocated_pct = max(0.0, _to_float(portfolio_state.get("capital_allocated_pct", 0.0)))
+    equity = max(0.0, _to_float(portfolio_state.get("equity", 0.0)))
+    peak_equity = max(0.0, _to_float(portfolio_state.get("peak_equity", equity)))
+
+    drawdown_pct = 0.0
+    if peak_equity > 0.0 and equity <= peak_equity:
+        drawdown_pct = ((peak_equity - equity) / peak_equity) * 100.0
+
+    exposure_within_limits = open_exposure_pct <= max_exposure_pct
+    position_sizing_ready = 0.0 < suggested_position_size_pct <= max_position_size_pct
+    drawdown_within_limits = drawdown_pct <= max_drawdown_pct
+    allocation_disciplined = capital_allocated_pct <= capital_budget_pct
+
+    allocation_state = (
+        "over_allocated"
+        if capital_allocated_pct > capital_budget_pct
+        else "budget_available"
+        if capital_allocated_pct < capital_budget_pct
+        else "at_budget"
+    )
+    exposure_state = "within_limit" if exposure_within_limits else "over_limit"
+    sizing_state = "ready" if position_sizing_ready else "size_constrained"
+    drawdown_state = "within_limit" if drawdown_within_limits else "drawdown_breached"
+
+    if (
+        supervision_decision != PHASE_H_SUPERVISED_NON_LIVE
+        or fail_safe_status == "fail_safe_triggered"
+        or not drawdown_within_limits
+        or not allocation_disciplined
+    ):
+        return (
+            PHASE_I_CAPITAL_PRESERVATION_MODE,
+            execution_readiness,
+            "defensive",
+            "Capital preservation activated due to supervision, drawdown, or allocation guardrail breach.",
+            allocation_state,
+            drawdown_state,
+        )
+    if not exposure_within_limits or not position_sizing_ready:
+        return (
+            PHASE_I_CONSTRAINED_NON_LIVE,
+            execution_readiness,
+            "cautious",
+            "Exposure or position-size constraints require constrained non-live allocation.",
+            allocation_state,
+            drawdown_state,
+        )
+    return (
+        PHASE_I_ADAPTIVE_PAPER_ONLY,
+        execution_readiness,
+        "adaptive_balanced",
+        "Portfolio constraints satisfied; adaptive allocation remains paper-only pending manual approval.",
+        allocation_state,
+        drawdown_state,
+    )
+
+
+def generate_adaptive_portfolio_risk_artifacts(
+    supervision_dir: Path,
+    portfolio_state_dir: Path,
+    output_dir: Path,
+    *,
+    mode: str,
+    portfolio_state_memory_path: Path,
+    registry_path: Path,
+    governor_version: str = PHASE_I_GOVERNOR_VERSION,
+) -> dict[str, Any]:
+    if str(mode).lower() != "replay":
+        return {
+            "adaptive_portfolio_enabled": False,
+            "portfolio_artifact_count": 0,
+            "portfolio_governance_dir": str(output_dir),
+            "portfolio_artifacts": [],
+            "portfolio_registry_path": str(registry_path),
+            "portfolio_state_memory_path": str(portfolio_state_memory_path),
+            "decision_classes": list(PHASE_I_DECISION_SEQUENCE),
+        }
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    portfolio_state_dir.mkdir(parents=True, exist_ok=True)
+    existing_memory = read_json_safe(portfolio_state_memory_path, default={"state_history": []})
+    if not isinstance(existing_memory, dict):
+        existing_memory = {"state_history": []}
+    state_history = existing_memory.get("state_history", [])
+    if not isinstance(state_history, list):
+        state_history = []
+    known_update_ids = {
+        str(item.get("update_id", "")).strip()
+        for item in state_history
+        if isinstance(item, dict) and str(item.get("update_id", "")).strip()
+    }
+
+    portfolio_state = existing_memory.get("latest_portfolio_state", {})
+    if not isinstance(portfolio_state, dict):
+        portfolio_state = {}
+    now_iso = datetime.now(tz=timezone.utc).isoformat()
+    for portfolio_path in sorted(portfolio_state_dir.glob("*.json")):
+        portfolio_payload = read_json_safe(portfolio_path, default={})
+        if not isinstance(portfolio_payload, dict):
+            continue
+        timestamp = str(portfolio_payload.get("timestamp", "")).strip() or now_iso
+        account_id = str(portfolio_payload.get("account_id", "paper")).strip() or "paper"
+        strategy_group = str(portfolio_payload.get("strategy_group", "sandbox")).strip() or "sandbox"
+        update_id = hashlib.blake2b(
+            f"{portfolio_path.name}|{timestamp}|{account_id}|{strategy_group}".encode("utf-8"),
+            digest_size=8,
+        ).hexdigest()
+        if update_id in known_update_ids:
+            continue
+
+        portfolio_state = {
+            "timestamp": timestamp,
+            "account_id": account_id,
+            "strategy_group": strategy_group,
+            "equity": round(max(0.0, _to_float(portfolio_payload.get("equity", 0.0))), 6),
+            "peak_equity": round(
+                max(
+                    _to_float(portfolio_payload.get("equity", 0.0)),
+                    _to_float(portfolio_payload.get("peak_equity", portfolio_payload.get("equity", 0.0))),
+                ),
+                6,
+            ),
+            "open_exposure_pct": round(max(0.0, _to_float(portfolio_payload.get("open_exposure_pct", 0.0))), 6),
+            "max_exposure_pct": round(max(0.0, _to_float(portfolio_payload.get("max_exposure_pct", 0.35))), 6),
+            "suggested_position_size_pct": round(
+                max(0.0, _to_float(portfolio_payload.get("suggested_position_size_pct", 0.0))),
+                6,
+            ),
+            "max_position_size_pct": round(
+                max(0.0, _to_float(portfolio_payload.get("max_position_size_pct", 0.03))),
+                6,
+            ),
+            "capital_budget_pct": round(max(0.0, _to_float(portfolio_payload.get("capital_budget_pct", 0.25))), 6),
+            "capital_allocated_pct": round(
+                max(0.0, _to_float(portfolio_payload.get("capital_allocated_pct", 0.0))),
+                6,
+            ),
+            "max_drawdown_pct": round(max(0.0, _to_float(portfolio_payload.get("max_drawdown_pct", 8.0))), 6),
+        }
+        state_history.append({"update_id": update_id, "source_path": str(portfolio_path), **portfolio_state})
+        known_update_ids.add(update_id)
+
+    if not portfolio_state:
+        portfolio_state = {
+            "timestamp": now_iso,
+            "account_id": "paper",
+            "strategy_group": "sandbox",
+            "equity": 0.0,
+            "peak_equity": 0.0,
+            "open_exposure_pct": 0.0,
+            "max_exposure_pct": 0.35,
+            "suggested_position_size_pct": 0.0,
+            "max_position_size_pct": 0.03,
+            "capital_budget_pct": 0.25,
+            "capital_allocated_pct": 0.0,
+            "max_drawdown_pct": 8.0,
+        }
+        fallback_id = hashlib.blake2b(f"default|{now_iso}".encode("utf-8"), digest_size=8).hexdigest()
+        if fallback_id not in known_update_ids:
+            state_history.append({"update_id": fallback_id, "source_path": "default", **portfolio_state})
+
+    memory_payload = {
+        "governor_version": governor_version,
+        "latest_portfolio_state": portfolio_state,
+        "state_history": state_history,
+    }
+    write_json_atomic(portfolio_state_memory_path, memory_payload)
+
+    deduplicated_supervision_records: dict[str, tuple[Path, dict[str, Any]]] = {}
+    for supervision_path in sorted(supervision_dir.glob("*.json")):
+        payload = read_json_safe(supervision_path, default={})
+        if not isinstance(payload, dict):
+            continue
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        deduplicated_supervision_records[candidate_id] = (supervision_path, payload)
+
+    generated_paths: list[str] = []
+    generated_entries: dict[str, dict[str, Any]] = {}
+    for candidate_id, (supervision_path, supervision_payload) in sorted(
+        deduplicated_supervision_records.items(),
+        key=lambda pair: pair[0],
+    ):
+        (
+            portfolio_decision,
+            execution_readiness,
+            risk_state,
+            decision_reason,
+            allocation_state,
+            drawdown_state,
+        ) = _phase_i_portfolio_decision(
+            supervision_payload,
+            portfolio_state,
+        )
+        open_exposure_pct = max(0.0, _to_float(portfolio_state.get("open_exposure_pct", 0.0)))
+        max_exposure_pct = max(0.0, _to_float(portfolio_state.get("max_exposure_pct", 0.35)))
+        suggested_position_size_pct = max(0.0, _to_float(portfolio_state.get("suggested_position_size_pct", 0.0)))
+        max_position_size_pct = max(0.0, _to_float(portfolio_state.get("max_position_size_pct", 0.03)))
+        capital_budget_pct = max(0.0, _to_float(portfolio_state.get("capital_budget_pct", 0.25)))
+        capital_allocated_pct = max(0.0, _to_float(portfolio_state.get("capital_allocated_pct", 0.0)))
+        equity = max(0.0, _to_float(portfolio_state.get("equity", 0.0)))
+        peak_equity = max(0.0, _to_float(portfolio_state.get("peak_equity", equity)))
+        drawdown_pct = 0.0
+        if peak_equity > 0.0 and equity <= peak_equity:
+            drawdown_pct = ((peak_equity - equity) / peak_equity) * 100.0
+
+        artifact = {
+            "candidate_id": candidate_id,
+            "module_name": str(supervision_payload.get("module_name", f"sandbox_{_safe_candidate_filename(candidate_id)}")),
+            "truth_class": str(supervision_payload.get("truth_class", "meta-intelligence")),
+            "supervision_source_path": str(supervision_path),
+            "portfolio_timestamp": str(portfolio_state.get("timestamp", now_iso)),
+            "supervision_decision": str(supervision_payload.get("supervision_decision", "")),
+            "portfolio_decision": portfolio_decision,
+            "decision_reason": decision_reason,
+            "execution_readiness": execution_readiness,
+            "risk_state": risk_state,
+            "allocation_state": allocation_state,
+            "exposure_state": "within_limit" if open_exposure_pct <= max_exposure_pct else "over_limit",
+            "sizing_state": (
+                "ready" if 0.0 < suggested_position_size_pct <= max_position_size_pct else "size_constrained"
+            ),
+            "drawdown_state": drawdown_state,
+            "portfolio_state_snapshot": portfolio_state,
+            "portfolio_state_memory_path": str(portfolio_state_memory_path),
+            "manual_approval_required": True,
+            "live_activation_allowed": False,
+            "risk_constraints": {
+                "live_execution_blocked": True,
+                "auto_live_activation": False,
+                "paper_execution_only": True,
+                "max_exposure_pct": max_exposure_pct,
+                "max_position_size_pct": max_position_size_pct,
+                "capital_budget_pct": capital_budget_pct,
+                "max_drawdown_pct": max(0.0, _to_float(portfolio_state.get("max_drawdown_pct", 8.0))),
+                "current_exposure_pct": open_exposure_pct,
+                "current_position_size_pct": suggested_position_size_pct,
+                "current_capital_allocated_pct": capital_allocated_pct,
+                "drawdown_pct": round(drawdown_pct, 6),
+            },
+            "governor_version": governor_version,
+        }
+        target_path = output_dir / f"{_safe_candidate_filename(candidate_id)}.json"
+        write_json_atomic(target_path, artifact)
+        generated_paths.append(str(target_path))
+        generated_entries[candidate_id] = artifact
+
+    existing_registry = read_json_safe(registry_path, default={"portfolio_records": []})
+    if not isinstance(existing_registry, dict):
+        existing_registry = {"portfolio_records": []}
+    records = existing_registry.get("portfolio_records", [])
+    if not isinstance(records, list):
+        records = []
+
+    registry_by_candidate: dict[str, dict[str, Any]] = {}
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        candidate_id = str(record.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        registry_by_candidate[candidate_id] = record
+    registry_by_candidate.update(generated_entries)
+
+    registry_payload = {
+        "governor_version": governor_version,
+        "decision_classes": list(PHASE_I_DECISION_SEQUENCE),
+        "portfolio_records": [registry_by_candidate[cid] for cid in sorted(registry_by_candidate)],
+    }
+    write_json_atomic(registry_path, registry_payload)
+
+    return {
+        "adaptive_portfolio_enabled": True,
+        "portfolio_artifact_count": len(generated_paths),
+        "portfolio_governance_dir": str(output_dir),
+        "portfolio_artifacts": generated_paths,
+        "portfolio_registry_path": str(registry_path),
+        "portfolio_state_memory_path": str(portfolio_state_memory_path),
+        "decision_classes": list(PHASE_I_DECISION_SEQUENCE),
+    }
+
+
+def run_knowledge_expansion_phase_i(
+    root: Path,
+    *,
+    mode: str,
+) -> dict[str, Any]:
+    knowledge_root = root / "memory" / "knowledge_expansion"
+    return generate_adaptive_portfolio_risk_artifacts(
+        supervision_dir=knowledge_root / "execution_supervision",
+        portfolio_state_dir=knowledge_root / "portfolio_risk_inputs",
+        output_dir=knowledge_root / "adaptive_portfolio_governance",
+        mode=mode,
+        portfolio_state_memory_path=knowledge_root / "adaptive_portfolio_state_memory.json",
+        registry_path=(knowledge_root / "adaptive_portfolio_governance" / "adaptive_portfolio_registry.json"),
+    )
+
+
+def _phase_j_incident_decision(
+    portfolio_payload: dict[str, Any],
+    health_state: dict[str, Any],
+) -> tuple[str, str, str, str, str]:
+    portfolio_decision = str(portfolio_payload.get("portfolio_decision", "")).strip()
+    execution_readiness = str(portfolio_payload.get("execution_readiness", "not_ready")).strip() or "not_ready"
+    health_score = max(0.0, min(1.0, _to_float(health_state.get("health_score", 1.0), 1.0)))
+    failed_checks = max(0, int(_to_float(health_state.get("failed_checks", 0), 0.0)))
+    unsafe_condition = bool(health_state.get("unsafe_condition", False))
+    rollback_requested = bool(health_state.get("rollback_requested", False))
+    incident_signals = health_state.get("incident_signals", [])
+    if not isinstance(incident_signals, list):
+        incident_signals = []
+
+    if (
+        rollback_requested
+        or unsafe_condition
+        or failed_checks >= 3
+        or health_score < 0.4
+        or portfolio_decision == PHASE_I_CAPITAL_PRESERVATION_MODE
+    ):
+        return (
+            PHASE_J_ROLLBACK_IMMEDIATE,
+            "critical",
+            "rollback_required",
+            execution_readiness,
+            "Critical monitoring condition detected; immediate controlled rollback required while live execution remains blocked.",
+        )
+    if (
+        failed_checks > 0
+        or health_score < 0.75
+        or bool(incident_signals)
+        or portfolio_decision == PHASE_I_CONSTRAINED_NON_LIVE
+    ):
+        return (
+            PHASE_J_ROLLBACK_CONTROLLED_NON_LIVE,
+            "warning",
+            "degraded_guarded",
+            execution_readiness,
+            "Degraded monitoring state detected; controlled non-live rollback and incident containment required.",
+        )
+    return (
+        PHASE_J_MONITOR_CONTINUE_PAPER_ONLY,
+        "normal",
+        "stable_guarded",
+        execution_readiness,
+        "Health and incident checks are stable; continue paper-only monitoring with governance controls.",
+    )
+
+
+def generate_monitoring_rollback_incident_artifacts(
+    portfolio_governance_dir: Path,
+    health_state_dir: Path,
+    output_dir: Path,
+    *,
+    mode: str,
+    health_state_memory_path: Path,
+    registry_path: Path,
+    governor_version: str = PHASE_J_GOVERNOR_VERSION,
+) -> dict[str, Any]:
+    if str(mode).lower() != "replay":
+        return {
+            "incident_control_enabled": False,
+            "incident_artifact_count": 0,
+            "incident_control_dir": str(output_dir),
+            "incident_artifacts": [],
+            "incident_registry_path": str(registry_path),
+            "health_state_memory_path": str(health_state_memory_path),
+            "decision_classes": list(PHASE_J_DECISION_SEQUENCE),
+        }
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    health_state_dir.mkdir(parents=True, exist_ok=True)
+
+    existing_memory = read_json_safe(health_state_memory_path, default={"state_history": []})
+    if not isinstance(existing_memory, dict):
+        existing_memory = {"state_history": []}
+    state_history = existing_memory.get("state_history", [])
+    if not isinstance(state_history, list):
+        state_history = []
+    known_update_ids = {
+        str(item.get("update_id", "")).strip()
+        for item in state_history
+        if isinstance(item, dict) and str(item.get("update_id", "")).strip()
+    }
+
+    health_state = existing_memory.get("latest_health_state", {})
+    if not isinstance(health_state, dict):
+        health_state = {}
+    now_iso = datetime.now(tz=timezone.utc).isoformat()
+    for health_path in sorted(health_state_dir.glob("*.json")):
+        health_payload = read_json_safe(health_path, default={})
+        if not isinstance(health_payload, dict):
+            continue
+        timestamp = str(health_payload.get("timestamp", "")).strip() or now_iso
+        health_score = round(max(0.0, min(1.0, _to_float(health_payload.get("health_score", 1.0), 1.0))), 6)
+        failed_checks = max(0, int(_to_float(health_payload.get("failed_checks", 0), 0.0)))
+        rollback_requested = bool(health_payload.get("rollback_requested", False))
+        update_id = hashlib.blake2b(
+            f"{health_path.name}|{timestamp}|{health_score}|{failed_checks}|{rollback_requested}".encode("utf-8"),
+            digest_size=8,
+        ).hexdigest()
+        if update_id in known_update_ids:
+            continue
+        incident_signals = health_payload.get("incident_signals", [])
+        if not isinstance(incident_signals, list):
+            incident_signals = []
+        incident_count = max(0, int(_to_float(health_payload.get("incident_count", len(incident_signals)), 0.0)))
+        health_state = {
+            "timestamp": timestamp,
+            "health_score": health_score,
+            "failed_checks": failed_checks,
+            "unsafe_condition": bool(health_payload.get("unsafe_condition", False)),
+            "rollback_requested": rollback_requested,
+            "incident_signals": [str(signal) for signal in incident_signals],
+            "incident_count": incident_count,
+            "source_component": str(health_payload.get("source_component", "phase_j_monitor")).strip()
+            or "phase_j_monitor",
+        }
+        state_history.append({"update_id": update_id, "source_path": str(health_path), **health_state})
+        known_update_ids.add(update_id)
+
+    if not health_state:
+        health_state = {
+            "timestamp": now_iso,
+            "health_score": 1.0,
+            "failed_checks": 0,
+            "unsafe_condition": False,
+            "rollback_requested": False,
+            "incident_signals": [],
+            "incident_count": 0,
+            "source_component": "phase_j_monitor",
+        }
+        fallback_id = hashlib.blake2b(f"default|{now_iso}".encode("utf-8"), digest_size=8).hexdigest()
+        if fallback_id not in known_update_ids:
+            state_history.append({"update_id": fallback_id, "source_path": "default", **health_state})
+
+    memory_payload = {
+        "governor_version": governor_version,
+        "latest_health_state": health_state,
+        "state_history": state_history,
+    }
+    write_json_atomic(health_state_memory_path, memory_payload)
+
+    deduplicated_portfolio_records: dict[str, tuple[Path, dict[str, Any]]] = {}
+    for portfolio_path in sorted(portfolio_governance_dir.glob("*.json")):
+        payload = read_json_safe(portfolio_path, default={})
+        if not isinstance(payload, dict):
+            continue
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        deduplicated_portfolio_records[candidate_id] = (portfolio_path, payload)
+
+    generated_paths: list[str] = []
+    generated_entries: dict[str, dict[str, Any]] = {}
+    for candidate_id, (portfolio_path, portfolio_payload) in sorted(
+        deduplicated_portfolio_records.items(),
+        key=lambda pair: pair[0],
+    ):
+        incident_decision, incident_severity, rollback_status, execution_readiness, decision_reason = (
+            _phase_j_incident_decision(portfolio_payload, health_state)
+        )
+        incident_id = hashlib.blake2b(
+            (
+                f"{candidate_id}|{health_state.get('timestamp', now_iso)}|"
+                f"{incident_decision}|{incident_severity}|{rollback_status}"
+            ).encode("utf-8"),
+            digest_size=8,
+        ).hexdigest()
+        artifact = {
+            "candidate_id": candidate_id,
+            "module_name": str(portfolio_payload.get("module_name", f"sandbox_{_safe_candidate_filename(candidate_id)}")),
+            "truth_class": str(portfolio_payload.get("truth_class", "meta-intelligence")),
+            "portfolio_source_path": str(portfolio_path),
+            "incident_timestamp": str(health_state.get("timestamp", now_iso)),
+            "portfolio_decision": str(portfolio_payload.get("portfolio_decision", "")),
+            "execution_readiness": execution_readiness,
+            "incident_id": incident_id,
+            "incident_severity": incident_severity,
+            "incident_control_decision": incident_decision,
+            "rollback_status": rollback_status,
+            "decision_reason": decision_reason,
+            "health_state_snapshot": health_state,
+            "health_state_memory_path": str(health_state_memory_path),
+            "manual_approval_required": True,
+            "live_activation_allowed": False,
+            "risk_constraints": {
+                "live_execution_blocked": True,
+                "auto_live_activation": False,
+                "paper_execution_only": True,
+                "rollback_allowed_non_live": True,
+                "incident_severity": incident_severity,
+            },
+            "governor_version": governor_version,
+        }
+        target_path = output_dir / f"{_safe_candidate_filename(candidate_id)}.json"
+        write_json_atomic(target_path, artifact)
+        generated_paths.append(str(target_path))
+        generated_entries[candidate_id] = artifact
+
+    existing_registry = read_json_safe(registry_path, default={"incident_records": []})
+    if not isinstance(existing_registry, dict):
+        existing_registry = {"incident_records": []}
+    records = existing_registry.get("incident_records", [])
+    if not isinstance(records, list):
+        records = []
+    registry_by_candidate: dict[str, dict[str, Any]] = {}
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        candidate_id = str(record.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        registry_by_candidate[candidate_id] = record
+    registry_by_candidate.update(generated_entries)
+
+    registry_payload = {
+        "governor_version": governor_version,
+        "decision_classes": list(PHASE_J_DECISION_SEQUENCE),
+        "incident_records": [registry_by_candidate[cid] for cid in sorted(registry_by_candidate)],
+    }
+    write_json_atomic(registry_path, registry_payload)
+
+    return {
+        "incident_control_enabled": True,
+        "incident_artifact_count": len(generated_paths),
+        "incident_control_dir": str(output_dir),
+        "incident_artifacts": generated_paths,
+        "incident_registry_path": str(registry_path),
+        "health_state_memory_path": str(health_state_memory_path),
+        "decision_classes": list(PHASE_J_DECISION_SEQUENCE),
+    }
+
+
+def run_knowledge_expansion_phase_j(
+    root: Path,
+    *,
+    mode: str,
+) -> dict[str, Any]:
+    knowledge_root = root / "memory" / "knowledge_expansion"
+    return generate_monitoring_rollback_incident_artifacts(
+        portfolio_governance_dir=knowledge_root / "adaptive_portfolio_governance",
+        health_state_dir=knowledge_root / "system_health_inputs",
+        output_dir=knowledge_root / "incident_control_governance",
+        mode=mode,
+        health_state_memory_path=knowledge_root / "system_health_state_memory.json",
+        registry_path=(knowledge_root / "incident_control_governance" / "incident_control_registry.json"),
+    )
+
+
+def generate_long_horizon_memory_artifacts(
+    decision_orchestrator_dir: Path,
+    portfolio_governance_dir: Path,
+    output_dir: Path,
+    *,
+    mode: str,
+    memory_state_path: Path,
+    registry_path: Path,
+    memory_version: str = PHASE_K_MEMORY_VERSION,
+) -> dict[str, Any]:
+    if str(mode).lower() != "replay":
+        return {
+            "long_horizon_memory_enabled": False,
+            "long_horizon_memory_count": 0,
+            "long_horizon_memory_dir": str(output_dir),
+            "long_horizon_memory_artifacts": [],
+            "long_horizon_memory_registry_path": str(registry_path),
+            "long_horizon_memory_state_path": str(memory_state_path),
+        }
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    decision_orchestrator_dir.mkdir(parents=True, exist_ok=True)
+    portfolio_governance_dir.mkdir(parents=True, exist_ok=True)
+
+    existing_state = read_json_safe(memory_state_path, default={"state_history": []})
+    if not isinstance(existing_state, dict):
+        existing_state = {"state_history": []}
+    state_history = existing_state.get("state_history", [])
+    if not isinstance(state_history, list):
+        state_history = []
+    known_update_ids = {
+        str(item.get("update_id", "")).strip()
+        for item in state_history
+        if isinstance(item, dict) and str(item.get("update_id", "")).strip()
+    }
+
+    phase_g_by_candidate: dict[str, tuple[Path, dict[str, Any]]] = {}
+    for decision_path in sorted(decision_orchestrator_dir.glob("*.json")):
+        payload = read_json_safe(decision_path, default={})
+        if not isinstance(payload, dict):
+            continue
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        phase_g_by_candidate[candidate_id] = (decision_path, payload)
+
+    phase_i_by_candidate: dict[str, tuple[Path, dict[str, Any]]] = {}
+    for portfolio_path in sorted(portfolio_governance_dir.glob("*.json")):
+        payload = read_json_safe(portfolio_path, default={})
+        if not isinstance(payload, dict):
+            continue
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        phase_i_by_candidate[candidate_id] = (portfolio_path, payload)
+
+    generated_paths: list[str] = []
+    generated_entries: dict[str, dict[str, Any]] = {}
+    now_iso = datetime.now(tz=timezone.utc).isoformat()
+    for candidate_id in sorted(set(phase_g_by_candidate) | set(phase_i_by_candidate)):
+        decision_path, decision_payload = phase_g_by_candidate.get(candidate_id, (Path(""), {}))
+        portfolio_path, portfolio_payload = phase_i_by_candidate.get(candidate_id, (Path(""), {}))
+        if not isinstance(decision_payload, dict):
+            decision_payload = {}
+        if not isinstance(portfolio_payload, dict):
+            portfolio_payload = {}
+
+        module_name = str(
+            portfolio_payload.get(
+                "module_name",
+                decision_payload.get("module_name", f"sandbox_{_safe_candidate_filename(candidate_id)}"),
+            )
+        )
+        decision_timestamp = str(decision_payload.get("decision_timestamp", "")).strip()
+        portfolio_timestamp = str(portfolio_payload.get("portfolio_timestamp", "")).strip()
+        memory_timestamp = portfolio_timestamp or decision_timestamp or now_iso
+        phase_g_decision = str(decision_payload.get("orchestrator_decision", "")).strip()
+        phase_i_decision = str(portfolio_payload.get("portfolio_decision", "")).strip()
+        performance_snapshot = portfolio_payload.get("portfolio_state_snapshot", {})
+        if not isinstance(performance_snapshot, dict):
+            performance_snapshot = {}
+        historical_market_state_summary = decision_payload.get("market_state_snapshot", {})
+        if not isinstance(historical_market_state_summary, dict):
+            historical_market_state_summary = {}
+        if not historical_market_state_summary:
+            historical_market_state_summary = {
+                "regime_state": str(decision_payload.get("regime_state", "unknown")),
+                "volatility_state": str(decision_payload.get("volatility_state", "unknown")),
+                "liquidity_state": str(decision_payload.get("liquidity_state", "unknown")),
+                "session_state": str(decision_payload.get("session_state", "unknown")),
+            }
+
+        artifact = {
+            "candidate_id": candidate_id,
+            "module_name": module_name,
+            "time_horizon_window": "long_horizon_90d",
+            "historical_market_state_summary": historical_market_state_summary,
+            "decision_outcome_history": {
+                "phase_g_orchestrator_decision": phase_g_decision,
+                "phase_i_portfolio_decision": phase_i_decision,
+                "phase_g_execution_readiness": str(decision_payload.get("execution_readiness", "not_ready")),
+                "phase_i_execution_readiness": str(portfolio_payload.get("execution_readiness", "not_ready")),
+                "phase_i_risk_state": str(portfolio_payload.get("risk_state", "unknown")),
+                "phase_i_drawdown_state": str(portfolio_payload.get("drawdown_state", "unknown")),
+            },
+            "performance_snapshot": {
+                "equity": _to_float(performance_snapshot.get("equity", 0.0)),
+                "peak_equity": _to_float(performance_snapshot.get("peak_equity", 0.0)),
+                "open_exposure_pct": _to_float(performance_snapshot.get("open_exposure_pct", 0.0)),
+                "capital_allocated_pct": _to_float(performance_snapshot.get("capital_allocated_pct", 0.0)),
+                "max_drawdown_pct": _to_float(performance_snapshot.get("max_drawdown_pct", 8.0)),
+                "risk_state": str(portfolio_payload.get("risk_state", "unknown")),
+                "allocation_state": str(portfolio_payload.get("allocation_state", "unknown")),
+            },
+            "memory_timestamp": memory_timestamp,
+            "memory_version": memory_version,
+            "phase_g_source_path": str(decision_path) if str(decision_path) else "",
+            "phase_i_source_path": str(portfolio_path) if str(portfolio_path) else "",
+            "manual_approval_required": True,
+            "live_activation_allowed": False,
+            "risk_constraints": {
+                "live_execution_blocked": True,
+                "auto_live_activation": False,
+                "paper_execution_only": True,
+            },
+        }
+        target_path = output_dir / f"{_safe_candidate_filename(candidate_id)}.json"
+        write_json_atomic(target_path, artifact)
+        generated_paths.append(str(target_path))
+        generated_entries[candidate_id] = artifact
+
+        update_id = hashlib.blake2b(
+            f"{candidate_id}|{memory_timestamp}|{phase_g_decision}|{phase_i_decision}".encode("utf-8"),
+            digest_size=8,
+        ).hexdigest()
+        if update_id not in known_update_ids:
+            state_history.append(
+                {
+                    "update_id": update_id,
+                    "candidate_id": candidate_id,
+                    "memory_timestamp": memory_timestamp,
+                    "phase_g_decision": phase_g_decision,
+                    "phase_i_decision": phase_i_decision,
+                    "source_paths": {
+                        "phase_g": str(decision_path) if str(decision_path) else "",
+                        "phase_i": str(portfolio_path) if str(portfolio_path) else "",
+                    },
+                }
+            )
+            known_update_ids.add(update_id)
+
+    state_payload = {
+        "memory_version": memory_version,
+        "latest_update_timestamp": generated_entries[next(reversed(sorted(generated_entries)))]["memory_timestamp"]
+        if generated_entries
+        else now_iso,
+        "state_history": state_history,
+    }
+    write_json_atomic(memory_state_path, state_payload)
+
+    existing_registry = read_json_safe(registry_path, default={"memory_records": []})
+    if not isinstance(existing_registry, dict):
+        existing_registry = {"memory_records": []}
+    records = existing_registry.get("memory_records", [])
+    if not isinstance(records, list):
+        records = []
+    registry_by_candidate: dict[str, dict[str, Any]] = {}
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        candidate_id = str(record.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        registry_by_candidate[candidate_id] = record
+    registry_by_candidate.update(generated_entries)
+    registry_payload = {
+        "memory_version": memory_version,
+        "memory_records": [registry_by_candidate[cid] for cid in sorted(registry_by_candidate)],
+    }
+    write_json_atomic(registry_path, registry_payload)
+
+    return {
+        "long_horizon_memory_enabled": True,
+        "long_horizon_memory_count": len(generated_paths),
+        "long_horizon_memory_dir": str(output_dir),
+        "long_horizon_memory_artifacts": generated_paths,
+        "long_horizon_memory_registry_path": str(registry_path),
+        "long_horizon_memory_state_path": str(memory_state_path),
+    }
+
+
+def run_knowledge_expansion_phase_k(
+    root: Path,
+    *,
+    mode: str,
+) -> dict[str, Any]:
+    knowledge_root = root / "memory" / "knowledge_expansion"
+    return generate_long_horizon_memory_artifacts(
+        decision_orchestrator_dir=knowledge_root / "decision_orchestrator",
+        portfolio_governance_dir=knowledge_root / "adaptive_portfolio_governance",
+        output_dir=knowledge_root / "long_horizon_memory",
+        mode=mode,
+        memory_state_path=knowledge_root / "long_horizon_state_memory.json",
+        registry_path=(knowledge_root / "long_horizon_memory" / "long_horizon_memory_registry.json"),
+    )
+
+
+def generate_advanced_discovery_artifacts(
+    validated_knowledge_registry_path: Path,
+    output_dir: Path,
+    *,
+    mode: str,
+    registry_path: Path,
+    discovery_version: str = PHASE_L_DISCOVERY_VERSION,
+) -> dict[str, Any]:
+    if str(mode).lower() != "replay":
+        return {
+            "advanced_discovery_enabled": False,
+            "advanced_discovery_count": 0,
+            "advanced_discovery_dir": str(output_dir),
+            "advanced_discovery_artifacts": [],
+            "advanced_discovery_registry_path": str(registry_path),
+        }
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    payload = read_json_safe(validated_knowledge_registry_path, default={"validated_knowledge": []})
+    if not isinstance(payload, dict):
+        payload = {"validated_knowledge": []}
+    validated_items = payload.get("validated_knowledge", [])
+    if not isinstance(validated_items, list):
+        validated_items = []
+
+    deduplicated_by_candidate: dict[str, dict[str, Any]] = {}
+    for item in validated_items:
+        if not isinstance(item, dict):
+            continue
+        candidate_id = str(item.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        deduplicated_by_candidate[candidate_id] = item
+
+    generated_paths: list[str] = []
+    generated_entries: dict[str, dict[str, Any]] = {}
+    now_iso = datetime.now(tz=timezone.utc).isoformat()
+    for candidate_id, item in sorted(deduplicated_by_candidate.items(), key=lambda pair: pair[0]):
+        statement = str(item.get("statement", item.get("hypothesis_statement", ""))).strip()
+        truth_class = str(item.get("truth_class", "meta-intelligence")).strip() or "meta-intelligence"
+        evidence_history = item.get("evidence_history", [])
+        if not isinstance(evidence_history, list):
+            evidence_history = []
+        decision = str(item.get("decision", "HOLD_FOR_MORE_DATA")).strip() or "HOLD_FOR_MORE_DATA"
+        decision_reasons = item.get("decision_reasons", [])
+        if not isinstance(decision_reasons, list):
+            decision_reasons = []
+        support_ratio = min(1.0, round(len(evidence_history) / 5.0, 6))
+        discovery_timestamp = str(item.get("timestamp", "")).strip() or now_iso
+        pattern_signature = hashlib.blake2b(
+            f"{candidate_id}|{truth_class}|{statement}".encode("utf-8"),
+            digest_size=12,
+        ).hexdigest()
+        artifact = {
+            "candidate_id": candidate_id,
+            "hypothesis_class": truth_class,
+            "pattern_signature": pattern_signature,
+            "statistical_summary": {
+                "evidence_points": len(evidence_history),
+                "support_ratio": support_ratio,
+                "confidence_proxy": 0.5 + (0.5 * support_ratio),
+            },
+            "replay_validation_summary": {
+                "replay_scope": "sandbox_only",
+                "decision": decision,
+                "decision_reasons": [str(reason) for reason in decision_reasons],
+                "replay_governed": True,
+            },
+            "discovery_timestamp": discovery_timestamp,
+            "discovery_version": discovery_version,
+            "sandbox_status": "replay_only",
+            "live_activation_allowed": False,
+        }
+        target_path = output_dir / f"{_safe_candidate_filename(candidate_id)}.json"
+        write_json_atomic(target_path, artifact)
+        generated_paths.append(str(target_path))
+        generated_entries[candidate_id] = artifact
+
+    existing_registry = read_json_safe(registry_path, default={"discovery_records": []})
+    if not isinstance(existing_registry, dict):
+        existing_registry = {"discovery_records": []}
+    records = existing_registry.get("discovery_records", [])
+    if not isinstance(records, list):
+        records = []
+    registry_by_candidate: dict[str, dict[str, Any]] = {}
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        candidate_id = str(record.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        registry_by_candidate[candidate_id] = record
+    registry_by_candidate.update(generated_entries)
+    registry_payload = {
+        "discovery_version": discovery_version,
+        "discovery_records": [registry_by_candidate[cid] for cid in sorted(registry_by_candidate)],
+    }
+    write_json_atomic(registry_path, registry_payload)
+
+    return {
+        "advanced_discovery_enabled": True,
+        "advanced_discovery_count": len(generated_paths),
+        "advanced_discovery_dir": str(output_dir),
+        "advanced_discovery_artifacts": generated_paths,
+        "advanced_discovery_registry_path": str(registry_path),
+    }
+
+
+def run_knowledge_expansion_phase_l(
+    root: Path,
+    *,
+    mode: str,
+) -> dict[str, Any]:
+    knowledge_root = root / "memory" / "knowledge_expansion"
+    return generate_advanced_discovery_artifacts(
+        validated_knowledge_registry_path=knowledge_root / "validated_knowledge_registry.json",
+        output_dir=knowledge_root / "advanced_discovery",
+        mode=mode,
+        registry_path=(knowledge_root / "advanced_discovery" / "advanced_discovery_registry.json"),
     )
