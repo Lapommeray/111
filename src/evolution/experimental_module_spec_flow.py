@@ -88,3 +88,81 @@ def run_knowledge_expansion_phase_b(root: Path) -> dict[str, Any]:
         validated_knowledge_registry_path=knowledge_root / "validated_knowledge_registry.json",
         output_dir=knowledge_root / "experimental_module_specs",
     )
+
+
+def generate_sandbox_module_artifacts(
+    experimental_specs_dir: Path,
+    output_dir: Path,
+) -> dict[str, Any]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    generated_paths: list[str] = []
+    generation_timestamp = datetime.now(tz=timezone.utc).isoformat()
+
+    deduplicated_by_candidate: dict[str, tuple[Path, dict[str, Any]]] = {}
+    for spec_path in sorted(experimental_specs_dir.glob("*.json")):
+        payload = read_json_safe(spec_path, default={})
+        if not isinstance(payload, dict):
+            continue
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        deduplicated_by_candidate[candidate_id] = (spec_path, payload)
+
+    used_filenames: set[str] = set()
+    for candidate_id, (spec_path, payload) in sorted(deduplicated_by_candidate.items(), key=lambda pair: pair[0]):
+        module_name = f"sandbox_{_safe_candidate_filename(candidate_id)}"
+        artifact = {
+            "candidate_id": candidate_id,
+            "module_name": module_name,
+            "truth_class": str(payload.get("truth_class", "meta-intelligence")),
+            "hypothesis_statement": str(payload.get("hypothesis_statement", payload.get("statement", ""))),
+            "evidence_summary": payload.get("evidence_summary", {}),
+            "source_spec_path": str(spec_path),
+            "generation_timestamp": generation_timestamp,
+            "sandbox_status": "replay_only",
+            "module_version": "1.0",
+        }
+
+        target_name = _safe_candidate_filename(candidate_id)
+        if target_name in used_filenames:
+            suffix = hashlib.blake2b(candidate_id.encode("utf-8"), digest_size=6).hexdigest()
+            target_name = f"{target_name}_{suffix}"
+        used_filenames.add(target_name)
+        target_path = output_dir / f"{target_name}.json"
+        write_json_atomic(target_path, artifact)
+        generated_paths.append(str(target_path))
+
+    return {
+        "sandbox_modules_dir": str(output_dir),
+        "sandbox_module_count": len(generated_paths),
+        "sandbox_module_artifacts": generated_paths,
+    }
+
+
+def load_sandbox_module_artifacts(sandbox_modules_dir: Path, mode: str) -> dict[str, Any]:
+    if str(mode).lower() != "replay":
+        return {
+            "sandbox_enabled": False,
+            "sandbox_module_count": 0,
+            "sandbox_modules": [],
+        }
+
+    discovered: list[dict[str, Any]] = []
+    for module_path in sorted(sandbox_modules_dir.glob("*.json")):
+        payload = read_json_safe(module_path, default={})
+        if isinstance(payload, dict):
+            discovered.append(payload)
+
+    return {
+        "sandbox_enabled": True,
+        "sandbox_module_count": len(discovered),
+        "sandbox_modules": discovered,
+    }
+
+
+def run_knowledge_expansion_phase_c(root: Path) -> dict[str, Any]:
+    knowledge_root = root / "memory" / "knowledge_expansion"
+    return generate_sandbox_module_artifacts(
+        experimental_specs_dir=knowledge_root / "experimental_module_specs",
+        output_dir=knowledge_root / "sandbox_modules",
+    )

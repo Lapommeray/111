@@ -11,6 +11,10 @@ from src.evolution.knowledge_expansion_orchestrator import (
     run_knowledge_expansion_phase_a,
 )
 from src.evolution.experimental_module_spec_flow import run_knowledge_expansion_phase_b
+from src.evolution.experimental_module_spec_flow import (
+    load_sandbox_module_artifacts,
+    run_knowledge_expansion_phase_c,
+)
 
 __all__ = [
     "ArchitectureGuard",
@@ -24,4 +28,6 @@ __all__ = [
     "KnowledgeExpansionOrchestrator",
     "run_knowledge_expansion_phase_a",
     "run_knowledge_expansion_phase_b",
+    "run_knowledge_expansion_phase_c",
+    "load_sandbox_module_artifacts",
 ]
