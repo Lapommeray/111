@@ -986,15 +986,49 @@
       "path": "memory/capability_registry/strategy_evolution_engine.json"
     },
     "survival_intelligence_layer": {
-      "pause_after_consecutive_losses_n": 3,
-      "consecutive_losses": 0,
-      "drawdown_points": 0.0,
-      "pause_trading": false,
-      "reduce_risk_after_drawdown": false,
-      "survival_mode": false,
-      "resume_only_after_stable_conditions": false,
-      "risk_multiplier": 1.0,
-      "path": "memory/autonomous_behavior/capital_survival.json"
+      "capital_survival_engine": {
+        "pause_after_consecutive_losses_n": 3,
+        "consecutive_losses": 0,
+        "drawdown_points": 0.0,
+        "pause_trading": false,
+        "reduce_risk_after_drawdown": false,
+        "survival_mode": false,
+        "resume_only_after_stable_conditions": false,
+        "risk_multiplier": 1.0,
+        "path": "memory/autonomous_behavior/capital_survival.json"
+      },
+      "pain_memory_survival_layer": {
+        "loss_cluster_contexts": [],
+        "extracted_pain_patterns": [],
+        "generated_detectors": [],
+        "validation_results": [],
+        "promotion_decisions": {
+          "promoted": [],
+          "quarantined": []
+        },
+        "paths": {
+          "loss_clusters": "memory/capability_candidates/pain_loss_clusters.json",
+          "pain_patterns": "memory/capability_candidates/pain_patterns.json",
+          "generated_detectors": "memory/capability_candidates/pain_survival_detectors.json",
+          "registry": "memory/capability_registry/pain_survival_rules.json"
+        }
+      }
+    },
+    "pain_memory_survival_layer": {
+      "loss_cluster_contexts": [],
+      "extracted_pain_patterns": [],
+      "generated_detectors": [],
+      "validation_results": [],
+      "promotion_decisions": {
+        "promoted": [],
+        "quarantined": []
+      },
+      "paths": {
+        "loss_clusters": "memory/capability_candidates/pain_loss_clusters.json",
+        "pain_patterns": "memory/capability_candidates/pain_patterns.json",
+        "generated_detectors": "memory/capability_candidates/pain_survival_detectors.json",
+        "registry": "memory/capability_registry/pain_survival_rules.json"
+      }
     },
     "meta_learning_loop": {
       "loop": [
