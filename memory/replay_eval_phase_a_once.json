@@ -1,0 +1,4884 @@
+{
+  "symbol": "XAUUSD",
+  "mode": "replay_evaluation",
+  "steps": 4,
+  "signal_counts": {
+    "total": 4,
+    "blocked": 4
+  },
+  "action_distribution": {
+    "BUY": 0,
+    "SELL": 0,
+    "WAIT": 4
+  },
+  "confidence_distribution": {
+    "low": 0,
+    "medium": 0,
+    "high": 4
+  },
+  "blocker_effect_report": {
+    "blocked_total": 4,
+    "reason_counts": {
+      "structure_liquidity_conflict": 4,
+      "session_filter:off_hours_block": 4
+    },
+    "top_reasons": [
+      {
+        "reason": "structure_liquidity_conflict",
+        "count": 4
+      },
+      {
+        "reason": "session_filter:off_hours_block",
+        "count": 4
+      }
+    ],
+    "protective_proxy_hits": 4
+  },
+  "module_contribution_report": {
+    "module_count": 18,
+    "modules": {
+      "displacement": {
+        "samples": 4,
+        "buy_votes": 0,
+        "sell_votes": 0,
+        "wait_votes": 0,
+        "neutral_votes": 4,
+        "avg_confidence_delta": 0.0,
+        "high_conf_signal_hits": 4,
+        "low_conf_signal_hits": 0,
+        "alignment_hits": 0,
+        "misalignment_hits": 4,
+        "wait_alignment_hits": 0,
+        "buy_action_hits": 0,
+        "sell_action_hits": 0,
+        "wait_action_hits": 31,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 1.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": 0.0,
+        "drawdown_prevention_proxy": 0.0
+      },
+      "fvg": {
+        "samples": 4,
+        "buy_votes": 0,
+        "sell_votes": 0,
+        "wait_votes": 0,
+        "neutral_votes": 4,
+        "avg_confidence_delta": -0.01,
+        "high_conf_signal_hits": 4,
+        "low_conf_signal_hits": 0,
+        "alignment_hits": 0,
+        "misalignment_hits": 4,
+        "wait_alignment_hits": 0,
+        "buy_action_hits": 0,
+        "sell_action_hits": 0,
+        "wait_action_hits": 31,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 1.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": 0.01,
+        "drawdown_prevention_proxy": 0.0
+      },
+      "volatility": {
+        "samples": 4,
+        "buy_votes": 0,
+        "sell_votes": 0,
+        "wait_votes": 0,
+        "neutral_votes": 4,
+        "avg_confidence_delta": 0.01,
+        "high_conf_signal_hits": 4,
+        "low_conf_signal_hits": 0,
+        "alignment_hits": 0,
+        "misalignment_hits": 4,
+        "wait_alignment_hits": 0,
+        "buy_action_hits": 0,
+        "sell_action_hits": 0,
+        "wait_action_hits": 31,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 1.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": -0.01,
+        "drawdown_prevention_proxy": 0.0
+      },
+      "sessions": {
+        "samples": 4,
+        "buy_votes": 0,
+        "sell_votes": 0,
+        "wait_votes": 0,
+        "neutral_votes": 4,
+        "avg_confidence_delta": -0.04,
+        "high_conf_signal_hits": 4,
+        "low_conf_signal_hits": 0,
+        "alignment_hits": 0,
+        "misalignment_hits": 4,
+        "wait_alignment_hits": 0,
+        "buy_action_hits": 0,
+        "sell_action_hits": 0,
+        "wait_action_hits": 31,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 1.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": 0.04,
+        "drawdown_prevention_proxy": 0.0
+      },
+      "spread_state": {
+        "samples": 4,
+        "buy_votes": 0,
+        "sell_votes": 0,
+        "wait_votes": 0,
+        "neutral_votes": 4,
+        "avg_confidence_delta": 0.02,
+        "high_conf_signal_hits": 4,
+        "low_conf_signal_hits": 0,
+        "alignment_hits": 0,
+        "misalignment_hits": 4,
+        "wait_alignment_hits": 0,
+        "buy_action_hits": 0,
+        "sell_action_hits": 0,
+        "wait_action_hits": 31,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 1.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": -0.02,
+        "drawdown_prevention_proxy": 0.0
+      },
+      "invisible_data_miner": {
+        "samples": 4,
+        "buy_votes": 4,
+        "sell_votes": 0,
+        "wait_votes": 0,
+        "neutral_votes": 0,
+        "avg_confidence_delta": 0.08,
+        "high_conf_signal_hits": 4,
+        "low_conf_signal_hits": 0,
+        "alignment_hits": 0,
+        "misalignment_hits": 4,
+        "wait_alignment_hits": 0,
+        "buy_action_hits": 0,
+        "sell_action_hits": 0,
+        "wait_action_hits": 31,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 0.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": -0.08,
+        "drawdown_prevention_proxy": 0.0
+      },
+      "human_lag_exploit": {
+        "samples": 4,
+        "buy_votes": 0,
+        "sell_votes": 0,
+        "wait_votes": 0,
+        "neutral_votes": 4,
+        "avg_confidence_delta": -0.01,
+        "high_conf_signal_hits": 4,
+        "low_conf_signal_hits": 0,
+        "alignment_hits": 0,
+        "misalignment_hits": 4,
+        "wait_alignment_hits": 0,
+        "buy_action_hits": 0,
+        "sell_action_hits": 0,
+        "wait_action_hits": 31,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 1.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": 0.01,
+        "drawdown_prevention_proxy": 0.0
+      },
+      "quantum_tremor_scanner": {
+        "samples": 4,
+        "buy_votes": 0,
+        "sell_votes": 0,
+        "wait_votes": 0,
+        "neutral_votes": 4,
+        "avg_confidence_delta": 0.01,
+        "high_conf_signal_hits": 4,
+        "low_conf_signal_hits": 0,
+        "alignment_hits": 0,
+        "misalignment_hits": 4,
+        "wait_alignment_hits": 0,
+        "buy_action_hits": 0,
+        "sell_action_hits": 0,
+        "wait_action_hits": 31,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 1.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": -0.01,
+        "drawdown_prevention_proxy": 0.0
+      },
+      "session_filter": {
+        "samples": 4,
+        "buy_votes": 0,
+        "sell_votes": 0,
+        "wait_votes": 4,
+        "neutral_votes": 0,
+        "avg_confidence_delta": -0.08,
+        "high_conf_signal_hits": 4,
+        "low_conf_signal_hits": 0,
+        "alignment_hits": 0,
+        "misalignment_hits": 4,
+        "wait_alignment_hits": 4,
+        "buy_action_hits": 0,
+        "sell_action_hits": 0,
+        "wait_action_hits": 31,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 4,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 1.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": 0.08,
+        "drawdown_prevention_proxy": 0.0
+      },
+      "spread_filter": {
+        "samples": 4,
+        "buy_votes": 0,
+        "sell_votes": 0,
+        "wait_votes": 0,
+        "neutral_votes": 4,
+        "avg_confidence_delta": 0.0,
+        "high_conf_signal_hits": 4,
+        "low_conf_signal_hits": 0,
+        "alignment_hits": 0,
+        "misalignment_hits": 4,
+        "wait_alignment_hits": 0,
+        "buy_action_hits": 0,
+        "sell_action_hits": 0,
+        "wait_action_hits": 31,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 1.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": 0.0,
+        "drawdown_prevention_proxy": 0.0
+      },
+      "conflict_filter": {
+        "samples": 4,
+        "buy_votes": 4,
+        "sell_votes": 0,
+        "wait_votes": 0,
+        "neutral_votes": 0,
+        "avg_confidence_delta": 0.01,
+        "high_conf_signal_hits": 4,
+        "low_conf_signal_hits": 0,
+        "alignment_hits": 0,
+        "misalignment_hits": 4,
+        "wait_alignment_hits": 0,
+        "buy_action_hits": 0,
+        "sell_action_hits": 0,
+        "wait_action_hits": 31,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 0.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": -0.01,
+        "drawdown_prevention_proxy": 0.0
+      },
+      "memory_filter": {
+        "samples": 4,
+        "buy_votes": 4,
+        "sell_votes": 0,
+        "wait_votes": 0,
+        "neutral_votes": 0,
+        "avg_confidence_delta": 0.02,
+        "high_conf_signal_hits": 4,
+        "low_conf_signal_hits": 0,
+        "alignment_hits": 0,
+        "misalignment_hits": 4,
+        "wait_alignment_hits": 0,
+        "buy_action_hits": 0,
+        "sell_action_hits": 0,
+        "wait_action_hits": 31,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 0.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": -0.02,
+        "drawdown_prevention_proxy": 0.0
+      },
+      "self_destruct_protocol": {
+        "samples": 4,
+        "buy_votes": 0,
+        "sell_votes": 0,
+        "wait_votes": 0,
+        "neutral_votes": 4,
+        "avg_confidence_delta": 0.0,
+        "high_conf_signal_hits": 4,
+        "low_conf_signal_hits": 0,
+        "alignment_hits": 0,
+        "misalignment_hits": 4,
+        "wait_alignment_hits": 0,
+        "buy_action_hits": 0,
+        "sell_action_hits": 0,
+        "wait_action_hits": 31,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 1.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": 0.0,
+        "drawdown_prevention_proxy": 0.0
+      },
+      "setup_score": {
+        "samples": 4,
+        "buy_votes": 0,
+        "sell_votes": 0,
+        "wait_votes": 0,
+        "neutral_votes": 4,
+        "avg_confidence_delta": 0.0,
+        "high_conf_signal_hits": 4,
+        "low_conf_signal_hits": 0,
+        "alignment_hits": 0,
+        "misalignment_hits": 4,
+        "wait_alignment_hits": 0,
+        "buy_action_hits": 0,
+        "sell_action_hits": 0,
+        "wait_action_hits": 31,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 1.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": 0.0,
+        "drawdown_prevention_proxy": 0.0
+      },
+      "regime_score": {
+        "samples": 4,
+        "buy_votes": 0,
+        "sell_votes": 0,
+        "wait_votes": 0,
+        "neutral_votes": 4,
+        "avg_confidence_delta": 0.075,
+        "high_conf_signal_hits": 4,
+        "low_conf_signal_hits": 0,
+        "alignment_hits": 0,
+        "misalignment_hits": 4,
+        "wait_alignment_hits": 0,
+        "buy_action_hits": 0,
+        "sell_action_hits": 0,
+        "wait_action_hits": 31,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 1.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": -0.075,
+        "drawdown_prevention_proxy": 0.0
+      },
+      "spectral_signal_fusion": {
+        "samples": 4,
+        "buy_votes": 4,
+        "sell_votes": 0,
+        "wait_votes": 0,
+        "neutral_votes": 0,
+        "avg_confidence_delta": 0.0133,
+        "high_conf_signal_hits": 4,
+        "low_conf_signal_hits": 0,
+        "alignment_hits": 0,
+        "misalignment_hits": 4,
+        "wait_alignment_hits": 0,
+        "buy_action_hits": 0,
+        "sell_action_hits": 0,
+        "wait_action_hits": 31,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 0.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": -0.0133,
+        "drawdown_prevention_proxy": 0.0
+      },
+      "meta_conscious_routing": {
+        "samples": 4,
+        "buy_votes": 0,
+        "sell_votes": 4,
+        "wait_votes": 0,
+        "neutral_votes": 0,
+        "avg_confidence_delta": 0.1,
+        "high_conf_signal_hits": 4,
+        "low_conf_signal_hits": 0,
+        "alignment_hits": 0,
+        "misalignment_hits": 4,
+        "wait_alignment_hits": 0,
+        "buy_action_hits": 0,
+        "sell_action_hits": 0,
+        "wait_action_hits": 31,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 0.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": -0.1,
+        "drawdown_prevention_proxy": 0.0
+      },
+      "meta_adaptive_ai": {
+        "samples": 4,
+        "buy_votes": 0,
+        "sell_votes": 0,
+        "wait_votes": 0,
+        "neutral_votes": 4,
+        "avg_confidence_delta": 0.0,
+        "high_conf_signal_hits": 4,
+        "low_conf_signal_hits": 0,
+        "alignment_hits": 0,
+        "misalignment_hits": 4,
+        "wait_alignment_hits": 0,
+        "buy_action_hits": 0,
+        "sell_action_hits": 0,
+        "wait_action_hits": 31,
+        "action_alignment": {
+          "aligned": 0,
+          "misaligned": 4,
+          "wait_aligned": 0,
+          "alignment_ratio": 0.0,
+          "count_wait_alignment": false
+        },
+        "regime_specific_alignment": {
+          "dominant_regime": "structure:trend_up",
+          "samples": 4,
+          "aligned": 0,
+          "ratio": 0.0
+        },
+        "contradiction_reduction_proxy": 1.0,
+        "blocker_protection_strength": 1.0,
+        "confidence_calibration_shift": 0.0,
+        "drawdown_prevention_proxy": 0.0
+      }
+    }
+  },
+  "session_report": {
+    "sessions": {
+      "off_hours": {
+        "samples": 4,
+        "blocked": 4,
+        "buy": 0,
+        "sell": 0,
+        "wait": 4
+      }
+    }
+  },
+  "records": [
+    {
+      "schema_version": "phase3.output.v1",
+      "symbol": "XAUUSD",
+      "signal": {
+        "symbol": "XAUUSD",
+        "action": "WAIT",
+        "confidence": 0.9983,
+        "reasons": [
+          "structure_liquidity_conflict",
+          "session_filter:off_hours_block"
+        ],
+        "blocked": true,
+        "setup_classification": "blocked",
+        "blocker_reasons": [
+          "structure_liquidity_conflict",
+          "session_filter:off_hours_block"
+        ],
+        "memory_context": {
+          "latest_snapshot_id": "snap_20260315043044855570",
+          "last_blocked_count": 1,
+          "last_promoted_count": 0,
+          "latest_trade_outcome": {
+            "trade_id": "blocked_snap_20260315043044855570",
+            "symbol": "XAUUSD",
+            "direction": "WAIT",
+            "status": "skipped",
+            "result": "n/a",
+            "pnl_points": 0.0,
+            "source_reasons": [
+              "structure_liquidity_conflict",
+              "session_filter:off_hours_block"
+            ],
+            "confidence": 0.9983
+          }
+        },
+        "rule_context": {
+          "active_rule_count": 0,
+          "matching_rule_ids": []
+        },
+        "schema_version": "phase3.v1",
+        "consumer_hints": {
+          "action_values": [
+            "BUY",
+            "SELL",
+            "WAIT"
+          ],
+          "confidence_range": [
+            0.0,
+            1.0
+          ]
+        },
+        "advanced_modules": {
+          "director_module_map": {
+            "displacement": {
+              "role": "momentum_displacement",
+              "group": "features"
+            },
+            "fvg": {
+              "role": "fair_value_gap_detection",
+              "group": "features"
+            },
+            "volatility": {
+              "role": "volatility_regime",
+              "group": "features"
+            },
+            "sessions": {
+              "role": "session_classifier",
+              "group": "features"
+            },
+            "spread_state": {
+              "role": "spread_proxy_estimator",
+              "group": "features"
+            },
+            "invisible_data_miner": {
+              "role": "internal_pattern_miner",
+              "group": "features"
+            },
+            "human_lag_exploit": {
+              "role": "public_behavior_lag_model",
+              "group": "features"
+            },
+            "quantum_tremor_scanner": {
+              "role": "micro_volatility_tremor_model",
+              "group": "features"
+            },
+            "session_filter": {
+              "role": "session_block_gate",
+              "group": "filters"
+            },
+            "spread_filter": {
+              "role": "spread_block_gate",
+              "group": "filters"
+            },
+            "conflict_filter": {
+              "role": "vote_conflict_gate",
+              "group": "filters"
+            },
+            "memory_filter": {
+              "role": "outcome_memory_gate",
+              "group": "filters"
+            },
+            "self_destruct_protocol": {
+              "role": "failing_logic_downrank_gate",
+              "group": "filters"
+            },
+            "setup_score": {
+              "role": "setup_quality_scoring",
+              "group": "scoring"
+            },
+            "regime_score": {
+              "role": "regime_quality_scoring",
+              "group": "scoring"
+            },
+            "spectral_signal_fusion": {
+              "role": "multi_signal_fusion",
+              "group": "scoring"
+            },
+            "meta_conscious_routing": {
+              "role": "entropy_liquidity_regime_router",
+              "group": "scoring"
+            },
+            "meta_adaptive_ai": {
+              "role": "internal_memory_adaptive_profile",
+              "group": "memory"
+            },
+            "evolution_kernel": {
+              "role": "evolution_kernel_reporter",
+              "group": "evolution"
+            }
+          },
+          "discovered_modules": {
+            "features": [
+              "displacement",
+              "fvg",
+              "human_lag_exploit",
+              "invisible_data_miner",
+              "liquidity",
+              "market_structure",
+              "quantum_tremor_scanner",
+              "sessions",
+              "spread_state",
+              "volatility"
+            ],
+            "filters": [
+              "conflict_filter",
+              "loss_blocker",
+              "memory_filter",
+              "self_destruct_protocol",
+              "session_filter",
+              "spread_filter"
+            ],
+            "scoring": [
+              "confidence_score",
+              "meta_conscious_routing",
+              "regime_score",
+              "setup_score",
+              "spectral_signal_fusion"
+            ],
+            "memory": [
+              "meta_adaptive_ai",
+              "pattern_store",
+              "self_coder",
+              "tracker"
+            ],
+            "evolution": [
+              "architecture_guard",
+              "candidate_module_factory",
+              "code_generator",
+              "duplication_audit",
+              "evolution_registry",
+              "experimental_module_spec_flow",
+              "gap_discovery",
+              "governance_report",
+              "hypothesis_registry",
+              "knowledge_expansion_orchestrator",
+              "overlap_scoring",
+              "promoter",
+              "self_inspector",
+              "verifier"
+            ],
+            "indicator": [
+              "chart_objects",
+              "indicator_output",
+              "signal_model"
+            ],
+            "mt5": [
+              "adapter",
+              "execution_state",
+              "symbol_guard"
+            ]
+          },
+          "module_results": {
+            "displacement": {
+              "name": "displacement",
+              "role": "momentum_displacement",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "displacement_ratio=1.0",
+                "weak_displacement"
+              ],
+              "payload": {
+                "module": "displacement",
+                "state": "computed",
+                "direction_vote": "neutral",
+                "confidence_delta": 0.0,
+                "reasons": [
+                  "displacement_ratio=1.0",
+                  "weak_displacement"
+                ],
+                "metrics": {
+                  "body": 0.25,
+                  "avg_body": 0.25,
+                  "ratio": 1.0
+                }
+              }
+            },
+            "fvg": {
+              "name": "fvg",
+              "role": "fair_value_gap_detection",
+              "direction_vote": "neutral",
+              "confidence_delta": -0.01,
+              "blocked": false,
+              "reasons": [
+                "no_fvg_signal"
+              ],
+              "payload": {
+                "module": "fvg",
+                "state": "no_gap",
+                "direction_vote": "neutral",
+                "confidence_delta": -0.01,
+                "reasons": [
+                  "no_fvg_signal"
+                ]
+              }
+            },
+            "volatility": {
+              "name": "volatility",
+              "role": "volatility_regime",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.01,
+              "blocked": false,
+              "reasons": [
+                "volatility_supportive"
+              ],
+              "payload": {
+                "module": "volatility",
+                "state": "balanced",
+                "direction_vote": "neutral",
+                "confidence_delta": 0.01,
+                "reasons": [
+                  "volatility_supportive"
+                ],
+                "metrics": {
+                  "last_range": 1.05,
+                  "avg_range": 1.05,
+                  "ratio": 1.0
+                }
+              }
+            },
+            "sessions": {
+              "name": "sessions",
+              "role": "session_classifier",
+              "direction_vote": "neutral",
+              "confidence_delta": -0.04,
+              "blocked": false,
+              "reasons": [
+                "session=off_hours",
+                "off_hours"
+              ],
+              "payload": {
+                "module": "sessions",
+                "state": "off_hours",
+                "direction_vote": "neutral",
+                "confidence_delta": -0.04,
+                "reasons": [
+                  "session=off_hours",
+                  "off_hours"
+                ],
+                "metrics": {
+                  "hour_utc": 23
+                }
+              }
+            },
+            "spread_state": {
+              "name": "spread_state",
+              "role": "spread_proxy_estimator",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.02,
+              "blocked": false,
+              "reasons": [
+                "spread_proxy_tight"
+              ],
+              "payload": {
+                "module": "spread_state",
+                "state": "tight",
+                "spread_points": 18.9,
+                "direction_vote": "neutral",
+                "confidence_delta": 0.02,
+                "reasons": [
+                  "spread_proxy_tight"
+                ]
+              }
+            },
+            "invisible_data_miner": {
+              "name": "invisible_data_miner",
+              "role": "internal_pattern_miner",
+              "direction_vote": "buy",
+              "confidence_delta": 0.08,
+              "blocked": false,
+              "reasons": [
+                "slope=3.48",
+                "up_steps=29",
+                "down_steps=0",
+                "structure_bias=buy",
+                "liquidity_hint=sell"
+              ],
+              "payload": {
+                "module": "invisible_data_miner",
+                "state": "computed",
+                "direction_vote": "buy",
+                "confidence_delta": 0.08,
+                "reasons": [
+                  "slope=3.48",
+                  "up_steps=29",
+                  "down_steps=0",
+                  "structure_bias=buy",
+                  "liquidity_hint=sell"
+                ]
+              }
+            },
+            "human_lag_exploit": {
+              "name": "human_lag_exploit",
+              "role": "public_behavior_lag_model",
+              "direction_vote": "neutral",
+              "confidence_delta": -0.01,
+              "blocked": false,
+              "reasons": [
+                "momentum=1.68",
+                "lag_ratio=1.0"
+              ],
+              "payload": {
+                "module": "human_lag_exploit",
+                "state": "no_clear_lag_edge",
+                "direction_vote": "neutral",
+                "confidence_delta": -0.01,
+                "reasons": [
+                  "momentum=1.68",
+                  "lag_ratio=1.0"
+                ]
+              }
+            },
+            "quantum_tremor_scanner": {
+              "name": "quantum_tremor_scanner",
+              "role": "micro_volatility_tremor_model",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.01,
+              "blocked": false,
+              "reasons": [
+                "tremor_ratio=1.0"
+              ],
+              "payload": {
+                "module": "quantum_tremor_scanner",
+                "state": "tremor_balanced",
+                "direction_vote": "neutral",
+                "confidence_delta": 0.01,
+                "reasons": [
+                  "tremor_ratio=1.0"
+                ],
+                "metrics": {
+                  "last_range": 1.05,
+                  "avg_range": 1.05
+                }
+              }
+            },
+            "session_filter": {
+              "name": "session_filter",
+              "role": "session_block_gate",
+              "direction_vote": "wait",
+              "confidence_delta": -0.08,
+              "blocked": true,
+              "reasons": [
+                "off_hours_block"
+              ],
+              "payload": {
+                "module": "session_filter",
+                "blocked": true,
+                "reasons": [
+                  "off_hours_block"
+                ],
+                "confidence_delta": -0.08,
+                "direction_vote": "wait"
+              }
+            },
+            "spread_filter": {
+              "name": "spread_filter",
+              "role": "spread_block_gate",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "spread_ok"
+              ],
+              "payload": {
+                "module": "spread_filter",
+                "blocked": false,
+                "reasons": [
+                  "spread_ok"
+                ],
+                "confidence_delta": 0.0,
+                "direction_vote": "neutral",
+                "metrics": {
+                  "spread_points": 18.9,
+                  "max_spread_points": 60.0
+                }
+              }
+            },
+            "conflict_filter": {
+              "name": "conflict_filter",
+              "role": "vote_conflict_gate",
+              "direction_vote": "buy",
+              "confidence_delta": 0.01,
+              "blocked": false,
+              "reasons": [
+                "buy_votes=2",
+                "sell_votes=0"
+              ],
+              "payload": {
+                "module": "conflict_filter",
+                "blocked": false,
+                "reasons": [
+                  "buy_votes=2",
+                  "sell_votes=0"
+                ],
+                "confidence_delta": 0.01,
+                "direction_vote": "buy"
+              }
+            },
+            "memory_filter": {
+              "name": "memory_filter",
+              "role": "outcome_memory_gate",
+              "direction_vote": "buy",
+              "confidence_delta": 0.02,
+              "blocked": false,
+              "reasons": [
+                "recent_direction_outcomes=0",
+                "recent_direction_losses=0",
+                "recent_blocked_same_direction=0"
+              ],
+              "payload": {
+                "module": "memory_filter",
+                "blocked": false,
+                "reasons": [
+                  "recent_direction_outcomes=0",
+                  "recent_direction_losses=0",
+                  "recent_blocked_same_direction=0"
+                ],
+                "confidence_delta": 0.02,
+                "direction_vote": "buy"
+              }
+            },
+            "self_destruct_protocol": {
+              "name": "self_destruct_protocol",
+              "role": "failing_logic_downrank_gate",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "recent_losses=0",
+                "loss_threshold=4"
+              ],
+              "payload": {
+                "module": "self_destruct_protocol",
+                "state": "idle",
+                "blocked": false,
+                "direction_vote": "neutral",
+                "confidence_delta": 0.0,
+                "reasons": [
+                  "recent_losses=0",
+                  "loss_threshold=4"
+                ],
+                "disabled_modules": []
+              }
+            },
+            "setup_score": {
+              "name": "setup_score",
+              "role": "setup_quality_scoring",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "informational_setup_score",
+                "input_count=10",
+                "input_avg_delta=0.001"
+              ],
+              "payload": {
+                "module": "setup_score",
+                "score": 0.501,
+                "confidence_delta": 0.0,
+                "input_avg_delta": 0.001,
+                "input_count": 10,
+                "contributing_modules": [
+                  "fvg",
+                  "volatility",
+                  "sessions",
+                  "spread_state",
+                  "invisible_data_miner",
+                  "human_lag_exploit",
+                  "quantum_tremor_scanner",
+                  "session_filter",
+                  "conflict_filter",
+                  "memory_filter"
+                ],
+                "reasons": [
+                  "informational_setup_score",
+                  "input_count=10",
+                  "input_avg_delta=0.001"
+                ]
+              }
+            },
+            "regime_score": {
+              "name": "regime_score",
+              "role": "regime_quality_scoring",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.075,
+              "blocked": false,
+              "reasons": [
+                "structure_strength=1.0",
+                "volatility_state=balanced"
+              ],
+              "payload": {
+                "module": "regime_score",
+                "score": 1.0,
+                "confidence_delta": 0.075,
+                "reasons": [
+                  "structure_strength=1.0",
+                  "volatility_state=balanced"
+                ]
+              }
+            },
+            "spectral_signal_fusion": {
+              "name": "spectral_signal_fusion",
+              "role": "multi_signal_fusion",
+              "direction_vote": "buy",
+              "confidence_delta": 0.0133,
+              "blocked": false,
+              "reasons": [
+                "buy_votes=1",
+                "sell_votes=0",
+                "avg_delta=0.0133"
+              ],
+              "payload": {
+                "module": "spectral_signal_fusion",
+                "state": "computed",
+                "direction_vote": "buy",
+                "confidence_delta": 0.0133,
+                "reasons": [
+                  "buy_votes=1",
+                  "sell_votes=0",
+                  "avg_delta=0.0133"
+                ]
+              }
+            },
+            "meta_conscious_routing": {
+              "name": "meta_conscious_routing",
+              "role": "entropy_liquidity_regime_router",
+              "direction_vote": "sell",
+              "confidence_delta": 0.1,
+              "blocked": false,
+              "reasons": [
+                "regime_score=1.0",
+                "liquidity_score=0.6",
+                "volatility_state=balanced",
+                "entropy_penalty=0.0"
+              ],
+              "payload": {
+                "module": "meta_conscious_routing",
+                "state": "computed",
+                "direction_vote": "sell",
+                "confidence_delta": 0.1,
+                "reasons": [
+                  "regime_score=1.0",
+                  "liquidity_score=0.6",
+                  "volatility_state=balanced",
+                  "entropy_penalty=0.0"
+                ]
+              }
+            },
+            "meta_adaptive_ai": {
+              "name": "meta_adaptive_ai",
+              "role": "internal_memory_adaptive_profile",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "samples=0",
+                "win_rate=0.0",
+                "preferred_direction=WAIT"
+              ],
+              "payload": {
+                "module": "meta_adaptive_ai",
+                "state": "computed",
+                "direction_vote": "neutral",
+                "confidence_delta": 0.0,
+                "reasons": [
+                  "samples=0",
+                  "win_rate=0.0",
+                  "preferred_direction=WAIT"
+                ]
+              }
+            }
+          },
+          "module_health": {
+            "displacement": {
+              "name": "displacement",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "displacement_ratio=1.0",
+                "weak_displacement"
+              ]
+            },
+            "fvg": {
+              "name": "fvg",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "no_fvg_signal"
+              ]
+            },
+            "volatility": {
+              "name": "volatility",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "volatility_supportive"
+              ]
+            },
+            "sessions": {
+              "name": "sessions",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "session=off_hours",
+                "off_hours"
+              ]
+            },
+            "spread_state": {
+              "name": "spread_state",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "spread_proxy_tight"
+              ]
+            },
+            "invisible_data_miner": {
+              "name": "invisible_data_miner",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "slope=3.48",
+                "up_steps=29",
+                "down_steps=0",
+                "structure_bias=buy",
+                "liquidity_hint=sell"
+              ]
+            },
+            "human_lag_exploit": {
+              "name": "human_lag_exploit",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "momentum=1.68",
+                "lag_ratio=1.0"
+              ]
+            },
+            "quantum_tremor_scanner": {
+              "name": "quantum_tremor_scanner",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "tremor_ratio=1.0"
+              ]
+            },
+            "session_filter": {
+              "name": "session_filter",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "off_hours_block"
+              ]
+            },
+            "spread_filter": {
+              "name": "spread_filter",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "spread_ok"
+              ]
+            },
+            "conflict_filter": {
+              "name": "conflict_filter",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "buy_votes=2",
+                "sell_votes=0"
+              ]
+            },
+            "memory_filter": {
+              "name": "memory_filter",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "recent_direction_outcomes=0",
+                "recent_direction_losses=0",
+                "recent_blocked_same_direction=0"
+              ]
+            },
+            "self_destruct_protocol": {
+              "name": "self_destruct_protocol",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "recent_losses=0",
+                "loss_threshold=4"
+              ]
+            },
+            "setup_score": {
+              "name": "setup_score",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "informational_setup_score",
+                "input_count=10",
+                "input_avg_delta=0.001"
+              ]
+            },
+            "regime_score": {
+              "name": "regime_score",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "structure_strength=1.0",
+                "volatility_state=balanced"
+              ]
+            },
+            "spectral_signal_fusion": {
+              "name": "spectral_signal_fusion",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "buy_votes=1",
+                "sell_votes=0",
+                "avg_delta=0.0133"
+              ]
+            },
+            "meta_conscious_routing": {
+              "name": "meta_conscious_routing",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "regime_score=1.0",
+                "liquidity_score=0.6",
+                "volatility_state=balanced",
+                "entropy_penalty=0.0"
+              ]
+            },
+            "meta_adaptive_ai": {
+              "name": "meta_adaptive_ai",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "samples=0",
+                "win_rate=0.0",
+                "preferred_direction=WAIT"
+              ]
+            }
+          },
+          "connector_hooks": {
+            "hook_displacement": {
+              "name": "hook_displacement",
+              "source_module": "displacement",
+              "target_interface": "direction_vote_bus",
+              "enabled": true,
+              "description": "Expose displacement vote to external AI/ensemble consumers."
+            },
+            "hook_spectral_fusion": {
+              "name": "hook_spectral_fusion",
+              "source_module": "spectral_signal_fusion",
+              "target_interface": "confidence_bus",
+              "enabled": true,
+              "description": "Expose spectral fusion confidence contribution."
+            },
+            "hook_meta_routing": {
+              "name": "hook_meta_routing",
+              "source_module": "meta_conscious_routing",
+              "target_interface": "routing_bus",
+              "enabled": true,
+              "description": "Expose entropy/liquidity/regime routing output."
+            },
+            "hook_self_destruct": {
+              "name": "hook_self_destruct",
+              "source_module": "self_destruct_protocol",
+              "target_interface": "risk_gate_bus",
+              "enabled": true,
+              "description": "Expose measurable down-rank/disable risk gate state."
+            },
+            "hook_meta_adaptive": {
+              "name": "hook_meta_adaptive",
+              "source_module": "meta_adaptive_ai",
+              "target_interface": "adaptive_profile_bus",
+              "enabled": true,
+              "description": "Expose internal-memory adaptive profile output."
+            },
+            "hook_evolution_kernel": {
+              "name": "hook_evolution_kernel",
+              "source_module": "evolution_kernel",
+              "target_interface": "evolution_control_bus",
+              "enabled": false,
+              "description": "Expose evolution inspection/proposal lifecycle summary."
+            }
+          },
+          "final_direction": "WAIT",
+          "final_confidence": 0.9983
+        },
+        "generated_code_visibility": {
+          "registry_path": "/home/runner/work/111/111/memory/generated_code_registry.json",
+          "latest_entries": [
+            {
+              "timestamp": "2026-03-15T04:30:44.858659+00:00",
+              "artifact_type": "generated_rules",
+              "artifact_path": "/home/runner/work/111/111/memory/generated_rules.json",
+              "metadata": {
+                "symbol": "XAUUSD",
+                "mode": "replay",
+                "rule_count": 0,
+                "snapshot_id": "snap_20260315043044855570"
+              }
+            },
+            {
+              "timestamp": "2026-03-15T04:30:44.858917+00:00",
+              "artifact_type": "meta_adaptive_profile",
+              "artifact_path": "/home/runner/work/111/111/memory/meta_adaptive_profile.json",
+              "metadata": {
+                "symbol": "XAUUSD",
+                "mode": "replay",
+                "snapshot_id": "snap_20260315043044855570"
+              }
+            }
+          ]
+        },
+        "evolution_kernel": {
+          "enabled": false,
+          "inspection": {},
+          "gap_count": 0,
+          "lifecycle": []
+        }
+      },
+      "chart_objects": [
+        {
+          "type": "label",
+          "id": "structure_state",
+          "symbol": "XAUUSD",
+          "text": "Structure: trend_up",
+          "value": 1.0
+        },
+        {
+          "type": "label",
+          "id": "liquidity_state",
+          "symbol": "XAUUSD",
+          "text": "Liquidity: sweep / sweep=high",
+          "value": 0.6000000000000001
+        },
+        {
+          "type": "signal_tag",
+          "id": "signal_action",
+          "symbol": "XAUUSD",
+          "text": "Action: WAIT",
+          "value": 0.9983,
+          "blocked": true
+        }
+      ],
+      "status_panel": {
+        "structure_state": "trend_up",
+        "liquidity_state": "sweep",
+        "confidence": 0.9983,
+        "blocker_result": {
+          "blocked": true,
+          "blocker_reasons": [
+            "structure_liquidity_conflict",
+            "session_filter:off_hours_block"
+          ]
+        },
+        "memory_result": {
+          "latest_trade_outcome": {
+            "trade_id": "blocked_snap_20260315043044855570",
+            "symbol": "XAUUSD",
+            "direction": "WAIT",
+            "status": "skipped",
+            "result": "n/a",
+            "pnl_points": 0.0,
+            "source_reasons": [
+              "structure_liquidity_conflict",
+              "session_filter:off_hours_block"
+            ],
+            "confidence": 0.9983
+          },
+          "outcome_summary": {
+            "total_closed": 0,
+            "wins": 0,
+            "losses": 0,
+            "flats": 0,
+            "win_rate": 0.0
+          }
+        },
+        "generated_rule_result": {
+          "generated_rule_count": 0,
+          "matching_rule_ids": []
+        },
+        "advanced_module_result": {
+          "blocked": true,
+          "blocked_reasons": [
+            "session_filter:off_hours_block"
+          ],
+          "module_count": 18,
+          "ready_count": 18
+        },
+        "evolution_result": {
+          "enabled": false,
+          "gaps_found": 0,
+          "proposals_processed": 0,
+          "proposed": 0,
+          "verified": 0,
+          "promoted": 0,
+          "rejected": 0,
+          "archived": 0
+        },
+        "execution_state": {
+          "symbol": "XAUUSD",
+          "mode": "replay",
+          "replay_source": "csv",
+          "mt5_attempted": false,
+          "data_source": "replay_csv",
+          "ready": true,
+          "reasons": [
+            "validated",
+            "data_source=replay_csv"
+          ]
+        }
+      },
+      "evaluation_step": 1
+    },
+    {
+      "schema_version": "phase3.output.v1",
+      "symbol": "XAUUSD",
+      "signal": {
+        "symbol": "XAUUSD",
+        "action": "WAIT",
+        "confidence": 0.9983,
+        "reasons": [
+          "structure_liquidity_conflict",
+          "session_filter:off_hours_block"
+        ],
+        "blocked": true,
+        "setup_classification": "blocked",
+        "blocker_reasons": [
+          "structure_liquidity_conflict",
+          "session_filter:off_hours_block"
+        ],
+        "memory_context": {
+          "latest_snapshot_id": "snap_20260315043044861553",
+          "last_blocked_count": 2,
+          "last_promoted_count": 0,
+          "latest_trade_outcome": {
+            "trade_id": "blocked_snap_20260315043044861553",
+            "symbol": "XAUUSD",
+            "direction": "WAIT",
+            "status": "skipped",
+            "result": "n/a",
+            "pnl_points": 0.0,
+            "source_reasons": [
+              "structure_liquidity_conflict",
+              "session_filter:off_hours_block"
+            ],
+            "confidence": 0.9983
+          }
+        },
+        "rule_context": {
+          "active_rule_count": 0,
+          "matching_rule_ids": []
+        },
+        "schema_version": "phase3.v1",
+        "consumer_hints": {
+          "action_values": [
+            "BUY",
+            "SELL",
+            "WAIT"
+          ],
+          "confidence_range": [
+            0.0,
+            1.0
+          ]
+        },
+        "advanced_modules": {
+          "director_module_map": {
+            "displacement": {
+              "role": "momentum_displacement",
+              "group": "features"
+            },
+            "fvg": {
+              "role": "fair_value_gap_detection",
+              "group": "features"
+            },
+            "volatility": {
+              "role": "volatility_regime",
+              "group": "features"
+            },
+            "sessions": {
+              "role": "session_classifier",
+              "group": "features"
+            },
+            "spread_state": {
+              "role": "spread_proxy_estimator",
+              "group": "features"
+            },
+            "invisible_data_miner": {
+              "role": "internal_pattern_miner",
+              "group": "features"
+            },
+            "human_lag_exploit": {
+              "role": "public_behavior_lag_model",
+              "group": "features"
+            },
+            "quantum_tremor_scanner": {
+              "role": "micro_volatility_tremor_model",
+              "group": "features"
+            },
+            "session_filter": {
+              "role": "session_block_gate",
+              "group": "filters"
+            },
+            "spread_filter": {
+              "role": "spread_block_gate",
+              "group": "filters"
+            },
+            "conflict_filter": {
+              "role": "vote_conflict_gate",
+              "group": "filters"
+            },
+            "memory_filter": {
+              "role": "outcome_memory_gate",
+              "group": "filters"
+            },
+            "self_destruct_protocol": {
+              "role": "failing_logic_downrank_gate",
+              "group": "filters"
+            },
+            "setup_score": {
+              "role": "setup_quality_scoring",
+              "group": "scoring"
+            },
+            "regime_score": {
+              "role": "regime_quality_scoring",
+              "group": "scoring"
+            },
+            "spectral_signal_fusion": {
+              "role": "multi_signal_fusion",
+              "group": "scoring"
+            },
+            "meta_conscious_routing": {
+              "role": "entropy_liquidity_regime_router",
+              "group": "scoring"
+            },
+            "meta_adaptive_ai": {
+              "role": "internal_memory_adaptive_profile",
+              "group": "memory"
+            },
+            "evolution_kernel": {
+              "role": "evolution_kernel_reporter",
+              "group": "evolution"
+            }
+          },
+          "discovered_modules": {
+            "features": [
+              "displacement",
+              "fvg",
+              "human_lag_exploit",
+              "invisible_data_miner",
+              "liquidity",
+              "market_structure",
+              "quantum_tremor_scanner",
+              "sessions",
+              "spread_state",
+              "volatility"
+            ],
+            "filters": [
+              "conflict_filter",
+              "loss_blocker",
+              "memory_filter",
+              "self_destruct_protocol",
+              "session_filter",
+              "spread_filter"
+            ],
+            "scoring": [
+              "confidence_score",
+              "meta_conscious_routing",
+              "regime_score",
+              "setup_score",
+              "spectral_signal_fusion"
+            ],
+            "memory": [
+              "meta_adaptive_ai",
+              "pattern_store",
+              "self_coder",
+              "tracker"
+            ],
+            "evolution": [
+              "architecture_guard",
+              "candidate_module_factory",
+              "code_generator",
+              "duplication_audit",
+              "evolution_registry",
+              "experimental_module_spec_flow",
+              "gap_discovery",
+              "governance_report",
+              "hypothesis_registry",
+              "knowledge_expansion_orchestrator",
+              "overlap_scoring",
+              "promoter",
+              "self_inspector",
+              "verifier"
+            ],
+            "indicator": [
+              "chart_objects",
+              "indicator_output",
+              "signal_model"
+            ],
+            "mt5": [
+              "adapter",
+              "execution_state",
+              "symbol_guard"
+            ]
+          },
+          "module_results": {
+            "displacement": {
+              "name": "displacement",
+              "role": "momentum_displacement",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "displacement_ratio=1.0",
+                "weak_displacement"
+              ],
+              "payload": {
+                "module": "displacement",
+                "state": "computed",
+                "direction_vote": "neutral",
+                "confidence_delta": 0.0,
+                "reasons": [
+                  "displacement_ratio=1.0",
+                  "weak_displacement"
+                ],
+                "metrics": {
+                  "body": 0.25,
+                  "avg_body": 0.25,
+                  "ratio": 1.0
+                }
+              }
+            },
+            "fvg": {
+              "name": "fvg",
+              "role": "fair_value_gap_detection",
+              "direction_vote": "neutral",
+              "confidence_delta": -0.01,
+              "blocked": false,
+              "reasons": [
+                "no_fvg_signal"
+              ],
+              "payload": {
+                "module": "fvg",
+                "state": "no_gap",
+                "direction_vote": "neutral",
+                "confidence_delta": -0.01,
+                "reasons": [
+                  "no_fvg_signal"
+                ]
+              }
+            },
+            "volatility": {
+              "name": "volatility",
+              "role": "volatility_regime",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.01,
+              "blocked": false,
+              "reasons": [
+                "volatility_supportive"
+              ],
+              "payload": {
+                "module": "volatility",
+                "state": "balanced",
+                "direction_vote": "neutral",
+                "confidence_delta": 0.01,
+                "reasons": [
+                  "volatility_supportive"
+                ],
+                "metrics": {
+                  "last_range": 1.05,
+                  "avg_range": 1.05,
+                  "ratio": 1.0
+                }
+              }
+            },
+            "sessions": {
+              "name": "sessions",
+              "role": "session_classifier",
+              "direction_vote": "neutral",
+              "confidence_delta": -0.04,
+              "blocked": false,
+              "reasons": [
+                "session=off_hours",
+                "off_hours"
+              ],
+              "payload": {
+                "module": "sessions",
+                "state": "off_hours",
+                "direction_vote": "neutral",
+                "confidence_delta": -0.04,
+                "reasons": [
+                  "session=off_hours",
+                  "off_hours"
+                ],
+                "metrics": {
+                  "hour_utc": 23
+                }
+              }
+            },
+            "spread_state": {
+              "name": "spread_state",
+              "role": "spread_proxy_estimator",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.02,
+              "blocked": false,
+              "reasons": [
+                "spread_proxy_tight"
+              ],
+              "payload": {
+                "module": "spread_state",
+                "state": "tight",
+                "spread_points": 18.9,
+                "direction_vote": "neutral",
+                "confidence_delta": 0.02,
+                "reasons": [
+                  "spread_proxy_tight"
+                ]
+              }
+            },
+            "invisible_data_miner": {
+              "name": "invisible_data_miner",
+              "role": "internal_pattern_miner",
+              "direction_vote": "buy",
+              "confidence_delta": 0.08,
+              "blocked": false,
+              "reasons": [
+                "slope=3.48",
+                "up_steps=29",
+                "down_steps=0",
+                "structure_bias=buy",
+                "liquidity_hint=sell"
+              ],
+              "payload": {
+                "module": "invisible_data_miner",
+                "state": "computed",
+                "direction_vote": "buy",
+                "confidence_delta": 0.08,
+                "reasons": [
+                  "slope=3.48",
+                  "up_steps=29",
+                  "down_steps=0",
+                  "structure_bias=buy",
+                  "liquidity_hint=sell"
+                ]
+              }
+            },
+            "human_lag_exploit": {
+              "name": "human_lag_exploit",
+              "role": "public_behavior_lag_model",
+              "direction_vote": "neutral",
+              "confidence_delta": -0.01,
+              "blocked": false,
+              "reasons": [
+                "momentum=1.68",
+                "lag_ratio=1.0"
+              ],
+              "payload": {
+                "module": "human_lag_exploit",
+                "state": "no_clear_lag_edge",
+                "direction_vote": "neutral",
+                "confidence_delta": -0.01,
+                "reasons": [
+                  "momentum=1.68",
+                  "lag_ratio=1.0"
+                ]
+              }
+            },
+            "quantum_tremor_scanner": {
+              "name": "quantum_tremor_scanner",
+              "role": "micro_volatility_tremor_model",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.01,
+              "blocked": false,
+              "reasons": [
+                "tremor_ratio=1.0"
+              ],
+              "payload": {
+                "module": "quantum_tremor_scanner",
+                "state": "tremor_balanced",
+                "direction_vote": "neutral",
+                "confidence_delta": 0.01,
+                "reasons": [
+                  "tremor_ratio=1.0"
+                ],
+                "metrics": {
+                  "last_range": 1.05,
+                  "avg_range": 1.05
+                }
+              }
+            },
+            "session_filter": {
+              "name": "session_filter",
+              "role": "session_block_gate",
+              "direction_vote": "wait",
+              "confidence_delta": -0.08,
+              "blocked": true,
+              "reasons": [
+                "off_hours_block"
+              ],
+              "payload": {
+                "module": "session_filter",
+                "blocked": true,
+                "reasons": [
+                  "off_hours_block"
+                ],
+                "confidence_delta": -0.08,
+                "direction_vote": "wait"
+              }
+            },
+            "spread_filter": {
+              "name": "spread_filter",
+              "role": "spread_block_gate",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "spread_ok"
+              ],
+              "payload": {
+                "module": "spread_filter",
+                "blocked": false,
+                "reasons": [
+                  "spread_ok"
+                ],
+                "confidence_delta": 0.0,
+                "direction_vote": "neutral",
+                "metrics": {
+                  "spread_points": 18.9,
+                  "max_spread_points": 60.0
+                }
+              }
+            },
+            "conflict_filter": {
+              "name": "conflict_filter",
+              "role": "vote_conflict_gate",
+              "direction_vote": "buy",
+              "confidence_delta": 0.01,
+              "blocked": false,
+              "reasons": [
+                "buy_votes=2",
+                "sell_votes=0"
+              ],
+              "payload": {
+                "module": "conflict_filter",
+                "blocked": false,
+                "reasons": [
+                  "buy_votes=2",
+                  "sell_votes=0"
+                ],
+                "confidence_delta": 0.01,
+                "direction_vote": "buy"
+              }
+            },
+            "memory_filter": {
+              "name": "memory_filter",
+              "role": "outcome_memory_gate",
+              "direction_vote": "buy",
+              "confidence_delta": 0.02,
+              "blocked": false,
+              "reasons": [
+                "recent_direction_outcomes=0",
+                "recent_direction_losses=0",
+                "recent_blocked_same_direction=0"
+              ],
+              "payload": {
+                "module": "memory_filter",
+                "blocked": false,
+                "reasons": [
+                  "recent_direction_outcomes=0",
+                  "recent_direction_losses=0",
+                  "recent_blocked_same_direction=0"
+                ],
+                "confidence_delta": 0.02,
+                "direction_vote": "buy"
+              }
+            },
+            "self_destruct_protocol": {
+              "name": "self_destruct_protocol",
+              "role": "failing_logic_downrank_gate",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "recent_losses=0",
+                "loss_threshold=4"
+              ],
+              "payload": {
+                "module": "self_destruct_protocol",
+                "state": "idle",
+                "blocked": false,
+                "direction_vote": "neutral",
+                "confidence_delta": 0.0,
+                "reasons": [
+                  "recent_losses=0",
+                  "loss_threshold=4"
+                ],
+                "disabled_modules": []
+              }
+            },
+            "setup_score": {
+              "name": "setup_score",
+              "role": "setup_quality_scoring",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "informational_setup_score",
+                "input_count=10",
+                "input_avg_delta=0.001"
+              ],
+              "payload": {
+                "module": "setup_score",
+                "score": 0.501,
+                "confidence_delta": 0.0,
+                "input_avg_delta": 0.001,
+                "input_count": 10,
+                "contributing_modules": [
+                  "fvg",
+                  "volatility",
+                  "sessions",
+                  "spread_state",
+                  "invisible_data_miner",
+                  "human_lag_exploit",
+                  "quantum_tremor_scanner",
+                  "session_filter",
+                  "conflict_filter",
+                  "memory_filter"
+                ],
+                "reasons": [
+                  "informational_setup_score",
+                  "input_count=10",
+                  "input_avg_delta=0.001"
+                ]
+              }
+            },
+            "regime_score": {
+              "name": "regime_score",
+              "role": "regime_quality_scoring",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.075,
+              "blocked": false,
+              "reasons": [
+                "structure_strength=1.0",
+                "volatility_state=balanced"
+              ],
+              "payload": {
+                "module": "regime_score",
+                "score": 1.0,
+                "confidence_delta": 0.075,
+                "reasons": [
+                  "structure_strength=1.0",
+                  "volatility_state=balanced"
+                ]
+              }
+            },
+            "spectral_signal_fusion": {
+              "name": "spectral_signal_fusion",
+              "role": "multi_signal_fusion",
+              "direction_vote": "buy",
+              "confidence_delta": 0.0133,
+              "blocked": false,
+              "reasons": [
+                "buy_votes=1",
+                "sell_votes=0",
+                "avg_delta=0.0133"
+              ],
+              "payload": {
+                "module": "spectral_signal_fusion",
+                "state": "computed",
+                "direction_vote": "buy",
+                "confidence_delta": 0.0133,
+                "reasons": [
+                  "buy_votes=1",
+                  "sell_votes=0",
+                  "avg_delta=0.0133"
+                ]
+              }
+            },
+            "meta_conscious_routing": {
+              "name": "meta_conscious_routing",
+              "role": "entropy_liquidity_regime_router",
+              "direction_vote": "sell",
+              "confidence_delta": 0.1,
+              "blocked": false,
+              "reasons": [
+                "regime_score=1.0",
+                "liquidity_score=0.6",
+                "volatility_state=balanced",
+                "entropy_penalty=0.0"
+              ],
+              "payload": {
+                "module": "meta_conscious_routing",
+                "state": "computed",
+                "direction_vote": "sell",
+                "confidence_delta": 0.1,
+                "reasons": [
+                  "regime_score=1.0",
+                  "liquidity_score=0.6",
+                  "volatility_state=balanced",
+                  "entropy_penalty=0.0"
+                ]
+              }
+            },
+            "meta_adaptive_ai": {
+              "name": "meta_adaptive_ai",
+              "role": "internal_memory_adaptive_profile",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "samples=0",
+                "win_rate=0.0",
+                "preferred_direction=WAIT"
+              ],
+              "payload": {
+                "module": "meta_adaptive_ai",
+                "state": "computed",
+                "direction_vote": "neutral",
+                "confidence_delta": 0.0,
+                "reasons": [
+                  "samples=0",
+                  "win_rate=0.0",
+                  "preferred_direction=WAIT"
+                ]
+              }
+            }
+          },
+          "module_health": {
+            "displacement": {
+              "name": "displacement",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "displacement_ratio=1.0",
+                "weak_displacement"
+              ]
+            },
+            "fvg": {
+              "name": "fvg",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "no_fvg_signal"
+              ]
+            },
+            "volatility": {
+              "name": "volatility",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "volatility_supportive"
+              ]
+            },
+            "sessions": {
+              "name": "sessions",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "session=off_hours",
+                "off_hours"
+              ]
+            },
+            "spread_state": {
+              "name": "spread_state",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "spread_proxy_tight"
+              ]
+            },
+            "invisible_data_miner": {
+              "name": "invisible_data_miner",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "slope=3.48",
+                "up_steps=29",
+                "down_steps=0",
+                "structure_bias=buy",
+                "liquidity_hint=sell"
+              ]
+            },
+            "human_lag_exploit": {
+              "name": "human_lag_exploit",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "momentum=1.68",
+                "lag_ratio=1.0"
+              ]
+            },
+            "quantum_tremor_scanner": {
+              "name": "quantum_tremor_scanner",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "tremor_ratio=1.0"
+              ]
+            },
+            "session_filter": {
+              "name": "session_filter",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "off_hours_block"
+              ]
+            },
+            "spread_filter": {
+              "name": "spread_filter",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "spread_ok"
+              ]
+            },
+            "conflict_filter": {
+              "name": "conflict_filter",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "buy_votes=2",
+                "sell_votes=0"
+              ]
+            },
+            "memory_filter": {
+              "name": "memory_filter",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "recent_direction_outcomes=0",
+                "recent_direction_losses=0",
+                "recent_blocked_same_direction=0"
+              ]
+            },
+            "self_destruct_protocol": {
+              "name": "self_destruct_protocol",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "recent_losses=0",
+                "loss_threshold=4"
+              ]
+            },
+            "setup_score": {
+              "name": "setup_score",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "informational_setup_score",
+                "input_count=10",
+                "input_avg_delta=0.001"
+              ]
+            },
+            "regime_score": {
+              "name": "regime_score",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "structure_strength=1.0",
+                "volatility_state=balanced"
+              ]
+            },
+            "spectral_signal_fusion": {
+              "name": "spectral_signal_fusion",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "buy_votes=1",
+                "sell_votes=0",
+                "avg_delta=0.0133"
+              ]
+            },
+            "meta_conscious_routing": {
+              "name": "meta_conscious_routing",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "regime_score=1.0",
+                "liquidity_score=0.6",
+                "volatility_state=balanced",
+                "entropy_penalty=0.0"
+              ]
+            },
+            "meta_adaptive_ai": {
+              "name": "meta_adaptive_ai",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "samples=0",
+                "win_rate=0.0",
+                "preferred_direction=WAIT"
+              ]
+            }
+          },
+          "connector_hooks": {
+            "hook_displacement": {
+              "name": "hook_displacement",
+              "source_module": "displacement",
+              "target_interface": "direction_vote_bus",
+              "enabled": true,
+              "description": "Expose displacement vote to external AI/ensemble consumers."
+            },
+            "hook_spectral_fusion": {
+              "name": "hook_spectral_fusion",
+              "source_module": "spectral_signal_fusion",
+              "target_interface": "confidence_bus",
+              "enabled": true,
+              "description": "Expose spectral fusion confidence contribution."
+            },
+            "hook_meta_routing": {
+              "name": "hook_meta_routing",
+              "source_module": "meta_conscious_routing",
+              "target_interface": "routing_bus",
+              "enabled": true,
+              "description": "Expose entropy/liquidity/regime routing output."
+            },
+            "hook_self_destruct": {
+              "name": "hook_self_destruct",
+              "source_module": "self_destruct_protocol",
+              "target_interface": "risk_gate_bus",
+              "enabled": true,
+              "description": "Expose measurable down-rank/disable risk gate state."
+            },
+            "hook_meta_adaptive": {
+              "name": "hook_meta_adaptive",
+              "source_module": "meta_adaptive_ai",
+              "target_interface": "adaptive_profile_bus",
+              "enabled": true,
+              "description": "Expose internal-memory adaptive profile output."
+            },
+            "hook_evolution_kernel": {
+              "name": "hook_evolution_kernel",
+              "source_module": "evolution_kernel",
+              "target_interface": "evolution_control_bus",
+              "enabled": false,
+              "description": "Expose evolution inspection/proposal lifecycle summary."
+            }
+          },
+          "final_direction": "WAIT",
+          "final_confidence": 0.9983
+        },
+        "generated_code_visibility": {
+          "registry_path": "/home/runner/work/111/111/memory/generated_code_registry.json",
+          "latest_entries": [
+            {
+              "timestamp": "2026-03-15T04:30:44.867333+00:00",
+              "artifact_type": "generated_rules",
+              "artifact_path": "/home/runner/work/111/111/memory/generated_rules.json",
+              "metadata": {
+                "symbol": "XAUUSD",
+                "mode": "replay",
+                "rule_count": 0,
+                "snapshot_id": "snap_20260315043044861553"
+              }
+            },
+            {
+              "timestamp": "2026-03-15T04:30:44.867638+00:00",
+              "artifact_type": "meta_adaptive_profile",
+              "artifact_path": "/home/runner/work/111/111/memory/meta_adaptive_profile.json",
+              "metadata": {
+                "symbol": "XAUUSD",
+                "mode": "replay",
+                "snapshot_id": "snap_20260315043044861553"
+              }
+            }
+          ]
+        },
+        "evolution_kernel": {
+          "enabled": false,
+          "inspection": {},
+          "gap_count": 0,
+          "lifecycle": []
+        }
+      },
+      "chart_objects": [
+        {
+          "type": "label",
+          "id": "structure_state",
+          "symbol": "XAUUSD",
+          "text": "Structure: trend_up",
+          "value": 1.0
+        },
+        {
+          "type": "label",
+          "id": "liquidity_state",
+          "symbol": "XAUUSD",
+          "text": "Liquidity: sweep / sweep=high",
+          "value": 0.6000000000000001
+        },
+        {
+          "type": "signal_tag",
+          "id": "signal_action",
+          "symbol": "XAUUSD",
+          "text": "Action: WAIT",
+          "value": 0.9983,
+          "blocked": true
+        }
+      ],
+      "status_panel": {
+        "structure_state": "trend_up",
+        "liquidity_state": "sweep",
+        "confidence": 0.9983,
+        "blocker_result": {
+          "blocked": true,
+          "blocker_reasons": [
+            "structure_liquidity_conflict",
+            "session_filter:off_hours_block"
+          ]
+        },
+        "memory_result": {
+          "latest_trade_outcome": {
+            "trade_id": "blocked_snap_20260315043044861553",
+            "symbol": "XAUUSD",
+            "direction": "WAIT",
+            "status": "skipped",
+            "result": "n/a",
+            "pnl_points": 0.0,
+            "source_reasons": [
+              "structure_liquidity_conflict",
+              "session_filter:off_hours_block"
+            ],
+            "confidence": 0.9983
+          },
+          "outcome_summary": {
+            "total_closed": 0,
+            "wins": 0,
+            "losses": 0,
+            "flats": 0,
+            "win_rate": 0.0
+          }
+        },
+        "generated_rule_result": {
+          "generated_rule_count": 0,
+          "matching_rule_ids": []
+        },
+        "advanced_module_result": {
+          "blocked": true,
+          "blocked_reasons": [
+            "session_filter:off_hours_block"
+          ],
+          "module_count": 18,
+          "ready_count": 18
+        },
+        "evolution_result": {
+          "enabled": false,
+          "gaps_found": 0,
+          "proposals_processed": 0,
+          "proposed": 0,
+          "verified": 0,
+          "promoted": 0,
+          "rejected": 0,
+          "archived": 0
+        },
+        "execution_state": {
+          "symbol": "XAUUSD",
+          "mode": "replay",
+          "replay_source": "csv",
+          "mt5_attempted": false,
+          "data_source": "replay_csv",
+          "ready": true,
+          "reasons": [
+            "validated",
+            "data_source=replay_csv"
+          ]
+        }
+      },
+      "evaluation_step": 2
+    },
+    {
+      "schema_version": "phase3.output.v1",
+      "symbol": "XAUUSD",
+      "signal": {
+        "symbol": "XAUUSD",
+        "action": "WAIT",
+        "confidence": 0.9983,
+        "reasons": [
+          "structure_liquidity_conflict",
+          "session_filter:off_hours_block"
+        ],
+        "blocked": true,
+        "setup_classification": "blocked",
+        "blocker_reasons": [
+          "structure_liquidity_conflict",
+          "session_filter:off_hours_block"
+        ],
+        "memory_context": {
+          "latest_snapshot_id": "snap_20260315043044870269",
+          "last_blocked_count": 3,
+          "last_promoted_count": 0,
+          "latest_trade_outcome": {
+            "trade_id": "blocked_snap_20260315043044870269",
+            "symbol": "XAUUSD",
+            "direction": "WAIT",
+            "status": "skipped",
+            "result": "n/a",
+            "pnl_points": 0.0,
+            "source_reasons": [
+              "structure_liquidity_conflict",
+              "session_filter:off_hours_block"
+            ],
+            "confidence": 0.9983
+          }
+        },
+        "rule_context": {
+          "active_rule_count": 0,
+          "matching_rule_ids": []
+        },
+        "schema_version": "phase3.v1",
+        "consumer_hints": {
+          "action_values": [
+            "BUY",
+            "SELL",
+            "WAIT"
+          ],
+          "confidence_range": [
+            0.0,
+            1.0
+          ]
+        },
+        "advanced_modules": {
+          "director_module_map": {
+            "displacement": {
+              "role": "momentum_displacement",
+              "group": "features"
+            },
+            "fvg": {
+              "role": "fair_value_gap_detection",
+              "group": "features"
+            },
+            "volatility": {
+              "role": "volatility_regime",
+              "group": "features"
+            },
+            "sessions": {
+              "role": "session_classifier",
+              "group": "features"
+            },
+            "spread_state": {
+              "role": "spread_proxy_estimator",
+              "group": "features"
+            },
+            "invisible_data_miner": {
+              "role": "internal_pattern_miner",
+              "group": "features"
+            },
+            "human_lag_exploit": {
+              "role": "public_behavior_lag_model",
+              "group": "features"
+            },
+            "quantum_tremor_scanner": {
+              "role": "micro_volatility_tremor_model",
+              "group": "features"
+            },
+            "session_filter": {
+              "role": "session_block_gate",
+              "group": "filters"
+            },
+            "spread_filter": {
+              "role": "spread_block_gate",
+              "group": "filters"
+            },
+            "conflict_filter": {
+              "role": "vote_conflict_gate",
+              "group": "filters"
+            },
+            "memory_filter": {
+              "role": "outcome_memory_gate",
+              "group": "filters"
+            },
+            "self_destruct_protocol": {
+              "role": "failing_logic_downrank_gate",
+              "group": "filters"
+            },
+            "setup_score": {
+              "role": "setup_quality_scoring",
+              "group": "scoring"
+            },
+            "regime_score": {
+              "role": "regime_quality_scoring",
+              "group": "scoring"
+            },
+            "spectral_signal_fusion": {
+              "role": "multi_signal_fusion",
+              "group": "scoring"
+            },
+            "meta_conscious_routing": {
+              "role": "entropy_liquidity_regime_router",
+              "group": "scoring"
+            },
+            "meta_adaptive_ai": {
+              "role": "internal_memory_adaptive_profile",
+              "group": "memory"
+            },
+            "evolution_kernel": {
+              "role": "evolution_kernel_reporter",
+              "group": "evolution"
+            }
+          },
+          "discovered_modules": {
+            "features": [
+              "displacement",
+              "fvg",
+              "human_lag_exploit",
+              "invisible_data_miner",
+              "liquidity",
+              "market_structure",
+              "quantum_tremor_scanner",
+              "sessions",
+              "spread_state",
+              "volatility"
+            ],
+            "filters": [
+              "conflict_filter",
+              "loss_blocker",
+              "memory_filter",
+              "self_destruct_protocol",
+              "session_filter",
+              "spread_filter"
+            ],
+            "scoring": [
+              "confidence_score",
+              "meta_conscious_routing",
+              "regime_score",
+              "setup_score",
+              "spectral_signal_fusion"
+            ],
+            "memory": [
+              "meta_adaptive_ai",
+              "pattern_store",
+              "self_coder",
+              "tracker"
+            ],
+            "evolution": [
+              "architecture_guard",
+              "candidate_module_factory",
+              "code_generator",
+              "duplication_audit",
+              "evolution_registry",
+              "experimental_module_spec_flow",
+              "gap_discovery",
+              "governance_report",
+              "hypothesis_registry",
+              "knowledge_expansion_orchestrator",
+              "overlap_scoring",
+              "promoter",
+              "self_inspector",
+              "verifier"
+            ],
+            "indicator": [
+              "chart_objects",
+              "indicator_output",
+              "signal_model"
+            ],
+            "mt5": [
+              "adapter",
+              "execution_state",
+              "symbol_guard"
+            ]
+          },
+          "module_results": {
+            "displacement": {
+              "name": "displacement",
+              "role": "momentum_displacement",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "displacement_ratio=1.0",
+                "weak_displacement"
+              ],
+              "payload": {
+                "module": "displacement",
+                "state": "computed",
+                "direction_vote": "neutral",
+                "confidence_delta": 0.0,
+                "reasons": [
+                  "displacement_ratio=1.0",
+                  "weak_displacement"
+                ],
+                "metrics": {
+                  "body": 0.25,
+                  "avg_body": 0.25,
+                  "ratio": 1.0
+                }
+              }
+            },
+            "fvg": {
+              "name": "fvg",
+              "role": "fair_value_gap_detection",
+              "direction_vote": "neutral",
+              "confidence_delta": -0.01,
+              "blocked": false,
+              "reasons": [
+                "no_fvg_signal"
+              ],
+              "payload": {
+                "module": "fvg",
+                "state": "no_gap",
+                "direction_vote": "neutral",
+                "confidence_delta": -0.01,
+                "reasons": [
+                  "no_fvg_signal"
+                ]
+              }
+            },
+            "volatility": {
+              "name": "volatility",
+              "role": "volatility_regime",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.01,
+              "blocked": false,
+              "reasons": [
+                "volatility_supportive"
+              ],
+              "payload": {
+                "module": "volatility",
+                "state": "balanced",
+                "direction_vote": "neutral",
+                "confidence_delta": 0.01,
+                "reasons": [
+                  "volatility_supportive"
+                ],
+                "metrics": {
+                  "last_range": 1.05,
+                  "avg_range": 1.05,
+                  "ratio": 1.0
+                }
+              }
+            },
+            "sessions": {
+              "name": "sessions",
+              "role": "session_classifier",
+              "direction_vote": "neutral",
+              "confidence_delta": -0.04,
+              "blocked": false,
+              "reasons": [
+                "session=off_hours",
+                "off_hours"
+              ],
+              "payload": {
+                "module": "sessions",
+                "state": "off_hours",
+                "direction_vote": "neutral",
+                "confidence_delta": -0.04,
+                "reasons": [
+                  "session=off_hours",
+                  "off_hours"
+                ],
+                "metrics": {
+                  "hour_utc": 23
+                }
+              }
+            },
+            "spread_state": {
+              "name": "spread_state",
+              "role": "spread_proxy_estimator",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.02,
+              "blocked": false,
+              "reasons": [
+                "spread_proxy_tight"
+              ],
+              "payload": {
+                "module": "spread_state",
+                "state": "tight",
+                "spread_points": 18.9,
+                "direction_vote": "neutral",
+                "confidence_delta": 0.02,
+                "reasons": [
+                  "spread_proxy_tight"
+                ]
+              }
+            },
+            "invisible_data_miner": {
+              "name": "invisible_data_miner",
+              "role": "internal_pattern_miner",
+              "direction_vote": "buy",
+              "confidence_delta": 0.08,
+              "blocked": false,
+              "reasons": [
+                "slope=3.48",
+                "up_steps=29",
+                "down_steps=0",
+                "structure_bias=buy",
+                "liquidity_hint=sell"
+              ],
+              "payload": {
+                "module": "invisible_data_miner",
+                "state": "computed",
+                "direction_vote": "buy",
+                "confidence_delta": 0.08,
+                "reasons": [
+                  "slope=3.48",
+                  "up_steps=29",
+                  "down_steps=0",
+                  "structure_bias=buy",
+                  "liquidity_hint=sell"
+                ]
+              }
+            },
+            "human_lag_exploit": {
+              "name": "human_lag_exploit",
+              "role": "public_behavior_lag_model",
+              "direction_vote": "neutral",
+              "confidence_delta": -0.01,
+              "blocked": false,
+              "reasons": [
+                "momentum=1.68",
+                "lag_ratio=1.0"
+              ],
+              "payload": {
+                "module": "human_lag_exploit",
+                "state": "no_clear_lag_edge",
+                "direction_vote": "neutral",
+                "confidence_delta": -0.01,
+                "reasons": [
+                  "momentum=1.68",
+                  "lag_ratio=1.0"
+                ]
+              }
+            },
+            "quantum_tremor_scanner": {
+              "name": "quantum_tremor_scanner",
+              "role": "micro_volatility_tremor_model",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.01,
+              "blocked": false,
+              "reasons": [
+                "tremor_ratio=1.0"
+              ],
+              "payload": {
+                "module": "quantum_tremor_scanner",
+                "state": "tremor_balanced",
+                "direction_vote": "neutral",
+                "confidence_delta": 0.01,
+                "reasons": [
+                  "tremor_ratio=1.0"
+                ],
+                "metrics": {
+                  "last_range": 1.05,
+                  "avg_range": 1.05
+                }
+              }
+            },
+            "session_filter": {
+              "name": "session_filter",
+              "role": "session_block_gate",
+              "direction_vote": "wait",
+              "confidence_delta": -0.08,
+              "blocked": true,
+              "reasons": [
+                "off_hours_block"
+              ],
+              "payload": {
+                "module": "session_filter",
+                "blocked": true,
+                "reasons": [
+                  "off_hours_block"
+                ],
+                "confidence_delta": -0.08,
+                "direction_vote": "wait"
+              }
+            },
+            "spread_filter": {
+              "name": "spread_filter",
+              "role": "spread_block_gate",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "spread_ok"
+              ],
+              "payload": {
+                "module": "spread_filter",
+                "blocked": false,
+                "reasons": [
+                  "spread_ok"
+                ],
+                "confidence_delta": 0.0,
+                "direction_vote": "neutral",
+                "metrics": {
+                  "spread_points": 18.9,
+                  "max_spread_points": 60.0
+                }
+              }
+            },
+            "conflict_filter": {
+              "name": "conflict_filter",
+              "role": "vote_conflict_gate",
+              "direction_vote": "buy",
+              "confidence_delta": 0.01,
+              "blocked": false,
+              "reasons": [
+                "buy_votes=2",
+                "sell_votes=0"
+              ],
+              "payload": {
+                "module": "conflict_filter",
+                "blocked": false,
+                "reasons": [
+                  "buy_votes=2",
+                  "sell_votes=0"
+                ],
+                "confidence_delta": 0.01,
+                "direction_vote": "buy"
+              }
+            },
+            "memory_filter": {
+              "name": "memory_filter",
+              "role": "outcome_memory_gate",
+              "direction_vote": "buy",
+              "confidence_delta": 0.02,
+              "blocked": false,
+              "reasons": [
+                "recent_direction_outcomes=0",
+                "recent_direction_losses=0",
+                "recent_blocked_same_direction=0"
+              ],
+              "payload": {
+                "module": "memory_filter",
+                "blocked": false,
+                "reasons": [
+                  "recent_direction_outcomes=0",
+                  "recent_direction_losses=0",
+                  "recent_blocked_same_direction=0"
+                ],
+                "confidence_delta": 0.02,
+                "direction_vote": "buy"
+              }
+            },
+            "self_destruct_protocol": {
+              "name": "self_destruct_protocol",
+              "role": "failing_logic_downrank_gate",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "recent_losses=0",
+                "loss_threshold=4"
+              ],
+              "payload": {
+                "module": "self_destruct_protocol",
+                "state": "idle",
+                "blocked": false,
+                "direction_vote": "neutral",
+                "confidence_delta": 0.0,
+                "reasons": [
+                  "recent_losses=0",
+                  "loss_threshold=4"
+                ],
+                "disabled_modules": []
+              }
+            },
+            "setup_score": {
+              "name": "setup_score",
+              "role": "setup_quality_scoring",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "informational_setup_score",
+                "input_count=10",
+                "input_avg_delta=0.001"
+              ],
+              "payload": {
+                "module": "setup_score",
+                "score": 0.501,
+                "confidence_delta": 0.0,
+                "input_avg_delta": 0.001,
+                "input_count": 10,
+                "contributing_modules": [
+                  "fvg",
+                  "volatility",
+                  "sessions",
+                  "spread_state",
+                  "invisible_data_miner",
+                  "human_lag_exploit",
+                  "quantum_tremor_scanner",
+                  "session_filter",
+                  "conflict_filter",
+                  "memory_filter"
+                ],
+                "reasons": [
+                  "informational_setup_score",
+                  "input_count=10",
+                  "input_avg_delta=0.001"
+                ]
+              }
+            },
+            "regime_score": {
+              "name": "regime_score",
+              "role": "regime_quality_scoring",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.075,
+              "blocked": false,
+              "reasons": [
+                "structure_strength=1.0",
+                "volatility_state=balanced"
+              ],
+              "payload": {
+                "module": "regime_score",
+                "score": 1.0,
+                "confidence_delta": 0.075,
+                "reasons": [
+                  "structure_strength=1.0",
+                  "volatility_state=balanced"
+                ]
+              }
+            },
+            "spectral_signal_fusion": {
+              "name": "spectral_signal_fusion",
+              "role": "multi_signal_fusion",
+              "direction_vote": "buy",
+              "confidence_delta": 0.0133,
+              "blocked": false,
+              "reasons": [
+                "buy_votes=1",
+                "sell_votes=0",
+                "avg_delta=0.0133"
+              ],
+              "payload": {
+                "module": "spectral_signal_fusion",
+                "state": "computed",
+                "direction_vote": "buy",
+                "confidence_delta": 0.0133,
+                "reasons": [
+                  "buy_votes=1",
+                  "sell_votes=0",
+                  "avg_delta=0.0133"
+                ]
+              }
+            },
+            "meta_conscious_routing": {
+              "name": "meta_conscious_routing",
+              "role": "entropy_liquidity_regime_router",
+              "direction_vote": "sell",
+              "confidence_delta": 0.1,
+              "blocked": false,
+              "reasons": [
+                "regime_score=1.0",
+                "liquidity_score=0.6",
+                "volatility_state=balanced",
+                "entropy_penalty=0.0"
+              ],
+              "payload": {
+                "module": "meta_conscious_routing",
+                "state": "computed",
+                "direction_vote": "sell",
+                "confidence_delta": 0.1,
+                "reasons": [
+                  "regime_score=1.0",
+                  "liquidity_score=0.6",
+                  "volatility_state=balanced",
+                  "entropy_penalty=0.0"
+                ]
+              }
+            },
+            "meta_adaptive_ai": {
+              "name": "meta_adaptive_ai",
+              "role": "internal_memory_adaptive_profile",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "samples=0",
+                "win_rate=0.0",
+                "preferred_direction=WAIT"
+              ],
+              "payload": {
+                "module": "meta_adaptive_ai",
+                "state": "computed",
+                "direction_vote": "neutral",
+                "confidence_delta": 0.0,
+                "reasons": [
+                  "samples=0",
+                  "win_rate=0.0",
+                  "preferred_direction=WAIT"
+                ]
+              }
+            }
+          },
+          "module_health": {
+            "displacement": {
+              "name": "displacement",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "displacement_ratio=1.0",
+                "weak_displacement"
+              ]
+            },
+            "fvg": {
+              "name": "fvg",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "no_fvg_signal"
+              ]
+            },
+            "volatility": {
+              "name": "volatility",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "volatility_supportive"
+              ]
+            },
+            "sessions": {
+              "name": "sessions",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "session=off_hours",
+                "off_hours"
+              ]
+            },
+            "spread_state": {
+              "name": "spread_state",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "spread_proxy_tight"
+              ]
+            },
+            "invisible_data_miner": {
+              "name": "invisible_data_miner",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "slope=3.48",
+                "up_steps=29",
+                "down_steps=0",
+                "structure_bias=buy",
+                "liquidity_hint=sell"
+              ]
+            },
+            "human_lag_exploit": {
+              "name": "human_lag_exploit",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "momentum=1.68",
+                "lag_ratio=1.0"
+              ]
+            },
+            "quantum_tremor_scanner": {
+              "name": "quantum_tremor_scanner",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "tremor_ratio=1.0"
+              ]
+            },
+            "session_filter": {
+              "name": "session_filter",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "off_hours_block"
+              ]
+            },
+            "spread_filter": {
+              "name": "spread_filter",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "spread_ok"
+              ]
+            },
+            "conflict_filter": {
+              "name": "conflict_filter",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "buy_votes=2",
+                "sell_votes=0"
+              ]
+            },
+            "memory_filter": {
+              "name": "memory_filter",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "recent_direction_outcomes=0",
+                "recent_direction_losses=0",
+                "recent_blocked_same_direction=0"
+              ]
+            },
+            "self_destruct_protocol": {
+              "name": "self_destruct_protocol",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "recent_losses=0",
+                "loss_threshold=4"
+              ]
+            },
+            "setup_score": {
+              "name": "setup_score",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "informational_setup_score",
+                "input_count=10",
+                "input_avg_delta=0.001"
+              ]
+            },
+            "regime_score": {
+              "name": "regime_score",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "structure_strength=1.0",
+                "volatility_state=balanced"
+              ]
+            },
+            "spectral_signal_fusion": {
+              "name": "spectral_signal_fusion",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "buy_votes=1",
+                "sell_votes=0",
+                "avg_delta=0.0133"
+              ]
+            },
+            "meta_conscious_routing": {
+              "name": "meta_conscious_routing",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "regime_score=1.0",
+                "liquidity_score=0.6",
+                "volatility_state=balanced",
+                "entropy_penalty=0.0"
+              ]
+            },
+            "meta_adaptive_ai": {
+              "name": "meta_adaptive_ai",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "samples=0",
+                "win_rate=0.0",
+                "preferred_direction=WAIT"
+              ]
+            }
+          },
+          "connector_hooks": {
+            "hook_displacement": {
+              "name": "hook_displacement",
+              "source_module": "displacement",
+              "target_interface": "direction_vote_bus",
+              "enabled": true,
+              "description": "Expose displacement vote to external AI/ensemble consumers."
+            },
+            "hook_spectral_fusion": {
+              "name": "hook_spectral_fusion",
+              "source_module": "spectral_signal_fusion",
+              "target_interface": "confidence_bus",
+              "enabled": true,
+              "description": "Expose spectral fusion confidence contribution."
+            },
+            "hook_meta_routing": {
+              "name": "hook_meta_routing",
+              "source_module": "meta_conscious_routing",
+              "target_interface": "routing_bus",
+              "enabled": true,
+              "description": "Expose entropy/liquidity/regime routing output."
+            },
+            "hook_self_destruct": {
+              "name": "hook_self_destruct",
+              "source_module": "self_destruct_protocol",
+              "target_interface": "risk_gate_bus",
+              "enabled": true,
+              "description": "Expose measurable down-rank/disable risk gate state."
+            },
+            "hook_meta_adaptive": {
+              "name": "hook_meta_adaptive",
+              "source_module": "meta_adaptive_ai",
+              "target_interface": "adaptive_profile_bus",
+              "enabled": true,
+              "description": "Expose internal-memory adaptive profile output."
+            },
+            "hook_evolution_kernel": {
+              "name": "hook_evolution_kernel",
+              "source_module": "evolution_kernel",
+              "target_interface": "evolution_control_bus",
+              "enabled": false,
+              "description": "Expose evolution inspection/proposal lifecycle summary."
+            }
+          },
+          "final_direction": "WAIT",
+          "final_confidence": 0.9983
+        },
+        "generated_code_visibility": {
+          "registry_path": "/home/runner/work/111/111/memory/generated_code_registry.json",
+          "latest_entries": [
+            {
+              "timestamp": "2026-03-15T04:30:44.878579+00:00",
+              "artifact_type": "generated_rules",
+              "artifact_path": "/home/runner/work/111/111/memory/generated_rules.json",
+              "metadata": {
+                "symbol": "XAUUSD",
+                "mode": "replay",
+                "rule_count": 0,
+                "snapshot_id": "snap_20260315043044870269"
+              }
+            },
+            {
+              "timestamp": "2026-03-15T04:30:44.878851+00:00",
+              "artifact_type": "meta_adaptive_profile",
+              "artifact_path": "/home/runner/work/111/111/memory/meta_adaptive_profile.json",
+              "metadata": {
+                "symbol": "XAUUSD",
+                "mode": "replay",
+                "snapshot_id": "snap_20260315043044870269"
+              }
+            }
+          ]
+        },
+        "evolution_kernel": {
+          "enabled": false,
+          "inspection": {},
+          "gap_count": 0,
+          "lifecycle": []
+        }
+      },
+      "chart_objects": [
+        {
+          "type": "label",
+          "id": "structure_state",
+          "symbol": "XAUUSD",
+          "text": "Structure: trend_up",
+          "value": 1.0
+        },
+        {
+          "type": "label",
+          "id": "liquidity_state",
+          "symbol": "XAUUSD",
+          "text": "Liquidity: sweep / sweep=high",
+          "value": 0.6000000000000001
+        },
+        {
+          "type": "signal_tag",
+          "id": "signal_action",
+          "symbol": "XAUUSD",
+          "text": "Action: WAIT",
+          "value": 0.9983,
+          "blocked": true
+        }
+      ],
+      "status_panel": {
+        "structure_state": "trend_up",
+        "liquidity_state": "sweep",
+        "confidence": 0.9983,
+        "blocker_result": {
+          "blocked": true,
+          "blocker_reasons": [
+            "structure_liquidity_conflict",
+            "session_filter:off_hours_block"
+          ]
+        },
+        "memory_result": {
+          "latest_trade_outcome": {
+            "trade_id": "blocked_snap_20260315043044870269",
+            "symbol": "XAUUSD",
+            "direction": "WAIT",
+            "status": "skipped",
+            "result": "n/a",
+            "pnl_points": 0.0,
+            "source_reasons": [
+              "structure_liquidity_conflict",
+              "session_filter:off_hours_block"
+            ],
+            "confidence": 0.9983
+          },
+          "outcome_summary": {
+            "total_closed": 0,
+            "wins": 0,
+            "losses": 0,
+            "flats": 0,
+            "win_rate": 0.0
+          }
+        },
+        "generated_rule_result": {
+          "generated_rule_count": 0,
+          "matching_rule_ids": []
+        },
+        "advanced_module_result": {
+          "blocked": true,
+          "blocked_reasons": [
+            "session_filter:off_hours_block"
+          ],
+          "module_count": 18,
+          "ready_count": 18
+        },
+        "evolution_result": {
+          "enabled": false,
+          "gaps_found": 0,
+          "proposals_processed": 0,
+          "proposed": 0,
+          "verified": 0,
+          "promoted": 0,
+          "rejected": 0,
+          "archived": 0
+        },
+        "execution_state": {
+          "symbol": "XAUUSD",
+          "mode": "replay",
+          "replay_source": "csv",
+          "mt5_attempted": false,
+          "data_source": "replay_csv",
+          "ready": true,
+          "reasons": [
+            "validated",
+            "data_source=replay_csv"
+          ]
+        }
+      },
+      "evaluation_step": 3
+    },
+    {
+      "schema_version": "phase3.output.v1",
+      "symbol": "XAUUSD",
+      "signal": {
+        "symbol": "XAUUSD",
+        "action": "WAIT",
+        "confidence": 0.9983,
+        "reasons": [
+          "structure_liquidity_conflict",
+          "session_filter:off_hours_block"
+        ],
+        "blocked": true,
+        "setup_classification": "blocked",
+        "blocker_reasons": [
+          "structure_liquidity_conflict",
+          "session_filter:off_hours_block"
+        ],
+        "memory_context": {
+          "latest_snapshot_id": "snap_20260315043044881691",
+          "last_blocked_count": 4,
+          "last_promoted_count": 0,
+          "latest_trade_outcome": {
+            "trade_id": "blocked_snap_20260315043044881691",
+            "symbol": "XAUUSD",
+            "direction": "WAIT",
+            "status": "skipped",
+            "result": "n/a",
+            "pnl_points": 0.0,
+            "source_reasons": [
+              "structure_liquidity_conflict",
+              "session_filter:off_hours_block"
+            ],
+            "confidence": 0.9983
+          }
+        },
+        "rule_context": {
+          "active_rule_count": 0,
+          "matching_rule_ids": []
+        },
+        "schema_version": "phase3.v1",
+        "consumer_hints": {
+          "action_values": [
+            "BUY",
+            "SELL",
+            "WAIT"
+          ],
+          "confidence_range": [
+            0.0,
+            1.0
+          ]
+        },
+        "advanced_modules": {
+          "director_module_map": {
+            "displacement": {
+              "role": "momentum_displacement",
+              "group": "features"
+            },
+            "fvg": {
+              "role": "fair_value_gap_detection",
+              "group": "features"
+            },
+            "volatility": {
+              "role": "volatility_regime",
+              "group": "features"
+            },
+            "sessions": {
+              "role": "session_classifier",
+              "group": "features"
+            },
+            "spread_state": {
+              "role": "spread_proxy_estimator",
+              "group": "features"
+            },
+            "invisible_data_miner": {
+              "role": "internal_pattern_miner",
+              "group": "features"
+            },
+            "human_lag_exploit": {
+              "role": "public_behavior_lag_model",
+              "group": "features"
+            },
+            "quantum_tremor_scanner": {
+              "role": "micro_volatility_tremor_model",
+              "group": "features"
+            },
+            "session_filter": {
+              "role": "session_block_gate",
+              "group": "filters"
+            },
+            "spread_filter": {
+              "role": "spread_block_gate",
+              "group": "filters"
+            },
+            "conflict_filter": {
+              "role": "vote_conflict_gate",
+              "group": "filters"
+            },
+            "memory_filter": {
+              "role": "outcome_memory_gate",
+              "group": "filters"
+            },
+            "self_destruct_protocol": {
+              "role": "failing_logic_downrank_gate",
+              "group": "filters"
+            },
+            "setup_score": {
+              "role": "setup_quality_scoring",
+              "group": "scoring"
+            },
+            "regime_score": {
+              "role": "regime_quality_scoring",
+              "group": "scoring"
+            },
+            "spectral_signal_fusion": {
+              "role": "multi_signal_fusion",
+              "group": "scoring"
+            },
+            "meta_conscious_routing": {
+              "role": "entropy_liquidity_regime_router",
+              "group": "scoring"
+            },
+            "meta_adaptive_ai": {
+              "role": "internal_memory_adaptive_profile",
+              "group": "memory"
+            },
+            "evolution_kernel": {
+              "role": "evolution_kernel_reporter",
+              "group": "evolution"
+            }
+          },
+          "discovered_modules": {
+            "features": [
+              "displacement",
+              "fvg",
+              "human_lag_exploit",
+              "invisible_data_miner",
+              "liquidity",
+              "market_structure",
+              "quantum_tremor_scanner",
+              "sessions",
+              "spread_state",
+              "volatility"
+            ],
+            "filters": [
+              "conflict_filter",
+              "loss_blocker",
+              "memory_filter",
+              "self_destruct_protocol",
+              "session_filter",
+              "spread_filter"
+            ],
+            "scoring": [
+              "confidence_score",
+              "meta_conscious_routing",
+              "regime_score",
+              "setup_score",
+              "spectral_signal_fusion"
+            ],
+            "memory": [
+              "meta_adaptive_ai",
+              "pattern_store",
+              "self_coder",
+              "tracker"
+            ],
+            "evolution": [
+              "architecture_guard",
+              "candidate_module_factory",
+              "code_generator",
+              "duplication_audit",
+              "evolution_registry",
+              "experimental_module_spec_flow",
+              "gap_discovery",
+              "governance_report",
+              "hypothesis_registry",
+              "knowledge_expansion_orchestrator",
+              "overlap_scoring",
+              "promoter",
+              "self_inspector",
+              "verifier"
+            ],
+            "indicator": [
+              "chart_objects",
+              "indicator_output",
+              "signal_model"
+            ],
+            "mt5": [
+              "adapter",
+              "execution_state",
+              "symbol_guard"
+            ]
+          },
+          "module_results": {
+            "displacement": {
+              "name": "displacement",
+              "role": "momentum_displacement",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "displacement_ratio=1.0",
+                "weak_displacement"
+              ],
+              "payload": {
+                "module": "displacement",
+                "state": "computed",
+                "direction_vote": "neutral",
+                "confidence_delta": 0.0,
+                "reasons": [
+                  "displacement_ratio=1.0",
+                  "weak_displacement"
+                ],
+                "metrics": {
+                  "body": 0.25,
+                  "avg_body": 0.25,
+                  "ratio": 1.0
+                }
+              }
+            },
+            "fvg": {
+              "name": "fvg",
+              "role": "fair_value_gap_detection",
+              "direction_vote": "neutral",
+              "confidence_delta": -0.01,
+              "blocked": false,
+              "reasons": [
+                "no_fvg_signal"
+              ],
+              "payload": {
+                "module": "fvg",
+                "state": "no_gap",
+                "direction_vote": "neutral",
+                "confidence_delta": -0.01,
+                "reasons": [
+                  "no_fvg_signal"
+                ]
+              }
+            },
+            "volatility": {
+              "name": "volatility",
+              "role": "volatility_regime",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.01,
+              "blocked": false,
+              "reasons": [
+                "volatility_supportive"
+              ],
+              "payload": {
+                "module": "volatility",
+                "state": "balanced",
+                "direction_vote": "neutral",
+                "confidence_delta": 0.01,
+                "reasons": [
+                  "volatility_supportive"
+                ],
+                "metrics": {
+                  "last_range": 1.05,
+                  "avg_range": 1.05,
+                  "ratio": 1.0
+                }
+              }
+            },
+            "sessions": {
+              "name": "sessions",
+              "role": "session_classifier",
+              "direction_vote": "neutral",
+              "confidence_delta": -0.04,
+              "blocked": false,
+              "reasons": [
+                "session=off_hours",
+                "off_hours"
+              ],
+              "payload": {
+                "module": "sessions",
+                "state": "off_hours",
+                "direction_vote": "neutral",
+                "confidence_delta": -0.04,
+                "reasons": [
+                  "session=off_hours",
+                  "off_hours"
+                ],
+                "metrics": {
+                  "hour_utc": 23
+                }
+              }
+            },
+            "spread_state": {
+              "name": "spread_state",
+              "role": "spread_proxy_estimator",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.02,
+              "blocked": false,
+              "reasons": [
+                "spread_proxy_tight"
+              ],
+              "payload": {
+                "module": "spread_state",
+                "state": "tight",
+                "spread_points": 18.9,
+                "direction_vote": "neutral",
+                "confidence_delta": 0.02,
+                "reasons": [
+                  "spread_proxy_tight"
+                ]
+              }
+            },
+            "invisible_data_miner": {
+              "name": "invisible_data_miner",
+              "role": "internal_pattern_miner",
+              "direction_vote": "buy",
+              "confidence_delta": 0.08,
+              "blocked": false,
+              "reasons": [
+                "slope=3.48",
+                "up_steps=29",
+                "down_steps=0",
+                "structure_bias=buy",
+                "liquidity_hint=sell"
+              ],
+              "payload": {
+                "module": "invisible_data_miner",
+                "state": "computed",
+                "direction_vote": "buy",
+                "confidence_delta": 0.08,
+                "reasons": [
+                  "slope=3.48",
+                  "up_steps=29",
+                  "down_steps=0",
+                  "structure_bias=buy",
+                  "liquidity_hint=sell"
+                ]
+              }
+            },
+            "human_lag_exploit": {
+              "name": "human_lag_exploit",
+              "role": "public_behavior_lag_model",
+              "direction_vote": "neutral",
+              "confidence_delta": -0.01,
+              "blocked": false,
+              "reasons": [
+                "momentum=1.68",
+                "lag_ratio=1.0"
+              ],
+              "payload": {
+                "module": "human_lag_exploit",
+                "state": "no_clear_lag_edge",
+                "direction_vote": "neutral",
+                "confidence_delta": -0.01,
+                "reasons": [
+                  "momentum=1.68",
+                  "lag_ratio=1.0"
+                ]
+              }
+            },
+            "quantum_tremor_scanner": {
+              "name": "quantum_tremor_scanner",
+              "role": "micro_volatility_tremor_model",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.01,
+              "blocked": false,
+              "reasons": [
+                "tremor_ratio=1.0"
+              ],
+              "payload": {
+                "module": "quantum_tremor_scanner",
+                "state": "tremor_balanced",
+                "direction_vote": "neutral",
+                "confidence_delta": 0.01,
+                "reasons": [
+                  "tremor_ratio=1.0"
+                ],
+                "metrics": {
+                  "last_range": 1.05,
+                  "avg_range": 1.05
+                }
+              }
+            },
+            "session_filter": {
+              "name": "session_filter",
+              "role": "session_block_gate",
+              "direction_vote": "wait",
+              "confidence_delta": -0.08,
+              "blocked": true,
+              "reasons": [
+                "off_hours_block"
+              ],
+              "payload": {
+                "module": "session_filter",
+                "blocked": true,
+                "reasons": [
+                  "off_hours_block"
+                ],
+                "confidence_delta": -0.08,
+                "direction_vote": "wait"
+              }
+            },
+            "spread_filter": {
+              "name": "spread_filter",
+              "role": "spread_block_gate",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "spread_ok"
+              ],
+              "payload": {
+                "module": "spread_filter",
+                "blocked": false,
+                "reasons": [
+                  "spread_ok"
+                ],
+                "confidence_delta": 0.0,
+                "direction_vote": "neutral",
+                "metrics": {
+                  "spread_points": 18.9,
+                  "max_spread_points": 60.0
+                }
+              }
+            },
+            "conflict_filter": {
+              "name": "conflict_filter",
+              "role": "vote_conflict_gate",
+              "direction_vote": "buy",
+              "confidence_delta": 0.01,
+              "blocked": false,
+              "reasons": [
+                "buy_votes=2",
+                "sell_votes=0"
+              ],
+              "payload": {
+                "module": "conflict_filter",
+                "blocked": false,
+                "reasons": [
+                  "buy_votes=2",
+                  "sell_votes=0"
+                ],
+                "confidence_delta": 0.01,
+                "direction_vote": "buy"
+              }
+            },
+            "memory_filter": {
+              "name": "memory_filter",
+              "role": "outcome_memory_gate",
+              "direction_vote": "buy",
+              "confidence_delta": 0.02,
+              "blocked": false,
+              "reasons": [
+                "recent_direction_outcomes=0",
+                "recent_direction_losses=0",
+                "recent_blocked_same_direction=0"
+              ],
+              "payload": {
+                "module": "memory_filter",
+                "blocked": false,
+                "reasons": [
+                  "recent_direction_outcomes=0",
+                  "recent_direction_losses=0",
+                  "recent_blocked_same_direction=0"
+                ],
+                "confidence_delta": 0.02,
+                "direction_vote": "buy"
+              }
+            },
+            "self_destruct_protocol": {
+              "name": "self_destruct_protocol",
+              "role": "failing_logic_downrank_gate",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "recent_losses=0",
+                "loss_threshold=4"
+              ],
+              "payload": {
+                "module": "self_destruct_protocol",
+                "state": "idle",
+                "blocked": false,
+                "direction_vote": "neutral",
+                "confidence_delta": 0.0,
+                "reasons": [
+                  "recent_losses=0",
+                  "loss_threshold=4"
+                ],
+                "disabled_modules": []
+              }
+            },
+            "setup_score": {
+              "name": "setup_score",
+              "role": "setup_quality_scoring",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "informational_setup_score",
+                "input_count=10",
+                "input_avg_delta=0.001"
+              ],
+              "payload": {
+                "module": "setup_score",
+                "score": 0.501,
+                "confidence_delta": 0.0,
+                "input_avg_delta": 0.001,
+                "input_count": 10,
+                "contributing_modules": [
+                  "fvg",
+                  "volatility",
+                  "sessions",
+                  "spread_state",
+                  "invisible_data_miner",
+                  "human_lag_exploit",
+                  "quantum_tremor_scanner",
+                  "session_filter",
+                  "conflict_filter",
+                  "memory_filter"
+                ],
+                "reasons": [
+                  "informational_setup_score",
+                  "input_count=10",
+                  "input_avg_delta=0.001"
+                ]
+              }
+            },
+            "regime_score": {
+              "name": "regime_score",
+              "role": "regime_quality_scoring",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.075,
+              "blocked": false,
+              "reasons": [
+                "structure_strength=1.0",
+                "volatility_state=balanced"
+              ],
+              "payload": {
+                "module": "regime_score",
+                "score": 1.0,
+                "confidence_delta": 0.075,
+                "reasons": [
+                  "structure_strength=1.0",
+                  "volatility_state=balanced"
+                ]
+              }
+            },
+            "spectral_signal_fusion": {
+              "name": "spectral_signal_fusion",
+              "role": "multi_signal_fusion",
+              "direction_vote": "buy",
+              "confidence_delta": 0.0133,
+              "blocked": false,
+              "reasons": [
+                "buy_votes=1",
+                "sell_votes=0",
+                "avg_delta=0.0133"
+              ],
+              "payload": {
+                "module": "spectral_signal_fusion",
+                "state": "computed",
+                "direction_vote": "buy",
+                "confidence_delta": 0.0133,
+                "reasons": [
+                  "buy_votes=1",
+                  "sell_votes=0",
+                  "avg_delta=0.0133"
+                ]
+              }
+            },
+            "meta_conscious_routing": {
+              "name": "meta_conscious_routing",
+              "role": "entropy_liquidity_regime_router",
+              "direction_vote": "sell",
+              "confidence_delta": 0.1,
+              "blocked": false,
+              "reasons": [
+                "regime_score=1.0",
+                "liquidity_score=0.6",
+                "volatility_state=balanced",
+                "entropy_penalty=0.0"
+              ],
+              "payload": {
+                "module": "meta_conscious_routing",
+                "state": "computed",
+                "direction_vote": "sell",
+                "confidence_delta": 0.1,
+                "reasons": [
+                  "regime_score=1.0",
+                  "liquidity_score=0.6",
+                  "volatility_state=balanced",
+                  "entropy_penalty=0.0"
+                ]
+              }
+            },
+            "meta_adaptive_ai": {
+              "name": "meta_adaptive_ai",
+              "role": "internal_memory_adaptive_profile",
+              "direction_vote": "neutral",
+              "confidence_delta": 0.0,
+              "blocked": false,
+              "reasons": [
+                "samples=0",
+                "win_rate=0.0",
+                "preferred_direction=WAIT"
+              ],
+              "payload": {
+                "module": "meta_adaptive_ai",
+                "state": "computed",
+                "direction_vote": "neutral",
+                "confidence_delta": 0.0,
+                "reasons": [
+                  "samples=0",
+                  "win_rate=0.0",
+                  "preferred_direction=WAIT"
+                ]
+              }
+            }
+          },
+          "module_health": {
+            "displacement": {
+              "name": "displacement",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "displacement_ratio=1.0",
+                "weak_displacement"
+              ]
+            },
+            "fvg": {
+              "name": "fvg",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "no_fvg_signal"
+              ]
+            },
+            "volatility": {
+              "name": "volatility",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "volatility_supportive"
+              ]
+            },
+            "sessions": {
+              "name": "sessions",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "session=off_hours",
+                "off_hours"
+              ]
+            },
+            "spread_state": {
+              "name": "spread_state",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "spread_proxy_tight"
+              ]
+            },
+            "invisible_data_miner": {
+              "name": "invisible_data_miner",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "slope=3.48",
+                "up_steps=29",
+                "down_steps=0",
+                "structure_bias=buy",
+                "liquidity_hint=sell"
+              ]
+            },
+            "human_lag_exploit": {
+              "name": "human_lag_exploit",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "momentum=1.68",
+                "lag_ratio=1.0"
+              ]
+            },
+            "quantum_tremor_scanner": {
+              "name": "quantum_tremor_scanner",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "tremor_ratio=1.0"
+              ]
+            },
+            "session_filter": {
+              "name": "session_filter",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "off_hours_block"
+              ]
+            },
+            "spread_filter": {
+              "name": "spread_filter",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "spread_ok"
+              ]
+            },
+            "conflict_filter": {
+              "name": "conflict_filter",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "buy_votes=2",
+                "sell_votes=0"
+              ]
+            },
+            "memory_filter": {
+              "name": "memory_filter",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "recent_direction_outcomes=0",
+                "recent_direction_losses=0",
+                "recent_blocked_same_direction=0"
+              ]
+            },
+            "self_destruct_protocol": {
+              "name": "self_destruct_protocol",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "recent_losses=0",
+                "loss_threshold=4"
+              ]
+            },
+            "setup_score": {
+              "name": "setup_score",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "informational_setup_score",
+                "input_count=10",
+                "input_avg_delta=0.001"
+              ]
+            },
+            "regime_score": {
+              "name": "regime_score",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "structure_strength=1.0",
+                "volatility_state=balanced"
+              ]
+            },
+            "spectral_signal_fusion": {
+              "name": "spectral_signal_fusion",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "buy_votes=1",
+                "sell_votes=0",
+                "avg_delta=0.0133"
+              ]
+            },
+            "meta_conscious_routing": {
+              "name": "meta_conscious_routing",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "regime_score=1.0",
+                "liquidity_score=0.6",
+                "volatility_state=balanced",
+                "entropy_penalty=0.0"
+              ]
+            },
+            "meta_adaptive_ai": {
+              "name": "meta_adaptive_ai",
+              "ready": true,
+              "status": "ready",
+              "details": [
+                "samples=0",
+                "win_rate=0.0",
+                "preferred_direction=WAIT"
+              ]
+            }
+          },
+          "connector_hooks": {
+            "hook_displacement": {
+              "name": "hook_displacement",
+              "source_module": "displacement",
+              "target_interface": "direction_vote_bus",
+              "enabled": true,
+              "description": "Expose displacement vote to external AI/ensemble consumers."
+            },
+            "hook_spectral_fusion": {
+              "name": "hook_spectral_fusion",
+              "source_module": "spectral_signal_fusion",
+              "target_interface": "confidence_bus",
+              "enabled": true,
+              "description": "Expose spectral fusion confidence contribution."
+            },
+            "hook_meta_routing": {
+              "name": "hook_meta_routing",
+              "source_module": "meta_conscious_routing",
+              "target_interface": "routing_bus",
+              "enabled": true,
+              "description": "Expose entropy/liquidity/regime routing output."
+            },
+            "hook_self_destruct": {
+              "name": "hook_self_destruct",
+              "source_module": "self_destruct_protocol",
+              "target_interface": "risk_gate_bus",
+              "enabled": true,
+              "description": "Expose measurable down-rank/disable risk gate state."
+            },
+            "hook_meta_adaptive": {
+              "name": "hook_meta_adaptive",
+              "source_module": "meta_adaptive_ai",
+              "target_interface": "adaptive_profile_bus",
+              "enabled": true,
+              "description": "Expose internal-memory adaptive profile output."
+            },
+            "hook_evolution_kernel": {
+              "name": "hook_evolution_kernel",
+              "source_module": "evolution_kernel",
+              "target_interface": "evolution_control_bus",
+              "enabled": false,
+              "description": "Expose evolution inspection/proposal lifecycle summary."
+            }
+          },
+          "final_direction": "WAIT",
+          "final_confidence": 0.9983
+        },
+        "generated_code_visibility": {
+          "registry_path": "/home/runner/work/111/111/memory/generated_code_registry.json",
+          "latest_entries": [
+            {
+              "timestamp": "2026-03-15T04:30:44.892393+00:00",
+              "artifact_type": "generated_rules",
+              "artifact_path": "/home/runner/work/111/111/memory/generated_rules.json",
+              "metadata": {
+                "symbol": "XAUUSD",
+                "mode": "replay",
+                "rule_count": 0,
+                "snapshot_id": "snap_20260315043044881691"
+              }
+            },
+            {
+              "timestamp": "2026-03-15T04:30:44.892730+00:00",
+              "artifact_type": "meta_adaptive_profile",
+              "artifact_path": "/home/runner/work/111/111/memory/meta_adaptive_profile.json",
+              "metadata": {
+                "symbol": "XAUUSD",
+                "mode": "replay",
+                "snapshot_id": "snap_20260315043044881691"
+              }
+            }
+          ]
+        },
+        "evolution_kernel": {
+          "enabled": false,
+          "inspection": {},
+          "gap_count": 0,
+          "lifecycle": []
+        }
+      },
+      "chart_objects": [
+        {
+          "type": "label",
+          "id": "structure_state",
+          "symbol": "XAUUSD",
+          "text": "Structure: trend_up",
+          "value": 1.0
+        },
+        {
+          "type": "label",
+          "id": "liquidity_state",
+          "symbol": "XAUUSD",
+          "text": "Liquidity: sweep / sweep=high",
+          "value": 0.6000000000000001
+        },
+        {
+          "type": "signal_tag",
+          "id": "signal_action",
+          "symbol": "XAUUSD",
+          "text": "Action: WAIT",
+          "value": 0.9983,
+          "blocked": true
+        }
+      ],
+      "status_panel": {
+        "structure_state": "trend_up",
+        "liquidity_state": "sweep",
+        "confidence": 0.9983,
+        "blocker_result": {
+          "blocked": true,
+          "blocker_reasons": [
+            "structure_liquidity_conflict",
+            "session_filter:off_hours_block"
+          ]
+        },
+        "memory_result": {
+          "latest_trade_outcome": {
+            "trade_id": "blocked_snap_20260315043044881691",
+            "symbol": "XAUUSD",
+            "direction": "WAIT",
+            "status": "skipped",
+            "result": "n/a",
+            "pnl_points": 0.0,
+            "source_reasons": [
+              "structure_liquidity_conflict",
+              "session_filter:off_hours_block"
+            ],
+            "confidence": 0.9983
+          },
+          "outcome_summary": {
+            "total_closed": 0,
+            "wins": 0,
+            "losses": 0,
+            "flats": 0,
+            "win_rate": 0.0
+          }
+        },
+        "generated_rule_result": {
+          "generated_rule_count": 0,
+          "matching_rule_ids": []
+        },
+        "advanced_module_result": {
+          "blocked": true,
+          "blocked_reasons": [
+            "session_filter:off_hours_block"
+          ],
+          "module_count": 18,
+          "ready_count": 18
+        },
+        "evolution_result": {
+          "enabled": false,
+          "gaps_found": 0,
+          "proposals_processed": 0,
+          "proposed": 0,
+          "verified": 0,
+          "promoted": 0,
+          "rejected": 0,
+          "archived": 0
+        },
+        "execution_state": {
+          "symbol": "XAUUSD",
+          "mode": "replay",
+          "replay_source": "csv",
+          "mt5_attempted": false,
+          "data_source": "replay_csv",
+          "ready": true,
+          "reasons": [
+            "validated",
+            "data_source=replay_csv"
+          ]
+        }
+      },
+      "evaluation_step": 4
+    }
+  ],
+  "knowledge_expansion_config": {
+    "enabled": true,
+    "root": "/home/runner/work/111/111/memory/knowledge_expansion",
+    "candidate_limit": 6
+  },
+  "knowledge_expansion_phase_a": {
+    "enabled": true,
+    "candidate_count": 6,
+    "decision_summary": {
+      "total_candidates": 6,
+      "decision_counts": {
+        "KEEP": 2,
+        "REJECT": 3,
+        "HOLD_FOR_MORE_DATA": 1,
+        "MERGE": 0
+      },
+      "accepted_candidates": [
+        "cand_phase_a_019",
+        "cand_phase_a_020"
+      ],
+      "rejected_candidates": [
+        "cand_phase_a_017",
+        "cand_phase_a_006",
+        "cand_phase_a_009"
+      ]
+    },
+    "artifact_paths": {
+      "hypothesis_registry": "/home/runner/work/111/111/memory/knowledge_expansion/candidate_hypothesis_registry.json",
+      "candidate_specs": "/home/runner/work/111/111/memory/knowledge_expansion/candidate_module_specs.20260315043044.json",
+      "overlap_report": "/home/runner/work/111/111/memory/knowledge_expansion/overlap_scoring.20260315043044.json",
+      "governance_ledger": "/home/runner/work/111/111/memory/knowledge_expansion/governance_ledger.20260315043044.json",
+      "governance_summary": "/home/runner/work/111/111/memory/knowledge_expansion/governance_summary.20260315043044.json",
+      "sandbox_candidates": "/home/runner/work/111/111/memory/knowledge_expansion/sandbox_candidates.20260315043044.json",
+      "validated_knowledge_registry": "/home/runner/work/111/111/memory/knowledge_expansion/validated_knowledge_registry.json",
+      "experimental_module_specs": "/home/runner/work/111/111/memory/knowledge_expansion/experimental_module_specs"
+    },
+    "sandbox_candidates_path": "/home/runner/work/111/111/memory/knowledge_expansion/sandbox_candidates.20260315043044.json",
+    "validated_knowledge_registry_path": "/home/runner/work/111/111/memory/knowledge_expansion/validated_knowledge_registry.json",
+    "decisions": [
+      {
+        "candidate_id": "cand_phase_a_019",
+        "hypothesis_id": "phase_a_019",
+        "decision": "KEEP",
+        "gates": {
+          "hypothesis_clarity": true,
+          "replay_usefulness": true,
+          "non_duplication": true,
+          "measurable_contribution": true,
+          "no_forbidden_core_mutation": true
+        },
+        "decision_reasons": [
+          "conditional usefulness supported for failure context",
+          "material contribution and non-duplicate profile"
+        ],
+        "overlap": {
+          "candidate_id": "cand_phase_a_019",
+          "candidate_name": "failure_assess_blocker_reason_structure",
+          "best_existing_match": "conflict_filter",
+          "existing_overlap_score": 0.265,
+          "best_candidate_match": "failure_assess_blocker_reason_session",
+          "candidate_overlap_score": 0.3875,
+          "overlap_score": 0.3875,
+          "overlap_components": {
+            "truth_class": 1.0,
+            "purpose": 0.0,
+            "inputs": 0.75,
+            "outputs": 0.8,
+            "constraints": 0.75
+          },
+          "is_duplicate_risk": false,
+          "merge_candidate": false,
+          "structural_redundancy": false,
+          "best_existing_signature": {
+            "name": "conflict_filter",
+            "truth_class": "failure",
+            "truth_class_rationale": "Module is a blocker/filter profile; these encode failure prevention conditions. source=conflict_filter.",
+            "purpose": "Existing module conflict_filter classified as failure; Module is a blocker/filter profile; these encode failure prevention conditions. source=conflict_filter. Observed in replay session=off_hours regime_proxy=high_confidence_bias with samples=4, avg_delta=0.010, dominant_vote=buy, mean_delta=0.010, payload_keys=blocked,confidence_delta,direction_vote,module.",
+            "inputs": [
+              "advanced_modules",
+              "bars_context",
+              "signal",
+              "status_panel"
+            ],
+            "outputs": [
+              "confidence_delta",
+              "direction_vote",
+              "health",
+              "payload",
+              "reasons"
+            ],
+            "constraints": [
+              "json_friendly_artifact_only",
+              "no_core_strategy_mutation",
+              "replay_only_governance_comparison",
+              "xauusd_first_only"
+            ]
+          }
+        }
+      },
+      {
+        "candidate_id": "cand_phase_a_017",
+        "hypothesis_id": "phase_a_017",
+        "decision": "REJECT",
+        "gates": {
+          "hypothesis_clarity": true,
+          "replay_usefulness": false,
+          "non_duplication": true,
+          "measurable_contribution": true,
+          "no_forbidden_core_mutation": true
+        },
+        "decision_reasons": [
+          "insufficient directional alignment",
+          "insufficient sample support",
+          "weak contribution delta"
+        ],
+        "overlap": {
+          "candidate_id": "cand_phase_a_017",
+          "candidate_name": "meta-intelligence_evaluate_meta_conscious_routing",
+          "best_existing_match": "meta_conscious_routing",
+          "existing_overlap_score": 0.365,
+          "best_candidate_match": "meta-intelligence_evaluate_invisible_data_miner",
+          "candidate_overlap_score": 0.5692,
+          "overlap_score": 0.5692,
+          "overlap_components": {
+            "truth_class": 1.0,
+            "purpose": 0.1429,
+            "inputs": 0.75,
+            "outputs": 0.8,
+            "constraints": 0.75
+          },
+          "is_duplicate_risk": false,
+          "merge_candidate": false,
+          "structural_redundancy": false,
+          "best_existing_signature": {
+            "name": "meta_conscious_routing",
+            "truth_class": "meta-intelligence",
+            "truth_class_rationale": "Module contributes routing/fusion/diagnostic behavior used to govern other evidence. source=meta_conscious_routing.",
+            "purpose": "Existing module meta_conscious_routing classified as meta-intelligence; Module contributes routing/fusion/diagnostic behavior used to govern other evidence. source=meta_conscious_routing. Observed in replay session=off_hours regime_proxy=high_confidence_bias with samples=4, avg_delta=0.100, dominant_vote=sell, mean_delta=0.100, payload_keys=confidence_delta,direction_vote,module,reasons.",
+            "inputs": [
+              "advanced_modules",
+              "bars_context",
+              "signal",
+              "status_panel"
+            ],
+            "outputs": [
+              "confidence_delta",
+              "direction_vote",
+              "health",
+              "payload",
+              "reasons"
+            ],
+            "constraints": [
+              "json_friendly_artifact_only",
+              "no_core_strategy_mutation",
+              "replay_only_governance_comparison",
+              "xauusd_first_only"
+            ]
+          }
+        }
+      },
+      {
+        "candidate_id": "cand_phase_a_021",
+        "hypothesis_id": "phase_a_021",
+        "decision": "HOLD_FOR_MORE_DATA",
+        "gates": {
+          "hypothesis_clarity": true,
+          "replay_usefulness": false,
+          "non_duplication": true,
+          "measurable_contribution": true,
+          "no_forbidden_core_mutation": true
+        },
+        "decision_reasons": [
+          "hold due to unstable evidence",
+          "insufficient sample support"
+        ],
+        "overlap": {
+          "candidate_id": "cand_phase_a_021",
+          "candidate_name": "timing_assess_timing_rule_for",
+          "best_existing_match": "sessions",
+          "existing_overlap_score": 0.3525,
+          "best_candidate_match": "timing_evaluate_session_filter_as",
+          "candidate_overlap_score": 0.4273,
+          "overlap_score": 0.4273,
+          "overlap_components": {
+            "truth_class": 1.0,
+            "purpose": 0.125,
+            "inputs": 0.75,
+            "outputs": 0.8,
+            "constraints": 0.75
+          },
+          "is_duplicate_risk": false,
+          "merge_candidate": false,
+          "structural_redundancy": false,
+          "best_existing_signature": {
+            "name": "sessions",
+            "truth_class": "timing",
+            "truth_class_rationale": "Module relates to session/time-window behavior, so it is timing truth. source=sessions.",
+            "purpose": "Existing module sessions classified as timing; Module relates to session/time-window behavior, so it is timing truth. source=sessions. Observed in replay session=off_hours regime_proxy=high_confidence_bias with samples=4, avg_delta=-0.040, dominant_vote=neutral, mean_delta=-0.040, payload_keys=confidence_delta,direction_vote,metrics,module.",
+            "inputs": [
+              "advanced_modules",
+              "bars_context",
+              "signal",
+              "status_panel"
+            ],
+            "outputs": [
+              "confidence_delta",
+              "direction_vote",
+              "health",
+              "payload",
+              "reasons"
+            ],
+            "constraints": [
+              "json_friendly_artifact_only",
+              "no_core_strategy_mutation",
+              "replay_only_governance_comparison",
+              "xauusd_first_only"
+            ]
+          }
+        }
+      },
+      {
+        "candidate_id": "cand_phase_a_020",
+        "hypothesis_id": "phase_a_020",
+        "decision": "KEEP",
+        "gates": {
+          "hypothesis_clarity": true,
+          "replay_usefulness": true,
+          "non_duplication": true,
+          "measurable_contribution": true,
+          "no_forbidden_core_mutation": true
+        },
+        "decision_reasons": [
+          "conditional usefulness supported for failure context",
+          "material contribution and non-duplicate profile"
+        ],
+        "overlap": {
+          "candidate_id": "cand_phase_a_020",
+          "candidate_name": "failure_assess_blocker_reason_session",
+          "best_existing_match": "conflict_filter",
+          "existing_overlap_score": 0.265,
+          "best_candidate_match": "failure_assess_blocker_reason_structure",
+          "candidate_overlap_score": 0.3875,
+          "overlap_score": 0.3875,
+          "overlap_components": {
+            "truth_class": 1.0,
+            "purpose": 0.0,
+            "inputs": 0.75,
+            "outputs": 0.8,
+            "constraints": 0.75
+          },
+          "is_duplicate_risk": false,
+          "merge_candidate": false,
+          "structural_redundancy": false,
+          "best_existing_signature": {
+            "name": "conflict_filter",
+            "truth_class": "failure",
+            "truth_class_rationale": "Module is a blocker/filter profile; these encode failure prevention conditions. source=conflict_filter.",
+            "purpose": "Existing module conflict_filter classified as failure; Module is a blocker/filter profile; these encode failure prevention conditions. source=conflict_filter. Observed in replay session=off_hours regime_proxy=high_confidence_bias with samples=4, avg_delta=0.010, dominant_vote=buy, mean_delta=0.010, payload_keys=blocked,confidence_delta,direction_vote,module.",
+            "inputs": [
+              "advanced_modules",
+              "bars_context",
+              "signal",
+              "status_panel"
+            ],
+            "outputs": [
+              "confidence_delta",
+              "direction_vote",
+              "health",
+              "payload",
+              "reasons"
+            ],
+            "constraints": [
+              "json_friendly_artifact_only",
+              "no_core_strategy_mutation",
+              "replay_only_governance_comparison",
+              "xauusd_first_only"
+            ]
+          }
+        }
+      },
+      {
+        "candidate_id": "cand_phase_a_006",
+        "hypothesis_id": "phase_a_006",
+        "decision": "REJECT",
+        "gates": {
+          "hypothesis_clarity": true,
+          "replay_usefulness": false,
+          "non_duplication": true,
+          "measurable_contribution": true,
+          "no_forbidden_core_mutation": true
+        },
+        "decision_reasons": [
+          "insufficient directional alignment",
+          "insufficient sample support",
+          "weak contribution delta"
+        ],
+        "overlap": {
+          "candidate_id": "cand_phase_a_006",
+          "candidate_name": "meta-intelligence_evaluate_invisible_data_miner",
+          "best_existing_match": "invisible_data_miner",
+          "existing_overlap_score": 0.365,
+          "best_candidate_match": "meta-intelligence_evaluate_meta_conscious_routing",
+          "candidate_overlap_score": 0.5692,
+          "overlap_score": 0.5692,
+          "overlap_components": {
+            "truth_class": 1.0,
+            "purpose": 0.1429,
+            "inputs": 0.75,
+            "outputs": 0.8,
+            "constraints": 0.75
+          },
+          "is_duplicate_risk": false,
+          "merge_candidate": false,
+          "structural_redundancy": false,
+          "best_existing_signature": {
+            "name": "invisible_data_miner",
+            "truth_class": "meta-intelligence",
+            "truth_class_rationale": "Module contributes routing/fusion/diagnostic behavior used to govern other evidence. source=invisible_data_miner.",
+            "purpose": "Existing module invisible_data_miner classified as meta-intelligence; Module contributes routing/fusion/diagnostic behavior used to govern other evidence. source=invisible_data_miner. Observed in replay session=off_hours regime_proxy=high_confidence_bias with samples=4, avg_delta=0.080, dominant_vote=buy, mean_delta=0.080, payload_keys=confidence_delta,direction_vote,module,reasons.",
+            "inputs": [
+              "advanced_modules",
+              "bars_context",
+              "signal",
+              "status_panel"
+            ],
+            "outputs": [
+              "confidence_delta",
+              "direction_vote",
+              "health",
+              "payload",
+              "reasons"
+            ],
+            "constraints": [
+              "json_friendly_artifact_only",
+              "no_core_strategy_mutation",
+              "replay_only_governance_comparison",
+              "xauusd_first_only"
+            ]
+          }
+        }
+      },
+      {
+        "candidate_id": "cand_phase_a_009",
+        "hypothesis_id": "phase_a_009",
+        "decision": "REJECT",
+        "gates": {
+          "hypothesis_clarity": true,
+          "replay_usefulness": false,
+          "non_duplication": true,
+          "measurable_contribution": true,
+          "no_forbidden_core_mutation": true
+        },
+        "decision_reasons": [
+          "insufficient directional alignment",
+          "insufficient sample support",
+          "weak contribution delta"
+        ],
+        "overlap": {
+          "candidate_id": "cand_phase_a_009",
+          "candidate_name": "timing_evaluate_session_filter_as",
+          "best_existing_match": "sessions",
+          "existing_overlap_score": 0.3387,
+          "best_candidate_match": "timing_assess_timing_rule_for",
+          "candidate_overlap_score": 0.4273,
+          "overlap_score": 0.4273,
+          "overlap_components": {
+            "truth_class": 1.0,
+            "purpose": 0.1053,
+            "inputs": 0.75,
+            "outputs": 0.8,
+            "constraints": 0.75
+          },
+          "is_duplicate_risk": false,
+          "merge_candidate": false,
+          "structural_redundancy": false,
+          "best_existing_signature": {
+            "name": "sessions",
+            "truth_class": "timing",
+            "truth_class_rationale": "Module relates to session/time-window behavior, so it is timing truth. source=sessions.",
+            "purpose": "Existing module sessions classified as timing; Module relates to session/time-window behavior, so it is timing truth. source=sessions. Observed in replay session=off_hours regime_proxy=high_confidence_bias with samples=4, avg_delta=-0.040, dominant_vote=neutral, mean_delta=-0.040, payload_keys=confidence_delta,direction_vote,metrics,module.",
+            "inputs": [
+              "advanced_modules",
+              "bars_context",
+              "signal",
+              "status_panel"
+            ],
+            "outputs": [
+              "confidence_delta",
+              "direction_vote",
+              "health",
+              "payload",
+              "reasons"
+            ],
+            "constraints": [
+              "json_friendly_artifact_only",
+              "no_core_strategy_mutation",
+              "replay_only_governance_comparison",
+              "xauusd_first_only"
+            ]
+          }
+        }
+      }
+    ],
+    "governance_law": {
+      "required_gates": [
+        "hypothesis_clarity",
+        "replay_usefulness",
+        "non_duplication",
+        "measurable_contribution",
+        "no_forbidden_core_mutation"
+      ],
+      "allowed_decisions": [
+        "KEEP",
+        "MERGE",
+        "REJECT",
+        "HOLD_FOR_MORE_DATA"
+      ]
+    }
+  }
+}

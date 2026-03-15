@@ -1,0 +1,21 @@
+{
+  "generated_at": "20260315043044",
+  "summary": {
+    "total_candidates": 6,
+    "decision_counts": {
+      "KEEP": 2,
+      "REJECT": 3,
+      "HOLD_FOR_MORE_DATA": 1,
+      "MERGE": 0
+    },
+    "accepted_candidates": [
+      "cand_phase_a_019",
+      "cand_phase_a_020"
+    ],
+    "rejected_candidates": [
+      "cand_phase_a_017",
+      "cand_phase_a_006",
+      "cand_phase_a_009"
+    ]
+  }
+}

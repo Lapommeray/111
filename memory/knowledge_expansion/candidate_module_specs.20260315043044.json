@@ -1,0 +1,167 @@
+{
+  "generated_at": "20260315043044",
+  "candidates": [
+    {
+      "candidate_id": "cand_phase_a_019",
+      "hypothesis_id": "phase_a_019",
+      "truth_class": "failure",
+      "module_kind": "failure_filter",
+      "candidate_name": "failure_assess_blocker_reason_structure",
+      "spec": {
+        "purpose": "Assess blocker reason structure_liquidity_conflict in off_hours context: count 4, protective ratio 1.00; useful only when this failure pattern recurs.",
+        "inputs": [
+          "advanced_modules",
+          "signal",
+          "status_panel"
+        ],
+        "outputs": [
+          "direction_vote",
+          "confidence_delta",
+          "reasons",
+          "payload"
+        ],
+        "constraints": [
+          "xauusd_first_only",
+          "no_core_strategy_mutation",
+          "json_friendly_artifact_only"
+        ]
+      },
+      "created_at": "2026-03-15T04:30:44.896425+00:00"
+    },
+    {
+      "candidate_id": "cand_phase_a_017",
+      "hypothesis_id": "phase_a_017",
+      "truth_class": "meta-intelligence",
+      "module_kind": "diagnostic_module",
+      "candidate_name": "meta-intelligence_evaluate_meta_conscious_routing",
+      "spec": {
+        "purpose": "Evaluate meta_conscious_routing as meta-intelligence truth in session=off_hours with regime_proxy=high_confidence_bias: avg confidence delta 0.100, alignment strength 0.00, consistency 1.00. Usefulness scope=conditional; validate this as condition-bound contribution.",
+        "inputs": [
+          "advanced_modules",
+          "signal",
+          "status_panel"
+        ],
+        "outputs": [
+          "direction_vote",
+          "confidence_delta",
+          "reasons",
+          "payload"
+        ],
+        "constraints": [
+          "xauusd_first_only",
+          "no_core_strategy_mutation",
+          "json_friendly_artifact_only"
+        ]
+      },
+      "created_at": "2026-03-15T04:30:44.896451+00:00"
+    },
+    {
+      "candidate_id": "cand_phase_a_021",
+      "hypothesis_id": "phase_a_021",
+      "truth_class": "timing",
+      "module_kind": "timing_filter",
+      "candidate_name": "timing_assess_timing_rule_for",
+      "spec": {
+        "purpose": "Assess timing rule for session=off_hours: blocked 4/4 (rate 1.00) under regime_proxy=high_confidence_bias; usefulness is conditional to this session context.",
+        "inputs": [
+          "advanced_modules",
+          "signal",
+          "status_panel"
+        ],
+        "outputs": [
+          "direction_vote",
+          "confidence_delta",
+          "reasons",
+          "payload"
+        ],
+        "constraints": [
+          "xauusd_first_only",
+          "no_core_strategy_mutation",
+          "json_friendly_artifact_only"
+        ]
+      },
+      "created_at": "2026-03-15T04:30:44.896462+00:00"
+    },
+    {
+      "candidate_id": "cand_phase_a_020",
+      "hypothesis_id": "phase_a_020",
+      "truth_class": "failure",
+      "module_kind": "failure_filter",
+      "candidate_name": "failure_assess_blocker_reason_session",
+      "spec": {
+        "purpose": "Assess blocker reason session_filter:off_hours_block in off_hours context: count 4, protective ratio 1.00; useful only when this failure pattern recurs.",
+        "inputs": [
+          "advanced_modules",
+          "signal",
+          "status_panel"
+        ],
+        "outputs": [
+          "direction_vote",
+          "confidence_delta",
+          "reasons",
+          "payload"
+        ],
+        "constraints": [
+          "xauusd_first_only",
+          "no_core_strategy_mutation",
+          "json_friendly_artifact_only"
+        ]
+      },
+      "created_at": "2026-03-15T04:30:44.896469+00:00"
+    },
+    {
+      "candidate_id": "cand_phase_a_006",
+      "hypothesis_id": "phase_a_006",
+      "truth_class": "meta-intelligence",
+      "module_kind": "diagnostic_module",
+      "candidate_name": "meta-intelligence_evaluate_invisible_data_miner",
+      "spec": {
+        "purpose": "Evaluate invisible_data_miner as meta-intelligence truth in session=off_hours with regime_proxy=high_confidence_bias: avg confidence delta 0.080, alignment strength 0.00, consistency 1.00. Usefulness scope=conditional; validate this as condition-bound contribution.",
+        "inputs": [
+          "advanced_modules",
+          "signal",
+          "status_panel"
+        ],
+        "outputs": [
+          "direction_vote",
+          "confidence_delta",
+          "reasons",
+          "payload"
+        ],
+        "constraints": [
+          "xauusd_first_only",
+          "no_core_strategy_mutation",
+          "json_friendly_artifact_only"
+        ]
+      },
+      "created_at": "2026-03-15T04:30:44.896476+00:00"
+    },
+    {
+      "candidate_id": "cand_phase_a_009",
+      "hypothesis_id": "phase_a_009",
+      "truth_class": "timing",
+      "module_kind": "timing_filter",
+      "candidate_name": "timing_evaluate_session_filter_as",
+      "spec": {
+        "purpose": "Evaluate session_filter as timing truth in session=off_hours with regime_proxy=high_confidence_bias: avg confidence delta -0.080, alignment strength 0.00, consistency 1.00. Usefulness scope=conditional; validate this as condition-bound contribution.",
+        "inputs": [
+          "advanced_modules",
+          "signal",
+          "status_panel"
+        ],
+        "outputs": [
+          "direction_vote",
+          "confidence_delta",
+          "reasons",
+          "payload"
+        ],
+        "constraints": [
+          "xauusd_first_only",
+          "no_core_strategy_mutation",
+          "json_friendly_artifact_only"
+        ]
+      },
+      "created_at": "2026-03-15T04:30:44.896483+00:00"
+    }
+  ]
+}

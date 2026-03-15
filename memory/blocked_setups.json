@@ -1,1 +1,42 @@
-[]
+[
+  {
+    "timestamp": "2026-03-15T04:30:44.857892+00:00",
+    "symbol": "XAUUSD",
+    "snapshot_id": "snap_20260315043044855570",
+    "direction": "WAIT",
+    "reasons": [
+      "structure_liquidity_conflict",
+      "session_filter:off_hours_block"
+    ]
+  },
+  {
+    "timestamp": "2026-03-15T04:30:44.866535+00:00",
+    "symbol": "XAUUSD",
+    "snapshot_id": "snap_20260315043044861553",
+    "direction": "WAIT",
+    "reasons": [
+      "structure_liquidity_conflict",
+      "session_filter:off_hours_block"
+    ]
+  },
+  {
+    "timestamp": "2026-03-15T04:30:44.877749+00:00",
+    "symbol": "XAUUSD",
+    "snapshot_id": "snap_20260315043044870269",
+    "direction": "WAIT",
+    "reasons": [
+      "structure_liquidity_conflict",
+      "session_filter:off_hours_block"
+    ]
+  },
+  {
+    "timestamp": "2026-03-15T04:30:44.891521+00:00",
+    "symbol": "XAUUSD",
+    "snapshot_id": "snap_20260315043044881691",
+    "direction": "WAIT",
+    "reasons": [
+      "structure_liquidity_conflict",
+      "session_filter:off_hours_block"
+    ]
+  }
+]

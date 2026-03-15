@@ -1,0 +1,40 @@
+{
+  "candidate_id": "cand_phase_a_019",
+  "truth_class": "failure",
+  "truth_class_rationale": "Derived from validated replay/governance knowledge entry.",
+  "usefulness_scope": "conditional",
+  "hypothesis_statement": "Assess blocker reason structure_liquidity_conflict in off_hours context: count 4, protective ratio 1.00; useful only when this failure pattern recurs.",
+  "evidence_summary": {
+    "evidence_points": 1,
+    "latest_evidence": {
+      "reason": "structure_liquidity_conflict",
+      "count": 4,
+      "blocked_total": 4,
+      "protective_proxy_hits": 4,
+      "protective_ratio": 1.0,
+      "context": {
+        "dominant_session": "off_hours",
+        "dominant_session_ratio": 1.0,
+        "top_blocker_reason": "structure_liquidity_conflict",
+        "regime_proxy": "high_confidence_bias",
+        "action_distribution": {
+          "BUY": 0,
+          "SELL": 0,
+          "WAIT": 4
+        },
+        "confidence_distribution": {
+          "low": 0,
+          "medium": 0,
+          "high": 4
+        }
+      }
+    },
+    "decision_reasons": [
+      "conditional usefulness supported for failure context",
+      "material contribution and non-duplicate profile"
+    ]
+  },
+  "promotion_status": "KEEP",
+  "spec_version": "1.0",
+  "generated_at": "2026-03-15T04:30:44.897809+00:00"
+}
