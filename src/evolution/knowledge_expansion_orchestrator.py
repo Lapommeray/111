@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from src.evolution.candidate_module_factory import CandidateModuleFactory
+from src.evolution.experimental_module_spec_flow import generate_experimental_module_specs
 from src.evolution.governance_report import build_governance_report
 from src.evolution.hypothesis_registry import HypothesisRegistry
 from src.evolution.overlap_scoring import OverlapScoring
@@ -69,6 +70,10 @@ class KnowledgeExpansionOrchestrator:
             candidate_specs=candidate_specs,
             decisions=decisions,
         )
+        phase_b_artifacts = generate_experimental_module_specs(
+            validated_knowledge_registry_path=validated_knowledge_registry_path,
+            output_dir=self.root / "experimental_module_specs",
+        )
         governance_summary = build_governance_report(decisions)
 
         artifact_paths = self._write_artifacts(
@@ -79,6 +84,7 @@ class KnowledgeExpansionOrchestrator:
             summary=governance_summary,
             validated_knowledge_registry_path=validated_knowledge_registry_path,
         )
+        artifact_paths["experimental_module_specs"] = phase_b_artifacts["experimental_module_specs_dir"]
 
         return {
             "enabled": True,
