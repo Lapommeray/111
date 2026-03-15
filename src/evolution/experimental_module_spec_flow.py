@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -36,8 +37,9 @@ def generate_experimental_module_specs(
         deduplicated_by_candidate[candidate_id] = item
 
     generated_paths: list[str] = []
+    generated_at = datetime.now(tz=timezone.utc).isoformat()
+    used_filenames: set[str] = set()
     for candidate_id, item in sorted(deduplicated_by_candidate.items(), key=lambda pair: pair[0]):
-        now_iso = datetime.now(tz=timezone.utc).isoformat()
         evidence_history = item.get("evidence_history", [])
         if not isinstance(evidence_history, list):
             evidence_history = []
@@ -60,10 +62,16 @@ def generate_experimental_module_specs(
             },
             "promotion_status": str(item.get("decision", "HOLD_FOR_MORE_DATA")),
             "spec_version": "1.0",
-            "generated_at": now_iso,
+            "generated_at": generated_at,
         }
 
-        target_path = output_dir / f"{_safe_candidate_filename(candidate_id)}.json"
+        base_name = _safe_candidate_filename(candidate_id)
+        target_name = base_name
+        if target_name in used_filenames:
+            suffix = hashlib.blake2b(candidate_id.encode("utf-8"), digest_size=6).hexdigest()
+            target_name = f"{base_name}_{suffix}"
+        used_filenames.add(target_name)
+        target_path = output_dir / f"{target_name}.json"
         write_json_atomic(target_path, entry)
         generated_paths.append(str(target_path))
 

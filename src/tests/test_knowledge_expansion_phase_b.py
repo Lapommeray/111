@@ -68,6 +68,7 @@ def test_phase_b_generates_specs_from_validated_knowledge(tmp_path: Path) -> Non
 
     artifacts = sorted(output_dir.glob("*.json"))
     assert len(artifacts) == 2
+    assert [path.name for path in artifacts] == ["cand_alpha.json", "cand_beta.json"]
     for artifact_path in artifacts:
         payload = json.loads(artifact_path.read_text(encoding="utf-8"))
         assert set(payload.keys()) == REQUIRED_SPEC_KEYS
