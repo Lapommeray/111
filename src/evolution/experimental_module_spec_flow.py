@@ -232,6 +232,8 @@ PHASE_J_DECISION_SEQUENCE = (
     PHASE_J_MONITOR_CONTINUE_PAPER_ONLY,
 )
 PHASE_J_GOVERNOR_VERSION = "phase_j_governor_v1"
+PHASE_K_MEMORY_VERSION = "phase_k_memory_v1"
+PHASE_L_DISCOVERY_VERSION = "phase_l_discovery_v1"
 
 
 def _to_float(value: Any, default: float = 0.0) -> float:
@@ -1659,4 +1661,333 @@ def run_knowledge_expansion_phase_j(
         mode=mode,
         health_state_memory_path=knowledge_root / "system_health_state_memory.json",
         registry_path=(knowledge_root / "incident_control_governance" / "incident_control_registry.json"),
+    )
+
+
+def generate_long_horizon_memory_artifacts(
+    decision_orchestrator_dir: Path,
+    portfolio_governance_dir: Path,
+    output_dir: Path,
+    *,
+    mode: str,
+    memory_state_path: Path,
+    registry_path: Path,
+    memory_version: str = PHASE_K_MEMORY_VERSION,
+) -> dict[str, Any]:
+    if str(mode).lower() != "replay":
+        return {
+            "long_horizon_memory_enabled": False,
+            "long_horizon_memory_count": 0,
+            "long_horizon_memory_dir": str(output_dir),
+            "long_horizon_memory_artifacts": [],
+            "long_horizon_memory_registry_path": str(registry_path),
+            "long_horizon_memory_state_path": str(memory_state_path),
+        }
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    decision_orchestrator_dir.mkdir(parents=True, exist_ok=True)
+    portfolio_governance_dir.mkdir(parents=True, exist_ok=True)
+
+    existing_state = read_json_safe(memory_state_path, default={"state_history": []})
+    if not isinstance(existing_state, dict):
+        existing_state = {"state_history": []}
+    state_history = existing_state.get("state_history", [])
+    if not isinstance(state_history, list):
+        state_history = []
+    known_update_ids = {
+        str(item.get("update_id", "")).strip()
+        for item in state_history
+        if isinstance(item, dict) and str(item.get("update_id", "")).strip()
+    }
+
+    phase_g_by_candidate: dict[str, tuple[Path, dict[str, Any]]] = {}
+    for decision_path in sorted(decision_orchestrator_dir.glob("*.json")):
+        payload = read_json_safe(decision_path, default={})
+        if not isinstance(payload, dict):
+            continue
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        phase_g_by_candidate[candidate_id] = (decision_path, payload)
+
+    phase_i_by_candidate: dict[str, tuple[Path, dict[str, Any]]] = {}
+    for portfolio_path in sorted(portfolio_governance_dir.glob("*.json")):
+        payload = read_json_safe(portfolio_path, default={})
+        if not isinstance(payload, dict):
+            continue
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        phase_i_by_candidate[candidate_id] = (portfolio_path, payload)
+
+    generated_paths: list[str] = []
+    generated_entries: dict[str, dict[str, Any]] = {}
+    now_iso = datetime.now(tz=timezone.utc).isoformat()
+    for candidate_id in sorted(set(phase_g_by_candidate) | set(phase_i_by_candidate)):
+        decision_path, decision_payload = phase_g_by_candidate.get(candidate_id, (Path(""), {}))
+        portfolio_path, portfolio_payload = phase_i_by_candidate.get(candidate_id, (Path(""), {}))
+        if not isinstance(decision_payload, dict):
+            decision_payload = {}
+        if not isinstance(portfolio_payload, dict):
+            portfolio_payload = {}
+
+        module_name = str(
+            portfolio_payload.get(
+                "module_name",
+                decision_payload.get("module_name", f"sandbox_{_safe_candidate_filename(candidate_id)}"),
+            )
+        )
+        decision_timestamp = str(decision_payload.get("decision_timestamp", "")).strip()
+        portfolio_timestamp = str(portfolio_payload.get("portfolio_timestamp", "")).strip()
+        memory_timestamp = portfolio_timestamp or decision_timestamp or now_iso
+        phase_g_decision = str(decision_payload.get("orchestrator_decision", "")).strip()
+        phase_i_decision = str(portfolio_payload.get("portfolio_decision", "")).strip()
+        performance_snapshot = portfolio_payload.get("portfolio_state_snapshot", {})
+        if not isinstance(performance_snapshot, dict):
+            performance_snapshot = {}
+        historical_market_state_summary = decision_payload.get("market_state_snapshot", {})
+        if not isinstance(historical_market_state_summary, dict):
+            historical_market_state_summary = {}
+        if not historical_market_state_summary:
+            historical_market_state_summary = {
+                "regime_state": str(decision_payload.get("regime_state", "unknown")),
+                "volatility_state": str(decision_payload.get("volatility_state", "unknown")),
+                "liquidity_state": str(decision_payload.get("liquidity_state", "unknown")),
+                "session_state": str(decision_payload.get("session_state", "unknown")),
+            }
+
+        artifact = {
+            "candidate_id": candidate_id,
+            "module_name": module_name,
+            "time_horizon_window": "long_horizon_90d",
+            "historical_market_state_summary": historical_market_state_summary,
+            "decision_outcome_history": {
+                "phase_g_orchestrator_decision": phase_g_decision,
+                "phase_i_portfolio_decision": phase_i_decision,
+                "phase_g_execution_readiness": str(decision_payload.get("execution_readiness", "not_ready")),
+                "phase_i_execution_readiness": str(portfolio_payload.get("execution_readiness", "not_ready")),
+                "phase_i_risk_state": str(portfolio_payload.get("risk_state", "unknown")),
+                "phase_i_drawdown_state": str(portfolio_payload.get("drawdown_state", "unknown")),
+            },
+            "performance_snapshot": {
+                "equity": _to_float(performance_snapshot.get("equity", 0.0)),
+                "peak_equity": _to_float(performance_snapshot.get("peak_equity", 0.0)),
+                "open_exposure_pct": _to_float(performance_snapshot.get("open_exposure_pct", 0.0)),
+                "capital_allocated_pct": _to_float(performance_snapshot.get("capital_allocated_pct", 0.0)),
+                "max_drawdown_pct": _to_float(performance_snapshot.get("max_drawdown_pct", 8.0)),
+                "risk_state": str(portfolio_payload.get("risk_state", "unknown")),
+                "allocation_state": str(portfolio_payload.get("allocation_state", "unknown")),
+            },
+            "memory_timestamp": memory_timestamp,
+            "memory_version": memory_version,
+            "phase_g_source_path": str(decision_path) if str(decision_path) else "",
+            "phase_i_source_path": str(portfolio_path) if str(portfolio_path) else "",
+            "manual_approval_required": True,
+            "live_activation_allowed": False,
+            "risk_constraints": {
+                "live_execution_blocked": True,
+                "auto_live_activation": False,
+                "paper_execution_only": True,
+            },
+        }
+        target_path = output_dir / f"{_safe_candidate_filename(candidate_id)}.json"
+        write_json_atomic(target_path, artifact)
+        generated_paths.append(str(target_path))
+        generated_entries[candidate_id] = artifact
+
+        update_id = hashlib.blake2b(
+            f"{candidate_id}|{memory_timestamp}|{phase_g_decision}|{phase_i_decision}".encode("utf-8"),
+            digest_size=8,
+        ).hexdigest()
+        if update_id not in known_update_ids:
+            state_history.append(
+                {
+                    "update_id": update_id,
+                    "candidate_id": candidate_id,
+                    "memory_timestamp": memory_timestamp,
+                    "phase_g_decision": phase_g_decision,
+                    "phase_i_decision": phase_i_decision,
+                    "source_paths": {
+                        "phase_g": str(decision_path) if str(decision_path) else "",
+                        "phase_i": str(portfolio_path) if str(portfolio_path) else "",
+                    },
+                }
+            )
+            known_update_ids.add(update_id)
+
+    state_payload = {
+        "memory_version": memory_version,
+        "latest_update_timestamp": generated_entries[next(reversed(sorted(generated_entries)))]["memory_timestamp"]
+        if generated_entries
+        else now_iso,
+        "state_history": state_history,
+    }
+    write_json_atomic(memory_state_path, state_payload)
+
+    existing_registry = read_json_safe(registry_path, default={"memory_records": []})
+    if not isinstance(existing_registry, dict):
+        existing_registry = {"memory_records": []}
+    records = existing_registry.get("memory_records", [])
+    if not isinstance(records, list):
+        records = []
+    registry_by_candidate: dict[str, dict[str, Any]] = {}
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        candidate_id = str(record.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        registry_by_candidate[candidate_id] = record
+    registry_by_candidate.update(generated_entries)
+    registry_payload = {
+        "memory_version": memory_version,
+        "memory_records": [registry_by_candidate[cid] for cid in sorted(registry_by_candidate)],
+    }
+    write_json_atomic(registry_path, registry_payload)
+
+    return {
+        "long_horizon_memory_enabled": True,
+        "long_horizon_memory_count": len(generated_paths),
+        "long_horizon_memory_dir": str(output_dir),
+        "long_horizon_memory_artifacts": generated_paths,
+        "long_horizon_memory_registry_path": str(registry_path),
+        "long_horizon_memory_state_path": str(memory_state_path),
+    }
+
+
+def run_knowledge_expansion_phase_k(
+    root: Path,
+    *,
+    mode: str,
+) -> dict[str, Any]:
+    knowledge_root = root / "memory" / "knowledge_expansion"
+    return generate_long_horizon_memory_artifacts(
+        decision_orchestrator_dir=knowledge_root / "decision_orchestrator",
+        portfolio_governance_dir=knowledge_root / "adaptive_portfolio_governance",
+        output_dir=knowledge_root / "long_horizon_memory",
+        mode=mode,
+        memory_state_path=knowledge_root / "long_horizon_state_memory.json",
+        registry_path=(knowledge_root / "long_horizon_memory" / "long_horizon_memory_registry.json"),
+    )
+
+
+def generate_advanced_discovery_artifacts(
+    validated_knowledge_registry_path: Path,
+    output_dir: Path,
+    *,
+    mode: str,
+    registry_path: Path,
+    discovery_version: str = PHASE_L_DISCOVERY_VERSION,
+) -> dict[str, Any]:
+    if str(mode).lower() != "replay":
+        return {
+            "advanced_discovery_enabled": False,
+            "advanced_discovery_count": 0,
+            "advanced_discovery_dir": str(output_dir),
+            "advanced_discovery_artifacts": [],
+            "advanced_discovery_registry_path": str(registry_path),
+        }
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    payload = read_json_safe(validated_knowledge_registry_path, default={"validated_knowledge": []})
+    if not isinstance(payload, dict):
+        payload = {"validated_knowledge": []}
+    validated_items = payload.get("validated_knowledge", [])
+    if not isinstance(validated_items, list):
+        validated_items = []
+
+    deduplicated_by_candidate: dict[str, dict[str, Any]] = {}
+    for item in validated_items:
+        if not isinstance(item, dict):
+            continue
+        candidate_id = str(item.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        deduplicated_by_candidate[candidate_id] = item
+
+    generated_paths: list[str] = []
+    generated_entries: dict[str, dict[str, Any]] = {}
+    now_iso = datetime.now(tz=timezone.utc).isoformat()
+    for candidate_id, item in sorted(deduplicated_by_candidate.items(), key=lambda pair: pair[0]):
+        statement = str(item.get("statement", item.get("hypothesis_statement", ""))).strip()
+        truth_class = str(item.get("truth_class", "meta-intelligence")).strip() or "meta-intelligence"
+        evidence_history = item.get("evidence_history", [])
+        if not isinstance(evidence_history, list):
+            evidence_history = []
+        decision = str(item.get("decision", "HOLD_FOR_MORE_DATA")).strip() or "HOLD_FOR_MORE_DATA"
+        decision_reasons = item.get("decision_reasons", [])
+        if not isinstance(decision_reasons, list):
+            decision_reasons = []
+        support_ratio = min(1.0, round(len(evidence_history) / 5.0, 6))
+        discovery_timestamp = str(item.get("timestamp", "")).strip() or now_iso
+        pattern_signature = hashlib.blake2b(
+            f"{candidate_id}|{truth_class}|{statement}".encode("utf-8"),
+            digest_size=12,
+        ).hexdigest()
+        artifact = {
+            "candidate_id": candidate_id,
+            "hypothesis_class": truth_class,
+            "pattern_signature": pattern_signature,
+            "statistical_summary": {
+                "evidence_points": len(evidence_history),
+                "support_ratio": support_ratio,
+                "confidence_proxy": 0.5 + (0.5 * support_ratio),
+            },
+            "replay_validation_summary": {
+                "replay_scope": "sandbox_only",
+                "decision": decision,
+                "decision_reasons": [str(reason) for reason in decision_reasons],
+                "replay_governed": True,
+            },
+            "discovery_timestamp": discovery_timestamp,
+            "discovery_version": discovery_version,
+            "sandbox_status": "replay_only",
+            "live_activation_allowed": False,
+        }
+        target_path = output_dir / f"{_safe_candidate_filename(candidate_id)}.json"
+        write_json_atomic(target_path, artifact)
+        generated_paths.append(str(target_path))
+        generated_entries[candidate_id] = artifact
+
+    existing_registry = read_json_safe(registry_path, default={"discovery_records": []})
+    if not isinstance(existing_registry, dict):
+        existing_registry = {"discovery_records": []}
+    records = existing_registry.get("discovery_records", [])
+    if not isinstance(records, list):
+        records = []
+    registry_by_candidate: dict[str, dict[str, Any]] = {}
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        candidate_id = str(record.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        registry_by_candidate[candidate_id] = record
+    registry_by_candidate.update(generated_entries)
+    registry_payload = {
+        "discovery_version": discovery_version,
+        "discovery_records": [registry_by_candidate[cid] for cid in sorted(registry_by_candidate)],
+    }
+    write_json_atomic(registry_path, registry_payload)
+
+    return {
+        "advanced_discovery_enabled": True,
+        "advanced_discovery_count": len(generated_paths),
+        "advanced_discovery_dir": str(output_dir),
+        "advanced_discovery_artifacts": generated_paths,
+        "advanced_discovery_registry_path": str(registry_path),
+    }
+
+
+def run_knowledge_expansion_phase_l(
+    root: Path,
+    *,
+    mode: str,
+) -> dict[str, Any]:
+    knowledge_root = root / "memory" / "knowledge_expansion"
+    return generate_advanced_discovery_artifacts(
+        validated_knowledge_registry_path=knowledge_root / "validated_knowledge_registry.json",
+        output_dir=knowledge_root / "advanced_discovery",
+        mode=mode,
+        registry_path=(knowledge_root / "advanced_discovery" / "advanced_discovery_registry.json"),
     )
