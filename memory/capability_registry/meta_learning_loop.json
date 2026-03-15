@@ -29,6 +29,21 @@
       "promoted_capabilities": 0,
       "detector_candidates": 5,
       "active_strategy_branch": "mutated_strategy_a"
+    },
+    {
+      "loop": [
+        "trade",
+        "review_outcome",
+        "update_feature_ranking",
+        "generate_capability_and_detector_ideas",
+        "mutate_strategy",
+        "replay_test_mutations",
+        "promote_improvements",
+        "repeat"
+      ],
+      "promoted_capabilities": 0,
+      "detector_candidates": 5,
+      "active_strategy_branch": "mutated_strategy_a"
     }
   ]
 }
