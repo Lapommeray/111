@@ -1,0 +1,122 @@
+You are helping me build a modular XAUUSD indicator system.
+
+Rules:
+- Return full files only (no partial snippets).
+- Keep modules small: one clear job per module.
+- No fake functionality or placeholder intelligence.
+- Use only legitimate market data, technical-analysis logic, explicit module design, and internal memory/state.
+- Every module must contribute to direction voting and confidence.
+- Prioritize blocking bad/weak setups over generating more entries.
+- Promoted setups must be based on real outcomes.
+- Focus on XAUUSD first.
+
+Goal:
+Build a modular, testable indicator engine that aggressively filters low-quality trades and only allows high-confluence setups.
+
+Create this Phase 1 structure:
+
+xau_indicator/
+├── config/
+│   ├── settings.json
+│   └── symbols.json
+├── data/
+│   ├── raw/
+│   ├── processed/
+│   └── samples/
+├── docs/
+│   ├── architecture.md
+│   ├── rules.md
+│   └── research_notes.md
+├── logs/
+│   ├── runtime.log
+│   ├── signals.log
+│   └── errors.log
+├── memory/
+│   ├── pattern_memory.json
+│   ├── blocked_setups.json
+│   ├── promoted_setups.json
+│   └── trade_outcomes.json
+├── self_generated/
+│   ├── generated_rules.json
+│   ├── generated_filters.py
+│   └── generated_notes.md
+├── src/
+│   ├── __init__.py
+│   ├── main.py
+│   ├── pipeline.py
+│   ├── state.py
+│   ├── utils.py
+│   ├── features/
+│   │   ├── __init__.py
+│   │   ├── market_structure.py
+│   │   ├── liquidity.py
+│   │   ├── displacement.py
+│   │   ├── fvg.py
+│   │   ├── volatility.py
+│   │   ├── sessions.py
+│   │   └── spread_state.py
+│   ├── filters/
+│   │   ├── __init__.py
+│   │   ├── loss_blocker.py
+│   │   ├── session_filter.py
+│   │   ├── spread_filter.py
+│   │   ├── conflict_filter.py
+│   │   └── memory_filter.py
+│   ├── scoring/
+│   │   ├── __init__.py
+│   │   ├── setup_score.py
+│   │   ├── confidence_score.py
+│   │   └── regime_score.py
+│   ├── memory/
+│   │   ├── __init__.py
+│   │   ├── tracker.py
+│   │   ├── pattern_store.py
+│   │   └── self_coder.py
+│   ├── mt5/
+│   │   ├── __init__.py
+│   │   ├── adapter.py
+│   │   ├── symbol_guard.py
+│   │   └── execution_state.py
+│   ├── indicator/
+│   │   ├── __init__.py
+│   │   ├── signal_model.py
+│   │   ├── indicator_output.py
+│   │   └── chart_objects.py
+│   └── tests/
+│       ├── test_features.py
+│       ├── test_filters.py
+│       ├── test_scoring.py
+│       └── test_memory.py
+└── run.py
+
+Phase 1 implementation order:
+1) src/mt5/adapter.py
+2) src/features/market_structure.py
+3) src/features/liquidity.py
+4) src/filters/loss_blocker.py
+5) src/scoring/confidence_score.py
+6) src/memory/pattern_store.py
+7) run.py
+
+Phase 1 milestone output:
+- Read XAUUSD data
+- Classify current state
+- Compute confidence
+- Block weak setups
+- Write memory files
+- Output BUY / SELL / WAIT + reasons
+
+Advanced module guardrails:
+- Use only legitimate data connectors/inputs.
+- No unauthorized data claims.
+- No fake self-learning claims.
+- Any adaptive behavior must be traceable to stored outcomes or deterministic logic.
+- Connect advanced modules through Oversoul Director via module mapping.
+
+Response format:
+- Generate Phase 1 only.
+- Return full contents for all Phase 1 files.
+- Include a short Phase 1 file tree.
+- Do not skip imports.
+- No “implement later” placeholders.
+- Code must be runnable and testable.
