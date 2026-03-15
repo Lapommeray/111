@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from src.learning.live_feedback import process_live_trade_feedback
 from src.utils import read_json_safe, write_json_atomic
 
 
@@ -2974,6 +2975,15 @@ def run_continuous_governed_improvement_cycle(
     )
     if governed_refusal.get("refused", False):
         live_activation_blocked = True
+    feedback_outcomes = read_json_safe(root / "memory" / "trade_outcomes.json", default=[])
+    if not isinstance(feedback_outcomes, list):
+        feedback_outcomes = []
+    live_learning_feedback = process_live_trade_feedback(
+        memory_root=root / "memory",
+        trade_outcomes=feedback_outcomes,
+        feature_contributors={},
+        replay_scope=replay_scope,
+    )
 
     cycle_payload = {
         "iteration_id": normalized_iteration_id,
@@ -2990,6 +3000,7 @@ def run_continuous_governed_improvement_cycle(
         "governed_rollback": governed_rollback,
         "invalid_artifact_quarantine": invalid_artifact_quarantine,
         "governed_refusal": governed_refusal,
+        "live_learning_feedback": live_learning_feedback,
         "cycle_recovery": {
             "interrupted_cycle_recovered": recovering_interrupted_cycle,
             "stale_artifacts_detected": stale_detected,
@@ -3102,6 +3113,7 @@ def run_continuous_governed_improvement_cycle(
         "governed_rollback": governed_rollback,
         "invalid_artifact_quarantine": invalid_artifact_quarantine,
         "governed_refusal": governed_refusal,
+        "live_learning_feedback": live_learning_feedback,
         "self_audit_artifact": self_audit_artifact,
         "cycle_recovery": cycle_payload["cycle_recovery"],
         "phase_results": phase_results,

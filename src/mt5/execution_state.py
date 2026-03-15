@@ -23,6 +23,10 @@ class ExecutionState:
     mt5_live_execution_enabled: bool = False
     mt5_auto_stop_active: bool = False
     mt5_controlled_execution: dict[str, Any] | None = None
+    capital_guard: dict[str, Any] | None = None
+    strategy_intelligence: dict[str, Any] | None = None
+    live_learning_loop: dict[str, Any] | None = None
+    monitoring_state: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -43,4 +47,8 @@ class ExecutionState:
             "mt5_live_execution_enabled": self.mt5_live_execution_enabled,
             "mt5_auto_stop_active": self.mt5_auto_stop_active,
             "mt5_controlled_execution": dict(self.mt5_controlled_execution or {}),
+            "capital_guard": dict(self.capital_guard or {}),
+            "strategy_intelligence": dict(self.strategy_intelligence or {}),
+            "live_learning_loop": dict(self.live_learning_loop or {}),
+            "monitoring_state": dict(self.monitoring_state or {}),
         }
