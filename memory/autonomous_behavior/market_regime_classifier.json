@@ -1,9 +1,0 @@
-{
-  "regime": "range",
-  "base_signal_confidence": 0.5,
-  "adjusted_signal_confidence": 0.475,
-  "base_risk_size": 1.0,
-  "adjusted_risk_size": 0.85,
-  "confidence_multiplier": 0.95,
-  "risk_multiplier": 0.85
-}
