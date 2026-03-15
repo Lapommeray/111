@@ -1,0 +1,9 @@
+{
+  "position_size_multiplier": 1.0,
+  "drawdown_points": 0.0,
+  "loss_streak": 0,
+  "refuse_weak_setups": false,
+  "tighten_execution_after_failures": false,
+  "switch_off_trading_in_bad_regimes": false,
+  "trading_enabled": true
+}
