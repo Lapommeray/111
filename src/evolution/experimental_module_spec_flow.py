@@ -178,6 +178,16 @@ PHASE_D_DECISION_SEQUENCE = (
 )
 PHASE_D_IMPROVEMENT_EPSILON = 0.05
 
+PHASE_E_REJECTED = "rejected"
+PHASE_E_RETAINED_FOR_FURTHER_REPLAY = "retained_for_further_replay"
+PHASE_E_PROMOTION_CANDIDATE = "promotion_candidate"
+PHASE_E_DECISION_SEQUENCE = (
+    PHASE_E_REJECTED,
+    PHASE_E_RETAINED_FOR_FURTHER_REPLAY,
+    PHASE_E_PROMOTION_CANDIDATE,
+)
+PHASE_E_GOVERNOR_VERSION = "phase_e_governor_v1"
+
 
 def _to_float(value: Any, default: float = 0.0) -> float:
     try:
@@ -332,4 +342,142 @@ def run_knowledge_expansion_phase_d(
         mode=mode,
         baseline_summary=baseline_summary,
         replay_scope=replay_scope,
+    )
+
+
+def _phase_e_decision_from_judgment(judgment_payload: dict[str, Any]) -> tuple[str, str, str, bool]:
+    phase_d_decision = str(judgment_payload.get("decision", "")).strip()
+    phase_d_reason = str(judgment_payload.get("decision_reason", "")).strip()
+    if phase_d_decision == PHASE_D_REJECT:
+        return (
+            PHASE_E_REJECTED,
+            phase_d_reason or "Sandbox judgment rejected candidate for replay governance.",
+            "rejected_non_live",
+            False,
+        )
+    if phase_d_decision == PHASE_D_PROMOTION_CANDIDATE:
+        return (
+            PHASE_E_PROMOTION_CANDIDATE,
+            phase_d_reason or "Sandbox judgment marked candidate for controlled promotion consideration.",
+            "non_live_candidate",
+            True,
+        )
+    return (
+        PHASE_E_RETAINED_FOR_FURTHER_REPLAY,
+        phase_d_reason or "Sandbox judgment retained candidate for further replay validation.",
+        "replay_only",
+        True,
+    )
+
+
+def generate_promotion_governance_artifacts(
+    sandbox_judgments_dir: Path,
+    output_dir: Path,
+    *,
+    mode: str,
+    registry_path: Path,
+    governor_version: str = PHASE_E_GOVERNOR_VERSION,
+) -> dict[str, Any]:
+    if str(mode).lower() != "replay":
+        return {
+            "governance_enabled": False,
+            "governance_artifact_count": 0,
+            "promotion_governance_dir": str(output_dir),
+            "promotion_governance_artifacts": [],
+            "promotion_registry_path": str(registry_path),
+            "decision_classes": list(PHASE_E_DECISION_SEQUENCE),
+        }
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    deduplicated_judgments: dict[str, tuple[Path, dict[str, Any]]] = {}
+    for judgment_path in sorted(sandbox_judgments_dir.glob("*.json")):
+        payload = read_json_safe(judgment_path, default={})
+        if not isinstance(payload, dict):
+            continue
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        deduplicated_judgments[candidate_id] = (judgment_path, payload)
+
+    generated_paths: list[str] = []
+    generated_entries: dict[str, dict[str, Any]] = {}
+    for candidate_id, (judgment_path, judgment_payload) in sorted(deduplicated_judgments.items(), key=lambda pair: pair[0]):
+        governance_decision, governance_reason, promotion_status, replay_revalidation_required = (
+            _phase_e_decision_from_judgment(judgment_payload)
+        )
+        comparison_summary = judgment_payload.get("comparison_summary", {})
+        judgment_summary = {
+            "phase_d_decision": str(judgment_payload.get("decision", "")),
+            "phase_d_effect": str(comparison_summary.get("effect", "")) if isinstance(comparison_summary, dict) else "",
+            "phase_d_score_delta": (
+                comparison_summary.get("score_delta", 0.0) if isinstance(comparison_summary, dict) else 0.0
+            ),
+        }
+        artifact = {
+            "candidate_id": candidate_id,
+            "module_name": str(judgment_payload.get("module_name", f"sandbox_{_safe_candidate_filename(candidate_id)}")),
+            "truth_class": str(judgment_payload.get("truth_class", "meta-intelligence")),
+            "governance_timestamp": str(
+                judgment_payload.get("judgment_timestamp", datetime.now(tz=timezone.utc).isoformat())
+            ),
+            "judgment_summary": judgment_summary,
+            "governance_decision": governance_decision,
+            "governance_reason": governance_reason,
+            "promotion_status": promotion_status,
+            "replay_revalidation_required": replay_revalidation_required,
+            "source_judgment_path": str(judgment_path),
+            "governor_version": governor_version,
+        }
+
+        target_path = output_dir / f"{_safe_candidate_filename(candidate_id)}.json"
+        write_json_atomic(target_path, artifact)
+        generated_paths.append(str(target_path))
+        generated_entries[candidate_id] = artifact
+
+    existing_registry = read_json_safe(registry_path, default={"governance_records": []})
+    if not isinstance(existing_registry, dict):
+        existing_registry = {"governance_records": []}
+    records = existing_registry.get("governance_records", [])
+    if not isinstance(records, list):
+        records = []
+
+    registry_by_candidate: dict[str, dict[str, Any]] = {}
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        candidate_id = str(record.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        registry_by_candidate[candidate_id] = record
+    registry_by_candidate.update(generated_entries)
+
+    registry_payload = {
+        "governor_version": governor_version,
+        "decision_classes": list(PHASE_E_DECISION_SEQUENCE),
+        "governance_records": [registry_by_candidate[cid] for cid in sorted(registry_by_candidate)],
+    }
+    write_json_atomic(registry_path, registry_payload)
+
+    return {
+        "governance_enabled": True,
+        "governance_artifact_count": len(generated_paths),
+        "promotion_governance_dir": str(output_dir),
+        "promotion_governance_artifacts": generated_paths,
+        "promotion_registry_path": str(registry_path),
+        "decision_classes": list(PHASE_E_DECISION_SEQUENCE),
+    }
+
+
+def run_knowledge_expansion_phase_e(
+    root: Path,
+    *,
+    mode: str,
+) -> dict[str, Any]:
+    knowledge_root = root / "memory" / "knowledge_expansion"
+    promotion_governance_dir = knowledge_root / "promotion_governance"
+    return generate_promotion_governance_artifacts(
+        sandbox_judgments_dir=knowledge_root / "sandbox_judgments",
+        output_dir=promotion_governance_dir,
+        mode=mode,
+        registry_path=promotion_governance_dir / "governed_promotion_registry.json",
     )

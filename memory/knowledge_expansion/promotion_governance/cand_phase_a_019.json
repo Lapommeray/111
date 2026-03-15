@@ -1,0 +1,17 @@
+{
+  "candidate_id": "cand_phase_a_019",
+  "module_name": "sandbox_cand_phase_a_019",
+  "truth_class": "failure",
+  "governance_timestamp": "2026-03-15T06:39:16.190224+00:00",
+  "judgment_summary": {
+    "phase_d_decision": "promotion_candidate",
+    "phase_d_effect": "improved",
+    "phase_d_score_delta": 1.0
+  },
+  "governance_decision": "promotion_candidate",
+  "governance_reason": "Sandbox module improved replay outcome versus baseline.",
+  "promotion_status": "non_live_candidate",
+  "replay_revalidation_required": true,
+  "source_judgment_path": "/home/runner/work/111/111/memory/knowledge_expansion/sandbox_judgments/cand_phase_a_019.json",
+  "governor_version": "phase_e_governor_v1"
+}
