@@ -223,6 +223,15 @@ PHASE_I_DECISION_SEQUENCE = (
     PHASE_I_ADAPTIVE_PAPER_ONLY,
 )
 PHASE_I_GOVERNOR_VERSION = "phase_i_governor_v1"
+PHASE_J_ROLLBACK_IMMEDIATE = "rollback_immediate"
+PHASE_J_ROLLBACK_CONTROLLED_NON_LIVE = "rollback_controlled_non_live"
+PHASE_J_MONITOR_CONTINUE_PAPER_ONLY = "monitor_continue_paper_only"
+PHASE_J_DECISION_SEQUENCE = (
+    PHASE_J_ROLLBACK_IMMEDIATE,
+    PHASE_J_ROLLBACK_CONTROLLED_NON_LIVE,
+    PHASE_J_MONITOR_CONTINUE_PAPER_ONLY,
+)
+PHASE_J_GOVERNOR_VERSION = "phase_j_governor_v1"
 
 
 def _to_float(value: Any, default: float = 0.0) -> float:
@@ -1399,4 +1408,255 @@ def run_knowledge_expansion_phase_i(
         mode=mode,
         portfolio_state_memory_path=knowledge_root / "adaptive_portfolio_state_memory.json",
         registry_path=(knowledge_root / "adaptive_portfolio_governance" / "adaptive_portfolio_registry.json"),
+    )
+
+
+def _phase_j_incident_decision(
+    portfolio_payload: dict[str, Any],
+    health_state: dict[str, Any],
+) -> tuple[str, str, str, str, str]:
+    portfolio_decision = str(portfolio_payload.get("portfolio_decision", "")).strip()
+    execution_readiness = str(portfolio_payload.get("execution_readiness", "not_ready")).strip() or "not_ready"
+    health_score = max(0.0, min(1.0, _to_float(health_state.get("health_score", 1.0), 1.0)))
+    failed_checks = max(0, int(_to_float(health_state.get("failed_checks", 0), 0.0)))
+    unsafe_condition = bool(health_state.get("unsafe_condition", False))
+    rollback_requested = bool(health_state.get("rollback_requested", False))
+    incident_signals = health_state.get("incident_signals", [])
+    if not isinstance(incident_signals, list):
+        incident_signals = []
+
+    if (
+        rollback_requested
+        or unsafe_condition
+        or failed_checks >= 3
+        or health_score < 0.4
+        or portfolio_decision == PHASE_I_CAPITAL_PRESERVATION_MODE
+    ):
+        return (
+            PHASE_J_ROLLBACK_IMMEDIATE,
+            "critical",
+            "rollback_required",
+            execution_readiness,
+            "Critical monitoring condition detected; immediate controlled rollback required while live execution remains blocked.",
+        )
+    if (
+        failed_checks > 0
+        or health_score < 0.75
+        or bool(incident_signals)
+        or portfolio_decision == PHASE_I_CONSTRAINED_NON_LIVE
+    ):
+        return (
+            PHASE_J_ROLLBACK_CONTROLLED_NON_LIVE,
+            "warning",
+            "degraded_guarded",
+            execution_readiness,
+            "Degraded monitoring state detected; controlled non-live rollback and incident containment required.",
+        )
+    return (
+        PHASE_J_MONITOR_CONTINUE_PAPER_ONLY,
+        "normal",
+        "stable_guarded",
+        execution_readiness,
+        "Health and incident checks are stable; continue paper-only monitoring with governance controls.",
+    )
+
+
+def generate_monitoring_rollback_incident_artifacts(
+    portfolio_governance_dir: Path,
+    health_state_dir: Path,
+    output_dir: Path,
+    *,
+    mode: str,
+    health_state_memory_path: Path,
+    registry_path: Path,
+    governor_version: str = PHASE_J_GOVERNOR_VERSION,
+) -> dict[str, Any]:
+    if str(mode).lower() != "replay":
+        return {
+            "incident_control_enabled": False,
+            "incident_artifact_count": 0,
+            "incident_control_dir": str(output_dir),
+            "incident_artifacts": [],
+            "incident_registry_path": str(registry_path),
+            "health_state_memory_path": str(health_state_memory_path),
+            "decision_classes": list(PHASE_J_DECISION_SEQUENCE),
+        }
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    health_state_dir.mkdir(parents=True, exist_ok=True)
+
+    existing_memory = read_json_safe(health_state_memory_path, default={"state_history": []})
+    if not isinstance(existing_memory, dict):
+        existing_memory = {"state_history": []}
+    state_history = existing_memory.get("state_history", [])
+    if not isinstance(state_history, list):
+        state_history = []
+    known_update_ids = {
+        str(item.get("update_id", "")).strip()
+        for item in state_history
+        if isinstance(item, dict) and str(item.get("update_id", "")).strip()
+    }
+
+    health_state = existing_memory.get("latest_health_state", {})
+    if not isinstance(health_state, dict):
+        health_state = {}
+    now_iso = datetime.now(tz=timezone.utc).isoformat()
+    for health_path in sorted(health_state_dir.glob("*.json")):
+        health_payload = read_json_safe(health_path, default={})
+        if not isinstance(health_payload, dict):
+            continue
+        timestamp = str(health_payload.get("timestamp", "")).strip() or now_iso
+        health_score = round(max(0.0, min(1.0, _to_float(health_payload.get("health_score", 1.0), 1.0))), 6)
+        failed_checks = max(0, int(_to_float(health_payload.get("failed_checks", 0), 0.0)))
+        rollback_requested = bool(health_payload.get("rollback_requested", False))
+        update_id = hashlib.blake2b(
+            f"{health_path.name}|{timestamp}|{health_score}|{failed_checks}|{rollback_requested}".encode("utf-8"),
+            digest_size=8,
+        ).hexdigest()
+        if update_id in known_update_ids:
+            continue
+        incident_signals = health_payload.get("incident_signals", [])
+        if not isinstance(incident_signals, list):
+            incident_signals = []
+        incident_count = max(0, int(_to_float(health_payload.get("incident_count", len(incident_signals)), 0.0)))
+        health_state = {
+            "timestamp": timestamp,
+            "health_score": health_score,
+            "failed_checks": failed_checks,
+            "unsafe_condition": bool(health_payload.get("unsafe_condition", False)),
+            "rollback_requested": rollback_requested,
+            "incident_signals": [str(signal) for signal in incident_signals],
+            "incident_count": incident_count,
+            "source_component": str(health_payload.get("source_component", "phase_j_monitor")).strip()
+            or "phase_j_monitor",
+        }
+        state_history.append({"update_id": update_id, "source_path": str(health_path), **health_state})
+        known_update_ids.add(update_id)
+
+    if not health_state:
+        health_state = {
+            "timestamp": now_iso,
+            "health_score": 1.0,
+            "failed_checks": 0,
+            "unsafe_condition": False,
+            "rollback_requested": False,
+            "incident_signals": [],
+            "incident_count": 0,
+            "source_component": "phase_j_monitor",
+        }
+        fallback_id = hashlib.blake2b(f"default|{now_iso}".encode("utf-8"), digest_size=8).hexdigest()
+        if fallback_id not in known_update_ids:
+            state_history.append({"update_id": fallback_id, "source_path": "default", **health_state})
+
+    memory_payload = {
+        "governor_version": governor_version,
+        "latest_health_state": health_state,
+        "state_history": state_history,
+    }
+    write_json_atomic(health_state_memory_path, memory_payload)
+
+    deduplicated_portfolio_records: dict[str, tuple[Path, dict[str, Any]]] = {}
+    for portfolio_path in sorted(portfolio_governance_dir.glob("*.json")):
+        payload = read_json_safe(portfolio_path, default={})
+        if not isinstance(payload, dict):
+            continue
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        deduplicated_portfolio_records[candidate_id] = (portfolio_path, payload)
+
+    generated_paths: list[str] = []
+    generated_entries: dict[str, dict[str, Any]] = {}
+    for candidate_id, (portfolio_path, portfolio_payload) in sorted(
+        deduplicated_portfolio_records.items(),
+        key=lambda pair: pair[0],
+    ):
+        incident_decision, incident_severity, rollback_status, execution_readiness, decision_reason = (
+            _phase_j_incident_decision(portfolio_payload, health_state)
+        )
+        incident_id = hashlib.blake2b(
+            (
+                f"{candidate_id}|{health_state.get('timestamp', now_iso)}|"
+                f"{incident_decision}|{incident_severity}|{rollback_status}"
+            ).encode("utf-8"),
+            digest_size=8,
+        ).hexdigest()
+        artifact = {
+            "candidate_id": candidate_id,
+            "module_name": str(portfolio_payload.get("module_name", f"sandbox_{_safe_candidate_filename(candidate_id)}")),
+            "truth_class": str(portfolio_payload.get("truth_class", "meta-intelligence")),
+            "portfolio_source_path": str(portfolio_path),
+            "incident_timestamp": str(health_state.get("timestamp", now_iso)),
+            "portfolio_decision": str(portfolio_payload.get("portfolio_decision", "")),
+            "execution_readiness": execution_readiness,
+            "incident_id": incident_id,
+            "incident_severity": incident_severity,
+            "incident_control_decision": incident_decision,
+            "rollback_status": rollback_status,
+            "decision_reason": decision_reason,
+            "health_state_snapshot": health_state,
+            "health_state_memory_path": str(health_state_memory_path),
+            "manual_approval_required": True,
+            "live_activation_allowed": False,
+            "risk_constraints": {
+                "live_execution_blocked": True,
+                "auto_live_activation": False,
+                "paper_execution_only": True,
+                "rollback_allowed_non_live": True,
+                "incident_severity": incident_severity,
+            },
+            "governor_version": governor_version,
+        }
+        target_path = output_dir / f"{_safe_candidate_filename(candidate_id)}.json"
+        write_json_atomic(target_path, artifact)
+        generated_paths.append(str(target_path))
+        generated_entries[candidate_id] = artifact
+
+    existing_registry = read_json_safe(registry_path, default={"incident_records": []})
+    if not isinstance(existing_registry, dict):
+        existing_registry = {"incident_records": []}
+    records = existing_registry.get("incident_records", [])
+    if not isinstance(records, list):
+        records = []
+    registry_by_candidate: dict[str, dict[str, Any]] = {}
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        candidate_id = str(record.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        registry_by_candidate[candidate_id] = record
+    registry_by_candidate.update(generated_entries)
+
+    registry_payload = {
+        "governor_version": governor_version,
+        "decision_classes": list(PHASE_J_DECISION_SEQUENCE),
+        "incident_records": [registry_by_candidate[cid] for cid in sorted(registry_by_candidate)],
+    }
+    write_json_atomic(registry_path, registry_payload)
+
+    return {
+        "incident_control_enabled": True,
+        "incident_artifact_count": len(generated_paths),
+        "incident_control_dir": str(output_dir),
+        "incident_artifacts": generated_paths,
+        "incident_registry_path": str(registry_path),
+        "health_state_memory_path": str(health_state_memory_path),
+        "decision_classes": list(PHASE_J_DECISION_SEQUENCE),
+    }
+
+
+def run_knowledge_expansion_phase_j(
+    root: Path,
+    *,
+    mode: str,
+) -> dict[str, Any]:
+    knowledge_root = root / "memory" / "knowledge_expansion"
+    return generate_monitoring_rollback_incident_artifacts(
+        portfolio_governance_dir=knowledge_root / "adaptive_portfolio_governance",
+        health_state_dir=knowledge_root / "system_health_inputs",
+        output_dir=knowledge_root / "incident_control_governance",
+        mode=mode,
+        health_state_memory_path=knowledge_root / "system_health_state_memory.json",
+        registry_path=(knowledge_root / "incident_control_governance" / "incident_control_registry.json"),
     )
