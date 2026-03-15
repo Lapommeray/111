@@ -1,9 +1,0 @@
-{
-  "latest_trade_evaluation": {
-    "trade_id": "",
-    "quality": "neutral",
-    "result": "unknown",
-    "pnl_points": 0.0
-  },
-  "feature_attribution": {}
-}
