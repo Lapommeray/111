@@ -214,17 +214,38 @@ def _build_non_live_mt5_readiness(
     reasons.extend(["non_live_mode", "live_execution_blocked_by_default"])
     if not data_freshness:
         reasons.append("data_stale_or_missing")
+    fail_safe_reasons = [
+        "terminal_connection_unstable",
+        "account_not_ready",
+    ]
+    if not bool(symbol_validation.get("symbol_subscription_ready", False)):
+        fail_safe_reasons.append("symbol_not_subscribed")
+    if not data_freshness:
+        fail_safe_reasons.append("tick_data_stale")
+    fail_safe_reasons = sorted(set(fail_safe_reasons))
+    reasons.extend(fail_safe_reasons)
     return {
         "readiness_timestamp": datetime.now(tz=timezone.utc).isoformat(),
         "data_source": data_source,
+        "terminal_connection_attempts": 0,
+        "terminal_connection_successes": 0,
         "terminal_connectivity": False,
+        "terminal_connection_stable": False,
         "symbol_validity": bool(symbol_validation["symbol_validity"]),
+        "symbol_subscription_ready": bool(symbol_validation.get("symbol_subscription_ready", False)),
         "account_trading_permission": False,
-        "data_freshness": bool(data_freshness),
+        "account_readiness": False,
+        "data_freshness": data_freshness,
         "data_age_seconds": data_age_seconds,
+        "tick_freshness_window_seconds": 900,
+        "tick_data_freshness": data_freshness,
+        "tick_age_seconds": data_age_seconds,
         "fail_safe_blocked_state": True,
+        "fail_safe_blocked_reasons": fail_safe_reasons,
         "live_execution_blocked": True,
         "order_execution_enabled": False,
+        "execution_gate": "non_live_enforced",
+        "execution_refused": True,
         "ready_for_controlled_usage": False,
         "reason_codes": sorted({str(reason) for reason in reasons if str(reason).strip()}),
     }
@@ -397,6 +418,16 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         **controlled_mt5_readiness,
         "artifact_path": controlled_mt5_readiness_path,
     }
+    mt5_unsafe_refusal = config.mode == "live" and not controlled_mt5_readiness.get(
+        "ready_for_controlled_usage", False
+    )
+    if mt5_unsafe_refusal:
+        controlled_mt5_readiness = {
+            **controlled_mt5_readiness,
+            "execution_gate": "refused_unsafe_readiness",
+            "execution_refused": True,
+            "rollback_applied": True,
+        }
 
     execution_state = ExecutionState(
         symbol=config.symbol,
@@ -404,14 +435,29 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         replay_source=config.replay_source,
         mt5_attempted=mt5_attempted,
         data_source=data_source,
-        ready=True,
+        ready=not mt5_unsafe_refusal,
         reasons=[
             "validated",
             f"data_source={data_source}",
             f"mt5_controlled_ready={controlled_mt5_readiness.get('ready_for_controlled_usage', False)}",
-        ],
+            (
+                "mt5_execution_refused_unsafe_readiness"
+                if mt5_unsafe_refusal
+                else "mt5_execution_refusal_not_required"
+            ),
+        ]
+        + (
+            [
+                f"refusal:{reason}"
+                for reason in controlled_mt5_readiness.get("fail_safe_blocked_reasons", [])
+            ]
+            if mt5_unsafe_refusal
+            else []
+        ),
         controlled_mt5_readiness=controlled_mt5_readiness,
         live_execution_blocked=True,
+        mt5_execution_gate=str(controlled_mt5_readiness.get("execution_gate", "blocked")),
+        mt5_execution_refused=bool(controlled_mt5_readiness.get("execution_refused", True)),
     )
 
     structure = classify_market_structure(bars)
@@ -446,8 +492,17 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         spread_points=spread_points,
     )
 
-    combined_blocked = block["blocked"] or advanced_state.blocked
-    combined_reasons = normalize_reasons(block["reasons"] + advanced_state.blocked_reasons)
+    refusal_reasons = [
+        "mt5_execution_refused_unsafe_readiness",
+        *[
+            f"mt5_fail_safe:{reason}"
+            for reason in controlled_mt5_readiness.get("fail_safe_blocked_reasons", [])
+        ],
+    ]
+    combined_blocked = block["blocked"] or advanced_state.blocked or mt5_unsafe_refusal
+    combined_reasons = normalize_reasons(
+        block["reasons"] + advanced_state.blocked_reasons + (refusal_reasons if mt5_unsafe_refusal else [])
+    )
 
     snapshot_id = store.record_snapshot(
         {

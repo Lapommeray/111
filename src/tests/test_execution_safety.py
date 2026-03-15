@@ -21,9 +21,10 @@ def _write_sample_csv(path: Path, rows: int = 20) -> None:
         writer.writeheader()
         for i in range(rows):
             base = 2000 + i * 0.1
+            age_seconds = (rows - i) * 60
             writer.writerow(
                 {
-                    "time": int(datetime.now(tz=timezone.utc).timestamp()) - ((rows - i) * 60),
+                    "time": int(datetime.now(tz=timezone.utc).timestamp()) - age_seconds,
                     "open": round(base, 2),
                     "high": round(base + 0.3, 2),
                     "low": round(base - 0.3, 2),
@@ -69,6 +70,14 @@ def test_mt5_adapter_uses_csv_fallback_when_available(tmp_path: Path) -> None:
     assert readiness["live_execution_blocked"] is True
     assert readiness["order_execution_enabled"] is False
     assert readiness["ready_for_controlled_usage"] is False
+    assert readiness["terminal_connection_stable"] is False
+    assert readiness["symbol_subscription_ready"] is True
+    assert readiness["account_readiness"] is False
+    assert readiness["tick_data_freshness"] is True
+    assert "terminal_connection_unstable" in readiness["fail_safe_blocked_reasons"]
+    assert "account_not_ready" in readiness["fail_safe_blocked_reasons"]
+    assert readiness["execution_gate"] == "refused_unsafe_readiness"
+    assert readiness["execution_refused"] is True
 
 
 def test_mt5_adapter_marks_stale_csv_data_as_not_fresh(tmp_path: Path) -> None:
@@ -104,7 +113,9 @@ def test_mt5_adapter_marks_stale_csv_data_as_not_fresh(tmp_path: Path) -> None:
     _ = adapter.get_bars()
     readiness = adapter.get_controlled_readiness_state()
     assert readiness["data_freshness"] is False
+    assert readiness["tick_data_freshness"] is False
     assert "data_stale_or_missing" in readiness["reason_codes"]
+    assert "tick_data_stale" in readiness["fail_safe_blocked_reasons"]
 
 
 def test_execution_state_to_dict_shape() -> None:
@@ -118,6 +129,8 @@ def test_execution_state_to_dict_shape() -> None:
         reasons=["validated"],
         controlled_mt5_readiness={"live_execution_blocked": True},
         live_execution_blocked=True,
+        mt5_execution_gate="non_live_enforced",
+        mt5_execution_refused=True,
     )
     payload = state.to_dict()
     assert payload["symbol"] == "XAUUSD"
@@ -126,3 +139,5 @@ def test_execution_state_to_dict_shape() -> None:
     assert payload["reasons"] == ["validated"]
     assert payload["controlled_mt5_readiness"]["live_execution_blocked"] is True
     assert payload["live_execution_blocked"] is True
+    assert payload["mt5_execution_gate"] == "non_live_enforced"
+    assert payload["mt5_execution_refused"] is True
