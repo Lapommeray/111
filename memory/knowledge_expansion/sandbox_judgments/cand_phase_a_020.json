@@ -3,12 +3,10 @@
   "module_name": "sandbox_cand_phase_a_020",
   "truth_class": "failure",
   "judgment_timestamp": "2026-03-15T06:39:16.190224+00:00",
-  "replay_scope": "full_replay",
+  "replay_scope": "evaluation_replay",
   "baseline_summary": {
     "score": 0.0,
-    "source": {
-      "score": 0.0
-    }
+    "source": {}
   },
   "module_summary": {
     "score": 1.0,

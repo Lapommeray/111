@@ -1,0 +1,40 @@
+{
+  "candidate_id": "cand_phase_a_020",
+  "module_name": "sandbox_cand_phase_a_020",
+  "time_horizon_window": "long_horizon_90d",
+  "historical_market_state_summary": {
+    "timestamp": "2026-03-15T10:27:00.889825+00:00",
+    "symbol": "UNKNOWN",
+    "trend": "neutral",
+    "volatility": 0.0,
+    "liquidity_state": "unknown"
+  },
+  "decision_outcome_history": {
+    "phase_g_orchestrator_decision": "controlled_review_signal",
+    "phase_i_portfolio_decision": "capital_preservation_mode",
+    "phase_g_execution_readiness": "not_ready",
+    "phase_i_execution_readiness": "not_ready",
+    "phase_i_risk_state": "defensive",
+    "phase_i_drawdown_state": "within_limit"
+  },
+  "performance_snapshot": {
+    "equity": 0.0,
+    "peak_equity": 0.0,
+    "open_exposure_pct": 0.0,
+    "capital_allocated_pct": 0.0,
+    "max_drawdown_pct": 8.0,
+    "risk_state": "defensive",
+    "allocation_state": "budget_available"
+  },
+  "memory_timestamp": "2026-03-15T10:27:00.892309+00:00",
+  "memory_version": "phase_k_memory_v1",
+  "phase_g_source_path": "memory/knowledge_expansion/decision_orchestrator/cand_phase_a_020.json",
+  "phase_i_source_path": "memory/knowledge_expansion/adaptive_portfolio_governance/cand_phase_a_020.json",
+  "manual_approval_required": true,
+  "live_activation_allowed": false,
+  "risk_constraints": {
+    "live_execution_blocked": true,
+    "auto_live_activation": false,
+    "paper_execution_only": true
+  }
+}

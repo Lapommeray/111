@@ -1,0 +1,430 @@
+{
+  "iteration_id": "replay_evaluation",
+  "mode": "replay",
+  "replay_scope": "evaluation_replay",
+  "cycle_signature": "5c446eb37c364765c912fd5d1b31e08e",
+  "live_activation_blocked": true,
+  "phase_artifact_digests": {
+    "discovery": {
+      "memory/knowledge_expansion/advanced_discovery/cand_phase_a_019.json": "cc8196bc65746bba00dd492f9c419cbb",
+      "memory/knowledge_expansion/advanced_discovery/cand_phase_a_020.json": "62e869a27f90f11cbfec39b164f8fc13"
+    },
+    "sandbox_generation": {
+      "memory/knowledge_expansion/sandbox_modules/cand_phase_a_019.json": "56dc4affef6a39fe6b10b70af1540338",
+      "memory/knowledge_expansion/sandbox_modules/cand_phase_a_020.json": "0a3acb7ff6a7fc2a69133b55050a9987"
+    },
+    "replay_judgment": {
+      "memory/knowledge_expansion/sandbox_judgments/cand_phase_a_019.json": "1223ddd58beb426688983ab79f54ce60",
+      "memory/knowledge_expansion/sandbox_judgments/cand_phase_a_020.json": "d7e96b52686fa8a715ec1347e6f4c75c"
+    },
+    "promotion_governance": {
+      "memory/knowledge_expansion/promotion_governance/cand_phase_a_019.json": "7c99ec2e974c2776b9081b4e50685cda",
+      "memory/knowledge_expansion/promotion_governance/cand_phase_a_020.json": "279d06708b9d0d5288443d72831245ef"
+    },
+    "execution_governance": {
+      "memory/knowledge_expansion/execution_governance/cand_phase_a_019.json": "b583ea47d6963f2fd4f51cf878d84bf6",
+      "memory/knowledge_expansion/execution_governance/cand_phase_a_020.json": "f3cdd221aa71569213f23b2db44ee89d"
+    },
+    "decision_orchestration": {
+      "memory/knowledge_expansion/decision_orchestrator/cand_phase_a_019.json": "7b90e1ca836173954e7a89379ec5a05d",
+      "memory/knowledge_expansion/decision_orchestrator/cand_phase_a_020.json": "230833cb4f5aecd1201c7afb73c10e08"
+    },
+    "execution_supervision": {
+      "memory/knowledge_expansion/execution_supervision/cand_phase_a_019.json": "73c1a2599e20f2f218b46a83a7dca220",
+      "memory/knowledge_expansion/execution_supervision/cand_phase_a_020.json": "c68886427ba95bc457d3bb0cf7b47f45"
+    },
+    "adaptive_portfolio": {
+      "memory/knowledge_expansion/adaptive_portfolio_governance/cand_phase_a_019.json": "ee5283a3783ce20e93a548e1fa35b706",
+      "memory/knowledge_expansion/adaptive_portfolio_governance/cand_phase_a_020.json": "d7c4845883bce2afa3406268da5c0853"
+    },
+    "incident_control": {
+      "memory/knowledge_expansion/incident_control_governance/cand_phase_a_019.json": "107a6237f6a8f08ab24d91c196ec3a31",
+      "memory/knowledge_expansion/incident_control_governance/cand_phase_a_020.json": "5707dc04210c961f55717c3076e0ae6b"
+    },
+    "long_horizon_memory": {
+      "memory/knowledge_expansion/long_horizon_memory/cand_phase_a_019.json": "69f5e54add725061a04f5dcde99b7ebb",
+      "memory/knowledge_expansion/long_horizon_memory/cand_phase_a_020.json": "9db174e43d5a5dcf4795dfb26d9c2315"
+    }
+  },
+  "artifact_integrity": {
+    "discovery": {
+      "artifact_count": 2,
+      "all_present": true,
+      "all_parse_ok": true,
+      "artifacts": [
+        {
+          "artifact_path": "memory/knowledge_expansion/advanced_discovery/cand_phase_a_019.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "cc8196bc65746bba00dd492f9c419cbb",
+          "raw_digest": "d037a9793aabfe78996ad59fec9c02e2"
+        },
+        {
+          "artifact_path": "memory/knowledge_expansion/advanced_discovery/cand_phase_a_020.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "62e869a27f90f11cbfec39b164f8fc13",
+          "raw_digest": "0b8e292e24c646e1058e9c1b21f4a7b5"
+        }
+      ]
+    },
+    "sandbox_generation": {
+      "artifact_count": 2,
+      "all_present": true,
+      "all_parse_ok": true,
+      "artifacts": [
+        {
+          "artifact_path": "memory/knowledge_expansion/sandbox_modules/cand_phase_a_019.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "56dc4affef6a39fe6b10b70af1540338",
+          "raw_digest": "527f1f129c1791cbb6fd2fb967b3a5b7"
+        },
+        {
+          "artifact_path": "memory/knowledge_expansion/sandbox_modules/cand_phase_a_020.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "0a3acb7ff6a7fc2a69133b55050a9987",
+          "raw_digest": "ca952cb4d5012c682a5de8912a1b00ed"
+        }
+      ]
+    },
+    "replay_judgment": {
+      "artifact_count": 2,
+      "all_present": true,
+      "all_parse_ok": true,
+      "artifacts": [
+        {
+          "artifact_path": "memory/knowledge_expansion/sandbox_judgments/cand_phase_a_019.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "1223ddd58beb426688983ab79f54ce60",
+          "raw_digest": "d1582cf47213dced3780a3f5248ff564"
+        },
+        {
+          "artifact_path": "memory/knowledge_expansion/sandbox_judgments/cand_phase_a_020.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "d7e96b52686fa8a715ec1347e6f4c75c",
+          "raw_digest": "ff34e5977bfc17e111f8dfddf9ced614"
+        }
+      ]
+    },
+    "promotion_governance": {
+      "artifact_count": 2,
+      "all_present": true,
+      "all_parse_ok": true,
+      "artifacts": [
+        {
+          "artifact_path": "memory/knowledge_expansion/promotion_governance/cand_phase_a_019.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "7c99ec2e974c2776b9081b4e50685cda",
+          "raw_digest": "5b748edf4d3d42ee5546796ff6a05395"
+        },
+        {
+          "artifact_path": "memory/knowledge_expansion/promotion_governance/cand_phase_a_020.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "279d06708b9d0d5288443d72831245ef",
+          "raw_digest": "c106fa05ff496302cd08186075d9920b"
+        }
+      ]
+    },
+    "execution_governance": {
+      "artifact_count": 2,
+      "all_present": true,
+      "all_parse_ok": true,
+      "artifacts": [
+        {
+          "artifact_path": "memory/knowledge_expansion/execution_governance/cand_phase_a_019.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "b583ea47d6963f2fd4f51cf878d84bf6",
+          "raw_digest": "54fa68beac979726c482c5147b740de5"
+        },
+        {
+          "artifact_path": "memory/knowledge_expansion/execution_governance/cand_phase_a_020.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "f3cdd221aa71569213f23b2db44ee89d",
+          "raw_digest": "3bc2ccf59fe9b02b6ef8c3effde2200e"
+        }
+      ]
+    },
+    "decision_orchestration": {
+      "artifact_count": 2,
+      "all_present": true,
+      "all_parse_ok": true,
+      "artifacts": [
+        {
+          "artifact_path": "memory/knowledge_expansion/decision_orchestrator/cand_phase_a_019.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "7b90e1ca836173954e7a89379ec5a05d",
+          "raw_digest": "5a9ec98f105373a15f3662f8ba6bc111"
+        },
+        {
+          "artifact_path": "memory/knowledge_expansion/decision_orchestrator/cand_phase_a_020.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "230833cb4f5aecd1201c7afb73c10e08",
+          "raw_digest": "03a9544b04f2afff223f24903bbf8270"
+        }
+      ]
+    },
+    "execution_supervision": {
+      "artifact_count": 2,
+      "all_present": true,
+      "all_parse_ok": true,
+      "artifacts": [
+        {
+          "artifact_path": "memory/knowledge_expansion/execution_supervision/cand_phase_a_019.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "73c1a2599e20f2f218b46a83a7dca220",
+          "raw_digest": "7b84a38f4020b9538d86b971883988a7"
+        },
+        {
+          "artifact_path": "memory/knowledge_expansion/execution_supervision/cand_phase_a_020.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "c68886427ba95bc457d3bb0cf7b47f45",
+          "raw_digest": "7b295cf3922798d34ffae42f4b63a382"
+        }
+      ]
+    },
+    "adaptive_portfolio": {
+      "artifact_count": 2,
+      "all_present": true,
+      "all_parse_ok": true,
+      "artifacts": [
+        {
+          "artifact_path": "memory/knowledge_expansion/adaptive_portfolio_governance/cand_phase_a_019.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "ee5283a3783ce20e93a548e1fa35b706",
+          "raw_digest": "766c87a3b9e0149f88ff1bfa30a16ff9"
+        },
+        {
+          "artifact_path": "memory/knowledge_expansion/adaptive_portfolio_governance/cand_phase_a_020.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "d7c4845883bce2afa3406268da5c0853",
+          "raw_digest": "46edd82a413d93beccb13a604505789d"
+        }
+      ]
+    },
+    "incident_control": {
+      "artifact_count": 2,
+      "all_present": true,
+      "all_parse_ok": true,
+      "artifacts": [
+        {
+          "artifact_path": "memory/knowledge_expansion/incident_control_governance/cand_phase_a_019.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "107a6237f6a8f08ab24d91c196ec3a31",
+          "raw_digest": "ffb6d0110ee6d47d84ecbbcd10d5885c"
+        },
+        {
+          "artifact_path": "memory/knowledge_expansion/incident_control_governance/cand_phase_a_020.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "5707dc04210c961f55717c3076e0ae6b",
+          "raw_digest": "a11019293dd64f5850fa56c41aba1b75"
+        }
+      ]
+    },
+    "long_horizon_memory": {
+      "artifact_count": 2,
+      "all_present": true,
+      "all_parse_ok": true,
+      "artifacts": [
+        {
+          "artifact_path": "memory/knowledge_expansion/long_horizon_memory/cand_phase_a_019.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "69f5e54add725061a04f5dcde99b7ebb",
+          "raw_digest": "f31d49155b5fd973db941c4c76bad404"
+        },
+        {
+          "artifact_path": "memory/knowledge_expansion/long_horizon_memory/cand_phase_a_020.json",
+          "exists": true,
+          "parse_ok": true,
+          "canonical_digest": "9db174e43d5a5dcf4795dfb26d9c2315",
+          "raw_digest": "3bf8cd293e7722d20676f89559500172"
+        }
+      ]
+    },
+    "all_checks_passed": true
+  },
+  "phase_registry_consistency": {
+    "replay_to_promotion_artifacts_match": true,
+    "promotion_to_execution_artifacts_match": true,
+    "promotion_artifacts_in_registry": true,
+    "execution_artifacts_in_registry": true,
+    "candidate_counts": {
+      "replay_judgment": 2,
+      "promotion_governance": 2,
+      "execution_governance": 2
+    },
+    "all_checks_passed": true
+  },
+  "end_to_end_governance_chain": {
+    "phase_sequence": [
+      "phase_a",
+      "phase_b",
+      "phase_c",
+      "phase_d",
+      "phase_e",
+      "phase_f",
+      "phase_g",
+      "phase_h",
+      "phase_i",
+      "phase_j",
+      "phase_k",
+      "phase_l"
+    ],
+    "phase_candidate_counts": {
+      "phase_a": 2,
+      "phase_b": 2,
+      "phase_c": 2,
+      "phase_d": 2,
+      "phase_e": 2,
+      "phase_f": 2,
+      "phase_g": 2,
+      "phase_h": 2,
+      "phase_i": 2,
+      "phase_j": 2,
+      "phase_k": 2,
+      "phase_l": 2
+    },
+    "phase_set_flow_checks": {
+      "phase_a_to_phase_b_downstream_subset": true,
+      "phase_b_to_phase_c_downstream_subset": true,
+      "phase_c_to_phase_d_downstream_subset": true,
+      "phase_d_to_phase_e_downstream_subset": true,
+      "phase_e_to_phase_f_downstream_subset": true,
+      "phase_f_to_phase_g_downstream_subset": true,
+      "phase_g_to_phase_h_downstream_subset": true,
+      "phase_h_to_phase_i_downstream_subset": true,
+      "phase_i_to_phase_j_downstream_subset": true,
+      "phase_j_to_phase_k_downstream_subset": true,
+      "phase_k_to_phase_l_downstream_subset": true
+    },
+    "traceability_checks": {
+      "phase_c_source_spec_paths_valid": true,
+      "phase_d_source_spec_paths_valid": true,
+      "phase_e_source_judgment_paths_valid": true,
+      "phase_f_governance_source_paths_valid": true,
+      "phase_g_execution_source_paths_valid": true,
+      "phase_h_orchestrator_source_paths_valid": true,
+      "phase_i_supervision_source_paths_valid": true,
+      "phase_j_portfolio_source_paths_valid": true,
+      "phase_k_phase_g_source_paths_valid": true,
+      "phase_k_phase_i_source_paths_valid": true
+    },
+    "issues": [],
+    "invalid_candidate_ids": [],
+    "all_checks_passed": true
+  },
+  "cross_phase_anomaly_detection": {
+    "has_anomalies": false,
+    "anomaly_count": 0,
+    "invalid_candidate_ids": [],
+    "candidate_anomalies": {}
+  },
+  "replay_governance_traceability": {
+    "has_issues": false,
+    "issue_count": 0,
+    "invalid_candidate_ids": [],
+    "candidate_issues": {}
+  },
+  "governed_rollback": {
+    "triggered": false,
+    "trigger_reasons": [],
+    "invalid_candidate_ids": [],
+    "rollback_report_path": "",
+    "affected_execution_artifacts": []
+  },
+  "invalid_artifact_quarantine": {
+    "quarantine_required": false,
+    "quarantined_record_count": 0,
+    "quarantine_report_path": "memory/knowledge_expansion/continuous_governed_improvement/quarantine/replay_evaluation/quarantine_report.json",
+    "quarantine_records": []
+  },
+  "governed_refusal": {
+    "refused": false,
+    "refusal_state": "continue_governed_non_live",
+    "refusal_reasons": [],
+    "safe_to_continue": true
+  },
+  "live_learning_feedback": {
+    "latest_trade_evaluation": {
+      "trade_id": "",
+      "quality": "neutral",
+      "result": "unknown",
+      "pnl_points": 0.0
+    },
+    "feature_attribution": {},
+    "mutation_candidate": {
+      "candidate_id": "b4cfc0eeaa7cc29e",
+      "trade_id": "",
+      "mutation_type": "feature_weight_adjustment",
+      "weak_features": [],
+      "replay_validation": {
+        "required": true,
+        "scope": "evaluation_replay",
+        "passed": false
+      },
+      "governance": {
+        "promotion_state": "pending",
+        "quarantine_required": false,
+        "refusal_reasons": [
+          "replay_validation_pending"
+        ]
+      }
+    },
+    "paths": {
+      "trade_outcomes": "memory/live_trade_feedback/trade_outcomes.json",
+      "feature_attribution": "memory/live_trade_feedback/feature_attribution.json",
+      "mutation_candidates": "memory/live_trade_feedback/mutation_candidates.json"
+    }
+  },
+  "cycle_recovery": {
+    "interrupted_cycle_recovered": false,
+    "stale_artifacts_detected": false,
+    "safe_refresh_applied": false,
+    "partial_resume_applied": false,
+    "resumed_phases": [],
+    "rerun_from_phase": ""
+  },
+  "stale_artifact_reasons": [],
+  "phase_counts": {
+    "discovery": 2,
+    "sandbox_generation": 2,
+    "replay_judgment": 2,
+    "promotion_governance": 2,
+    "execution_governance": 2,
+    "decision_orchestration": 2,
+    "execution_supervision": 2,
+    "adaptive_portfolio": 2,
+    "incident_control": 2,
+    "long_horizon_memory": 2
+  },
+  "registry_paths": {
+    "advanced_discovery": "memory/knowledge_expansion/advanced_discovery/advanced_discovery_registry.json",
+    "promotion_governance": "memory/knowledge_expansion/promotion_governance/governed_promotion_registry.json",
+    "execution_governance": "memory/knowledge_expansion/execution_governance/controlled_execution_registry.json",
+    "decision_orchestration": "memory/knowledge_expansion/decision_orchestrator/controlled_decision_registry.json",
+    "execution_supervision": "memory/knowledge_expansion/execution_supervision/broker_exchange_supervision_registry.json",
+    "adaptive_portfolio": "memory/knowledge_expansion/adaptive_portfolio_governance/adaptive_portfolio_registry.json",
+    "incident_control": "memory/knowledge_expansion/incident_control_governance/incident_control_registry.json",
+    "long_horizon_memory": "memory/knowledge_expansion/long_horizon_memory/long_horizon_memory_registry.json"
+  },
+  "self_audit_artifact": {
+    "self_audit_path": "memory/knowledge_expansion/continuous_governed_improvement/self_audit_replay_evaluation.json",
+    "self_audit_signature": "995476ce4242cd96c5d6ecb602c0db54"
+  }
+}

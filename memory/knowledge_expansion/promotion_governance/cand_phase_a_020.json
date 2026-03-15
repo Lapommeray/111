@@ -12,6 +12,6 @@
   "governance_reason": "Sandbox module improved replay outcome versus baseline.",
   "promotion_status": "non_live_candidate",
   "replay_revalidation_required": true,
-  "source_judgment_path": "/home/runner/work/111/111/memory/knowledge_expansion/sandbox_judgments/cand_phase_a_020.json",
+  "source_judgment_path": "memory/knowledge_expansion/sandbox_judgments/cand_phase_a_020.json",
   "governor_version": "phase_e_governor_v1"
 }
