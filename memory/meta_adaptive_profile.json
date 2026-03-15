@@ -3,5 +3,5 @@
   "samples": 0,
   "win_rate": 0.0,
   "preferred_direction": "WAIT",
-  "confidence_bias": 0.0
+  "confidence_bias": -0.1
 }
