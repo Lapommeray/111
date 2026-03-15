@@ -10,9 +10,9 @@ from src.evolution.knowledge_expansion_orchestrator import (
     KnowledgeExpansionOrchestrator,
     run_knowledge_expansion_phase_a,
 )
+from src.evolution.experimental_module_spec_flow import run_knowledge_expansion_phase_b
 from src.evolution.experimental_module_spec_flow import (
     load_sandbox_module_artifacts,
-    run_knowledge_expansion_phase_b,
     run_knowledge_expansion_phase_c,
 )
 
