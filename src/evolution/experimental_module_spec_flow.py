@@ -80,3 +80,11 @@ def generate_experimental_module_specs(
         "experimental_spec_count": len(generated_paths),
         "experimental_spec_artifacts": generated_paths,
     }
+
+
+def run_knowledge_expansion_phase_b(root: Path) -> dict[str, Any]:
+    knowledge_root = root / "memory" / "knowledge_expansion"
+    return generate_experimental_module_specs(
+        validated_knowledge_registry_path=knowledge_root / "validated_knowledge_registry.json",
+        output_dir=knowledge_root / "experimental_module_specs",
+    )
