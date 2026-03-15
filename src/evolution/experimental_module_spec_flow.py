@@ -226,6 +226,14 @@ def _phase_d_decision_from_delta(delta: float) -> tuple[str, str, str]:
     )
 
 
+def _phase_d_effect_from_delta(delta: float) -> str:
+    if delta > PHASE_D_IMPROVEMENT_EPSILON:
+        return "improved"
+    if delta < -PHASE_D_IMPROVEMENT_EPSILON:
+        return "regressed"
+    return "no_meaningful_effect"
+
+
 def generate_sandbox_judgments(
     sandbox_modules_dir: Path,
     output_dir: Path,
@@ -265,7 +273,7 @@ def generate_sandbox_judgments(
         module_name = str(module_payload.get("module_name", f"sandbox_{_safe_candidate_filename(candidate_id)}"))
         module_score = _summary_score(module_payload)
         score_delta = module_score - baseline_score
-        effect = "improved" if score_delta > PHASE_D_IMPROVEMENT_EPSILON else "regressed" if score_delta < -PHASE_D_IMPROVEMENT_EPSILON else "no_meaningful_effect"
+        effect = _phase_d_effect_from_delta(score_delta)
         decision, decision_reason, promotion_status = _phase_d_decision_from_delta(score_delta)
 
         artifact = {

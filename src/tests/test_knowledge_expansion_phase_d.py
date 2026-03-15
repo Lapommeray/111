@@ -129,10 +129,10 @@ def test_phase_d_outputs_deterministic_decisions(tmp_path: Path) -> None:
 
     result = run_knowledge_expansion_phase_d(tmp_path, mode="replay", baseline_summary={"score": 5})
     artifacts = sorted(Path(path) for path in result["sandbox_judgments"])
-    decisions = {
-        json.loads(path.read_text(encoding="utf-8"))["candidate_id"]: json.loads(path.read_text(encoding="utf-8"))["decision"]
-        for path in artifacts
-    }
+    decisions = {}
+    for path in artifacts:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        decisions[payload["candidate_id"]] = payload["decision"]
 
     assert decisions["cand_improve"] == PHASE_D_PROMOTION_CANDIDATE
     assert decisions["cand_regress"] == PHASE_D_REJECT
