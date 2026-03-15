@@ -1,0 +1,24 @@
+{
+  "architectures": [
+    {
+      "architecture": "features_ensemble_scoring",
+      "score": 0.55
+    },
+    {
+      "architecture": "features_regime_split_scoring",
+      "score": 0.51
+    },
+    {
+      "architecture": "features_reinforcement_scoring",
+      "score": 0.47
+    },
+    {
+      "architecture": "features_execution_refinement_layer",
+      "score": 0.43
+    }
+  ],
+  "strongest_architecture": {
+    "architecture": "features_ensemble_scoring",
+    "score": 0.55
+  }
+}
