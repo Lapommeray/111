@@ -12,12 +12,14 @@ from src.evolution.knowledge_expansion_orchestrator import (
 )
 from src.evolution.experimental_module_spec_flow import run_knowledge_expansion_phase_b
 from src.evolution.experimental_module_spec_flow import (
+    generate_execution_governance_artifacts,
     generate_promotion_governance_artifacts,
     generate_sandbox_judgments,
     load_sandbox_module_artifacts,
     run_knowledge_expansion_phase_c,
     run_knowledge_expansion_phase_d,
     run_knowledge_expansion_phase_e,
+    run_knowledge_expansion_phase_f,
 )
 
 __all__ = [
@@ -35,7 +37,9 @@ __all__ = [
     "run_knowledge_expansion_phase_c",
     "run_knowledge_expansion_phase_d",
     "run_knowledge_expansion_phase_e",
+    "run_knowledge_expansion_phase_f",
     "load_sandbox_module_artifacts",
     "generate_sandbox_judgments",
     "generate_promotion_governance_artifacts",
+    "generate_execution_governance_artifacts",
 ]

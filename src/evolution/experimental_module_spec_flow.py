@@ -187,6 +187,15 @@ PHASE_E_DECISION_SEQUENCE = (
     PHASE_E_PROMOTION_CANDIDATE,
 )
 PHASE_E_GOVERNOR_VERSION = "phase_e_governor_v1"
+PHASE_F_BLOCKED = "blocked"
+PHASE_F_MANUAL_REVIEW_REQUIRED = "manual_review_required"
+PHASE_F_ELIGIBLE_FOR_CONTROLLED_EXECUTION_REVIEW = "eligible_for_controlled_execution_review"
+PHASE_F_DECISION_SEQUENCE = (
+    PHASE_F_BLOCKED,
+    PHASE_F_MANUAL_REVIEW_REQUIRED,
+    PHASE_F_ELIGIBLE_FOR_CONTROLLED_EXECUTION_REVIEW,
+)
+PHASE_F_GOVERNOR_VERSION = "phase_f_governor_v1"
 
 
 def _to_float(value: Any, default: float = 0.0) -> float:
@@ -480,4 +489,141 @@ def run_knowledge_expansion_phase_e(
         output_dir=promotion_governance_dir,
         mode=mode,
         registry_path=promotion_governance_dir / "governed_promotion_registry.json",
+    )
+
+
+def _phase_f_execution_decision_from_governance(governance_payload: dict[str, Any]) -> tuple[str, str, str]:
+    governance_decision = str(governance_payload.get("governance_decision", "")).strip()
+    governance_reason = str(governance_payload.get("governance_reason", "")).strip()
+    if governance_decision == PHASE_E_REJECTED:
+        return (
+            PHASE_F_BLOCKED,
+            "blocked_non_live",
+            governance_reason or "Promotion governance rejected candidate.",
+        )
+    if governance_decision == PHASE_E_PROMOTION_CANDIDATE:
+        return (
+            PHASE_F_ELIGIBLE_FOR_CONTROLLED_EXECUTION_REVIEW,
+            "pending_controlled_execution_review",
+            governance_reason or "Candidate eligible for controlled execution review.",
+        )
+    return (
+        PHASE_F_MANUAL_REVIEW_REQUIRED,
+        "pending_manual_review",
+        governance_reason or "Manual review required before controlled execution review.",
+    )
+
+
+def generate_execution_governance_artifacts(
+    promotion_governance_dir: Path,
+    output_dir: Path,
+    *,
+    mode: str,
+    registry_path: Path,
+    governor_version: str = PHASE_F_GOVERNOR_VERSION,
+) -> dict[str, Any]:
+    if str(mode).lower() != "replay":
+        return {
+            "execution_governance_enabled": False,
+            "execution_governance_artifact_count": 0,
+            "execution_governance_dir": str(output_dir),
+            "execution_governance_artifacts": [],
+            "controlled_execution_registry_path": str(registry_path),
+            "decision_classes": list(PHASE_F_DECISION_SEQUENCE),
+        }
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    deduplicated_governance_records: dict[str, tuple[Path, dict[str, Any]]] = {}
+    for governance_path in sorted(promotion_governance_dir.glob("*.json")):
+        payload = read_json_safe(governance_path, default={})
+        if not isinstance(payload, dict):
+            continue
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        deduplicated_governance_records[candidate_id] = (governance_path, payload)
+
+    generated_paths: list[str] = []
+    generated_entries: dict[str, dict[str, Any]] = {}
+    for candidate_id, (governance_path, governance_payload) in sorted(
+        deduplicated_governance_records.items(),
+        key=lambda pair: pair[0],
+    ):
+        execution_decision, execution_status, execution_reason = _phase_f_execution_decision_from_governance(
+            governance_payload
+        )
+        execution_governance_timestamp = str(governance_payload.get("governance_timestamp", "")).strip()
+        if not execution_governance_timestamp:
+            execution_governance_timestamp = datetime.now(tz=timezone.utc).isoformat()
+        artifact = {
+            "candidate_id": candidate_id,
+            "module_name": str(governance_payload.get("module_name", f"sandbox_{_safe_candidate_filename(candidate_id)}")),
+            "truth_class": str(governance_payload.get("truth_class", "meta-intelligence")),
+            "governance_source_path": str(governance_path),
+            "execution_governance_timestamp": execution_governance_timestamp,
+            "governance_decision": str(governance_payload.get("governance_decision", "")),
+            "execution_decision": execution_decision,
+            "execution_reason": execution_reason,
+            "execution_status": execution_status,
+            "manual_approval_required": True,
+            "live_activation_allowed": False,
+            "risk_constraints": {
+                "live_execution_blocked": True,
+                "auto_live_activation": False,
+                "controlled_execution_review_required": True,
+            },
+            "governor_version": governor_version,
+        }
+
+        target_path = output_dir / f"{_safe_candidate_filename(candidate_id)}.json"
+        write_json_atomic(target_path, artifact)
+        generated_paths.append(str(target_path))
+        generated_entries[candidate_id] = artifact
+
+    existing_registry = read_json_safe(registry_path, default={"execution_records": []})
+    if not isinstance(existing_registry, dict):
+        existing_registry = {"execution_records": []}
+    records = existing_registry.get("execution_records", [])
+    if not isinstance(records, list):
+        records = []
+
+    registry_by_candidate: dict[str, dict[str, Any]] = {}
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        candidate_id = str(record.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        registry_by_candidate[candidate_id] = record
+    registry_by_candidate.update(generated_entries)
+
+    registry_payload = {
+        "governor_version": governor_version,
+        "decision_classes": list(PHASE_F_DECISION_SEQUENCE),
+        "execution_records": [registry_by_candidate[cid] for cid in sorted(registry_by_candidate)],
+    }
+    write_json_atomic(registry_path, registry_payload)
+
+    return {
+        "execution_governance_enabled": True,
+        "execution_governance_artifact_count": len(generated_paths),
+        "execution_governance_dir": str(output_dir),
+        "execution_governance_artifacts": generated_paths,
+        "controlled_execution_registry_path": str(registry_path),
+        "decision_classes": list(PHASE_F_DECISION_SEQUENCE),
+    }
+
+
+def run_knowledge_expansion_phase_f(
+    root: Path,
+    *,
+    mode: str,
+) -> dict[str, Any]:
+    knowledge_root = root / "memory" / "knowledge_expansion"
+    execution_governance_dir = knowledge_root / "execution_governance"
+    return generate_execution_governance_artifacts(
+        promotion_governance_dir=knowledge_root / "promotion_governance",
+        output_dir=execution_governance_dir,
+        mode=mode,
+        registry_path=execution_governance_dir / "controlled_execution_registry.json",
     )
