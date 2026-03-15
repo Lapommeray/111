@@ -74,7 +74,9 @@ def test_continuous_cycle_executes_governed_phases(tmp_path: Path) -> None:
     assert phase_results["incident_control"]["incident_artifact_count"] == 1
     assert phase_results["long_horizon_memory"]["long_horizon_memory_count"] == 1
     assert "live_learning_feedback" in result
+    assert "autonomous_behavior_layer" in result
     assert Path(result["live_learning_feedback"]["paths"]["mutation_candidates"]).exists()
+    assert Path(result["autonomous_behavior_layer"]["trade_review_engine"]["path"]).exists()
     assert Path(result["cycle_artifact_path"]).exists()
 
 

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from src.learning.live_feedback import process_live_trade_feedback
+from src.learning.autonomous_behavior_layer import run_autonomous_behavior_layer
 from src.utils import read_json_safe, write_json_atomic
 
 
@@ -3282,6 +3283,41 @@ def run_continuous_governed_improvement_cycle(
         feature_contributors={},
         replay_scope=replay_scope,
     )
+    mutation_candidates_path = Path(str(live_learning_feedback.get("paths", {}).get("mutation_candidates", "")))
+    mutation_candidate_payload = read_json_safe(mutation_candidates_path, default={"mutation_candidates": []})
+    if not isinstance(mutation_candidate_payload, dict):
+        mutation_candidate_payload = {"mutation_candidates": []}
+    mutation_candidates = mutation_candidate_payload.get("mutation_candidates", [])
+    if not isinstance(mutation_candidates, list):
+        mutation_candidates = []
+    autonomous_behavior = run_autonomous_behavior_layer(
+        memory_root=root / "memory",
+        trade_outcomes=feedback_outcomes,
+        market_state={
+            "structure_state": str(baseline_summary.get("structure_state", "range")) if isinstance(baseline_summary, dict) else "range",
+            "volatility_ratio": _to_float(
+                baseline_summary.get("volatility_ratio", 1.0) if isinstance(baseline_summary, dict) else 1.0,
+                default=1.0,
+            ),
+            "spread_ratio": 1.0 if not governed_refusal.get("refused", False) else 2.2,
+            "slippage_ratio": 1.0 if not governed_rollback.get("triggered", False) else 1.8,
+            "stale_price_data": not bool(artifact_integrity.get("all_checks_passed", False)),
+            "mt5_ready": not bool(governed_refusal.get("refused", False)),
+            "recent_setup_confidence": _to_float(
+                baseline_summary.get("confidence", 0.5) if isinstance(baseline_summary, dict) else 0.5,
+                default=0.5,
+            ),
+            "base_signal_confidence": _to_float(
+                baseline_summary.get("confidence", 0.5) if isinstance(baseline_summary, dict) else 0.5,
+                default=0.5,
+            ),
+            "base_risk_size": 1.0,
+        },
+        feature_contributors={},
+        mutation_candidates=mutation_candidates,
+    )
+    if autonomous_behavior.get("continuous_survival_loop", {}).get("decision") == "pause":
+        live_activation_blocked = True
 
     cycle_payload = {
         "iteration_id": normalized_iteration_id,
@@ -3299,6 +3335,7 @@ def run_continuous_governed_improvement_cycle(
         "invalid_artifact_quarantine": invalid_artifact_quarantine,
         "governed_refusal": governed_refusal,
         "live_learning_feedback": live_learning_feedback,
+        "autonomous_behavior_layer": autonomous_behavior,
         "cycle_recovery": {
             "interrupted_cycle_recovered": recovering_interrupted_cycle,
             "stale_artifacts_detected": stale_detected,
@@ -3412,6 +3449,7 @@ def run_continuous_governed_improvement_cycle(
         "invalid_artifact_quarantine": invalid_artifact_quarantine,
         "governed_refusal": governed_refusal,
         "live_learning_feedback": live_learning_feedback,
+        "autonomous_behavior_layer": autonomous_behavior,
         "self_audit_artifact": self_audit_artifact,
         "cycle_recovery": cycle_payload["cycle_recovery"],
         "phase_results": phase_results,
