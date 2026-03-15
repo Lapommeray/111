@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -96,7 +97,7 @@ def generate_sandbox_module_artifacts(
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     generated_paths: list[str] = []
-    generation_timestamp = datetime.now(tz=timezone.utc).isoformat()
+    default_generation_timestamp = datetime.now(tz=timezone.utc).isoformat()
 
     deduplicated_by_candidate: dict[str, tuple[Path, dict[str, Any]]] = {}
     for spec_path in sorted(experimental_specs_dir.glob("*.json")):
@@ -111,6 +112,18 @@ def generate_sandbox_module_artifacts(
     used_filenames: set[str] = set()
     for candidate_id, (spec_path, payload) in sorted(deduplicated_by_candidate.items(), key=lambda pair: pair[0]):
         module_name = f"sandbox_{_safe_candidate_filename(candidate_id)}"
+        target_name = _safe_candidate_filename(candidate_id)
+        if target_name in used_filenames:
+            suffix = hashlib.blake2b(candidate_id.encode("utf-8"), digest_size=6).hexdigest()
+            target_name = f"{target_name}_{suffix}"
+        used_filenames.add(target_name)
+        target_path = output_dir / f"{target_name}.json"
+        existing_artifact = read_json_safe(target_path, default={})
+        generation_timestamp = (
+            str(existing_artifact.get("generation_timestamp", "")).strip()
+            if isinstance(existing_artifact, dict)
+            else ""
+        ) or default_generation_timestamp
         artifact = {
             "candidate_id": candidate_id,
             "module_name": module_name,
@@ -123,12 +136,6 @@ def generate_sandbox_module_artifacts(
             "module_version": "1.0",
         }
 
-        target_name = _safe_candidate_filename(candidate_id)
-        if target_name in used_filenames:
-            suffix = hashlib.blake2b(candidate_id.encode("utf-8"), digest_size=6).hexdigest()
-            target_name = f"{target_name}_{suffix}"
-        used_filenames.add(target_name)
-        target_path = output_dir / f"{target_name}.json"
         write_json_atomic(target_path, artifact)
         generated_paths.append(str(target_path))
 
@@ -324,7 +331,7 @@ def generate_sandbox_judgments(
         deduplicated_by_candidate[candidate_id] = payload
 
     judgment_paths: list[str] = []
-    judgment_timestamp = datetime.now(tz=timezone.utc).isoformat()
+    default_judgment_timestamp = datetime.now(tz=timezone.utc).isoformat()
     used_filenames: set[str] = set()
     for candidate_id, module_payload in sorted(deduplicated_by_candidate.items(), key=lambda pair: pair[0]):
         module_name = str(module_payload.get("module_name", f"sandbox_{_safe_candidate_filename(candidate_id)}"))
@@ -332,6 +339,18 @@ def generate_sandbox_judgments(
         score_delta = module_score - baseline_score
         effect = _phase_d_effect_from_delta(score_delta)
         decision, decision_reason, promotion_status = _phase_d_decision_from_delta(score_delta)
+        target_name = _safe_candidate_filename(candidate_id)
+        if target_name in used_filenames:
+            suffix = hashlib.blake2b(candidate_id.encode("utf-8"), digest_size=6).hexdigest()
+            target_name = f"{target_name}_{suffix}"
+        used_filenames.add(target_name)
+        target_path = output_dir / f"{target_name}.json"
+        existing_artifact = read_json_safe(target_path, default={})
+        judgment_timestamp = (
+            str(existing_artifact.get("judgment_timestamp", "")).strip()
+            if isinstance(existing_artifact, dict)
+            else ""
+        ) or default_judgment_timestamp
 
         artifact = {
             "candidate_id": candidate_id,
@@ -356,12 +375,6 @@ def generate_sandbox_judgments(
             "promotion_status": promotion_status,
         }
 
-        target_name = _safe_candidate_filename(candidate_id)
-        if target_name in used_filenames:
-            suffix = hashlib.blake2b(candidate_id.encode("utf-8"), digest_size=6).hexdigest()
-            target_name = f"{target_name}_{suffix}"
-        used_filenames.add(target_name)
-        target_path = output_dir / f"{target_name}.json"
         write_json_atomic(target_path, artifact)
         judgment_paths.append(str(target_path))
 
@@ -1919,7 +1932,14 @@ def generate_advanced_discovery_artifacts(
         if not isinstance(decision_reasons, list):
             decision_reasons = []
         support_ratio = min(1.0, round(len(evidence_history) / 5.0, 6))
-        discovery_timestamp = str(item.get("timestamp", "")).strip() or now_iso
+        target_path = output_dir / f"{_safe_candidate_filename(candidate_id)}.json"
+        existing_artifact = read_json_safe(target_path, default={})
+        existing_discovery_timestamp = (
+            str(existing_artifact.get("discovery_timestamp", "")).strip()
+            if isinstance(existing_artifact, dict)
+            else ""
+        )
+        discovery_timestamp = str(item.get("timestamp", "")).strip() or existing_discovery_timestamp or now_iso
         pattern_signature = hashlib.blake2b(
             f"{candidate_id}|{truth_class}|{statement}".encode("utf-8"),
             digest_size=12,
@@ -1944,7 +1964,6 @@ def generate_advanced_discovery_artifacts(
             "sandbox_status": "replay_only",
             "live_activation_allowed": False,
         }
-        target_path = output_dir / f"{_safe_candidate_filename(candidate_id)}.json"
         write_json_atomic(target_path, artifact)
         generated_paths.append(str(target_path))
         generated_entries[candidate_id] = artifact
@@ -1991,3 +2010,137 @@ def run_knowledge_expansion_phase_l(
         mode=mode,
         registry_path=(knowledge_root / "advanced_discovery" / "advanced_discovery_registry.json"),
     )
+
+
+def _deterministic_payload_digest(payload: Any) -> str:
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.blake2b(serialized.encode("utf-8"), digest_size=16).hexdigest()
+
+
+def _artifact_digests(paths: list[str]) -> dict[str, str]:
+    digests: dict[str, str] = {}
+    for path_str in sorted(paths):
+        artifact_path = Path(path_str)
+        payload = read_json_safe(artifact_path, default={})
+        digests[str(artifact_path)] = _deterministic_payload_digest(payload)
+    return digests
+
+
+def run_continuous_governed_improvement_cycle(
+    root: Path,
+    *,
+    mode: str,
+    baseline_summary: dict[str, Any] | None = None,
+    replay_scope: str = "full_replay",
+    iteration_id: str = "default",
+) -> dict[str, Any]:
+    knowledge_root = root / "memory" / "knowledge_expansion"
+    cycle_dir = knowledge_root / "continuous_governed_improvement"
+    cycle_dir.mkdir(parents=True, exist_ok=True)
+    normalized_iteration_id = _safe_candidate_filename(iteration_id)
+
+    discovery = run_knowledge_expansion_phase_l(root, mode=mode)
+    experimental_specs = run_knowledge_expansion_phase_b(root)
+    sandbox = run_knowledge_expansion_phase_c(root)
+    replay_judgment = run_knowledge_expansion_phase_d(
+        root,
+        mode=mode,
+        baseline_summary=baseline_summary,
+        replay_scope=replay_scope,
+    )
+    promotion_governance = run_knowledge_expansion_phase_e(root, mode=mode)
+    execution_governance = run_knowledge_expansion_phase_f(root, mode=mode)
+
+    phase_artifact_digests = {
+        "discovery": _artifact_digests(discovery.get("advanced_discovery_artifacts", [])),
+        "sandbox_generation": _artifact_digests(sandbox.get("sandbox_module_artifacts", [])),
+        "replay_judgment": _artifact_digests(replay_judgment.get("sandbox_judgments", [])),
+        "promotion_governance": _artifact_digests(
+            promotion_governance.get("promotion_governance_artifacts", [])
+        ),
+        "execution_governance": _artifact_digests(
+            execution_governance.get("execution_governance_artifacts", [])
+        ),
+    }
+    cycle_signature = _deterministic_payload_digest(
+        {
+            "iteration_id": normalized_iteration_id,
+            "mode": str(mode).lower(),
+            "replay_scope": replay_scope,
+            "phase_artifact_digests": phase_artifact_digests,
+        }
+    )
+
+    live_flags: list[bool] = []
+    for artifact_path in execution_governance.get("execution_governance_artifacts", []):
+        artifact_payload = read_json_safe(Path(artifact_path), default={})
+        if isinstance(artifact_payload, dict):
+            live_flags.append(bool(artifact_payload.get("live_activation_allowed", False)))
+    live_activation_blocked = not any(live_flags)
+
+    cycle_payload = {
+        "iteration_id": normalized_iteration_id,
+        "mode": str(mode).lower(),
+        "replay_scope": replay_scope,
+        "cycle_signature": cycle_signature,
+        "live_activation_blocked": live_activation_blocked,
+        "phase_artifact_digests": phase_artifact_digests,
+        "phase_counts": {
+            "discovery": int(discovery.get("advanced_discovery_count", 0)),
+            "sandbox_generation": int(sandbox.get("sandbox_module_count", 0)),
+            "replay_judgment": int(replay_judgment.get("sandbox_judgment_count", 0)),
+            "promotion_governance": int(promotion_governance.get("governance_artifact_count", 0)),
+            "execution_governance": int(execution_governance.get("execution_governance_artifact_count", 0)),
+        },
+        "registry_paths": {
+            "advanced_discovery": str(discovery.get("advanced_discovery_registry_path", "")),
+            "promotion_governance": str(promotion_governance.get("promotion_registry_path", "")),
+            "execution_governance": str(execution_governance.get("controlled_execution_registry_path", "")),
+        },
+    }
+
+    cycle_artifact_path = cycle_dir / f"cycle_{normalized_iteration_id}.json"
+    write_json_atomic(cycle_artifact_path, cycle_payload)
+
+    registry_path = cycle_dir / "continuous_governed_improvement_registry.json"
+    registry_payload = read_json_safe(registry_path, default={"cycles": []})
+    if not isinstance(registry_payload, dict):
+        registry_payload = {"cycles": []}
+    cycles = registry_payload.get("cycles", [])
+    if not isinstance(cycles, list):
+        cycles = []
+    cycles_by_iteration: dict[str, dict[str, Any]] = {}
+    for cycle in cycles:
+        if not isinstance(cycle, dict):
+            continue
+        existing_iteration_id = str(cycle.get("iteration_id", "")).strip()
+        if not existing_iteration_id:
+            continue
+        cycles_by_iteration[existing_iteration_id] = cycle
+    cycles_by_iteration[normalized_iteration_id] = {
+        "iteration_id": normalized_iteration_id,
+        "cycle_signature": cycle_signature,
+        "cycle_artifact_path": str(cycle_artifact_path),
+        "live_activation_blocked": live_activation_blocked,
+    }
+    registry_payload = {
+        "cycles": [cycles_by_iteration[cycle_id] for cycle_id in sorted(cycles_by_iteration)],
+    }
+    write_json_atomic(registry_path, registry_payload)
+
+    return {
+        "continuous_governed_improvement_enabled": str(mode).lower() == "replay",
+        "iteration_id": normalized_iteration_id,
+        "cycle_signature": cycle_signature,
+        "cycle_artifact_path": str(cycle_artifact_path),
+        "cycle_registry_path": str(registry_path),
+        "live_activation_blocked": live_activation_blocked,
+        "phase_results": {
+            "discovery": discovery,
+            "experimental_specs": experimental_specs,
+            "sandbox_generation": sandbox,
+            "replay_judgment": replay_judgment,
+            "promotion_governance": promotion_governance,
+            "execution_governance": execution_governance,
+        },
+    }
