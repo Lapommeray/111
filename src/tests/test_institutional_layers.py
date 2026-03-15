@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import time
 from pathlib import Path
 
 from run import RuntimeConfig, ensure_sample_data, run_pipeline
@@ -12,6 +14,7 @@ from src.risk.capital_guard import (
     evaluate_capital_protection,
     volatility_scaling_factor,
 )
+from src.strategy.intelligence import score_signal_intelligence
 
 
 def test_strategy_intelligence_signal_fields_and_artifacts(tmp_path: Path) -> None:
@@ -72,6 +75,69 @@ def test_live_trade_feedback_loop_is_deterministic_and_quarantines_unsafe(tmp_pa
     assert Path(first["paths"]["trade_outcomes"]).exists()
     assert Path(first["paths"]["feature_attribution"]).exists()
     assert Path(first["paths"]["mutation_candidates"]).exists()
+
+
+def test_live_trade_feedback_cleans_stale_artifacts_and_prunes_weak_mutations(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    feedback_root = memory_root / "live_trade_feedback"
+    feedback_root.mkdir(parents=True, exist_ok=True)
+    stale_artifact = feedback_root / "old_feedback_snapshot.json"
+    stale_artifact.write_text("{}", encoding="utf-8")
+    stale_timestamp = time.time() - (60 * 60 * 24 * 31)
+    os.utime(stale_artifact, (stale_timestamp, stale_timestamp))
+
+    feedback = process_live_trade_feedback(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {
+                "trade_id": "trade_weak",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -1.2,
+            }
+        ],
+        feature_contributors={"setup_score": 0.9},
+        replay_scope="full_replay",
+    )
+    mutation_candidates_payload = json.loads(Path(feedback["paths"]["mutation_candidates"]).read_text(encoding="utf-8"))
+
+    assert not stale_artifact.exists()
+    assert str(stale_artifact) in feedback["cleanup"]["deleted_artifacts"]
+    assert feedback["mutation_candidate"]["governance"]["quarantine_required"] is True
+    assert mutation_candidates_payload["mutation_candidates"] == []
+
+
+def test_signal_intelligence_keeps_best_patterns_and_prunes_low_usefulness(tmp_path: Path) -> None:
+    memory_root = str(tmp_path / "memory")
+    low_quality = score_signal_intelligence(
+        memory_root=memory_root,
+        symbol="XAUUSD",
+        decision="BUY",
+        base_confidence=0.1,
+        module_results={"module_a": {"confidence_delta": -0.3, "direction_vote": "neutral", "blocked": True}},
+        outcomes=[{"status": "closed", "result": "loss"}],
+    )
+    high_quality = score_signal_intelligence(
+        memory_root=memory_root,
+        symbol="XAUUSD",
+        decision="BUY",
+        base_confidence=0.85,
+        module_results={
+            "module_a": {"confidence_delta": 0.2, "direction_vote": "buy", "blocked": False},
+            "module_b": {"confidence_delta": 0.15, "direction_vote": "buy", "blocked": False},
+        },
+        outcomes=[
+            {"status": "closed", "result": "win"},
+            {"status": "closed", "result": "win"},
+        ],
+    )
+    quality_path = Path(high_quality["paths"]["signal_quality_registry"])
+    quality_registry = json.loads(quality_path.read_text(encoding="utf-8"))
+
+    signal_ids = [item["signal_id"] for item in quality_registry["signals"]]
+    assert high_quality["signal_id"] in quality_registry["best_signal_patterns"]
+    assert high_quality["signal_id"] in signal_ids
+    assert low_quality["signal_id"] not in signal_ids
 
 
 def test_capital_guard_enforces_daily_loss_limit() -> None:

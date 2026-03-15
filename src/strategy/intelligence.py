@@ -7,6 +7,10 @@ from typing import Any
 
 from src.utils import clamp, read_json_safe, write_json_atomic
 
+_MAX_SIGNAL_PATTERNS = 200
+_MIN_USEFULNESS_SCORE = 0.35
+_MAX_BEST_SIGNAL_PATTERNS = 25
+
 
 def _feature_score(feature_payload: dict[str, Any]) -> float:
     confidence_delta = float(feature_payload.get("confidence_delta", 0.0))
@@ -19,6 +23,26 @@ def _feature_score(feature_payload: dict[str, Any]) -> float:
 
 def _closed_outcomes(outcomes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [item for item in outcomes if str(item.get("status", "")).lower() == "closed"]
+
+
+def _signal_usefulness(
+    *,
+    signal_score: float,
+    confidence: float,
+    confirmation_ratio: float,
+    win_rate: float,
+) -> float:
+    return round(
+        clamp(
+            (signal_score * 0.4)
+            + (confidence * 0.35)
+            + (confirmation_ratio * 0.15)
+            + (win_rate * 0.1),
+            0.0,
+            1.0,
+        ),
+        4,
+    )
 
 
 def score_signal_intelligence(
@@ -78,6 +102,12 @@ def score_signal_intelligence(
         "contributors": contributors,
     }
     signal_id = sha256(json.dumps(signal_key_payload, sort_keys=True).encode("utf-8")).hexdigest()[:16]
+    usefulness_score = _signal_usefulness(
+        signal_score=signal_score,
+        confidence=confidence,
+        confirmation_ratio=confirmation_ratio,
+        win_rate=win_rate,
+    )
 
     quality_registry = read_json_safe(quality_path, default={"signals": []})
     if not isinstance(quality_registry, dict):
@@ -94,6 +124,7 @@ def score_signal_intelligence(
             "signal_score": signal_score,
             "confidence": confidence,
             "confirmation_ratio": confirmation_ratio,
+            "usefulness_score": usefulness_score,
             "feature_contributors": contributors,
             "outcome_attribution": {
                 "closed_outcomes": len(closed),
@@ -101,7 +132,29 @@ def score_signal_intelligence(
             },
         }
     )
-    write_json_atomic(quality_path, {"signals": filtered_signals[-200:]})
+    pruned_signals = [
+        signal
+        for signal in filtered_signals
+        if float(signal.get("usefulness_score", 0.0)) >= _MIN_USEFULNESS_SCORE
+    ]
+    pruned_signals.sort(
+        key=lambda signal: (
+            float(signal.get("usefulness_score", 0.0)),
+            str(signal.get("signal_id", "")),
+        ),
+        reverse=True,
+    )
+    write_json_atomic(
+        quality_path,
+        {
+            "signals": pruned_signals[:_MAX_SIGNAL_PATTERNS],
+            "best_signal_patterns": [
+                str(signal.get("signal_id", ""))
+                for signal in pruned_signals[:_MAX_BEST_SIGNAL_PATTERNS]
+                if str(signal.get("signal_id", ""))
+            ],
+        },
+    )
 
     feature_state = read_json_safe(feature_path, default={"feature_scores": {}})
     if not isinstance(feature_state, dict):
@@ -119,6 +172,12 @@ def score_signal_intelligence(
             "running_score": running_score,
             "samples": updated_samples,
         }
+    historical_feature_scores = {
+        feature_name: feature_payload
+        for feature_name, feature_payload in historical_feature_scores.items()
+        if float(feature_payload.get("running_score", 0.0)) >= 0.15
+        or int(feature_payload.get("samples", 0)) < 5
+    }
     write_json_atomic(feature_path, {"feature_scores": historical_feature_scores})
 
     confidence_state = {
