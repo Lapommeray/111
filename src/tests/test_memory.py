@@ -141,6 +141,40 @@ def test_run_pipeline_first_run_live_and_replay_csv(tmp_path: Path) -> None:
     assert live_output["symbol"] == replay_output["symbol"] == "XAUUSD"
 
 
+def test_market_structure_detectors_are_persisted_in_snapshot_memory(tmp_path: Path) -> None:
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+    memory_root = tmp_path / "memory"
+
+    run_pipeline(
+        RuntimeConfig(
+            symbol="XAUUSD",
+            timeframe="M5",
+            bars=120,
+            sample_path=str(sample_path),
+            memory_root=str(memory_root),
+            mode="replay",
+            replay_source="csv",
+            replay_csv_path=str(sample_path),
+        )
+    )
+
+    snapshot_payload = json.loads((memory_root / "pattern_memory.json").read_text(encoding="utf-8"))
+    latest = snapshot_payload["patterns"][-1]
+    modules = latest["advanced_state"]["module_results"]
+    for detector_name in (
+        "liquidity_sweep",
+        "compression_expansion",
+        "session_behavior",
+        "market_regime",
+        "execution_quality",
+    ):
+        assert detector_name in modules
+        payload = modules[detector_name]["payload"]
+        assert "confidence" in payload
+        assert "confidence_level" in payload
+
+
 def test_run_pipeline_compact_output_mode(tmp_path: Path) -> None:
     sample_path = tmp_path / "samples" / "xauusd.csv"
     ensure_sample_data(sample_path)

@@ -8,10 +8,12 @@ from src.module_factory import ModuleFactory
 from src.features.fvg import detect_fvg_state
 from src.features.human_lag_exploit import measure_human_lag_signal
 from src.features.invisible_data_miner import mine_internal_patterns
+from src.features.liquidity import detect_liquidity_sweep_state
+from src.features.market_structure import classify_market_regime
 from src.features.quantum_tremor_scanner import scan_tremor_state
-from src.features.sessions import compute_session_state
-from src.features.spread_state import compute_spread_state
-from src.features.volatility import compute_volatility_state
+from src.features.sessions import compute_session_state, track_session_behavior
+from src.features.spread_state import compute_spread_state, track_execution_quality
+from src.features.volatility import compute_volatility_state, detect_compression_expansion_state
 from src.filters.conflict_filter import apply_conflict_filter
 from src.filters.memory_filter import apply_memory_filter
 from src.filters.self_destruct_protocol import apply_self_destruct_protocol
@@ -39,6 +41,11 @@ class OversoulDirector:
             "volatility": {"role": "volatility_regime", "group": "features"},
             "sessions": {"role": "session_classifier", "group": "features"},
             "spread_state": {"role": "spread_proxy_estimator", "group": "features"},
+            "liquidity_sweep": {"role": "liquidity_sweep_stop_run_detector", "group": "features"},
+            "compression_expansion": {"role": "compression_expansion_detector", "group": "features"},
+            "session_behavior": {"role": "session_behavior_tracker", "group": "features"},
+            "market_regime": {"role": "market_regime_classifier", "group": "features"},
+            "execution_quality": {"role": "execution_quality_tracker", "group": "features"},
             "invisible_data_miner": {"role": "internal_pattern_miner", "group": "features"},
             "human_lag_exploit": {"role": "public_behavior_lag_model", "group": "features"},
             "quantum_tremor_scanner": {"role": "micro_volatility_tremor_model", "group": "features"},
@@ -152,12 +159,18 @@ def run_advanced_modules(
         base_direction=base_direction,
     )
 
+    volatility_output = compute_volatility_state(bars)
     feature_outputs: dict[str, dict[str, Any]] = {
         "displacement": compute_displacement(bars),
         "fvg": detect_fvg_state(bars),
-        "volatility": compute_volatility_state(bars),
+        "volatility": volatility_output,
         "sessions": compute_session_state(bars),
         "spread_state": compute_spread_state(bars),
+        "liquidity_sweep": detect_liquidity_sweep_state(bars),
+        "compression_expansion": detect_compression_expansion_state(bars),
+        "session_behavior": track_session_behavior(bars, trade_outcomes),
+        "market_regime": classify_market_regime(structure, volatility_output),
+        "execution_quality": track_execution_quality(bars),
         "invisible_data_miner": mine_internal_patterns(bars, structure, liquidity),
         "human_lag_exploit": measure_human_lag_signal(bars),
         "quantum_tremor_scanner": scan_tremor_state(bars),
