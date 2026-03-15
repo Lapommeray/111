@@ -95,6 +95,9 @@ def _build_trade_review(
         reasons = outcome.get("source_reasons", [])
         if not isinstance(reasons, list):
             reasons = []
+        default_entry_reason = "unknown"
+        if reasons:
+            default_entry_reason = str(reasons[0])
         result = str(outcome.get("result", "unknown")).lower()
         pnl_points = float(outcome.get("pnl_points", 0.0))
         if result == "loss":
@@ -108,7 +111,7 @@ def _build_trade_review(
         reviews.append(
             {
                 "trade_id": str(outcome.get("trade_id", "")),
-                "entry_reason": str(outcome.get("entry_reason", reasons[0] if reasons else "unknown")),
+                "entry_reason": str(outcome.get("entry_reason", default_entry_reason)),
                 "exit_reason": str(outcome.get("exit_reason", result)),
                 "regime": str(outcome.get("regime", regime)),
                 "setup_type": str(outcome.get("setup_type", direction.lower())),
@@ -204,9 +207,9 @@ def _memory_maintenance(*, autonomous_root: Path, trade_review: dict[str, Any]) 
     if not isinstance(trade_reviews, list):
         trade_reviews = []
     retained_reviews = trade_reviews[-120:]
-    low_value_pruned = sum(1 for review in trade_reviews if str(review.get("result", "")).lower() == "flat")
+    low_value_pattern_count = sum(1 for review in trade_reviews if str(review.get("result", "")).lower() == "flat")
     high_performance_patterns = [
-        review for review in retained_reviews if str(review.get("result", "")).lower() == "win" and float(review.get("pnl_points", 0.0)) > 0
+        review for review in retained_reviews if str(review.get("result", "")).lower() == "win"
     ]
     deleted_stale_artifacts: list[str] = []
     for artifact in autonomous_root.glob("*.json"):
@@ -214,7 +217,7 @@ def _memory_maintenance(*, autonomous_root: Path, trade_review: dict[str, Any]) 
             artifact.unlink(missing_ok=True)
             deleted_stale_artifacts.append(str(artifact))
     maintenance = {
-        "low_value_patterns_pruned": low_value_pruned,
+        "low_value_patterns_pruned": low_value_pattern_count,
         "history_compression": {
             "before": len(trade_reviews),
             "after": len(retained_reviews),

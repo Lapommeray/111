@@ -3290,6 +3290,8 @@ def run_continuous_governed_improvement_cycle(
     mutation_candidates = mutation_candidate_payload.get("mutation_candidates", [])
     if not isinstance(mutation_candidates, list):
         mutation_candidates = []
+    spread_ratio_on_refusal = 2.2
+    slippage_ratio_on_rollback = 1.8
     autonomous_behavior = run_autonomous_behavior_layer(
         memory_root=root / "memory",
         trade_outcomes=feedback_outcomes,
@@ -3299,8 +3301,8 @@ def run_continuous_governed_improvement_cycle(
                 baseline_summary.get("volatility_ratio", 1.0) if isinstance(baseline_summary, dict) else 1.0,
                 default=1.0,
             ),
-            "spread_ratio": 1.0 if not governed_refusal.get("refused", False) else 2.2,
-            "slippage_ratio": 1.0 if not governed_rollback.get("triggered", False) else 1.8,
+            "spread_ratio": 1.0 if not governed_refusal.get("refused", False) else spread_ratio_on_refusal,
+            "slippage_ratio": 1.0 if not governed_rollback.get("triggered", False) else slippage_ratio_on_rollback,
             "stale_price_data": not bool(artifact_integrity.get("all_checks_passed", False)),
             "mt5_ready": not bool(governed_refusal.get("refused", False)),
             "recent_setup_confidence": _to_float(
