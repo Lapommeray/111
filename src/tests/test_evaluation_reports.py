@@ -44,6 +44,18 @@ def test_module_contribution_report_shape() -> None:
     assert report["module_count"] >= 1
     assert "spectral_signal_fusion" in report["modules"]
     assert report["modules"]["spectral_signal_fusion"]["samples"] == 2
+    assert report["modules"]["spectral_signal_fusion"]["action_alignment"] == {
+        "aligned": 1,
+        "misaligned": 1,
+        "wait_aligned": 0,
+        "alignment_ratio": 0.5,
+        "count_wait_alignment": False,
+    }
+    assert "regime_specific_alignment" in report["modules"]["spectral_signal_fusion"]
+    assert "contradiction_reduction_proxy" in report["modules"]["spectral_signal_fusion"]
+    assert "blocker_protection_strength" in report["modules"]["spectral_signal_fusion"]
+    assert "confidence_calibration_shift" in report["modules"]["spectral_signal_fusion"]
+    assert "drawdown_prevention_proxy" in report["modules"]["spectral_signal_fusion"]
 
 
 def test_blocker_effect_report_shape() -> None:
@@ -94,6 +106,9 @@ def test_run_replay_evaluation_writes_json_report(tmp_path: Path) -> None:
         evaluation_steps=4,
         evaluation_stride=5,
         evaluation_output_path=str(report_path),
+        knowledge_expansion_enabled=True,
+        knowledge_expansion_root=str(tmp_path / "memory" / "knowledge_expansion"),
+        knowledge_candidate_limit=5,
     )
 
     report = run_replay_evaluation(config)
@@ -102,6 +117,18 @@ def test_run_replay_evaluation_writes_json_report(tmp_path: Path) -> None:
     assert report["steps"] == 4
     assert "module_contribution_report" in report
     assert report_path.exists()
+    module_any = next(iter(report["module_contribution_report"]["modules"].values()))
+    assert "regime_specific_alignment" in module_any
+    assert "contradiction_reduction_proxy" in module_any
+    assert "blocker_protection_strength" in module_any
+    assert "confidence_calibration_shift" in module_any
+    assert "drawdown_prevention_proxy" in module_any
+    assert "knowledge_expansion_phase_a" in report
+    assert report["knowledge_expansion_phase_a"]["enabled"] is True
+
+    loaded = json.loads(report_path.read_text(encoding="utf-8"))
+    assert loaded["steps"] == 4
+    assert loaded["knowledge_expansion_phase_a"]["enabled"] is True
 
     loaded = json.loads(report_path.read_text(encoding="utf-8"))
     assert loaded["steps"] == 4

@@ -32,6 +32,9 @@ def evaluate_replay(
     compact_output: bool,
     evaluation_steps: int,
     evaluation_stride: int,
+    knowledge_expansion_enabled: bool = False,
+    knowledge_expansion_root: str = "memory/knowledge_expansion",
+    knowledge_candidate_limit: int = 6,
 ) -> dict[str, Any]:
     """Run replay evaluation using the existing replay pipeline path only."""
     rows = _load_rows(Path(replay_csv_path))
@@ -89,6 +92,11 @@ def evaluate_replay(
         "module_contribution_report": build_module_contribution_report(records),
         "session_report": build_session_report(records),
         "records": records,
+        "knowledge_expansion_config": {
+            "enabled": knowledge_expansion_enabled,
+            "root": knowledge_expansion_root,
+            "candidate_limit": knowledge_candidate_limit,
+        },
     }
 
 

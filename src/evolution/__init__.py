@@ -6,6 +6,10 @@ from src.evolution.gap_discovery import GapDiscovery
 from src.evolution.promoter import Promoter
 from src.evolution.self_inspector import SelfInspector
 from src.evolution.verifier import Verifier
+from src.evolution.knowledge_expansion_orchestrator import (
+    KnowledgeExpansionOrchestrator,
+    run_knowledge_expansion_phase_a,
+)
 
 __all__ = [
     "ArchitectureGuard",
@@ -16,4 +20,6 @@ __all__ = [
     "Promoter",
     "SelfInspector",
     "Verifier",
+    "KnowledgeExpansionOrchestrator",
+    "run_knowledge_expansion_phase_a",
 ]

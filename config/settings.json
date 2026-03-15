@@ -16,5 +16,9 @@
   "compact_output": false,
   "evaluation_steps": 30,
   "evaluation_stride": 5,
+  "evaluation_output_path": "memory/replay_evaluation_report.json",
+  "knowledge_expansion_enabled": false,
+  "knowledge_expansion_root": "memory/knowledge_expansion",
+  "knowledge_candidate_limit": 6
   "evaluation_output_path": "memory/replay_evaluation_report.json"
 }

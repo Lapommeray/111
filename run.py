@@ -16,6 +16,7 @@ from src.evolution.gap_discovery import GapDiscovery
 from src.evolution.promoter import Promoter
 from src.evolution.self_inspector import SelfInspector
 from src.evolution.verifier import Verifier
+from src.evolution.knowledge_expansion_orchestrator import run_knowledge_expansion_phase_a
 from src.features.liquidity import assess_liquidity_state
 from src.features.market_structure import classify_market_structure
 from src.filters.loss_blocker import LossBlocker
@@ -56,6 +57,9 @@ class RuntimeConfig:
     evaluation_steps: int = 30
     evaluation_stride: int = 5
     evaluation_output_path: str = "memory/replay_evaluation_report.json"
+    knowledge_expansion_enabled: bool = False
+    knowledge_expansion_root: str = "memory/knowledge_expansion"
+    knowledge_candidate_limit: int = 6
 
 
 def ensure_sample_data(path: Path) -> None:
@@ -122,6 +126,9 @@ def load_runtime_config(path: Path) -> RuntimeConfig:
         evaluation_steps=int(data.get("evaluation_steps", 30)),
         evaluation_stride=int(data.get("evaluation_stride", 5)),
         evaluation_output_path=str(data.get("evaluation_output_path", "memory/replay_evaluation_report.json")),
+        knowledge_expansion_enabled=bool(data.get("knowledge_expansion_enabled", False)),
+        knowledge_expansion_root=str(data.get("knowledge_expansion_root", "memory/knowledge_expansion")),
+        knowledge_candidate_limit=int(data.get("knowledge_candidate_limit", 6)),
     )
 
 
@@ -142,6 +149,7 @@ def validate_runtime_config(config: RuntimeConfig) -> None:
     Path(config.evolution_registry_path).parent.mkdir(parents=True, exist_ok=True)
     Path(config.evolution_artifact_root).mkdir(parents=True, exist_ok=True)
     Path(config.evaluation_output_path).parent.mkdir(parents=True, exist_ok=True)
+    Path(config.knowledge_expansion_root).mkdir(parents=True, exist_ok=True)
 
     if config.evaluation_steps <= 0:
         raise ValueError("evaluation_steps must be > 0")
@@ -557,6 +565,18 @@ def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
         compact_output=config.compact_output,
         evaluation_steps=config.evaluation_steps,
         evaluation_stride=config.evaluation_stride,
+        knowledge_expansion_enabled=config.knowledge_expansion_enabled,
+        knowledge_expansion_root=config.knowledge_expansion_root,
+        knowledge_candidate_limit=config.knowledge_candidate_limit,
+    )
+
+    if config.knowledge_expansion_enabled:
+        report["knowledge_expansion_phase_a"] = run_knowledge_expansion_phase_a(
+            replay_report=report,
+            root=Path(config.knowledge_expansion_root),
+            candidate_limit=config.knowledge_candidate_limit,
+        )
+
     )
 
     Path(config.evaluation_output_path).write_text(json.dumps(report, indent=2), encoding="utf-8")
@@ -573,6 +593,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--evaluate-replay", choices=["true", "false"], default=None)
     parser.add_argument("--evaluation-steps", type=int, default=None)
     parser.add_argument("--evaluation-stride", type=int, default=None)
+    parser.add_argument("--knowledge-expansion-enabled", choices=["true", "false"], default=None)
     return parser.parse_args()
 
 
