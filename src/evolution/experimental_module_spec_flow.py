@@ -2026,6 +2026,106 @@ def _artifact_digests(paths: list[str]) -> dict[str, str]:
     return digests
 
 
+def _load_registry_candidate_ids(registry_path: Path, records_key: str) -> set[str]:
+    payload = read_json_safe(registry_path, default={})
+    if not isinstance(payload, dict):
+        return set()
+    records = payload.get(records_key, [])
+    if not isinstance(records, list):
+        return set()
+    candidate_ids: set[str] = set()
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        candidate_id = str(record.get("candidate_id", "")).strip()
+        if candidate_id:
+            candidate_ids.add(candidate_id)
+    return candidate_ids
+
+
+def _artifact_candidate_ids(artifact_paths: list[str]) -> set[str]:
+    candidate_ids: set[str] = set()
+    for artifact_path in artifact_paths:
+        payload = read_json_safe(Path(artifact_path), default={})
+        if not isinstance(payload, dict):
+            continue
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        if candidate_id:
+            candidate_ids.add(candidate_id)
+    return candidate_ids
+
+
+def _artifact_integrity_report(paths: list[str]) -> dict[str, Any]:
+    artifacts: list[dict[str, Any]] = []
+    for path_str in sorted(paths):
+        artifact_path = Path(path_str)
+        raw_payload = artifact_path.read_text(encoding="utf-8") if artifact_path.exists() else ""
+        parsed_payload = read_json_safe(artifact_path, default=None)
+        parse_ok = isinstance(parsed_payload, dict)
+        canonical_digest = _deterministic_payload_digest(parsed_payload if parse_ok else {})
+        artifacts.append(
+            {
+                "artifact_path": str(artifact_path),
+                "exists": artifact_path.exists(),
+                "parse_ok": parse_ok,
+                "canonical_digest": canonical_digest,
+                "raw_digest": hashlib.blake2b(raw_payload.encode("utf-8"), digest_size=16).hexdigest(),
+            }
+        )
+    return {
+        "artifact_count": len(artifacts),
+        "all_present": all(bool(item["exists"]) for item in artifacts),
+        "all_parse_ok": all(bool(item["parse_ok"]) for item in artifacts),
+        "artifacts": artifacts,
+    }
+
+
+def _is_cycle_artifact_stale(existing_cycle_payload: Any) -> tuple[bool, list[str]]:
+    if not isinstance(existing_cycle_payload, dict):
+        return False, []
+    stale_reasons: list[str] = []
+    phase_artifact_digests = existing_cycle_payload.get("phase_artifact_digests", {})
+    if not isinstance(phase_artifact_digests, dict):
+        return False, []
+    for phase_name, digest_map in phase_artifact_digests.items():
+        if not isinstance(digest_map, dict):
+            continue
+        for artifact_path, expected_digest in digest_map.items():
+            path_obj = Path(str(artifact_path))
+            if not path_obj.exists():
+                stale_reasons.append(f"{phase_name}:missing:{artifact_path}")
+                continue
+            current_payload = read_json_safe(path_obj, default={})
+            current_digest = _deterministic_payload_digest(current_payload)
+            if current_digest != str(expected_digest):
+                stale_reasons.append(f"{phase_name}:digest_mismatch:{artifact_path}")
+    return (len(stale_reasons) > 0, stale_reasons)
+
+
+def _refresh_stale_artifacts(
+    stale_reasons: list[str],
+    *,
+    mode: str,
+    root: Path,
+    baseline_summary: dict[str, Any] | None,
+    replay_scope: str,
+) -> bool:
+    if str(mode).lower() != "replay" or not stale_reasons:
+        return False
+    run_knowledge_expansion_phase_l(root, mode=mode)
+    run_knowledge_expansion_phase_b(root)
+    run_knowledge_expansion_phase_c(root)
+    run_knowledge_expansion_phase_d(
+        root,
+        mode=mode,
+        baseline_summary=baseline_summary,
+        replay_scope=replay_scope,
+    )
+    run_knowledge_expansion_phase_e(root, mode=mode)
+    run_knowledge_expansion_phase_f(root, mode=mode)
+    return True
+
+
 def run_continuous_governed_improvement_cycle(
     root: Path,
     *,
@@ -2038,6 +2138,36 @@ def run_continuous_governed_improvement_cycle(
     cycle_dir = knowledge_root / "continuous_governed_improvement"
     cycle_dir.mkdir(parents=True, exist_ok=True)
     normalized_iteration_id = _safe_candidate_filename(iteration_id)
+    cycle_artifact_path = cycle_dir / f"cycle_{normalized_iteration_id}.json"
+    cycle_state_path = cycle_dir / f"cycle_state_{normalized_iteration_id}.json"
+
+    previous_state_payload = read_json_safe(cycle_state_path, default={})
+    recovering_interrupted_cycle = (
+        isinstance(previous_state_payload, dict)
+        and str(previous_state_payload.get("status", "")).strip().lower() == "in_progress"
+    )
+    existing_cycle_payload = read_json_safe(cycle_artifact_path, default={})
+    stale_detected, stale_reasons = _is_cycle_artifact_stale(existing_cycle_payload)
+    stale_refreshed = _refresh_stale_artifacts(
+        stale_reasons,
+        mode=mode,
+        root=root,
+        baseline_summary=baseline_summary,
+        replay_scope=replay_scope,
+    )
+    write_json_atomic(
+        cycle_state_path,
+        {
+            "iteration_id": normalized_iteration_id,
+            "status": "in_progress",
+            "recovery": {"interrupted_cycle_recovered": recovering_interrupted_cycle},
+            "stale_detection": {
+                "detected": stale_detected,
+                "reasons": stale_reasons,
+                "safe_refresh_applied": stale_refreshed,
+            },
+        },
+    )
 
     discovery = run_knowledge_expansion_phase_l(root, mode=mode)
     experimental_specs = run_knowledge_expansion_phase_b(root)
@@ -2050,6 +2180,55 @@ def run_continuous_governed_improvement_cycle(
     )
     promotion_governance = run_knowledge_expansion_phase_e(root, mode=mode)
     execution_governance = run_knowledge_expansion_phase_f(root, mode=mode)
+
+    replay_candidate_ids = _artifact_candidate_ids(replay_judgment.get("sandbox_judgments", []))
+    promotion_candidate_ids = _artifact_candidate_ids(promotion_governance.get("promotion_governance_artifacts", []))
+    execution_candidate_ids = _artifact_candidate_ids(
+        execution_governance.get("execution_governance_artifacts", [])
+    )
+    promotion_registry_path = Path(str(promotion_governance.get("promotion_registry_path", "")))
+    execution_registry_path = Path(str(execution_governance.get("controlled_execution_registry_path", "")))
+    promotion_registry_candidates = _load_registry_candidate_ids(
+        promotion_registry_path,
+        "governance_records",
+    )
+    execution_registry_candidates = _load_registry_candidate_ids(
+        execution_registry_path,
+        "execution_records",
+    )
+    phase_registry_consistency = {
+        "replay_to_promotion_artifacts_match": replay_candidate_ids == promotion_candidate_ids,
+        "promotion_to_execution_artifacts_match": promotion_candidate_ids == execution_candidate_ids,
+        "promotion_artifacts_in_registry": promotion_candidate_ids.issubset(promotion_registry_candidates),
+        "execution_artifacts_in_registry": execution_candidate_ids.issubset(execution_registry_candidates),
+        "candidate_counts": {
+            "replay_judgment": len(replay_candidate_ids),
+            "promotion_governance": len(promotion_candidate_ids),
+            "execution_governance": len(execution_candidate_ids),
+        },
+    }
+    phase_registry_consistency["all_checks_passed"] = all(
+        bool(value)
+        for key, value in phase_registry_consistency.items()
+        if key not in {"candidate_counts"}
+    )
+
+    artifact_integrity = {
+        "discovery": _artifact_integrity_report(discovery.get("advanced_discovery_artifacts", [])),
+        "sandbox_generation": _artifact_integrity_report(sandbox.get("sandbox_module_artifacts", [])),
+        "replay_judgment": _artifact_integrity_report(replay_judgment.get("sandbox_judgments", [])),
+        "promotion_governance": _artifact_integrity_report(
+            promotion_governance.get("promotion_governance_artifacts", [])
+        ),
+        "execution_governance": _artifact_integrity_report(
+            execution_governance.get("execution_governance_artifacts", [])
+        ),
+    }
+    artifact_integrity["all_checks_passed"] = all(
+        bool(item.get("all_present", False)) and bool(item.get("all_parse_ok", False))
+        for phase_name, item in artifact_integrity.items()
+        if phase_name != "all_checks_passed" and isinstance(item, dict)
+    )
 
     phase_artifact_digests = {
         "discovery": _artifact_digests(discovery.get("advanced_discovery_artifacts", [])),
@@ -2068,6 +2247,8 @@ def run_continuous_governed_improvement_cycle(
             "mode": str(mode).lower(),
             "replay_scope": replay_scope,
             "phase_artifact_digests": phase_artifact_digests,
+            "artifact_integrity": artifact_integrity,
+            "phase_registry_consistency": phase_registry_consistency,
         }
     )
 
@@ -2085,6 +2266,14 @@ def run_continuous_governed_improvement_cycle(
         "cycle_signature": cycle_signature,
         "live_activation_blocked": live_activation_blocked,
         "phase_artifact_digests": phase_artifact_digests,
+        "artifact_integrity": artifact_integrity,
+        "phase_registry_consistency": phase_registry_consistency,
+        "cycle_recovery": {
+            "interrupted_cycle_recovered": recovering_interrupted_cycle,
+            "stale_artifacts_detected": stale_detected,
+            "safe_refresh_applied": stale_refreshed,
+        },
+        "stale_artifact_reasons": stale_reasons,
         "phase_counts": {
             "discovery": int(discovery.get("advanced_discovery_count", 0)),
             "sandbox_generation": int(sandbox.get("sandbox_module_count", 0)),
@@ -2099,7 +2288,6 @@ def run_continuous_governed_improvement_cycle(
         },
     }
 
-    cycle_artifact_path = cycle_dir / f"cycle_{normalized_iteration_id}.json"
     write_json_atomic(cycle_artifact_path, cycle_payload)
 
     registry_path = cycle_dir / "continuous_governed_improvement_registry.json"
@@ -2127,6 +2315,21 @@ def run_continuous_governed_improvement_cycle(
         "cycles": [cycles_by_iteration[cycle_id] for cycle_id in sorted(cycles_by_iteration)],
     }
     write_json_atomic(registry_path, registry_payload)
+    write_json_atomic(
+        cycle_state_path,
+        {
+            "iteration_id": normalized_iteration_id,
+            "status": "completed",
+            "cycle_signature": cycle_signature,
+            "recovery": {"interrupted_cycle_recovered": recovering_interrupted_cycle},
+            "stale_detection": {
+                "detected": stale_detected,
+                "reasons": stale_reasons,
+                "safe_refresh_applied": stale_refreshed,
+            },
+            "live_activation_blocked": live_activation_blocked,
+        },
+    )
 
     return {
         "continuous_governed_improvement_enabled": str(mode).lower() == "replay",
@@ -2134,7 +2337,11 @@ def run_continuous_governed_improvement_cycle(
         "cycle_signature": cycle_signature,
         "cycle_artifact_path": str(cycle_artifact_path),
         "cycle_registry_path": str(registry_path),
+        "cycle_state_path": str(cycle_state_path),
         "live_activation_blocked": live_activation_blocked,
+        "artifact_integrity": artifact_integrity,
+        "phase_registry_consistency": phase_registry_consistency,
+        "cycle_recovery": cycle_payload["cycle_recovery"],
         "phase_results": {
             "discovery": discovery,
             "experimental_specs": experimental_specs,

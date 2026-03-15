@@ -122,3 +122,83 @@ def test_continuous_cycle_does_not_mutate_live_execution_paths(tmp_path: Path) -
         payload = json.loads(Path(artifact_path).read_text(encoding="utf-8"))
         assert payload["live_activation_allowed"] is False
         assert payload["risk_constraints"]["live_execution_blocked"] is True
+
+
+def test_continuous_cycle_reports_artifact_integrity_and_registry_consistency(tmp_path: Path) -> None:
+    _seed_validated_knowledge(tmp_path)
+
+    result = run_continuous_governed_improvement_cycle(
+        tmp_path,
+        mode="replay",
+        baseline_summary={"score": 0.0},
+        iteration_id="integrity",
+    )
+
+    integrity = result["artifact_integrity"]
+    assert integrity["all_checks_passed"] is True
+    assert integrity["execution_governance"]["all_present"] is True
+    first_exec_artifact = integrity["execution_governance"]["artifacts"][0]
+    assert first_exec_artifact["canonical_digest"]
+    assert first_exec_artifact["raw_digest"]
+
+    consistency = result["phase_registry_consistency"]
+    assert consistency["all_checks_passed"] is True
+    assert consistency["candidate_counts"]["replay_judgment"] == 1
+    assert consistency["candidate_counts"]["promotion_governance"] == 1
+    assert consistency["candidate_counts"]["execution_governance"] == 1
+
+
+def test_continuous_cycle_recovers_from_interrupted_state(tmp_path: Path) -> None:
+    _seed_validated_knowledge(tmp_path)
+    cycle_dir = tmp_path / "memory" / "knowledge_expansion" / "continuous_governed_improvement"
+    cycle_dir.mkdir(parents=True, exist_ok=True)
+    cycle_state_path = cycle_dir / "cycle_state_recover.json"
+    cycle_state_path.write_text(
+        json.dumps(
+            {
+                "iteration_id": "recover",
+                "status": "in_progress",
+                "recovery": {"interrupted_cycle_recovered": False},
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_continuous_governed_improvement_cycle(
+        tmp_path,
+        mode="replay",
+        baseline_summary={"score": 0.0},
+        iteration_id="recover",
+    )
+    final_state = json.loads(Path(result["cycle_state_path"]).read_text(encoding="utf-8"))
+
+    assert result["cycle_recovery"]["interrupted_cycle_recovered"] is True
+    assert final_state["status"] == "completed"
+    assert final_state["recovery"]["interrupted_cycle_recovered"] is True
+
+
+def test_continuous_cycle_detects_stale_artifacts_and_applies_safe_refresh(tmp_path: Path) -> None:
+    _seed_validated_knowledge(tmp_path)
+    first = run_continuous_governed_improvement_cycle(
+        tmp_path,
+        mode="replay",
+        baseline_summary={"score": 0.0},
+        iteration_id="stale",
+    )
+    first_cycle_payload = json.loads(Path(first["cycle_artifact_path"]).read_text(encoding="utf-8"))
+    sandbox_digest_map = first_cycle_payload["phase_artifact_digests"]["sandbox_generation"]
+    stale_path = Path(next(iter(sandbox_digest_map)))
+    stale_path.write_text(json.dumps({"candidate_id": "cand_alpha", "tampered": True}, indent=2), encoding="utf-8")
+
+    second = run_continuous_governed_improvement_cycle(
+        tmp_path,
+        mode="replay",
+        baseline_summary={"score": 0.0},
+        iteration_id="stale",
+    )
+
+    assert second["cycle_recovery"]["stale_artifacts_detected"] is True
+    assert second["cycle_recovery"]["safe_refresh_applied"] is True
+    second_cycle_payload = json.loads(Path(second["cycle_artifact_path"]).read_text(encoding="utf-8"))
+    assert any("digest_mismatch" in reason for reason in second_cycle_payload["stale_artifact_reasons"])
