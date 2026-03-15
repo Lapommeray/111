@@ -196,6 +196,15 @@ PHASE_F_DECISION_SEQUENCE = (
     PHASE_F_ELIGIBLE_FOR_CONTROLLED_EXECUTION_REVIEW,
 )
 PHASE_F_GOVERNOR_VERSION = "phase_f_governor_v1"
+PHASE_G_HOLD_NON_LIVE = "hold_non_live"
+PHASE_G_PAPER_EXECUTION_ONLY = "paper_execution_only"
+PHASE_G_CONTROLLED_REVIEW_SIGNAL = "controlled_review_signal"
+PHASE_G_DECISION_SEQUENCE = (
+    PHASE_G_HOLD_NON_LIVE,
+    PHASE_G_PAPER_EXECUTION_ONLY,
+    PHASE_G_CONTROLLED_REVIEW_SIGNAL,
+)
+PHASE_G_GOVERNOR_VERSION = "phase_g_governor_v1"
 
 
 def _to_float(value: Any, default: float = 0.0) -> float:
@@ -626,4 +635,212 @@ def run_knowledge_expansion_phase_f(
         output_dir=execution_governance_dir,
         mode=mode,
         registry_path=execution_governance_dir / "controlled_execution_registry.json",
+    )
+
+
+def _phase_g_decision_from_inputs(
+    execution_payload: dict[str, Any],
+    market_state: dict[str, Any],
+) -> tuple[str, str, str]:
+    execution_decision = str(execution_payload.get("execution_decision", "")).strip()
+    volatility = _to_float(market_state.get("volatility", 0.0))
+    trend = str(market_state.get("trend", "neutral")).strip().lower()
+    if execution_decision == PHASE_F_BLOCKED:
+        return (
+            PHASE_G_HOLD_NON_LIVE,
+            "blocked_non_live",
+            "Execution governance blocked candidate; remain non-live.",
+        )
+    if execution_decision == PHASE_F_ELIGIBLE_FOR_CONTROLLED_EXECUTION_REVIEW and volatility <= 0.06:
+        return (
+            PHASE_G_CONTROLLED_REVIEW_SIGNAL,
+            "pending_controlled_decision_review",
+            f"Controlled review signal produced from recent market state (trend={trend}, volatility={volatility:.4f}).",
+        )
+    return (
+        PHASE_G_PAPER_EXECUTION_ONLY,
+        "paper_execution_non_live",
+        "Candidate restricted to paper execution; controlled review conditions not satisfied.",
+    )
+
+
+def generate_realtime_decision_orchestrator_artifacts(
+    execution_governance_dir: Path,
+    market_data_dir: Path,
+    output_dir: Path,
+    *,
+    mode: str,
+    market_state_memory_path: Path,
+    registry_path: Path,
+    governor_version: str = PHASE_G_GOVERNOR_VERSION,
+) -> dict[str, Any]:
+    if str(mode).lower() != "replay":
+        return {
+            "decision_orchestration_enabled": False,
+            "decision_artifact_count": 0,
+            "decision_orchestrator_dir": str(output_dir),
+            "decision_artifacts": [],
+            "decision_registry_path": str(registry_path),
+            "market_state_memory_path": str(market_state_memory_path),
+            "decision_classes": list(PHASE_G_DECISION_SEQUENCE),
+        }
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    market_data_dir.mkdir(parents=True, exist_ok=True)
+
+    existing_market_memory = read_json_safe(market_state_memory_path, default={"state_history": []})
+    if not isinstance(existing_market_memory, dict):
+        existing_market_memory = {"state_history": []}
+    state_history = existing_market_memory.get("state_history", [])
+    if not isinstance(state_history, list):
+        state_history = []
+    known_update_ids = {
+        str(item.get("update_id", "")).strip()
+        for item in state_history
+        if isinstance(item, dict) and str(item.get("update_id", "")).strip()
+    }
+
+    market_state = existing_market_memory.get("latest_market_state", {})
+    if not isinstance(market_state, dict):
+        market_state = {}
+    now_iso = datetime.now(tz=timezone.utc).isoformat()
+    for market_path in sorted(market_data_dir.glob("*.json")):
+        market_payload = read_json_safe(market_path, default={})
+        if not isinstance(market_payload, dict):
+            continue
+        market_timestamp = str(market_payload.get("timestamp", "")).strip() or now_iso
+        symbol = str(market_payload.get("symbol", "UNKNOWN")).strip() or "UNKNOWN"
+        update_id = hashlib.blake2b(
+            f"{market_path.name}|{market_timestamp}|{symbol}".encode("utf-8"),
+            digest_size=8,
+        ).hexdigest()
+        if update_id in known_update_ids:
+            continue
+        market_state = {
+            "timestamp": market_timestamp,
+            "symbol": symbol,
+            "trend": str(market_payload.get("trend", "neutral")).strip().lower() or "neutral",
+            "volatility": round(_to_float(market_payload.get("volatility", 0.0)), 6),
+            "liquidity_state": str(market_payload.get("liquidity_state", "unknown")).strip() or "unknown",
+        }
+        state_history.append(
+            {
+                "update_id": update_id,
+                "source_path": str(market_path),
+                **market_state,
+            }
+        )
+        known_update_ids.add(update_id)
+
+    if not market_state:
+        market_state = {
+            "timestamp": now_iso,
+            "symbol": "UNKNOWN",
+            "trend": "neutral",
+            "volatility": 0.0,
+            "liquidity_state": "unknown",
+        }
+        fallback_id = hashlib.blake2b(f"default|{now_iso}".encode("utf-8"), digest_size=8).hexdigest()
+        if fallback_id not in known_update_ids:
+            state_history.append({"update_id": fallback_id, "source_path": "default", **market_state})
+
+    market_state_memory_payload = {
+        "governor_version": governor_version,
+        "latest_market_state": market_state,
+        "state_history": state_history,
+    }
+    write_json_atomic(market_state_memory_path, market_state_memory_payload)
+
+    deduplicated_execution_records: dict[str, tuple[Path, dict[str, Any]]] = {}
+    for execution_path in sorted(execution_governance_dir.glob("*.json")):
+        payload = read_json_safe(execution_path, default={})
+        if not isinstance(payload, dict):
+            continue
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        deduplicated_execution_records[candidate_id] = (execution_path, payload)
+
+    generated_paths: list[str] = []
+    generated_entries: dict[str, dict[str, Any]] = {}
+    for candidate_id, (execution_path, execution_payload) in sorted(
+        deduplicated_execution_records.items(),
+        key=lambda pair: pair[0],
+    ):
+        decision, decision_status, decision_reason = _phase_g_decision_from_inputs(execution_payload, market_state)
+        artifact = {
+            "candidate_id": candidate_id,
+            "module_name": str(execution_payload.get("module_name", f"sandbox_{_safe_candidate_filename(candidate_id)}")),
+            "truth_class": str(execution_payload.get("truth_class", "meta-intelligence")),
+            "execution_source_path": str(execution_path),
+            "decision_timestamp": str(market_state.get("timestamp", now_iso)),
+            "execution_decision": str(execution_payload.get("execution_decision", "")),
+            "orchestrator_decision": decision,
+            "decision_reason": decision_reason,
+            "decision_status": decision_status,
+            "market_state_snapshot": market_state,
+            "market_state_memory_path": str(market_state_memory_path),
+            "manual_approval_required": True,
+            "live_activation_allowed": False,
+            "risk_constraints": {
+                "live_execution_blocked": True,
+                "auto_live_activation": False,
+                "controlled_execution_review_required": True,
+                "paper_execution_only": decision != PHASE_G_CONTROLLED_REVIEW_SIGNAL,
+            },
+            "governor_version": governor_version,
+        }
+        target_path = output_dir / f"{_safe_candidate_filename(candidate_id)}.json"
+        write_json_atomic(target_path, artifact)
+        generated_paths.append(str(target_path))
+        generated_entries[candidate_id] = artifact
+
+    existing_registry = read_json_safe(registry_path, default={"decision_records": []})
+    if not isinstance(existing_registry, dict):
+        existing_registry = {"decision_records": []}
+    records = existing_registry.get("decision_records", [])
+    if not isinstance(records, list):
+        records = []
+
+    registry_by_candidate: dict[str, dict[str, Any]] = {}
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        candidate_id = str(record.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        registry_by_candidate[candidate_id] = record
+    registry_by_candidate.update(generated_entries)
+
+    registry_payload = {
+        "governor_version": governor_version,
+        "decision_classes": list(PHASE_G_DECISION_SEQUENCE),
+        "decision_records": [registry_by_candidate[cid] for cid in sorted(registry_by_candidate)],
+    }
+    write_json_atomic(registry_path, registry_payload)
+
+    return {
+        "decision_orchestration_enabled": True,
+        "decision_artifact_count": len(generated_paths),
+        "decision_orchestrator_dir": str(output_dir),
+        "decision_artifacts": generated_paths,
+        "decision_registry_path": str(registry_path),
+        "market_state_memory_path": str(market_state_memory_path),
+        "decision_classes": list(PHASE_G_DECISION_SEQUENCE),
+    }
+
+
+def run_knowledge_expansion_phase_g(
+    root: Path,
+    *,
+    mode: str,
+) -> dict[str, Any]:
+    knowledge_root = root / "memory" / "knowledge_expansion"
+    return generate_realtime_decision_orchestrator_artifacts(
+        execution_governance_dir=knowledge_root / "execution_governance",
+        market_data_dir=knowledge_root / "market_data_feed",
+        output_dir=knowledge_root / "decision_orchestrator",
+        mode=mode,
+        market_state_memory_path=knowledge_root / "market_state_memory.json",
+        registry_path=(knowledge_root / "decision_orchestrator" / "controlled_decision_registry.json"),
     )
