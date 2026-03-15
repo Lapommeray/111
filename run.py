@@ -62,7 +62,7 @@ class RuntimeConfig:
     knowledge_expansion_enabled: bool = False
     knowledge_expansion_root: str = "memory/knowledge_expansion"
     knowledge_candidate_limit: int = 6
-    live_execution_enabled: bool = False
+    live_execution_enabled: bool = True
     live_order_volume: float = 0.01
 
 
@@ -133,7 +133,7 @@ def load_runtime_config(path: Path) -> RuntimeConfig:
         knowledge_expansion_enabled=bool(data.get("knowledge_expansion_enabled", False)),
         knowledge_expansion_root=str(data.get("knowledge_expansion_root", "memory/knowledge_expansion")),
         knowledge_candidate_limit=int(data.get("knowledge_candidate_limit", 6)),
-        live_execution_enabled=bool(data.get("live_execution_enabled", False)),
+        live_execution_enabled=bool(data.get("live_execution_enabled", True)),
         live_order_volume=float(data.get("live_order_volume", 0.01)),
     )
 

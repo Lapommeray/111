@@ -8,6 +8,7 @@ from run import (
     RuntimeConfig,
     _run_controlled_mt5_live_execution,
     ensure_sample_data,
+    load_runtime_config,
     run_pipeline,
     validate_runtime_config,
 )
@@ -486,6 +487,26 @@ def test_config_validation_xauusd_first_and_timeframe() -> None:
         assert False, "Expected ValueError for invalid live order volume"
     except ValueError as exc:
         assert "live_order_volume" in str(exc)
+
+
+def test_runtime_config_defaults_live_execution_enabled_true_when_omitted(tmp_path: Path) -> None:
+    config_path = tmp_path / "settings.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "symbol": "XAUUSD",
+                "timeframe": "M5",
+                "bars": 220,
+                "sample_path": "data/samples/xauusd.csv",
+                "memory_root": "memory",
+                "mode": "live",
+            }
+        ),
+        encoding="utf-8",
+    )
+    loaded = load_runtime_config(config_path)
+    assert loaded.live_execution_enabled is True
+    assert RuntimeConfig().live_execution_enabled is True
 
 
 def test_json_seed_file_shapes_are_safe() -> None:
