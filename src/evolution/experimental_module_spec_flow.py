@@ -214,6 +214,15 @@ PHASE_H_DECISION_SEQUENCE = (
     PHASE_H_SUPERVISED_NON_LIVE,
 )
 PHASE_H_GOVERNOR_VERSION = "phase_h_governor_v1"
+PHASE_I_CAPITAL_PRESERVATION_MODE = "capital_preservation_mode"
+PHASE_I_CONSTRAINED_NON_LIVE = "constrained_non_live"
+PHASE_I_ADAPTIVE_PAPER_ONLY = "adaptive_paper_only"
+PHASE_I_DECISION_SEQUENCE = (
+    PHASE_I_CAPITAL_PRESERVATION_MODE,
+    PHASE_I_CONSTRAINED_NON_LIVE,
+    PHASE_I_ADAPTIVE_PAPER_ONLY,
+)
+PHASE_I_GOVERNOR_VERSION = "phase_i_governor_v1"
 
 
 def _to_float(value: Any, default: float = 0.0) -> float:
@@ -1077,4 +1086,317 @@ def run_knowledge_expansion_phase_h(
         mode=mode,
         interface_state_memory_path=knowledge_root / "broker_exchange_state_memory.json",
         registry_path=(knowledge_root / "execution_supervision" / "broker_exchange_supervision_registry.json"),
+    )
+
+
+def _phase_i_portfolio_decision(
+    supervision_payload: dict[str, Any],
+    portfolio_state: dict[str, Any],
+) -> tuple[str, str, str, str, str, str]:
+    supervision_decision = str(supervision_payload.get("supervision_decision", "")).strip()
+    fail_safe_status = str(supervision_payload.get("fail_safe_status", "")).strip()
+    execution_readiness = str(supervision_payload.get("execution_readiness", "not_ready")).strip() or "not_ready"
+
+    open_exposure_pct = max(0.0, _to_float(portfolio_state.get("open_exposure_pct", 0.0)))
+    max_exposure_pct = max(0.0, _to_float(portfolio_state.get("max_exposure_pct", 0.35)))
+    suggested_position_size_pct = max(0.0, _to_float(portfolio_state.get("suggested_position_size_pct", 0.0)))
+    max_position_size_pct = max(0.0, _to_float(portfolio_state.get("max_position_size_pct", 0.03)))
+    max_drawdown_pct = max(0.0, _to_float(portfolio_state.get("max_drawdown_pct", 8.0)))
+    capital_budget_pct = max(0.0, _to_float(portfolio_state.get("capital_budget_pct", 0.25)))
+    capital_allocated_pct = max(0.0, _to_float(portfolio_state.get("capital_allocated_pct", 0.0)))
+    equity = max(0.0, _to_float(portfolio_state.get("equity", 0.0)))
+    peak_equity = max(0.0, _to_float(portfolio_state.get("peak_equity", equity)))
+
+    drawdown_pct = 0.0
+    if peak_equity > 0.0 and equity <= peak_equity:
+        drawdown_pct = ((peak_equity - equity) / peak_equity) * 100.0
+
+    exposure_within_limits = open_exposure_pct <= max_exposure_pct
+    position_sizing_ready = 0.0 < suggested_position_size_pct <= max_position_size_pct
+    drawdown_within_limits = drawdown_pct <= max_drawdown_pct
+    allocation_disciplined = capital_allocated_pct <= capital_budget_pct
+
+    allocation_state = (
+        "over_allocated"
+        if capital_allocated_pct > capital_budget_pct
+        else "budget_available"
+        if capital_allocated_pct < capital_budget_pct
+        else "at_budget"
+    )
+    exposure_state = "within_limit" if exposure_within_limits else "over_limit"
+    sizing_state = "ready" if position_sizing_ready else "size_constrained"
+    drawdown_state = "within_limit" if drawdown_within_limits else "drawdown_breached"
+
+    if (
+        supervision_decision != PHASE_H_SUPERVISED_NON_LIVE
+        or fail_safe_status == "fail_safe_triggered"
+        or not drawdown_within_limits
+        or not allocation_disciplined
+    ):
+        return (
+            PHASE_I_CAPITAL_PRESERVATION_MODE,
+            execution_readiness,
+            "defensive",
+            "Capital preservation activated due to supervision, drawdown, or allocation guardrail breach.",
+            allocation_state,
+            drawdown_state,
+        )
+    if not exposure_within_limits or not position_sizing_ready:
+        return (
+            PHASE_I_CONSTRAINED_NON_LIVE,
+            execution_readiness,
+            "cautious",
+            "Exposure or position-size constraints require constrained non-live allocation.",
+            allocation_state,
+            drawdown_state,
+        )
+    return (
+        PHASE_I_ADAPTIVE_PAPER_ONLY,
+        execution_readiness,
+        "adaptive_balanced",
+        "Portfolio constraints satisfied; adaptive allocation remains paper-only pending manual approval.",
+        allocation_state,
+        drawdown_state,
+    )
+
+
+def generate_adaptive_portfolio_risk_artifacts(
+    supervision_dir: Path,
+    portfolio_state_dir: Path,
+    output_dir: Path,
+    *,
+    mode: str,
+    portfolio_state_memory_path: Path,
+    registry_path: Path,
+    governor_version: str = PHASE_I_GOVERNOR_VERSION,
+) -> dict[str, Any]:
+    if str(mode).lower() != "replay":
+        return {
+            "adaptive_portfolio_enabled": False,
+            "portfolio_artifact_count": 0,
+            "portfolio_governance_dir": str(output_dir),
+            "portfolio_artifacts": [],
+            "portfolio_registry_path": str(registry_path),
+            "portfolio_state_memory_path": str(portfolio_state_memory_path),
+            "decision_classes": list(PHASE_I_DECISION_SEQUENCE),
+        }
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    portfolio_state_dir.mkdir(parents=True, exist_ok=True)
+    existing_memory = read_json_safe(portfolio_state_memory_path, default={"state_history": []})
+    if not isinstance(existing_memory, dict):
+        existing_memory = {"state_history": []}
+    state_history = existing_memory.get("state_history", [])
+    if not isinstance(state_history, list):
+        state_history = []
+    known_update_ids = {
+        str(item.get("update_id", "")).strip()
+        for item in state_history
+        if isinstance(item, dict) and str(item.get("update_id", "")).strip()
+    }
+
+    portfolio_state = existing_memory.get("latest_portfolio_state", {})
+    if not isinstance(portfolio_state, dict):
+        portfolio_state = {}
+    now_iso = datetime.now(tz=timezone.utc).isoformat()
+    for portfolio_path in sorted(portfolio_state_dir.glob("*.json")):
+        portfolio_payload = read_json_safe(portfolio_path, default={})
+        if not isinstance(portfolio_payload, dict):
+            continue
+        timestamp = str(portfolio_payload.get("timestamp", "")).strip() or now_iso
+        account_id = str(portfolio_payload.get("account_id", "paper")).strip() or "paper"
+        strategy_group = str(portfolio_payload.get("strategy_group", "sandbox")).strip() or "sandbox"
+        update_id = hashlib.blake2b(
+            f"{portfolio_path.name}|{timestamp}|{account_id}|{strategy_group}".encode("utf-8"),
+            digest_size=8,
+        ).hexdigest()
+        if update_id in known_update_ids:
+            continue
+
+        portfolio_state = {
+            "timestamp": timestamp,
+            "account_id": account_id,
+            "strategy_group": strategy_group,
+            "equity": round(max(0.0, _to_float(portfolio_payload.get("equity", 0.0))), 6),
+            "peak_equity": round(
+                max(
+                    _to_float(portfolio_payload.get("equity", 0.0)),
+                    _to_float(portfolio_payload.get("peak_equity", portfolio_payload.get("equity", 0.0))),
+                ),
+                6,
+            ),
+            "open_exposure_pct": round(max(0.0, _to_float(portfolio_payload.get("open_exposure_pct", 0.0))), 6),
+            "max_exposure_pct": round(max(0.0, _to_float(portfolio_payload.get("max_exposure_pct", 0.35))), 6),
+            "suggested_position_size_pct": round(
+                max(0.0, _to_float(portfolio_payload.get("suggested_position_size_pct", 0.0))),
+                6,
+            ),
+            "max_position_size_pct": round(
+                max(0.0, _to_float(portfolio_payload.get("max_position_size_pct", 0.03))),
+                6,
+            ),
+            "capital_budget_pct": round(max(0.0, _to_float(portfolio_payload.get("capital_budget_pct", 0.25))), 6),
+            "capital_allocated_pct": round(
+                max(0.0, _to_float(portfolio_payload.get("capital_allocated_pct", 0.0))),
+                6,
+            ),
+            "max_drawdown_pct": round(max(0.0, _to_float(portfolio_payload.get("max_drawdown_pct", 8.0))), 6),
+        }
+        state_history.append({"update_id": update_id, "source_path": str(portfolio_path), **portfolio_state})
+        known_update_ids.add(update_id)
+
+    if not portfolio_state:
+        portfolio_state = {
+            "timestamp": now_iso,
+            "account_id": "paper",
+            "strategy_group": "sandbox",
+            "equity": 0.0,
+            "peak_equity": 0.0,
+            "open_exposure_pct": 0.0,
+            "max_exposure_pct": 0.35,
+            "suggested_position_size_pct": 0.0,
+            "max_position_size_pct": 0.03,
+            "capital_budget_pct": 0.25,
+            "capital_allocated_pct": 0.0,
+            "max_drawdown_pct": 8.0,
+        }
+        fallback_id = hashlib.blake2b(f"default|{now_iso}".encode("utf-8"), digest_size=8).hexdigest()
+        if fallback_id not in known_update_ids:
+            state_history.append({"update_id": fallback_id, "source_path": "default", **portfolio_state})
+
+    memory_payload = {
+        "governor_version": governor_version,
+        "latest_portfolio_state": portfolio_state,
+        "state_history": state_history,
+    }
+    write_json_atomic(portfolio_state_memory_path, memory_payload)
+
+    deduplicated_supervision_records: dict[str, tuple[Path, dict[str, Any]]] = {}
+    for supervision_path in sorted(supervision_dir.glob("*.json")):
+        payload = read_json_safe(supervision_path, default={})
+        if not isinstance(payload, dict):
+            continue
+        candidate_id = str(payload.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        deduplicated_supervision_records[candidate_id] = (supervision_path, payload)
+
+    generated_paths: list[str] = []
+    generated_entries: dict[str, dict[str, Any]] = {}
+    for candidate_id, (supervision_path, supervision_payload) in sorted(
+        deduplicated_supervision_records.items(),
+        key=lambda pair: pair[0],
+    ):
+        (
+            portfolio_decision,
+            execution_readiness,
+            risk_state,
+            decision_reason,
+            allocation_state,
+            drawdown_state,
+        ) = _phase_i_portfolio_decision(
+            supervision_payload,
+            portfolio_state,
+        )
+        open_exposure_pct = max(0.0, _to_float(portfolio_state.get("open_exposure_pct", 0.0)))
+        max_exposure_pct = max(0.0, _to_float(portfolio_state.get("max_exposure_pct", 0.35)))
+        suggested_position_size_pct = max(0.0, _to_float(portfolio_state.get("suggested_position_size_pct", 0.0)))
+        max_position_size_pct = max(0.0, _to_float(portfolio_state.get("max_position_size_pct", 0.03)))
+        capital_budget_pct = max(0.0, _to_float(portfolio_state.get("capital_budget_pct", 0.25)))
+        capital_allocated_pct = max(0.0, _to_float(portfolio_state.get("capital_allocated_pct", 0.0)))
+        equity = max(0.0, _to_float(portfolio_state.get("equity", 0.0)))
+        peak_equity = max(0.0, _to_float(portfolio_state.get("peak_equity", equity)))
+        drawdown_pct = 0.0
+        if peak_equity > 0.0 and equity <= peak_equity:
+            drawdown_pct = ((peak_equity - equity) / peak_equity) * 100.0
+
+        artifact = {
+            "candidate_id": candidate_id,
+            "module_name": str(supervision_payload.get("module_name", f"sandbox_{_safe_candidate_filename(candidate_id)}")),
+            "truth_class": str(supervision_payload.get("truth_class", "meta-intelligence")),
+            "supervision_source_path": str(supervision_path),
+            "portfolio_timestamp": str(portfolio_state.get("timestamp", now_iso)),
+            "supervision_decision": str(supervision_payload.get("supervision_decision", "")),
+            "portfolio_decision": portfolio_decision,
+            "decision_reason": decision_reason,
+            "execution_readiness": execution_readiness,
+            "risk_state": risk_state,
+            "allocation_state": allocation_state,
+            "exposure_state": "within_limit" if open_exposure_pct <= max_exposure_pct else "over_limit",
+            "sizing_state": (
+                "ready" if 0.0 < suggested_position_size_pct <= max_position_size_pct else "size_constrained"
+            ),
+            "drawdown_state": drawdown_state,
+            "portfolio_state_snapshot": portfolio_state,
+            "portfolio_state_memory_path": str(portfolio_state_memory_path),
+            "manual_approval_required": True,
+            "live_activation_allowed": False,
+            "risk_constraints": {
+                "live_execution_blocked": True,
+                "auto_live_activation": False,
+                "paper_execution_only": True,
+                "max_exposure_pct": max_exposure_pct,
+                "max_position_size_pct": max_position_size_pct,
+                "capital_budget_pct": capital_budget_pct,
+                "max_drawdown_pct": max(0.0, _to_float(portfolio_state.get("max_drawdown_pct", 8.0))),
+                "current_exposure_pct": open_exposure_pct,
+                "current_position_size_pct": suggested_position_size_pct,
+                "current_capital_allocated_pct": capital_allocated_pct,
+                "drawdown_pct": round(drawdown_pct, 6),
+            },
+            "governor_version": governor_version,
+        }
+        target_path = output_dir / f"{_safe_candidate_filename(candidate_id)}.json"
+        write_json_atomic(target_path, artifact)
+        generated_paths.append(str(target_path))
+        generated_entries[candidate_id] = artifact
+
+    existing_registry = read_json_safe(registry_path, default={"portfolio_records": []})
+    if not isinstance(existing_registry, dict):
+        existing_registry = {"portfolio_records": []}
+    records = existing_registry.get("portfolio_records", [])
+    if not isinstance(records, list):
+        records = []
+
+    registry_by_candidate: dict[str, dict[str, Any]] = {}
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        candidate_id = str(record.get("candidate_id", "")).strip()
+        if not candidate_id:
+            continue
+        registry_by_candidate[candidate_id] = record
+    registry_by_candidate.update(generated_entries)
+
+    registry_payload = {
+        "governor_version": governor_version,
+        "decision_classes": list(PHASE_I_DECISION_SEQUENCE),
+        "portfolio_records": [registry_by_candidate[cid] for cid in sorted(registry_by_candidate)],
+    }
+    write_json_atomic(registry_path, registry_payload)
+
+    return {
+        "adaptive_portfolio_enabled": True,
+        "portfolio_artifact_count": len(generated_paths),
+        "portfolio_governance_dir": str(output_dir),
+        "portfolio_artifacts": generated_paths,
+        "portfolio_registry_path": str(registry_path),
+        "portfolio_state_memory_path": str(portfolio_state_memory_path),
+        "decision_classes": list(PHASE_I_DECISION_SEQUENCE),
+    }
+
+
+def run_knowledge_expansion_phase_i(
+    root: Path,
+    *,
+    mode: str,
+) -> dict[str, Any]:
+    knowledge_root = root / "memory" / "knowledge_expansion"
+    return generate_adaptive_portfolio_risk_artifacts(
+        supervision_dir=knowledge_root / "execution_supervision",
+        portfolio_state_dir=knowledge_root / "portfolio_risk_inputs",
+        output_dir=knowledge_root / "adaptive_portfolio_governance",
+        mode=mode,
+        portfolio_state_memory_path=knowledge_root / "adaptive_portfolio_state_memory.json",
+        registry_path=(knowledge_root / "adaptive_portfolio_governance" / "adaptive_portfolio_registry.json"),
     )
