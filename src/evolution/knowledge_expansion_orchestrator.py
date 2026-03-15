@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
@@ -8,7 +9,7 @@ from src.evolution.candidate_module_factory import CandidateModuleFactory
 from src.evolution.governance_report import build_governance_report
 from src.evolution.hypothesis_registry import HypothesisRegistry
 from src.evolution.overlap_scoring import OverlapScoring
-from src.utils import write_json_atomic
+from src.utils import read_json_safe, write_json_atomic
 
 
 class KnowledgeExpansionOrchestrator:
@@ -47,14 +48,27 @@ class KnowledgeExpansionOrchestrator:
 
     def run(self, replay_report: dict[str, Any]) -> dict[str, Any]:
         generated_hypotheses = self._generate_hypotheses(replay_report)
-        hypotheses = self._prioritize_hypotheses(generated_hypotheses)[: self.candidate_limit]
+        prioritized_hypotheses = self._prioritize_hypotheses(generated_hypotheses)
+        hypotheses = self._merge_near_duplicate_hypotheses(prioritized_hypotheses)[: self.candidate_limit]
         registered = [self.registry.register(h) for h in hypotheses]
+        merged_map = {str(item.get("hypothesis_id", "")): item for item in hypotheses}
+        for item in registered:
+            merged = merged_map.get(str(item.get("hypothesis_id", "")), {})
+            if "evidence_history" in merged:
+                item["evidence_history"] = merged.get("evidence_history", [])
+            if "merged_hypothesis_ids" in merged:
+                item["merged_hypothesis_ids"] = merged.get("merged_hypothesis_ids", [])
 
         candidate_specs = self.candidate_factory.generate(registered)
         existing_signatures = self._extract_existing_signatures(replay_report)
         overlap_report = self.overlap.evaluate(candidate_specs, existing_signatures)
 
         decisions = self._make_decisions(registered, candidate_specs, overlap_report)
+        validated_knowledge_registry_path = self._persist_validated_knowledge_registry(
+            hypotheses=registered,
+            candidate_specs=candidate_specs,
+            decisions=decisions,
+        )
         governance_summary = build_governance_report(decisions)
 
         artifact_paths = self._write_artifacts(
@@ -63,6 +77,7 @@ class KnowledgeExpansionOrchestrator:
             overlap_report=overlap_report,
             decisions=decisions,
             summary=governance_summary,
+            validated_knowledge_registry_path=validated_knowledge_registry_path,
         )
 
         return {
@@ -70,6 +85,8 @@ class KnowledgeExpansionOrchestrator:
             "candidate_count": len(candidate_specs),
             "decision_summary": governance_summary,
             "artifact_paths": artifact_paths,
+            "sandbox_candidates_path": artifact_paths["sandbox_candidates"],
+            "validated_knowledge_registry_path": artifact_paths["validated_knowledge_registry"],
             "decisions": decisions,
             "governance_law": {
                 "required_gates": [
@@ -210,6 +227,70 @@ class KnowledgeExpansionOrchestrator:
                 item["truth_class"] = "meta-intelligence"
 
         return hypotheses
+
+    def _merge_near_duplicate_hypotheses(self, hypotheses: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        merged: list[dict[str, Any]] = []
+        for hypothesis in hypotheses:
+            matched = False
+            for existing in merged:
+                if self._is_near_duplicate_hypothesis(existing, hypothesis):
+                    existing_history = (
+                        list(existing.get("evidence_history", []))
+                        if isinstance(existing.get("evidence_history"), list)
+                        else []
+                    )
+                    incoming_evidence = hypothesis.get("evidence", {})
+                    if incoming_evidence:
+                        existing_history.append(incoming_evidence)
+                    existing["evidence_history"] = existing_history
+
+                    merged_ids = (
+                        list(existing.get("merged_hypothesis_ids", []))
+                        if isinstance(existing.get("merged_hypothesis_ids"), list)
+                        else []
+                    )
+                    incoming_id = str(hypothesis.get("hypothesis_id", ""))
+                    if incoming_id and incoming_id not in merged_ids:
+                        merged_ids.append(incoming_id)
+                    existing["merged_hypothesis_ids"] = merged_ids
+                    matched = True
+                    break
+
+            if not matched:
+                entry = dict(hypothesis)
+                entry["evidence_history"] = [entry.get("evidence", {})] if entry.get("evidence", {}) else []
+                entry["merged_hypothesis_ids"] = [str(entry.get("hypothesis_id", ""))]
+                merged.append(entry)
+
+        return merged
+
+    def _is_near_duplicate_hypothesis(self, left: dict[str, Any], right: dict[str, Any]) -> bool:
+        if str(left.get("truth_class", "")) != str(right.get("truth_class", "")):
+            return False
+        source = str(left.get("source", ""))
+        if source != str(right.get("source", "")):
+            return False
+
+        left_evidence = left.get("evidence", {}) if isinstance(left.get("evidence"), dict) else {}
+        right_evidence = right.get("evidence", {}) if isinstance(right.get("evidence"), dict) else {}
+
+        if source == "module_contribution_report":
+            if str(left_evidence.get("module_name", "")) != str(right_evidence.get("module_name", "")):
+                return False
+        elif source == "blocker_effect_report":
+            if str(left_evidence.get("reason", "")) != str(right_evidence.get("reason", "")):
+                return False
+        elif source == "session_report":
+            if str(left_evidence.get("session", "")) != str(right_evidence.get("session", "")):
+                return False
+
+        left_statement = str(left.get("statement", "")).strip().lower()
+        right_statement = str(right.get("statement", "")).strip().lower()
+        if not left_statement or not right_statement:
+            return False
+
+        similarity = SequenceMatcher(a=left_statement, b=right_statement).ratio()
+        return similarity >= 0.9
 
     def _truth_class_from_module_name(self, module_name: str) -> str:
         name = module_name.lower()
@@ -689,12 +770,14 @@ class KnowledgeExpansionOrchestrator:
         overlap_report: list[dict[str, Any]],
         decisions: list[dict[str, Any]],
         summary: dict[str, Any],
+        validated_knowledge_registry_path: Path,
     ) -> dict[str, str]:
         stamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d%H%M%S")
         candidates_path = self.root / f"candidate_module_specs.{stamp}.json"
         overlap_path = self.root / f"overlap_scoring.{stamp}.json"
         ledger_path = self.root / f"governance_ledger.{stamp}.json"
         summary_path = self.root / f"governance_summary.{stamp}.json"
+        sandbox_candidates_path = self.root / f"sandbox_candidates.{stamp}.json"
 
         write_json_atomic(candidates_path, {"generated_at": stamp, "candidates": candidate_specs})
         write_json_atomic(overlap_path, {"generated_at": stamp, "overlap": overlap_report})
@@ -707,6 +790,31 @@ class KnowledgeExpansionOrchestrator:
             },
         )
         write_json_atomic(summary_path, {"generated_at": stamp, "summary": summary})
+        hypothesis_by_id = {str(item.get("hypothesis_id", "")): item for item in hypotheses}
+        sandbox_candidates = []
+        for spec in candidate_specs:
+            candidate_id = str(spec.get("candidate_id", ""))
+            decision = next((d for d in decisions if str(d.get("candidate_id", "")) == candidate_id), {})
+            if str(decision.get("decision", "")) == "REJECT":
+                continue
+            hypothesis = hypothesis_by_id.get(str(spec.get("hypothesis_id", "")), {})
+            sandbox_candidates.append(
+                {
+                    "candidate_id": candidate_id,
+                    "hypothesis_id": spec.get("hypothesis_id", ""),
+                    "decision": decision.get("decision", "HOLD_FOR_MORE_DATA"),
+                    "truth_class": spec.get("truth_class", "meta-intelligence"),
+                    "candidate_spec": spec.get("spec", {}),
+                    "evidence_history": hypothesis.get("evidence_history", []),
+                }
+            )
+        write_json_atomic(
+            sandbox_candidates_path,
+            {
+                "generated_at": stamp,
+                "sandbox_candidates": sandbox_candidates,
+            },
+        )
 
         return {
             "hypothesis_registry": str(self.registry.path),
@@ -714,7 +822,68 @@ class KnowledgeExpansionOrchestrator:
             "overlap_report": str(overlap_path),
             "governance_ledger": str(ledger_path),
             "governance_summary": str(summary_path),
+            "sandbox_candidates": str(sandbox_candidates_path),
+            "validated_knowledge_registry": str(validated_knowledge_registry_path),
         }
+
+    def _persist_validated_knowledge_registry(
+        self,
+        hypotheses: list[dict[str, Any]],
+        candidate_specs: list[dict[str, Any]],
+        decisions: list[dict[str, Any]],
+    ) -> Path:
+        path = self.root / "validated_knowledge_registry.json"
+        payload = read_json_safe(path, default={"validated_knowledge": []})
+        if not isinstance(payload, dict):
+            payload = {"validated_knowledge": []}
+
+        existing_items = payload.get("validated_knowledge", [])
+        if not isinstance(existing_items, list):
+            existing_items = []
+
+        existing_by_hypothesis = {
+            str(item.get("hypothesis_id", "")): item for item in existing_items if isinstance(item, dict)
+        }
+        hypothesis_map = {str(item.get("hypothesis_id", "")): item for item in hypotheses}
+        candidate_map = {str(item.get("candidate_id", "")): item for item in candidate_specs}
+
+        for decision in decisions:
+            if str(decision.get("decision", "")) not in {"KEEP", "MERGE"}:
+                continue
+
+            candidate_id = str(decision.get("candidate_id", ""))
+            hypothesis_id = str(decision.get("hypothesis_id", ""))
+            hypothesis = hypothesis_map.get(hypothesis_id, {})
+            candidate = candidate_map.get(candidate_id, {})
+
+            evidence_history = (
+                list(hypothesis.get("evidence_history", []))
+                if isinstance(hypothesis.get("evidence_history"), list)
+                else []
+            )
+            if not evidence_history and hypothesis.get("evidence", {}):
+                evidence_history = [hypothesis.get("evidence", {})]
+            overlap_info = decision.get("overlap", {})
+            if not isinstance(overlap_info, dict):
+                overlap_info = {}
+
+            entry = {
+                "hypothesis_id": hypothesis_id,
+                "candidate_id": candidate_id,
+                "decision": decision.get("decision", ""),
+                "truth_class": hypothesis.get("truth_class", candidate.get("truth_class", "meta-intelligence")),
+                "statement": hypothesis.get("statement", ""),
+                "decision_reasons": decision.get("decision_reasons", []),
+                "overlap_score": overlap_info.get("overlap_score", 0.0),
+                "evidence_history": evidence_history,
+                "updated_at": datetime.now(tz=timezone.utc).isoformat(),
+            }
+            existing_by_hypothesis[hypothesis_id] = entry
+
+        payload["validated_knowledge"] = sorted(existing_by_hypothesis.values(), key=lambda item: str(item.get("hypothesis_id", "")))
+        payload["updated_at"] = datetime.now(tz=timezone.utc).isoformat()
+        write_json_atomic(path, payload)
+        return path
 
 
 def run_knowledge_expansion_phase_a(
