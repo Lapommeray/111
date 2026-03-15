@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import csv
-from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -13,6 +12,7 @@ from src.mt5.symbol_guard import SymbolGuard
 
 def _write_sample_csv(path: Path, rows: int = 20) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    base_timestamp = 4_000_000_000
     with path.open("w", encoding="utf-8", newline="") as fh:
         writer = csv.DictWriter(
             fh,
@@ -24,7 +24,7 @@ def _write_sample_csv(path: Path, rows: int = 20) -> None:
             age_seconds = (rows - i) * 60
             writer.writerow(
                 {
-                    "time": int(datetime.now(tz=timezone.utc).timestamp()) - age_seconds,
+                    "time": base_timestamp - age_seconds,
                     "open": round(base, 2),
                     "high": round(base + 0.3, 2),
                     "low": round(base - 0.3, 2),
@@ -131,6 +131,9 @@ def test_execution_state_to_dict_shape() -> None:
         live_execution_blocked=True,
         mt5_execution_gate="non_live_enforced",
         mt5_execution_refused=True,
+        mt5_chain_verified=True,
+        mt5_quarantined=False,
+        mt5_safe_resume_state="stable",
     )
     payload = state.to_dict()
     assert payload["symbol"] == "XAUUSD"
@@ -141,3 +144,6 @@ def test_execution_state_to_dict_shape() -> None:
     assert payload["live_execution_blocked"] is True
     assert payload["mt5_execution_gate"] == "non_live_enforced"
     assert payload["mt5_execution_refused"] is True
+    assert payload["mt5_chain_verified"] is True
+    assert payload["mt5_quarantined"] is False
+    assert payload["mt5_safe_resume_state"] == "stable"

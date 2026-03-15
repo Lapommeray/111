@@ -17,6 +17,9 @@ class ExecutionState:
     live_execution_blocked: bool = True
     mt5_execution_gate: str = "blocked"
     mt5_execution_refused: bool = True
+    mt5_chain_verified: bool = False
+    mt5_quarantined: bool = False
+    mt5_safe_resume_state: str = "unknown"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -31,4 +34,7 @@ class ExecutionState:
             "live_execution_blocked": self.live_execution_blocked,
             "mt5_execution_gate": self.mt5_execution_gate,
             "mt5_execution_refused": self.mt5_execution_refused,
+            "mt5_chain_verified": self.mt5_chain_verified,
+            "mt5_quarantined": self.mt5_quarantined,
+            "mt5_safe_resume_state": self.mt5_safe_resume_state,
         }

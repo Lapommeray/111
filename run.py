@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 from datetime import datetime, timezone
 from dataclasses import dataclass
@@ -257,6 +258,177 @@ def _persist_controlled_mt5_readiness(memory_root: str, payload: dict[str, Any])
     return str(readiness_path)
 
 
+def _verify_mt5_readiness_chain(*, readiness: dict[str, Any], mode: str) -> dict[str, Any]:
+    checks = [
+        {
+            "name": "terminal_connection_stable",
+            "required": mode == "live",
+            "passed": bool(readiness.get("terminal_connection_stable", False)),
+        },
+        {
+            "name": "symbol_subscription_ready",
+            "required": True,
+            "passed": bool(readiness.get("symbol_subscription_ready", False)),
+        },
+        {
+            "name": "account_readiness",
+            "required": mode == "live",
+            "passed": bool(readiness.get("account_readiness", False)),
+        },
+        {
+            "name": "tick_data_freshness",
+            "required": True,
+            "passed": bool(readiness.get("tick_data_freshness", False)),
+        },
+        {
+            "name": "fail_safe_blocked_state",
+            "required": True,
+            "passed": bool(readiness.get("fail_safe_blocked_state", False)),
+        },
+        {
+            "name": "live_execution_blocked",
+            "required": True,
+            "passed": bool(readiness.get("live_execution_blocked", False)),
+        },
+        {
+            "name": "order_execution_disabled",
+            "required": True,
+            "passed": not bool(readiness.get("order_execution_enabled", True)),
+        },
+    ]
+    failed_required_checks = sorted(
+        check["name"] for check in checks if bool(check["required"]) and not bool(check["passed"])
+    )
+    return {
+        "mode": mode,
+        "checks": checks,
+        "required_check_count": sum(1 for check in checks if bool(check["required"])),
+        "failed_required_checks": failed_required_checks,
+        "all_checks_passed": not failed_required_checks,
+    }
+
+
+def _build_mt5_quarantine_state(
+    *,
+    readiness: dict[str, Any],
+    mode: str,
+    readiness_chain: dict[str, Any],
+) -> dict[str, Any]:
+    invalid_state_reasons: list[str] = []
+    if bool(readiness.get("order_execution_enabled", False)):
+        invalid_state_reasons.append("order_execution_must_remain_disabled")
+    if not bool(readiness.get("live_execution_blocked", False)):
+        invalid_state_reasons.append("live_execution_must_remain_blocked_by_default")
+    if bool(readiness.get("execution_refused", True)) and (
+        bool(readiness.get("ready_for_controlled_usage", False))
+        or str(readiness.get("execution_gate", "")).strip().lower() == "controlled_non_live"
+    ):
+        invalid_state_reasons.append("inconsistent_ready_or_controlled_gate_refused_state")
+    failed_required_checks = list(readiness_chain.get("failed_required_checks", []))
+    quarantine_reasons = sorted(set(invalid_state_reasons + failed_required_checks))
+    quarantine_required = bool(invalid_state_reasons) or (mode == "live" and bool(failed_required_checks))
+    return {
+        "quarantine_required": quarantine_required,
+        "quarantine_reasons": quarantine_reasons,
+        "invalid_state_reasons": sorted(set(invalid_state_reasons)),
+        "failed_required_checks": failed_required_checks,
+    }
+
+
+def _load_mt5_resume_state(memory_root: str) -> dict[str, Any]:
+    resume_path = Path(memory_root) / "mt5_runtime_resume_state.json"
+    if not resume_path.exists():
+        return {"status": "unknown", "interruption_detected": False, "safe_resume_applied": False}
+    try:
+        payload = json.loads(resume_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {"status": "unknown", "interruption_detected": False, "safe_resume_applied": False}
+    if not isinstance(payload, dict):
+        return {"status": "unknown", "interruption_detected": False, "safe_resume_applied": False}
+    return payload
+
+
+def _build_mt5_resume_state(
+    *,
+    previous_resume_state: dict[str, Any],
+    readiness_chain: dict[str, Any],
+    quarantine_state: dict[str, Any],
+) -> dict[str, Any]:
+    interruption_detected = bool(quarantine_state.get("quarantine_required", False)) or not bool(
+        readiness_chain.get("all_checks_passed", False)
+    )
+    prior_interruption = bool(previous_resume_state.get("interruption_detected", False))
+    safe_resume_applied = prior_interruption and not interruption_detected
+    status = "interrupted" if interruption_detected else "stable"
+    if safe_resume_applied:
+        status = "resumed_safe"
+    return {
+        "previous_status": str(previous_resume_state.get("status", "unknown")),
+        "status": status,
+        "interruption_detected": interruption_detected,
+        "safe_resume_applied": safe_resume_applied,
+    }
+
+
+def _build_mt5_self_audit_report(
+    *,
+    readiness: dict[str, Any],
+    mode: str,
+    readiness_chain: dict[str, Any],
+    quarantine_state: dict[str, Any],
+    resume_state: dict[str, Any],
+) -> dict[str, Any]:
+    failed_checks = list(readiness_chain.get("failed_required_checks", []))
+    quarantine_reasons = list(quarantine_state.get("quarantine_reasons", []))
+    deterministic_fingerprint = "|".join(
+        [
+            str(readiness.get("symbol_validity", False)),
+            str(readiness.get("symbol_subscription_ready", False)),
+            str(readiness.get("account_readiness", False)),
+            str(readiness.get("tick_data_freshness", False)),
+            ",".join(failed_checks),
+            ",".join(quarantine_reasons),
+            str(resume_state.get("status", "unknown")),
+        ]
+    )
+    deterministic_id = hashlib.sha256(deterministic_fingerprint.encode("utf-8")).hexdigest()[:32]
+    return {
+        "audit_id": (
+            f"mt5-audit-{str(readiness.get('data_source', 'unknown'))}-"
+            f"{mode}-{deterministic_id}"
+        ),
+        "mode": mode,
+        "deterministic_fingerprint": deterministic_fingerprint,
+        "all_checks_passed": bool(readiness_chain.get("all_checks_passed", False)),
+        "failed_required_checks": failed_checks,
+        "quarantine_required": bool(quarantine_state.get("quarantine_required", False)),
+        "quarantine_reasons": quarantine_reasons,
+        "safe_resume_applied": bool(resume_state.get("safe_resume_applied", False)),
+    }
+
+
+def _persist_mt5_pack3_artifacts(
+    *,
+    memory_root: str,
+    readiness_chain: dict[str, Any],
+    self_audit_report: dict[str, Any],
+    quarantine_state: dict[str, Any],
+    resume_state: dict[str, Any],
+) -> dict[str, str]:
+    root = Path(memory_root)
+    paths = {
+        "readiness_chain_path": root / "mt5_readiness_chain_verification.json",
+        "self_audit_report_path": root / "mt5_self_audit_report.json",
+        "quarantine_state_path": root / "mt5_readiness_quarantine_state.json",
+        "resume_state_path": root / "mt5_runtime_resume_state.json",
+    }
+    write_json_atomic(paths["readiness_chain_path"], readiness_chain)
+    write_json_atomic(paths["self_audit_report_path"], self_audit_report)
+    write_json_atomic(paths["quarantine_state_path"], quarantine_state)
+    write_json_atomic(paths["resume_state_path"], resume_state)
+    return {name: str(path) for name, path in paths.items()}
+
+
 def run_evolution_kernel(config: RuntimeConfig) -> dict[str, Any]:
     if not config.evolution_enabled:
         return {
@@ -418,15 +590,78 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         **controlled_mt5_readiness,
         "artifact_path": controlled_mt5_readiness_path,
     }
-    mt5_unsafe_refusal = config.mode == "live" and not controlled_mt5_readiness.get(
-        "ready_for_controlled_usage", False
+    readiness_chain = _verify_mt5_readiness_chain(
+        readiness=controlled_mt5_readiness,
+        mode=config.mode,
+    )
+    quarantine_state = _build_mt5_quarantine_state(
+        readiness=controlled_mt5_readiness,
+        mode=config.mode,
+        readiness_chain=readiness_chain,
+    )
+    previous_resume_state = _load_mt5_resume_state(config.memory_root)
+    resume_state = _build_mt5_resume_state(
+        previous_resume_state=previous_resume_state,
+        readiness_chain=readiness_chain,
+        quarantine_state=quarantine_state,
+    )
+    self_audit_report = _build_mt5_self_audit_report(
+        readiness=controlled_mt5_readiness,
+        mode=config.mode,
+        readiness_chain=readiness_chain,
+        quarantine_state=quarantine_state,
+        resume_state=resume_state,
+    )
+    pack3_artifact_paths = _persist_mt5_pack3_artifacts(
+        memory_root=config.memory_root,
+        readiness_chain=readiness_chain,
+        self_audit_report=self_audit_report,
+        quarantine_state=quarantine_state,
+        resume_state=resume_state,
+    )
+    controlled_mt5_readiness = {
+        **controlled_mt5_readiness,
+        "readiness_chain_verification": {
+            **readiness_chain,
+            "artifact_path": pack3_artifact_paths["readiness_chain_path"],
+        },
+        "self_audit_report": {
+            **self_audit_report,
+            "artifact_path": pack3_artifact_paths["self_audit_report_path"],
+        },
+        "quarantine_state": {
+            **quarantine_state,
+            "artifact_path": pack3_artifact_paths["quarantine_state_path"],
+        },
+        "resume_state": {
+            **resume_state,
+            "artifact_path": pack3_artifact_paths["resume_state_path"],
+        },
+    }
+    mt5_unsafe_refusal = bool(quarantine_state.get("quarantine_required", False)) or (
+        config.mode == "live"
+        and (
+            not controlled_mt5_readiness.get("ready_for_controlled_usage", False)
+            or not bool(readiness_chain.get("all_checks_passed", False))
+        )
     )
     if mt5_unsafe_refusal:
         controlled_mt5_readiness = {
             **controlled_mt5_readiness,
-            "execution_gate": "refused_unsafe_readiness",
+            "execution_gate": (
+                "quarantined_invalid_readiness"
+                if bool(quarantine_state.get("quarantine_required", False))
+                else "refused_unsafe_readiness"
+            ),
             "execution_refused": True,
             "rollback_applied": True,
+        }
+    elif bool(resume_state.get("safe_resume_applied", False)):
+        controlled_mt5_readiness = {
+            **controlled_mt5_readiness,
+            "execution_gate": "safe_resumed_non_live_blocked",
+            "execution_refused": False,
+            "safe_resume_applied": True,
         }
 
     execution_state = ExecutionState(
@@ -458,6 +693,9 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         live_execution_blocked=True,
         mt5_execution_gate=str(controlled_mt5_readiness.get("execution_gate", "blocked")),
         mt5_execution_refused=bool(controlled_mt5_readiness.get("execution_refused", True)),
+        mt5_chain_verified=bool(readiness_chain.get("all_checks_passed", False)),
+        mt5_quarantined=bool(quarantine_state.get("quarantine_required", False)),
+        mt5_safe_resume_state=str(resume_state.get("status", "unknown")),
     )
 
     structure = classify_market_structure(bars)
@@ -494,6 +732,11 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
 
     refusal_reasons = [
         "mt5_execution_refused_unsafe_readiness",
+        *(
+            ["mt5_quarantined_invalid_readiness"]
+            if bool(quarantine_state.get("quarantine_required", False))
+            else []
+        ),
         *[
             f"mt5_fail_safe:{reason}"
             for reason in controlled_mt5_readiness.get("fail_safe_blocked_reasons", [])
