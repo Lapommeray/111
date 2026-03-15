@@ -398,18 +398,13 @@
   },
   "cycle_recovery": {
     "interrupted_cycle_recovered": false,
-    "stale_artifacts_detected": true,
-    "safe_refresh_applied": true,
+    "stale_artifacts_detected": false,
+    "safe_refresh_applied": false,
     "partial_resume_applied": false,
     "resumed_phases": [],
     "rerun_from_phase": ""
   },
-  "stale_artifact_reasons": [
-    "replay_judgment:digest_mismatch:memory/knowledge_expansion/sandbox_judgments/cand_phase_a_019.json",
-    "replay_judgment:digest_mismatch:memory/knowledge_expansion/sandbox_judgments/cand_phase_a_020.json",
-    "promotion_governance:digest_mismatch:memory/knowledge_expansion/promotion_governance/cand_phase_a_019.json",
-    "promotion_governance:digest_mismatch:memory/knowledge_expansion/promotion_governance/cand_phase_a_020.json"
-  ],
+  "stale_artifact_reasons": [],
   "phase_counts": {
     "discovery": 2,
     "sandbox_generation": 2,

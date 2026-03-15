@@ -6,14 +6,9 @@
     "interrupted_cycle_recovered": false
   },
   "stale_detection": {
-    "detected": true,
-    "reasons": [
-      "replay_judgment:digest_mismatch:memory/knowledge_expansion/sandbox_judgments/cand_phase_a_019.json",
-      "replay_judgment:digest_mismatch:memory/knowledge_expansion/sandbox_judgments/cand_phase_a_020.json",
-      "promotion_governance:digest_mismatch:memory/knowledge_expansion/promotion_governance/cand_phase_a_019.json",
-      "promotion_governance:digest_mismatch:memory/knowledge_expansion/promotion_governance/cand_phase_a_020.json"
-    ],
-    "safe_refresh_applied": true
+    "detected": false,
+    "reasons": [],
+    "safe_refresh_applied": false
   },
   "partial_resume": {
     "applied": false,
