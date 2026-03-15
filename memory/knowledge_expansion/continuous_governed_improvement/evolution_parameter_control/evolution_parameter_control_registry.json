@@ -1,0 +1,71 @@
+{
+  "iterations": [
+    {
+      "iteration_id": "replay_evaluation",
+      "regime_context": {
+        "volatility_ratio": 1.0,
+        "volatility_regime": "medium_volatility",
+        "structure_state": "range",
+        "confidence": 0.5,
+        "replay_scope": "evaluation_replay",
+        "weak_module_cluster_size": 0,
+        "weak_module_cluster_detected": false
+      },
+      "performance": {
+        "promoted_modules_total": 2,
+        "promoted_modules_later_failed": 0,
+        "promoted_modules_later_failed_ids": [],
+        "quarantined_modules_total": 0,
+        "quarantined_modules_later_would_work": 0,
+        "quarantined_modules_later_would_work_ids": [],
+        "mutation_usefulness": 0.0,
+        "mutation_noise": 0.38,
+        "promotion_precision_by_regime": {
+          "medium_volatility": 1.0
+        },
+        "quarantine_precision_by_regime": {
+          "medium_volatility": 1.0
+        },
+        "replay_evaluated": true,
+        "governed": true
+      },
+      "parameter_state": {
+        "promotion_threshold": 0.6,
+        "quarantine_strictness": 0.55,
+        "mutation_rate": 0.45,
+        "exploration_vs_stability_balance": 0.5
+      },
+      "parameter_changes": [
+        {
+          "parameter": "mutation_rate",
+          "previous": 0.5,
+          "updated": 0.45,
+          "delta": -0.05,
+          "reason": "mutation usefulness is below noise under replay evaluation",
+          "replay_evaluated": true,
+          "governed": true
+        }
+      ],
+      "adaptation_reasons": [
+        "mutation usefulness is below noise under replay evaluation"
+      ],
+      "governance_context": {
+        "governed_refusal": {
+          "refused": false,
+          "refusal_state": "continue_governed_non_live",
+          "refusal_reasons": [],
+          "safe_to_continue": true
+        },
+        "governed_rollback": {
+          "triggered": false,
+          "trigger_reasons": [],
+          "invalid_candidate_ids": [],
+          "rollback_report_path": "",
+          "affected_execution_artifacts": []
+        },
+        "replay_evaluated": true,
+        "governed": true
+      }
+    }
+  ]
+}

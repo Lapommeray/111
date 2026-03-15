@@ -25,6 +25,7 @@ class ExecutionState:
     mt5_controlled_execution: dict[str, Any] | None = None
     capital_guard: dict[str, Any] | None = None
     strategy_intelligence: dict[str, Any] | None = None
+    macro_state: dict[str, Any] | None = None
     live_learning_loop: dict[str, Any] | None = None
     monitoring_state: dict[str, Any] | None = None
 
@@ -49,6 +50,7 @@ class ExecutionState:
             "mt5_controlled_execution": dict(self.mt5_controlled_execution or {}),
             "capital_guard": dict(self.capital_guard or {}),
             "strategy_intelligence": dict(self.strategy_intelligence or {}),
+            "macro_state": dict(self.macro_state or {}),
             "live_learning_loop": dict(self.live_learning_loop or {}),
             "monitoring_state": dict(self.monitoring_state or {}),
         }

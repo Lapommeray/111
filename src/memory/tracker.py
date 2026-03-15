@@ -26,6 +26,7 @@ class OutcomeTracker:
         bars: list[dict[str, Any]],
         confidence: float,
         reasons: list[str],
+        trade_tags: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if decision not in {"BUY", "SELL"}:
             outcome = {
@@ -37,6 +38,7 @@ class OutcomeTracker:
                 "pnl_points": 0.0,
                 "source_reasons": reasons,
                 "confidence": confidence,
+                "trade_tags": dict(trade_tags or {}),
             }
             self.store.record_trade_outcome(outcome)
             return outcome
@@ -51,6 +53,7 @@ class OutcomeTracker:
                 "pnl_points": 0.0,
                 "source_reasons": reasons,
                 "confidence": confidence,
+                "trade_tags": dict(trade_tags or {}),
             }
             self.store.record_trade_outcome(outcome)
             return outcome
@@ -80,6 +83,7 @@ class OutcomeTracker:
             "pnl_points": round(pnl_points, 3),
             "confidence": confidence,
             "source_reasons": reasons,
+            "trade_tags": dict(trade_tags or {}),
         }
         self.store.record_trade_outcome(outcome)
         return outcome

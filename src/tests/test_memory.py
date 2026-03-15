@@ -434,6 +434,35 @@ def test_run_pipeline_persists_controlled_mt5_execution_artifacts(tmp_path: Path
     assert Path(controlled_execution["execution_artifact_path"]).exists()
     assert Path(controlled_execution["execution_state_path"]).exists()
     assert Path(controlled_execution["execution_history_path"]).exists()
+    assert "trade_tags" in controlled_execution
+    assert "session" in controlled_execution["trade_tags"]
+
+
+def test_run_pipeline_persists_macro_state_and_trade_tags(tmp_path: Path) -> None:
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+    memory_root = tmp_path / "memory_macro"
+
+    output = run_pipeline(
+        RuntimeConfig(
+            symbol="XAUUSD",
+            timeframe="M5",
+            bars=120,
+            sample_path=str(sample_path),
+            memory_root=str(memory_root),
+            mode="replay",
+            replay_source="csv",
+            replay_csv_path=str(sample_path),
+        )
+    )
+
+    execution_state = output["status_panel"]["execution_state"]
+    signal = output["signal"]
+    assert "macro_state" in signal
+    assert "trade_tags" in signal
+    assert execution_state["macro_state"]["macro_states"]["dxy_state"] == "unavailable"
+    outcomes = json.loads((memory_root / "trade_outcomes.json").read_text(encoding="utf-8"))
+    assert outcomes[-1]["trade_tags"]["session"] in {"asia", "london", "new_york", "off_hours"}
 
 
 def test_controlled_mt5_execution_requires_explicit_live_gate(tmp_path: Path) -> None:
