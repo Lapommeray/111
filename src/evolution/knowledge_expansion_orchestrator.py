@@ -843,7 +843,7 @@ class KnowledgeExpansionOrchestrator:
         if not isinstance(payload, dict):
             payload = {"validated_knowledge": []}
 
-        existing_items = payload.get("validated_knowledge", [])
+        existing_items = payload.get("entries", payload.get("validated_knowledge", []))
         if not isinstance(existing_items, list):
             existing_items = []
 
@@ -886,7 +886,7 @@ class KnowledgeExpansionOrchestrator:
             }
             existing_by_hypothesis[hypothesis_id] = entry
 
-        payload["validated_knowledge"] = sorted(existing_by_hypothesis.values(), key=lambda item: str(item.get("hypothesis_id", "")))
+        payload["entries"] = sorted(existing_by_hypothesis.values(), key=lambda item: str(item.get("hypothesis_id", "")))
         payload["updated_at"] = datetime.now(tz=timezone.utc).isoformat()
         write_json_atomic(path, payload)
         return path
