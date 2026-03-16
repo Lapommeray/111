@@ -23,6 +23,95 @@ from src.macro.gold_macro import (
 )
 
 
+def _patch_available_macro_feeds(
+    monkeypatch,
+    *,
+    dxy_change: float = 0.0,
+    us10y_change: float = 0.0,
+    event_type: str = "routine_calendar",
+) -> None:
+    monkeypatch.setattr(
+        "src.macro.gold_macro.AlphaVantageAdapter.fetch_dxy_proxy",
+        lambda _self: {
+            "feed": "alpha_vantage",
+            "available": True,
+            "stale": False,
+            "state": "neutral_usd",
+            "reason_codes": [],
+            "metrics": {"usd_proxy_change": dxy_change},
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        },
+    )
+    monkeypatch.setattr(
+        "src.macro.gold_macro.FREDAdapter.fetch_core_macro",
+        lambda _self: {
+            "DGS10": {
+                "available": True,
+                "stale": False,
+                "value": 4.0,
+                "previous_value": 3.9,
+                "change": us10y_change,
+                "reason_codes": [],
+            },
+            "DGS2": {
+                "available": True,
+                "stale": False,
+                "value": 3.8,
+                "previous_value": 3.7,
+                "change": 0.01,
+                "reason_codes": [],
+            },
+            "T10YIE": {
+                "available": True,
+                "stale": False,
+                "value": 2.0,
+                "previous_value": 2.0,
+                "change": 0.0,
+                "reason_codes": [],
+            },
+            "REAL_RATE_PROXY": {
+                "available": True,
+                "stale": False,
+                "value": 1.8,
+                "previous_value": None,
+                "change": None,
+                "reason_codes": [],
+            },
+        },
+    )
+    monkeypatch.setattr(
+        "src.macro.gold_macro.TreasuryYieldsAdapter.fetch_yields",
+        lambda _self: {
+            "feed": "treasury",
+            "available": True,
+            "stale": False,
+            "state": "available",
+            "reason_codes": [],
+            "metrics": {"yield_10y": 4.0, "yield_2y": 3.8, "curve_10y_2y": 0.2},
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        },
+    )
+    monkeypatch.setattr(
+        "src.macro.gold_macro.EconomicCalendarAdapter.fetch_events",
+        lambda _self: {
+            "feed": "economic_calendar",
+            "available": True,
+            "stale": False,
+            "state": "calm",
+            "reason_codes": [],
+            "metrics": {
+                "high_impact_count": 0,
+                "major_event_count": 0,
+                "event_count": 0,
+                "upcoming_major_events_60m": 0,
+                "recent_major_events_30m": 0,
+                "event_type": event_type,
+            },
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        },
+    )
+
+
 def test_alpha_vantage_adapter_parses_usd_proxy_state() -> None:
     def _fetcher(_url: str) -> dict[str, object]:
         return {
@@ -283,3 +372,169 @@ def test_correlation_regime_break_detector_reduces_size_and_confidence(tmp_path:
     assert break_macro["risk_behavior"]["confidence_penalty"] >= CORRELATION_BREAK_CONFIDENCE_PENALTY
     assert Path(last_macro["correlation_regime"]["paths"]["state"]).exists()
     assert Path(last_macro["correlation_regime"]["paths"]["history"]).exists()
+
+
+def test_correlation_refinement_dual_confirmation_and_major_warning(tmp_path: Path, monkeypatch) -> None:
+    _patch_available_macro_feeds(monkeypatch, dxy_change=0.18, us10y_change=0.15)
+    memory = tmp_path / "memory_corr_refined"
+    for idx in range(6):
+        bars = [
+            {"time": 4_200_000_000 + idx * 60 - 60, "close": 2000.0},
+            {"time": 4_200_000_000 + idx * 60, "close": 2000.2 + (idx * 0.35)},
+        ]
+        macro = collect_xauusd_macro_state(
+            memory_root=str(memory),
+            bars=bars,
+            session_state="new_york",
+            volatility_regime="balanced",
+            config=MacroFeedConfig(
+                alpha_vantage_api_key="k",
+                fred_api_key="k",
+                treasury_endpoint="https://example.com/treasury",
+                economic_calendar_endpoint="https://example.com/calendar",
+                enabled=True,
+            ),
+        )
+
+    corr = macro["correlation_regime"]
+    assert corr["confirmation"] in {"dual_break", "dxy_break_only", "yield_break_only"}
+    assert macro["trade_tags"]["correlation_confirmation"] == corr["confirmation"]
+    assert "surgical_layer_triggers" in macro["trade_tags"]
+    if corr["confirmation"] == "dual_break":
+        assert macro["risk_behavior"]["size_multiplier"] <= CORRELATION_BREAK_SIZE_MULTIPLIER
+
+
+def test_stop_hunt_round_cluster_and_london_fix_layers(tmp_path: Path, monkeypatch) -> None:
+    _patch_available_macro_feeds(monkeypatch)
+    base = datetime(2026, 3, 16, 15, 10, tzinfo=timezone.utc)
+    bars = []
+    for i in range(24):
+        t = int((base - timedelta(minutes=23 - i)).timestamp())
+        close = 2000.0 + (0.1 if i < 20 else 2.2 if i == 21 else -0.4 if i >= 22 else 0.0)
+        bars.append(
+            {
+                "time": t,
+                "open": 2000.0,
+                "high": 2003.0 if i == 22 else close + 0.3,
+                "low": 1999.7,
+                "close": close,
+                "volume": 120.0,
+            }
+        )
+    macro = collect_xauusd_macro_state(
+        memory_root=str(tmp_path / "memory_stop_hunt"),
+        bars=bars,
+        session_state="london",
+        volatility_regime="balanced",
+        config=MacroFeedConfig(
+            alpha_vantage_api_key="k",
+            fred_api_key="k",
+            treasury_endpoint="https://example.com/treasury",
+            economic_calendar_endpoint="https://example.com/calendar",
+            enabled=True,
+        ),
+    )
+    detectors = macro["detectors"]
+    assert detectors["stop_hunt_footprint_analyzer"]["state"] in {"sweep_detected", "no_sweep"}
+    assert detectors["round_number_stop_cluster_map"]["state"] != "insufficient_data"
+    assert detectors["london_fix_imbalance_detector"]["state"] in {"fix_imbalance_detected", "fix_orderly"}
+
+
+def test_tokyo_vacuum_nfp_and_pause_paths_are_governed(tmp_path: Path, monkeypatch) -> None:
+    _patch_available_macro_feeds(monkeypatch)
+    start = datetime(2026, 3, 6, 13, 31, tzinfo=timezone.utc)
+    bars = []
+    for i in range(30):
+        t = int((start - timedelta(minutes=29 - i)).timestamp())
+        bars.append(
+            {
+                "time": t,
+                "open": 2000.0,
+                "high": 2000.6,
+                "low": 1999.6,
+                "close": 2000.0 + (i * 0.01),
+                "spread": 0.2 if i < 29 else 1.0,
+                "tick_volume": 140 if i < 29 else 20,
+            }
+        )
+    macro = collect_xauusd_macro_state(
+        memory_root=str(tmp_path / "memory_vacuum"),
+        bars=bars,
+        session_state="asia",
+        volatility_regime="balanced",
+        config=MacroFeedConfig(
+            alpha_vantage_api_key="k",
+            fred_api_key="k",
+            treasury_endpoint="https://example.com/treasury",
+            economic_calendar_endpoint="https://example.com/calendar",
+            enabled=True,
+        ),
+    )
+    assert macro["detectors"]["nfp_front_run_layer"]["state"] in {
+        "nfp_pre_15m",
+        "nfp_post_0_2m_block",
+        "nfp_post_2_5m_watch",
+        "nfp_post_5m_reentry_window",
+        "normal",
+    }
+    assert macro["detectors"]["tokyo_open_liquidity_vacuum_detector"]["state"] in {
+        "tokyo_liquidity_vacuum",
+        "tokyo_normal_liquidity",
+    }
+    if macro["detectors"]["tokyo_open_liquidity_vacuum_detector"]["active"]:
+        assert macro["risk_behavior"]["pause_trading"] is True
+        assert macro["risk_behavior"]["pause_seconds"] >= 120
+
+
+def test_blowoff_archaeologist_gamma_proxy_and_memory_persistence(tmp_path: Path, monkeypatch) -> None:
+    _patch_available_macro_feeds(monkeypatch)
+    bars = []
+    base = datetime(2026, 3, 16, 12, 5, tzinfo=timezone.utc)
+    for i in range(185):
+        t = int((base - timedelta(minutes=184 - i)).timestamp())
+        price = 2000.0 + (0.02 if i % 2 == 0 else -0.02)
+        bars.append(
+            {
+                "time": t,
+                "open": price,
+                "high": price + 0.15,
+                "low": price - 0.15,
+                "close": price,
+                "volume": 80.0,
+            }
+        )
+    bars[-2] = {
+        "time": bars[-2]["time"],
+        "open": 2000.8,
+        "high": 2006.0,
+        "low": 2000.2,
+        "close": 2001.0,
+        "volume": 260.0,
+    }
+    bars[-1] = {
+        "time": bars[-1]["time"],
+        "open": 2001.0,
+        "high": 2002.5,
+        "low": 1999.9,
+        "close": 2000.4,
+        "volume": 120.0,
+    }
+    macro = collect_xauusd_macro_state(
+        memory_root=str(tmp_path / "memory_arch"),
+        bars=bars,
+        session_state="new_york",
+        volatility_regime="expansion",
+        config=MacroFeedConfig(
+            alpha_vantage_api_key="k",
+            fred_api_key="k",
+            treasury_endpoint="https://example.com/treasury",
+            economic_calendar_endpoint="https://example.com/calendar",
+            enabled=True,
+        ),
+    )
+    assert macro["detectors"]["blowoff_top_fingerprint"]["state"] in {"blowoff_top_detected", "no_blowoff"}
+    assert macro["detectors"]["price_archaeologist_layer"]["partial"] in {True, False}
+    assert macro["detectors"]["dealer_gamma_flip_proxy"]["proxy"] is True
+    assert macro["detectors"]["dealer_gamma_flip_proxy"]["partial"] is True
+    assert Path(macro["paths"]["surgical_latest"]).exists()
+    assert Path(macro["paths"]["surgical_history"]).exists()

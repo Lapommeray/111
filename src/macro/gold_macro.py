@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from statistics import median
 from typing import Any
 
 from src.macro.adapters import (
@@ -41,14 +42,90 @@ FEED_UNAVAILABLE_CONFIDENCE_STEP = 0.03
 FEED_UNAVAILABLE_CONFIDENCE_CAP = 0.18
 CORRELATION_WINDOW_SIZE = 30
 CORRELATION_MIN_SAMPLES = 5
-CORRELATION_BREAKDOWN_DROP = 0.55
-CORRELATION_BREAKDOWN_WEAK = 0.2
 CORRELATION_BREAK_SIZE_MULTIPLIER = 0.65
 CORRELATION_BREAK_CONFIDENCE_PENALTY = 0.07
 DEFAULT_NEGATIVE_CORRELATION = -0.5
 DEFAULT_POSITIVE_CORRELATION = 0.5
 HIGH_REAL_RATE_THRESHOLD = 1.6
 LOW_REAL_RATE_THRESHOLD = 0.2
+CORRELATION_STRONG_INVERSE = -0.6
+CORRELATION_BREAKDOWN = -0.3
+CORRELATION_FLIP = 0.0
+CORRELATION_MAJOR_WARNING = 0.3
+CORRELATION_DELTA_CUT_TRIGGER = 0.4
+CORRELATION_MAJOR_WARNING_SIZE_MULTIPLIER = 0.3
+CORRELATION_MAJOR_WARNING_CONFIDENCE_PENALTY = 0.1
+STOP_HUNT_LOOKBACK = 20
+STOP_HUNT_REVERSION_SIZE_MULTIPLIER = 0.85
+STOP_HUNT_REVERSION_CONFIDENCE_BONUS = 0.02
+LONDON_FIX_SPIKE_THRESHOLD = 0.0012
+LONDON_FIX_REVERSAL_SIZE_MULTIPLIER = 0.75
+ROUND_CLUSTER_ZONE_B_MIN = 0.5
+ROUND_CLUSTER_ZONE_B_MAX = 1.5
+ROUND_CLUSTER_ZONE_C_MIN = 2.0
+ROUND_CLUSTER_ZONE_C_MAX = 3.0
+ROUND_CLUSTER_REVERSION_CONFIDENCE_BONUS = 0.03
+TOKYO_VACUUM_SPREAD_FACTOR = 1.8
+TOKYO_VACUUM_TICK_VELOCITY_FACTOR = 0.6
+TOKYO_VACUUM_AUTOPAUSE_SECONDS = 600
+BLOWOFF_RETURN_THRESHOLD = 0.0022
+BLOWOFF_VOLUME_RATIO_THRESHOLD = 1.35
+BLOWOFF_WICK_RATIO_THRESHOLD = 0.35
+BLOWOFF_SIZE_MULTIPLIER = 0.65
+NFP_PRE_EVENT_SIZE_MULTIPLIER = 0.7
+NFP_POST_BLOCK_SECONDS = 120
+NFP_POST_WATCH_SECONDS = 300
+NFP_POST_RELEASE_SIZE_MULTIPLIER = 0.8
+ARCHAEOLOGY_MIN_BARS = 90
+ARCHAEOLOGY_MAX_BARS = 180
+ARCHAEOLOGY_RANGE_THRESHOLD = 0.0015
+ARCHAEOLOGY_MIN_SPAN_BARS = 12
+ARCHAEOLOGY_REVISIT_DISTANCE = 1.8
+GAMMA_PROXY_STRIKES = [1850.0, 1900.0, 1950.0, 2000.0, 2050.0]
+GAMMA_PROXY_STRIKE_DISTANCE = 1.8
+GAMMA_PROXY_ACCELERATION_THRESHOLD = 0.0018
+
+
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        if value is None:
+            return default
+        return float(value)
+    except Exception:
+        return default
+
+
+def _bar_close(bar: dict[str, Any]) -> float:
+    return _safe_float(bar.get("close"), 0.0)
+
+
+def _bar_high(bar: dict[str, Any]) -> float:
+    high = _safe_float(bar.get("high"), 0.0)
+    if high > 0:
+        return high
+    return _bar_close(bar)
+
+
+def _bar_low(bar: dict[str, Any]) -> float:
+    low = _safe_float(bar.get("low"), 0.0)
+    if low > 0:
+        return low
+    return _bar_close(bar)
+
+
+def _bar_open(bar: dict[str, Any]) -> float:
+    value = _safe_float(bar.get("open"), 0.0)
+    if value != 0.0:
+        return value
+    return _bar_close(bar)
+
+
+def _bar_volume(bar: dict[str, Any]) -> float:
+    value = _safe_float(bar.get("volume"), 0.0)
+    if value > 0:
+        return value
+    value = _safe_float(bar.get("tick_volume"), 0.0)
+    return max(0.0, value)
 
 
 @dataclass(frozen=True)
@@ -146,21 +223,51 @@ def _detect_correlation_shift(
             "state": "insufficient_data",
             "reason": "insufficient_samples",
             "expected_sign": expected_sign,
+            "tier": "insufficient_data",
         }
 
     prior = previous_corr
     if prior is None:
         prior = DEFAULT_NEGATIVE_CORRELATION if expected_sign < 0 else DEFAULT_POSITIVE_CORRELATION
-    sign_flip = (prior * current_corr) < 0 and abs(current_corr) >= CORRELATION_BREAKDOWN_WEAK
-    sharp_breakdown = abs(prior) >= 0.5 and (abs(prior) - abs(current_corr)) >= CORRELATION_BREAKDOWN_DROP
-    break_detected = bool(sign_flip or sharp_breakdown)
+    corr_delta = current_corr - prior
+    tier = "strong_inverse_regime"
+    if current_corr > CORRELATION_MAJOR_WARNING:
+        tier = "major_warning"
+    elif current_corr > CORRELATION_FLIP:
+        tier = "flip"
+    elif current_corr > CORRELATION_BREAKDOWN:
+        tier = "breakdown"
+    elif current_corr < CORRELATION_STRONG_INVERSE:
+        tier = "strong_inverse_regime"
+    else:
+        tier = "normal_inverse_regime"
+
+    sign_flip = current_corr > CORRELATION_FLIP
+    breakdown = current_corr > CORRELATION_BREAKDOWN
+    major_warning = current_corr > CORRELATION_MAJOR_WARNING
+    roc_trigger = corr_delta > CORRELATION_DELTA_CUT_TRIGGER
+    break_detected = bool(breakdown or sign_flip or major_warning or roc_trigger)
     state = "correlation_break_detected" if break_detected else "correlation_stable"
-    reason = "sign_flip" if sign_flip else "sharp_breakdown" if sharp_breakdown else "stable"
+    reason = "stable"
+    if major_warning:
+        reason = "major_warning"
+    elif sign_flip:
+        reason = "flip"
+    elif breakdown:
+        reason = "breakdown"
+    elif roc_trigger:
+        reason = "rate_of_change_trigger"
     return {
         "break_detected": break_detected,
         "state": state,
         "reason": reason,
         "expected_sign": expected_sign,
+        "tier": tier,
+        "corr_delta_short": round(corr_delta, 6),
+        "roc_trigger": roc_trigger,
+        "major_warning": major_warning,
+        "breakdown": breakdown,
+        "flip": sign_flip,
     }
 
 
@@ -234,19 +341,32 @@ def _compute_correlation_regime(
         expected_sign=-1,
     )
 
-    break_detected = bool(dxy_shift["break_detected"] or us10y_shift["break_detected"])
+    dxy_break = bool(dxy_shift["break_detected"])
+    yield_break = bool(us10y_shift["break_detected"])
+    confirmation = "dual_stable"
+    if dxy_break and yield_break:
+        confirmation = "dual_break"
+    elif dxy_break:
+        confirmation = "dxy_break_only"
+    elif yield_break:
+        confirmation = "yield_break_only"
+
+    break_detected = bool(dxy_break or yield_break)
     state = "correlation_break_detected" if break_detected else (
         "insufficient_data" if current_corr_dxy is None and current_corr_us10y is None else "correlation_stable"
     )
     break_reasons = []
-    if dxy_shift["break_detected"]:
+    if dxy_break:
         break_reasons.append(f"xau_dxy:{dxy_shift['reason']}")
-    if us10y_shift["break_detected"]:
+    if yield_break:
         break_reasons.append(f"xau_us10y:{us10y_shift['reason']}")
+    if confirmation != "dual_stable":
+        break_reasons.append(f"confirmation:{confirmation}")
 
     correlation_state = {
         "state": state,
         "break_detected": break_detected,
+        "confirmation": confirmation,
         "rolling_correlations": {
             "xau_dxy": current_corr_dxy,
             "xau_us10y": current_corr_us10y,
@@ -264,6 +384,7 @@ def _compute_correlation_regime(
             "xau_dxy": dxy_shift,
             "xau_us10y": us10y_shift,
         },
+        "correlation_regime_tags": normalize_reasons(break_reasons),
         "logged_at": datetime.now(tz=timezone.utc).isoformat(),
     }
 
@@ -286,6 +407,319 @@ def _compute_correlation_regime(
         "history": str(history_path),
     }
     return correlation_state
+
+
+def _detect_stop_hunt_footprint(*, bars: list[dict[str, Any]], macro_root: Path) -> dict[str, Any]:
+    state_path = macro_root / "stop_hunt_state.json"
+    state_payload = read_json_safe(state_path, default={"swept_levels": {}})
+    if not isinstance(state_payload, dict):
+        state_payload = {"swept_levels": {}}
+    swept_levels = state_payload.get("swept_levels", {})
+    if not isinstance(swept_levels, dict):
+        swept_levels = {}
+
+    if len(bars) < STOP_HUNT_LOOKBACK + 1:
+        result = {"state": "insufficient_data", "active": False, "events": [], "favorite_zones": []}
+        write_json_atomic(state_path, {"swept_levels": swept_levels, "last": result})
+        return result
+
+    last_bar = bars[-1]
+    recent = bars[-(STOP_HUNT_LOOKBACK + 1) : -1]
+    recent_high = max(_bar_high(bar) for bar in recent)
+    recent_low = min(_bar_low(bar) for bar in recent)
+    events: list[dict[str, Any]] = []
+    if _bar_high(last_bar) > recent_high and _bar_close(last_bar) < recent_high:
+        key = f"{round(recent_high, 2)}"
+        swept_levels[key] = int(swept_levels.get(key, 0)) + 1
+        events.append({"type": "upside_sweep", "level": round(recent_high, 4), "opposite_bias": "sell"})
+    if _bar_low(last_bar) < recent_low and _bar_close(last_bar) > recent_low:
+        key = f"{round(recent_low, 2)}"
+        swept_levels[key] = int(swept_levels.get(key, 0)) + 1
+        events.append({"type": "downside_sweep", "level": round(recent_low, 4), "opposite_bias": "buy"})
+
+    favorite_zones = sorted(
+        [{"level": float(level), "sweeps": count} for level, count in swept_levels.items()],
+        key=lambda item: item["sweeps"],
+        reverse=True,
+    )[:5]
+    result = {
+        "state": "sweep_detected" if events else "no_sweep",
+        "active": bool(events),
+        "events": events,
+        "favorite_zones": favorite_zones,
+    }
+    write_json_atomic(state_path, {"swept_levels": swept_levels, "last": result})
+    return result
+
+
+def _detect_london_fix_imbalance(*, bars: list[dict[str, Any]], bar_dt: datetime) -> dict[str, Any]:
+    if not bars:
+        return {"state": "insufficient_data", "active": False, "partial": True}
+    # London PM fix at 15:00 UTC modeled with a 14:45-15:15 UTC liquidity-impact window.
+    current_mins = bar_dt.hour * 60 + bar_dt.minute
+    in_fix_window = (14 * 60 + 45) <= current_mins <= (15 * 60 + 15)
+    if not in_fix_window or len(bars) < 12:
+        return {"state": "outside_fix_window", "active": False, "partial": False}
+
+    recent = bars[-12:]
+    fix_level = median(_bar_close(bar) for bar in recent[:6])
+    pre_fix = recent[:6]
+    around_fix = recent[6:9]
+    post_fix = recent[9:]
+    pre_fix_range = max(_bar_high(bar) for bar in pre_fix) - min(_bar_low(bar) for bar in pre_fix)
+    spike = max(abs((_bar_close(bar) - fix_level) / fix_level) for bar in around_fix) if fix_level else 0.0
+    reversal = False
+    if post_fix:
+        reversal = any((_bar_close(bar) - fix_level) * (_bar_close(around_fix[-1]) - fix_level) < 0 for bar in post_fix)
+    state = "fix_imbalance_detected" if spike > LONDON_FIX_SPIKE_THRESHOLD and reversal else "fix_orderly"
+    return {
+        "state": state,
+        "active": state == "fix_imbalance_detected",
+        "fix_level": round(fix_level, 4),
+        "pre_fix_liquidity_thinning": round(pre_fix_range, 6),
+        "fix_spike": round(spike, 6),
+        "reversal_through_fix": reversal,
+    }
+
+
+def _round_number_stop_cluster_map(*, bars: list[dict[str, Any]], round_number_state: dict[str, Any]) -> dict[str, Any]:
+    nearest_level = round_number_state.get("nearest_level")
+    if not isinstance(nearest_level, (int, float)) or len(bars) < 4:
+        return {"state": "insufficient_data", "active": False}
+    level = float(nearest_level)
+    touched_zone = "zone_a"
+    quick_reversal = False
+    for bar in bars[-4:]:
+        dist = abs(_bar_close(bar) - level)
+        if ROUND_CLUSTER_ZONE_B_MIN <= dist <= ROUND_CLUSTER_ZONE_B_MAX:
+            touched_zone = "zone_b"
+        elif ROUND_CLUSTER_ZONE_C_MIN <= dist <= ROUND_CLUSTER_ZONE_C_MAX:
+            touched_zone = "zone_c"
+    if touched_zone == "zone_b":
+        latest = bars[-1]
+        prior = bars[-2]
+        quick_reversal = abs(_bar_close(latest) - level) < abs(_bar_close(prior) - level)
+    state = "zone_b_sweep_reversion" if touched_zone == "zone_b" and quick_reversal else f"{touched_zone}_interaction"
+    return {
+        "state": state,
+        "active": touched_zone in {"zone_b", "zone_c"},
+        "nearest_round_level": round(level, 4),
+        "first_hit_zone": touched_zone,
+        "zone_b_quick_reversal": quick_reversal,
+    }
+
+
+def _session_transition_volatility_decay(*, bars: list[dict[str, Any]], bar_dt: datetime, session_state: str) -> dict[str, Any]:
+    if len(bars) < 24:
+        return {"state": "insufficient_data", "active": False, "partial": True, "size_multiplier": 1.0, "confidence_penalty": 0.0}
+    returns = []
+    for idx in range(1, min(61, len(bars))):
+        prev = _bar_close(bars[-idx - 1])
+        cur = _bar_close(bars[-idx])
+        if prev != 0:
+            returns.append(abs((cur - prev) / prev))
+    short_vol = sum(returns[:12]) / max(1, len(returns[:12]))
+    long_vol = sum(returns) / max(1, len(returns))
+    ratio = short_vol / long_vol if long_vol > 0 else 1.0
+    hour = bar_dt.hour
+    transition = "none"
+    if hour in {7, 8}:
+        transition = "asia_to_london"
+    elif hour in {12, 13}:
+        transition = "london_to_newyork"
+    decay = ratio < 0.85
+    size_multiplier = 0.9 if transition != "none" and not decay else 0.8 if transition != "none" else 1.0
+    confidence_penalty = 0.03 if transition != "none" and ratio > 1.25 else 0.0
+    return {
+        "state": "transition_decay" if decay and transition != "none" else "transition_expansion" if transition != "none" else "session_stable",
+        "active": transition != "none",
+        "transition": transition,
+        "session": session_state,
+        "volatility_ratio": round(ratio, 6),
+        "size_multiplier": size_multiplier,
+        "confidence_penalty": confidence_penalty,
+    }
+
+
+def _tokyo_open_liquidity_vacuum(*, bars: list[dict[str, Any]], bar_dt: datetime) -> dict[str, Any]:
+    if len(bars) < 20:
+        return {"state": "insufficient_data", "active": False, "partial": True}
+    tokyo_window = bar_dt.hour in {0, 1}
+    spreads = [_safe_float(bar.get("spread"), 0.0) for bar in bars[-20:]]
+    spread_known = any(item > 0 for item in spreads)
+    spread_series = [item for item in spreads if item > 0]
+    spread_median = median(spread_series) if spread_series else 0.0
+    spread_now = spread_series[-1] if spread_series else 0.0
+    volumes = [_bar_volume(bar) for bar in bars[-20:]]
+    volume_median = median(volumes[:-1]) if len(volumes) > 1 else 0.0
+    volume_now = volumes[-1] if volumes else 0.0
+    spread_expand = spread_now > (spread_median * TOKYO_VACUUM_SPREAD_FACTOR) if spread_median > 0 else False
+    velocity_collapse = volume_now < (volume_median * TOKYO_VACUUM_TICK_VELOCITY_FACTOR) if volume_median > 0 else False
+    active = bool(tokyo_window and spread_expand and velocity_collapse)
+    return {
+        "state": "tokyo_liquidity_vacuum" if active else "tokyo_normal_liquidity",
+        "active": active,
+        "partial": not spread_known,
+        "auto_pause_seconds": TOKYO_VACUUM_AUTOPAUSE_SECONDS if active else 0,
+        "spread_now": round(spread_now, 6),
+        "spread_median": round(spread_median, 6),
+        "tick_velocity_now": round(volume_now, 6),
+        "tick_velocity_median": round(volume_median, 6),
+    }
+
+
+def _blowoff_top_fingerprint(*, bars: list[dict[str, Any]]) -> dict[str, Any]:
+    if len(bars) < 6:
+        return {"state": "insufficient_data", "active": False}
+    seq = bars[-6:]
+    price_start = _bar_close(seq[0])
+    price_end = _bar_close(seq[-2])
+    price_jump = ((price_end - price_start) / price_start) if price_start else 0.0
+    volumes = [_bar_volume(bar) for bar in seq]
+    avg_volume = sum(volumes[:-1]) / max(1, len(volumes[:-1]))
+    vol_ratio = (volumes[-2] / avg_volume) if avg_volume > 0 else 1.0
+    candle = seq[-2]
+    body_high = max(_bar_open(candle), _bar_close(candle))
+    upper_wick = max(0.0, _bar_high(candle) - body_high)
+    total_range = max(1e-9, _bar_high(candle) - _bar_low(candle))
+    wick_ratio = upper_wick / total_range
+    close_position = (_bar_close(candle) - _bar_low(candle)) / total_range
+    next_lower_high = _bar_high(seq[-1]) < _bar_high(candle)
+    active = (
+        price_jump > BLOWOFF_RETURN_THRESHOLD
+        and vol_ratio > BLOWOFF_VOLUME_RATIO_THRESHOLD
+        and wick_ratio > BLOWOFF_WICK_RATIO_THRESHOLD
+        and close_position < 0.4
+        and next_lower_high
+    )
+    return {
+        "state": "blowoff_top_detected" if active else "no_blowoff",
+        "active": active,
+        "price_jump": round(price_jump, 6),
+        "volume_ratio": round(vol_ratio, 6),
+        "upper_wick_ratio": round(wick_ratio, 6),
+        "close_bottom_fraction": round(close_position, 6),
+        "next_candle_lower_high": next_lower_high,
+    }
+
+
+def _next_nfp_timestamp(reference: datetime) -> datetime:
+    # NFP proxy schedule: first Friday monthly at 13:30 UTC (08:30 ET), found by scanning from day 1.
+    probe = datetime(reference.year, reference.month, 1, 13, 30, tzinfo=timezone.utc)
+    while probe.weekday() != 4:
+        probe += timedelta(days=1)
+    if probe < reference - timedelta(hours=24):
+        month = reference.month + 1
+        year = reference.year
+        if month > 12:
+            month = 1
+            year += 1
+        probe = datetime(year, month, 1, 13, 30, tzinfo=timezone.utc)
+        while probe.weekday() != 4:
+            probe += timedelta(days=1)
+    return probe
+
+
+def _nfp_front_run_layer(*, bars: list[dict[str, Any]], bar_dt: datetime) -> dict[str, Any]:
+    nfp_ts = _next_nfp_timestamp(bar_dt)
+    secs_to_nfp = (nfp_ts - bar_dt).total_seconds()
+    phase = "normal"
+    size_multiplier = 1.0
+    pause_trading = False
+    if 0 <= secs_to_nfp <= 900:
+        phase = "nfp_pre_15m"
+        size_multiplier = NFP_PRE_EVENT_SIZE_MULTIPLIER
+    elif -NFP_POST_BLOCK_SECONDS <= secs_to_nfp < 0:
+        phase = "nfp_post_0_2m_block"
+        pause_trading = True
+    elif -(NFP_POST_WATCH_SECONDS) <= secs_to_nfp < -NFP_POST_BLOCK_SECONDS:
+        phase = "nfp_post_2_5m_watch"
+        size_multiplier = NFP_POST_RELEASE_SIZE_MULTIPLIER
+    elif secs_to_nfp < -NFP_POST_WATCH_SECONDS and secs_to_nfp > -(6 * 3600):
+        phase = "nfp_post_5m_reentry_window"
+        size_multiplier = 0.9
+
+    drift = 0.0
+    if bars:
+        lookback = min(len(bars), 288)
+        start = _bar_close(bars[-lookback])
+        end = _bar_close(bars[-1])
+        if start != 0:
+            drift = (end - start) / start
+    return {
+        "state": phase,
+        "active": phase != "normal",
+        "nfp_timestamp": nfp_ts.isoformat(),
+        "seconds_to_nfp": int(secs_to_nfp),
+        "pre_nfp_24h_drift": round(drift, 6),
+        "size_multiplier": size_multiplier,
+        "pause_trading": pause_trading,
+    }
+
+
+def _price_archaeologist_layer(*, bars: list[dict[str, Any]], macro_root: Path, last_price: float) -> dict[str, Any]:
+    state_path = macro_root / "price_archaeologist_state.json"
+    state_payload = read_json_safe(state_path, default={"zones": []})
+    if not isinstance(state_payload, dict):
+        state_payload = {"zones": []}
+    zones = state_payload.get("zones", [])
+    if not isinstance(zones, list):
+        zones = []
+
+    segment = bars[-ARCHAEOLOGY_MAX_BARS:]
+    if len(segment) >= ARCHAEOLOGY_MIN_BARS:
+        chunk = segment[-ARCHAEOLOGY_MIN_BARS:]
+        closes = [_bar_close(bar) for bar in chunk]
+        mean = sum(closes) / max(1, len(closes))
+        high = max(closes)
+        low = min(closes)
+        range_ratio = ((high - low) / mean) if mean else 0.0
+        if range_ratio <= ARCHAEOLOGY_RANGE_THRESHOLD:
+            zones.append(
+                {
+                    "midpoint": round((high + low) / 2.0, 4),
+                    "range_ratio": round(range_ratio, 6),
+                    "span_bars": len(chunk),
+                    "logged_at": datetime.now(tz=timezone.utc).isoformat(),
+                }
+            )
+    zones = zones[-50:]
+    revisits = [zone for zone in zones if abs(last_price - _safe_float(zone.get("midpoint"), 0.0)) <= ARCHAEOLOGY_REVISIT_DISTANCE]
+    result = {
+        "state": "structural_magnet_revisit" if revisits else "no_revisit",
+        "active": bool(revisits),
+        "partial": len(segment) < ARCHAEOLOGY_MIN_BARS,
+        "zones": zones,
+        "revisit_candidates": revisits[:5],
+    }
+    write_json_atomic(state_path, {"zones": zones, "last": result})
+    return result
+
+
+def _dealer_gamma_flip_proxy(*, bars: list[dict[str, Any]], last_price: float) -> dict[str, Any]:
+    nearest = min(GAMMA_PROXY_STRIKES, key=lambda strike: abs(strike - last_price))
+    distance = abs(nearest - last_price)
+    momentum = 0.0
+    acceleration = 0.0
+    if len(bars) >= 3:
+        r1 = _price_change(bars[-3:-1])
+        r2 = _price_change(bars[-2:])
+        momentum = r2
+        acceleration = r2 - r1
+    near_strike = distance <= GAMMA_PROXY_STRIKE_DISTANCE
+    short_gamma = near_strike and acceleration > GAMMA_PROXY_ACCELERATION_THRESHOLD
+    long_gamma_cap = near_strike and abs(acceleration) <= (GAMMA_PROXY_ACCELERATION_THRESHOLD * 0.2)
+    state = "short_gamma_extension_proxy" if short_gamma else "long_gamma_cap_proxy" if long_gamma_cap else "neutral_proxy"
+    return {
+        "state": state,
+        "active": near_strike,
+        "proxy": True,
+        "partial": True,
+        "nearest_strike": nearest,
+        "distance_to_strike": round(distance, 6),
+        "momentum": round(momentum, 6),
+        "acceleration": round(acceleration, 6),
+    }
 
 
 def collect_xauusd_macro_state(
@@ -386,9 +820,19 @@ def collect_xauusd_macro_state(
         dxy_change=dxy_change if bool(alpha_state.get("available", False)) else None,
         us10y_change=yield_change if bool(fred_state.get("DGS10", {}).get("available", False)) else None,
     )
+    stop_hunt_state = _detect_stop_hunt_footprint(bars=bars, macro_root=macro_root)
+    london_fix_state = _detect_london_fix_imbalance(bars=bars, bar_dt=bar_dt)
+    round_cluster_state = _round_number_stop_cluster_map(bars=bars, round_number_state=round_number_state)
+    transition_decay_state = _session_transition_volatility_decay(bars=bars, bar_dt=bar_dt, session_state=session_state)
+    tokyo_vacuum_state = _tokyo_open_liquidity_vacuum(bars=bars, bar_dt=bar_dt)
+    blowoff_state = _blowoff_top_fingerprint(bars=bars)
+    nfp_state = _nfp_front_run_layer(bars=bars, bar_dt=bar_dt)
+    archaeology_state = _price_archaeologist_layer(bars=bars, macro_root=macro_root, last_price=last_price)
+    gamma_proxy_state = _dealer_gamma_flip_proxy(bars=bars, last_price=last_price)
 
     size_multiplier = 1.0
     confidence_penalty = 0.0
+    confidence_bonus = 0.0
     risk_reasons: list[str] = []
     if dxy_state == "strong_usd" and yield_pressure == "bearish_gold":
         size_multiplier *= DXY_YIELD_SIZE_MULTIPLIER
@@ -424,6 +868,63 @@ def collect_xauusd_macro_state(
         size_multiplier *= CORRELATION_BREAK_SIZE_MULTIPLIER
         confidence_penalty += CORRELATION_BREAK_CONFIDENCE_PENALTY
         risk_reasons.append("correlation_regime_break_detected")
+    if (
+        correlation_regime.get("confirmation") == "dual_break"
+        and (
+            correlation_regime.get("pairs", {}).get("xau_dxy", {}).get("major_warning")
+            or correlation_regime.get("pairs", {}).get("xau_us10y", {}).get("major_warning")
+        )
+    ):
+        size_multiplier *= CORRELATION_MAJOR_WARNING_SIZE_MULTIPLIER
+        confidence_penalty += CORRELATION_MAJOR_WARNING_CONFIDENCE_PENALTY
+        risk_reasons.append("correlation_major_warning_cap")
+    if (
+        correlation_regime.get("pairs", {}).get("xau_dxy", {}).get("roc_trigger")
+        or correlation_regime.get("pairs", {}).get("xau_us10y", {}).get("roc_trigger")
+    ):
+        size_multiplier *= 0.7
+        risk_reasons.append("correlation_roc_immediate_cut")
+    if stop_hunt_state.get("active"):
+        size_multiplier *= STOP_HUNT_REVERSION_SIZE_MULTIPLIER
+        confidence_bonus += STOP_HUNT_REVERSION_CONFIDENCE_BONUS
+        risk_reasons.append("stop_hunt_sweep_detected")
+    if london_fix_state.get("active"):
+        size_multiplier *= LONDON_FIX_REVERSAL_SIZE_MULTIPLIER
+        confidence_penalty += 0.03
+        risk_reasons.append("london_fix_imbalance")
+    if round_cluster_state.get("state") == "zone_b_sweep_reversion":
+        confidence_bonus += ROUND_CLUSTER_REVERSION_CONFIDENCE_BONUS
+        risk_reasons.append("round_cluster_zone_b_reversion")
+    transition_size = _safe_float(transition_decay_state.get("size_multiplier"), 1.0)
+    transition_penalty = _safe_float(transition_decay_state.get("confidence_penalty"), 0.0)
+    size_multiplier *= transition_size
+    confidence_penalty += transition_penalty
+    if transition_decay_state.get("active"):
+        risk_reasons.append(f"session_transition:{transition_decay_state.get('state')}")
+    if tokyo_vacuum_state.get("active"):
+        size_multiplier *= 0.6
+        confidence_penalty += 0.06
+        risk_reasons.append("tokyo_liquidity_vacuum")
+    if blowoff_state.get("active"):
+        size_multiplier *= BLOWOFF_SIZE_MULTIPLIER
+        confidence_penalty += 0.05
+        risk_reasons.append("blowoff_top_fingerprint")
+    if nfp_state.get("active"):
+        size_multiplier *= _safe_float(nfp_state.get("size_multiplier"), 1.0)
+        if str(nfp_state.get("state")) == "nfp_post_2_5m_watch":
+            confidence_penalty += 0.03
+        risk_reasons.append(f"nfp_layer:{nfp_state.get('state')}")
+    if archaeology_state.get("active"):
+        size_multiplier *= 0.9
+        confidence_bonus += 0.02
+        risk_reasons.append("price_archaeologist_revisit")
+    if gamma_proxy_state.get("state") == "short_gamma_extension_proxy":
+        size_multiplier *= 0.85
+        confidence_penalty += 0.02
+        risk_reasons.append("dealer_gamma_proxy_short_gamma")
+    elif gamma_proxy_state.get("state") == "long_gamma_cap_proxy":
+        size_multiplier *= 0.9
+        risk_reasons.append("dealer_gamma_proxy_long_gamma_cap")
 
     feed_unavailable = []
     if not bool(alpha_state.get("available", False)):
@@ -458,6 +959,13 @@ def collect_xauusd_macro_state(
         and bool(fred_state.get("T10YIE", {}).get("stale", False))
     )
     pause_trading = bool(feed_stale_or_unsafe) or bool(is_friday_afternoon) or bool(upcoming_major_events_60m > 0)
+    pause_seconds = 0
+    if bool(tokyo_vacuum_state.get("active")):
+        pause_trading = True
+        pause_seconds = max(pause_seconds, int(tokyo_vacuum_state.get("auto_pause_seconds", TOKYO_VACUUM_AUTOPAUSE_SECONDS)))
+    if bool(nfp_state.get("pause_trading")):
+        pause_trading = True
+        pause_seconds = max(pause_seconds, NFP_POST_BLOCK_SECONDS)
     if feed_stale_or_unsafe:
         risk_reasons.append("macro_feed_state_unsafe_or_stale")
 
@@ -500,9 +1008,24 @@ def collect_xauusd_macro_state(
                 "xau_dxy_corr": correlation_regime.get("rolling_correlations", {}).get("xau_dxy"),
                 "xau_us10y_corr": correlation_regime.get("rolling_correlations", {}).get("xau_us10y"),
                 "reasons": correlation_regime.get("break_reasons", []),
+                "confirmation": correlation_regime.get("confirmation"),
             },
         },
+        "stop_hunt_footprint_analyzer": stop_hunt_state,
+        "london_fix_imbalance_detector": london_fix_state,
+        "round_number_stop_cluster_map": round_cluster_state,
+        "session_transition_volatility_decay_model": transition_decay_state,
+        "tokyo_open_liquidity_vacuum_detector": tokyo_vacuum_state,
+        "blowoff_top_fingerprint": blowoff_state,
+        "nfp_front_run_layer": nfp_state,
+        "price_archaeologist_layer": archaeology_state,
+        "dealer_gamma_flip_proxy": gamma_proxy_state,
     }
+    active_surgical_layers = [
+        name
+        for name, payload in detectors.items()
+        if isinstance(payload, dict) and bool(payload.get("active", False))
+    ]
 
     trade_tags = {
         "session": session_state,
@@ -518,11 +1041,14 @@ def collect_xauusd_macro_state(
         "major_round_number_proximity": major_round_state["state"],
         "event_type": str(calendar_state.get("metrics", {}).get("event_type", "unknown")),
         "session_policy": session_policy_state,
+        "correlation_confirmation": str(correlation_regime.get("confirmation", "dual_stable")),
+        "surgical_layer_triggers": active_surgical_layers,
     }
     risk_behavior = {
         "size_multiplier": round(clamp(size_multiplier, 0.1, 1.0), 4),
-        "confidence_penalty": round(clamp(confidence_penalty, 0.0, 0.35), 4),
+        "confidence_penalty": round(clamp(confidence_penalty - confidence_bonus, 0.0, 0.35), 4),
         "pause_trading": pause_trading,
+        "pause_seconds": pause_seconds,
         "reasons": normalize_reasons(risk_reasons),
     }
 
@@ -555,6 +1081,17 @@ def collect_xauusd_macro_state(
             "event_type": str(calendar_state.get("metrics", {}).get("event_type", "unknown")),
         },
         "correlation_regime": correlation_regime,
+        "surgical_layers": {
+            "stop_hunt_footprint": stop_hunt_state,
+            "london_fix_imbalance": london_fix_state,
+            "round_number_cluster": round_cluster_state,
+            "session_transition_volatility_decay": transition_decay_state,
+            "tokyo_open_liquidity_vacuum": tokyo_vacuum_state,
+            "blowoff_top_fingerprint": blowoff_state,
+            "nfp_front_run": nfp_state,
+            "price_archaeologist": archaeology_state,
+            "dealer_gamma_flip_proxy": gamma_proxy_state,
+        },
         "logged_at": datetime.now(tz=timezone.utc).isoformat(),
     }
 
@@ -584,13 +1121,53 @@ def collect_xauusd_macro_state(
                 "gold_physical_premium_discount": bool(physical_premium_state.get("available", False)),
                 "central_bank_gold_reserves": bool(central_bank_reserve_state.get("available", False)),
             },
+            "surgical_layer_triggers": active_surgical_layers,
         }
     )
     write_json_atomic(history_path, history[-300:])
 
+    surgical_latest_path = root / "surgical_layers_latest.json"
+    surgical_history_path = root / "surgical_layers_history.json"
+    surgical_payload = {
+        "logged_at": macro_state["logged_at"],
+        "trade_tags": trade_tags,
+        "detectors": {
+            "correlation_regime": correlation_regime,
+            "stop_hunt_footprint": stop_hunt_state,
+            "london_fix_imbalance": london_fix_state,
+            "round_number_cluster": round_cluster_state,
+            "session_transition_volatility_decay": transition_decay_state,
+            "tokyo_open_liquidity_vacuum": tokyo_vacuum_state,
+            "blowoff_top_fingerprint": blowoff_state,
+            "nfp_front_run": nfp_state,
+            "price_archaeologist": archaeology_state,
+            "dealer_gamma_flip_proxy": gamma_proxy_state,
+        },
+        "partial_layers": [
+            name
+            for name, payload in {
+                "tokyo_open_liquidity_vacuum": tokyo_vacuum_state,
+                "price_archaeologist": archaeology_state,
+                "dealer_gamma_flip_proxy": gamma_proxy_state,
+            }.items()
+            if isinstance(payload, dict) and bool(payload.get("partial", False))
+        ],
+    }
+    write_json_atomic(surgical_latest_path, surgical_payload)
+    surgical_history = read_json_safe(surgical_history_path, default=[])
+    if not isinstance(surgical_history, list):
+        surgical_history = []
+    surgical_history.append(surgical_payload)
+    write_json_atomic(surgical_history_path, surgical_history[-500:])
+
     cache_key = str(Path(memory_root).resolve())
     _MACRO_STATE_CACHE[cache_key] = macro_state
-    macro_state["paths"] = {"latest": str(latest_path), "history": str(history_path)}
+    macro_state["paths"] = {
+        "latest": str(latest_path),
+        "history": str(history_path),
+        "surgical_latest": str(surgical_latest_path),
+        "surgical_history": str(surgical_history_path),
+    }
     return macro_state
 
 
