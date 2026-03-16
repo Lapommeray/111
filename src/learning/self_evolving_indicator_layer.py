@@ -828,6 +828,569 @@ def _fractal_liquidity_decay_functions(
     return {"liquidity_decay_models": models, "path": str(model_path)}
 
 
+def _execution_microstructure_intelligence_layer(
+    *,
+    memory_root: Path,
+    closed: list[dict[str, Any]],
+    market_state: dict[str, Any],
+    replay_scope: str,
+) -> dict[str, Any]:
+    execution_dir = memory_root / "execution_microstructure"
+    execution_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = execution_dir / "execution_microstructure_latest.json"
+    history_path = execution_dir / "execution_microstructure_history.json"
+    failure_clusters_path = execution_dir / "execution_failure_clusters.json"
+    quality_baselines_path = execution_dir / "execution_quality_baselines.json"
+    entry_timing_path = execution_dir / "entry_timing_degradation.json"
+
+    telemetry_trades = [item for item in closed if isinstance(item, dict)]
+
+    slippage_ratios: list[float] = []
+    spread_shocks: list[float] = []
+    fill_delays: list[float] = []
+    partial_fill_gaps: list[float] = []
+    entry_timing_values: list[float] = []
+    failure_counter: dict[str, int] = {}
+    telemetry_samples = 0
+
+    for trade in telemetry_trades:
+        intended_entry = trade.get("intended_entry_price")
+        avg_fill = trade.get("average_fill_price")
+        if intended_entry is not None and avg_fill is not None:
+            intended_value = float(intended_entry or 0.0)
+            avg_fill_value = float(avg_fill or 0.0)
+            if abs(intended_value) > 0.0:
+                slippage_ratio = abs(avg_fill_value - intended_value) / max(1e-6, abs(intended_value))
+                slippage_ratios.append(round(min(1.5, max(0.0, slippage_ratio)), 6))
+                telemetry_samples += 1
+
+        spread_signal = trade.get("spread_at_signal")
+        spread_peak = trade.get("max_spread_during_window")
+        spread_submit = trade.get("spread_at_submit")
+        spread_fill = trade.get("spread_at_fill")
+        if spread_signal is not None and spread_peak is not None:
+            baseline = max(1e-6, float(spread_signal or 0.0))
+            shock = (float(spread_peak or 0.0) - baseline) / baseline
+            spread_shocks.append(round(max(0.0, shock), 6))
+            telemetry_samples += 1
+        elif spread_signal is not None and spread_submit is not None and spread_fill is not None:
+            baseline = max(1e-6, float(spread_signal or 0.0))
+            shock = (max(float(spread_submit or 0.0), float(spread_fill or 0.0)) - baseline) / baseline
+            spread_shocks.append(round(max(0.0, shock), 6))
+            telemetry_samples += 1
+
+        signal_time = trade.get("signal_time")
+        order_submit_time = trade.get("order_submit_time")
+        first_fill_time = trade.get("first_fill_time")
+        final_fill_time = trade.get("final_fill_time")
+        if signal_time is not None and first_fill_time is not None:
+            delay = max(0.0, float(first_fill_time or 0.0) - float(signal_time or 0.0))
+            fill_delays.append(round(min(600.0, delay), 4))
+            telemetry_samples += 1
+        elif order_submit_time is not None and first_fill_time is not None:
+            delay = max(0.0, float(first_fill_time or 0.0) - float(order_submit_time or 0.0))
+            fill_delays.append(round(min(600.0, delay), 4))
+            telemetry_samples += 1
+        if first_fill_time is not None and final_fill_time is not None:
+            completion_delay = max(0.0, float(final_fill_time or 0.0) - float(first_fill_time or 0.0))
+            fill_delays.append(round(min(600.0, completion_delay), 4))
+
+        requested_size = trade.get("requested_size")
+        filled_size = trade.get("filled_size")
+        if requested_size is not None and filled_size is not None:
+            requested = max(1e-6, float(requested_size or 0.0))
+            fill_ratio = max(0.0, min(1.0, float(filled_size or 0.0) / requested))
+            partial_fill_gaps.append(round(1.0 - fill_ratio, 6))
+            telemetry_samples += 1
+
+        mae_after_fill = trade.get("mae_after_fill")
+        mfe_after_fill = trade.get("mfe_after_fill")
+        if mae_after_fill is not None and mfe_after_fill is not None:
+            mae = abs(float(mae_after_fill or 0.0))
+            mfe = max(0.0, float(mfe_after_fill or 0.0))
+            timing_degradation = mae / max(1e-6, mae + mfe)
+            entry_timing_values.append(round(max(0.0, min(1.0, timing_degradation)), 6))
+            telemetry_samples += 1
+
+        if str(trade.get("result", "")).lower() == "loss":
+            failure_cause = str(trade.get("failure_cause", "unknown")).strip() or "unknown"
+            if failure_cause in {"execution_failure", "mt5_reject", "spread_spike", "slippage_spike", "partial_fill"}:
+                failure_counter[failure_cause] = failure_counter.get(failure_cause, 0) + 1
+
+    fallback_spread_ratio = round(max(0.0, float(market_state.get("spread_ratio", 1.0) or 1.0) - 1.0), 6)
+    fallback_slippage_ratio = round(max(0.0, float(market_state.get("slippage_ratio", 1.0) or 1.0) - 1.0), 6)
+
+    avg_slippage_damage = round(
+        sum(slippage_ratios) / max(1, len(slippage_ratios)) if slippage_ratios else min(1.0, fallback_slippage_ratio * 0.5),
+        6,
+    )
+    avg_spread_shock = round(
+        sum(spread_shocks) / max(1, len(spread_shocks)) if spread_shocks else min(1.0, fallback_spread_ratio * 0.5),
+        6,
+    )
+    avg_fill_delay = round(sum(fill_delays) / max(1, len(fill_delays)), 4) if fill_delays else 0.0
+    avg_partial_fill_gap = round(sum(partial_fill_gaps) / max(1, len(partial_fill_gaps)), 6) if partial_fill_gaps else 0.0
+    entry_timing_degradation = round(sum(entry_timing_values) / max(1, len(entry_timing_values)), 6) if entry_timing_values else 0.0
+
+    slippage_penalty = min(1.0, avg_slippage_damage * 6.0)
+    spread_penalty = min(1.0, avg_spread_shock * 0.7)
+    delay_penalty = min(1.0, avg_fill_delay / 15.0)
+    partial_penalty = min(1.0, avg_partial_fill_gap * 2.0)
+    timing_penalty = min(1.0, entry_timing_degradation * 0.8)
+    execution_penalty = round(
+        min(
+            1.0,
+            (slippage_penalty * 0.28)
+            + (spread_penalty * 0.24)
+            + (delay_penalty * 0.18)
+            + (partial_penalty * 0.18)
+            + (timing_penalty * 0.12),
+        ),
+        6,
+    )
+
+    total_execution_failures = sum(failure_counter.values())
+    cluster_items = [
+        {"failure_cause": key, "count": value}
+        for key, value in sorted(failure_counter.items(), key=lambda item: (item[1], item[0]), reverse=True)
+    ]
+    strongest_cluster = cluster_items[0] if cluster_items else {"failure_cause": "none", "count": 0}
+    failure_cluster_risk = round(min(1.0, total_execution_failures / max(1, len(telemetry_trades))), 6)
+
+    execution_quality_score = round(max(0.0, min(1.0, 1.0 - execution_penalty)), 6)
+    telemetry_coverage = round(min(1.0, telemetry_samples / max(1, len(telemetry_trades) * 5)), 6)
+    execution_confidence = round(max(0.25, min(1.0, 0.35 + (telemetry_coverage * 0.65))), 6)
+
+    if telemetry_samples == 0:
+        execution_state = "insufficient_data"
+    elif execution_quality_score < 0.35 or failure_cluster_risk >= 0.7:
+        execution_state = "fragile"
+    elif execution_quality_score < 0.6:
+        execution_state = "degraded"
+    else:
+        execution_state = "stable"
+
+    slippage_state = "high_damage" if slippage_penalty >= 0.65 else "elevated" if slippage_penalty >= 0.35 else "normal"
+    spread_state = "shock" if spread_penalty >= 0.65 else "elevated" if spread_penalty >= 0.35 else "normal"
+    fill_delay_state = "degraded" if delay_penalty >= 0.6 else "elevated" if delay_penalty >= 0.3 else "normal"
+    partial_fill_state = "degraded" if partial_penalty >= 0.6 else "elevated" if partial_penalty >= 0.25 else "normal"
+
+    should_reduce_size = execution_penalty >= 0.45 or partial_penalty >= 0.5 or failure_cluster_risk >= 0.45
+    should_delay_entry = spread_penalty >= 0.45 or delay_penalty >= 0.45 or entry_timing_degradation >= 0.55
+    should_refuse_trade = execution_state == "fragile" or failure_cluster_risk >= 0.75
+
+    recommended_actions: list[str] = []
+    if should_refuse_trade:
+        recommended_actions.append("refuse_trade_until_execution_stabilizes")
+    if should_delay_entry:
+        recommended_actions.append("delay_entry_until_spread_and_fill_delay_normalize")
+    if should_reduce_size:
+        recommended_actions.append("reduce_position_size_for_execution_uncertainty")
+    if partial_fill_state in {"degraded", "elevated"}:
+        recommended_actions.append("apply_partial_fill_aware_sizing")
+    if not recommended_actions:
+        recommended_actions.append("maintain_current_execution_controls")
+
+    failure_clusters_payload = {
+        "clusters": cluster_items,
+        "strongest_cluster": strongest_cluster,
+        "failure_cluster_risk": failure_cluster_risk,
+        "sample_size": len(telemetry_trades),
+    }
+    quality_baselines_payload = {
+        "replay_scope": replay_scope,
+        "telemetry_samples": telemetry_samples,
+        "telemetry_coverage": telemetry_coverage,
+        "baselines": {
+            "slippage_damage": avg_slippage_damage,
+            "spread_shock": avg_spread_shock,
+            "fill_delay_seconds": avg_fill_delay,
+            "partial_fill_gap": avg_partial_fill_gap,
+            "entry_timing_degradation": entry_timing_degradation,
+        },
+        "market_context_bridge": {
+            "spread_ratio": round(float(market_state.get("spread_ratio", 1.0) or 1.0), 4),
+            "slippage_ratio": round(float(market_state.get("slippage_ratio", 1.0) or 1.0), 4),
+        },
+    }
+    entry_timing_payload = {
+        "entry_timing_degradation": entry_timing_degradation,
+        "samples": len(entry_timing_values),
+        "values": entry_timing_values[-100:],
+    }
+    write_json_atomic(failure_clusters_path, failure_clusters_payload)
+    write_json_atomic(quality_baselines_path, quality_baselines_payload)
+    write_json_atomic(entry_timing_path, entry_timing_payload)
+
+    payload = {
+        "execution_quality_score": execution_quality_score,
+        "execution_confidence": execution_confidence,
+        "execution_state": execution_state,
+        "slippage_state": slippage_state,
+        "spread_state": spread_state,
+        "fill_delay_state": fill_delay_state,
+        "partial_fill_state": partial_fill_state,
+        "failure_cluster_risk": failure_cluster_risk,
+        "entry_timing_degradation": entry_timing_degradation,
+        "execution_penalty": execution_penalty,
+        "should_reduce_size": should_reduce_size,
+        "should_delay_entry": should_delay_entry,
+        "should_refuse_trade": should_refuse_trade,
+        "recommended_actions": recommended_actions,
+        "governance": {
+            "sandbox_only": True,
+            "no_blind_live_self_rewrites": True,
+            "replay_validation_required": True,
+            "direct_live_override_allowed": False,
+        },
+    }
+
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+    return {
+        **payload,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "failure_clusters": str(failure_clusters_path),
+            "quality_baselines": str(quality_baselines_path),
+            "entry_timing_degradation": str(entry_timing_path),
+        },
+    }
+
+
+def _intelligence_gap_discovery_engine(
+    *,
+    memory_root: Path,
+    closed: list[dict[str, Any]],
+    counterfactual_engine: dict[str, Any],
+    unified_market_intelligence_field: dict[str, Any],
+    pain_geometry_engine: dict[str, Any],
+    execution_microstructure_engine: dict[str, Any],
+) -> dict[str, Any]:
+    gap_dir = memory_root / "intelligence_gaps"
+    gap_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = gap_dir / "intelligence_gap_latest.json"
+    history_path = gap_dir / "intelligence_gap_history.json"
+
+    gaps: list[dict[str, Any]] = []
+    losses = [item for item in closed if str(item.get("result", "")).lower() == "loss"]
+    failure_clusters: list[dict[str, Any]] = []
+    if losses:
+        clustered: dict[tuple[str, str], int] = {}
+        for item in losses:
+            key = (
+                str(item.get("session", "unknown")),
+                str(item.get("failure_cause", "unknown")),
+            )
+            clustered[key] = clustered.get(key, 0) + 1
+        failure_clusters = [
+            {"session": session, "failure_cause": cause, "count": count}
+            for (session, cause), count in sorted(clustered.items(), key=lambda entry: (entry[1], entry[0]), reverse=True)
+        ]
+
+    counterfactual_items = counterfactual_engine.get("counterfactual_evaluations", [])
+    if not isinstance(counterfactual_items, list):
+        counterfactual_items = []
+    counterfactual_superiority = sum(
+        1 for item in counterfactual_items if isinstance(item, dict) and not bool(item.get("strategy_improved_outcome", False))
+    )
+    counterfactual_superiority_ratio = round(counterfactual_superiority / max(1, len(counterfactual_items)), 4)
+    if counterfactual_superiority_ratio >= 0.35:
+        strongest_cluster = failure_clusters[0] if failure_clusters else {"session": "unknown", "failure_cause": "unknown", "count": 0}
+        gaps.append(
+            {
+                "gap_type": "counterfactual_superiority_gap",
+                "evidence_strength": round(min(1.0, 0.35 + (counterfactual_superiority_ratio * 0.6)), 4),
+                "failure_clusters": failure_clusters[:5],
+                "hypothesized_capability": f"{strongest_cluster['session']}_counterfactual_edge_detector",
+                "sandbox_only": True,
+                "replay_validation_required": True,
+            }
+        )
+
+    composite_confidence = round(
+        float(unified_market_intelligence_field.get("confidence_structure", {}).get("composite_confidence", 0.0) or 0.0),
+        4,
+    )
+    refusal_pause_behavior = unified_market_intelligence_field.get("decision_refinements", {}).get("refusal_pause_behavior", {})
+    should_refuse = bool(refusal_pause_behavior.get("should_refuse", False))
+    should_pause = bool(refusal_pause_behavior.get("should_pause", False))
+    hesitation_frequency = int(should_refuse) + int(should_pause)
+    if composite_confidence <= 0.5 or hesitation_frequency > 0:
+        gaps.append(
+            {
+                "gap_type": "confidence_hesitation_gap",
+                "evidence_strength": round(
+                    min(1.0, max(0.25, (1.0 - composite_confidence) * 0.7 + (hesitation_frequency * 0.2))),
+                    4,
+                ),
+                "failure_clusters": failure_clusters[:5],
+                "hypothesized_capability": "confidence_stability_hesitation_filter",
+                "sandbox_only": True,
+                "replay_validation_required": True,
+            }
+        )
+
+    pain_risk = float(pain_geometry_engine.get("pain_risk_surface", {}).get("current_state_risk", 0.0) or 0.0)
+    execution_state = str(execution_microstructure_engine.get("execution_state", "insufficient_data"))
+    execution_penalty = float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0)
+    failure_cluster_risk = float(execution_microstructure_engine.get("failure_cluster_risk", 0.0) or 0.0)
+    if execution_state in {"degraded", "fragile"} or execution_penalty >= 0.4 or failure_cluster_risk >= 0.35 or pain_risk >= 0.55:
+        gaps.append(
+            {
+                "gap_type": "session_liquidity_fragility",
+                "evidence_strength": round(
+                    min(
+                        1.0,
+                        max(
+                            0.3,
+                            (execution_penalty * 0.45) + (failure_cluster_risk * 0.35) + (min(1.0, pain_risk) * 0.2),
+                        ),
+                    ),
+                    4,
+                ),
+                "failure_clusters": failure_clusters[:5],
+                "hypothesized_capability": "session_open_liquidity_vacuum_detector",
+                "sandbox_only": True,
+                "replay_validation_required": True,
+            }
+        )
+
+    payload = {
+        "intelligence_gaps": sorted(gaps, key=lambda item: item["evidence_strength"], reverse=True),
+        "diagnostics": {
+            "closed_trade_count": len(closed),
+            "loss_count": len(losses),
+            "counterfactual_superiority_ratio": counterfactual_superiority_ratio,
+            "composite_confidence": composite_confidence,
+            "pain_risk": round(pain_risk, 4),
+            "execution_state": execution_state,
+        },
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+    return {**payload, "paths": {"latest": str(latest_path), "history": str(history_path)}}
+
+
+def _synthetic_data_plane_expansion_engine(
+    *,
+    memory_root: Path,
+    closed: list[dict[str, Any]],
+    market_state: dict[str, Any],
+    counterfactual_engine: dict[str, Any],
+    unified_market_intelligence_field: dict[str, Any],
+    execution_microstructure_engine: dict[str, Any],
+) -> dict[str, Any]:
+    planes_dir = memory_root / "synthetic_data_planes"
+    planes_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = planes_dir / "synthetic_data_planes_latest.json"
+    history_path = planes_dir / "synthetic_data_planes_history.json"
+
+    losses = [item for item in closed if str(item.get("result", "")).lower() == "loss"]
+    false_entry_frequency = round(len(losses) / max(1, len(closed)), 4)
+    counterfactual_items = counterfactual_engine.get("counterfactual_evaluations", [])
+    if not isinstance(counterfactual_items, list):
+        counterfactual_items = []
+    counterfactual_advantage = round(
+        sum(1 for item in counterfactual_items if isinstance(item, dict) and not bool(item.get("strategy_improved_outcome", False)))
+        / max(1, len(counterfactual_items)),
+        4,
+    )
+    composite_confidence = float(
+        unified_market_intelligence_field.get("confidence_structure", {}).get("composite_confidence", 0.0) or 0.0
+    )
+    confidence_stability = round(max(0.0, min(1.0, 1.0 - abs(composite_confidence - 0.6))), 4)
+    drawdown_cluster_pressure = round(min(1.0, false_entry_frequency * 1.4), 4)
+    execution_penalty = round(float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0), 4)
+
+    plane_specs = [
+        ("session_fragility_curve", ["session", "spread_ratio", "volatility"]),
+        ("structural_price_memory_map", ["structure_state", "entry_price", "session"]),
+        ("liquidity_sweep_density", ["spread_ratio", "slippage_ratio", "failure_cause"]),
+        ("execution_survivability_curve", ["fill_delay", "partial_fill_gap", "entry_timing_degradation"]),
+        ("regime_instability_surface", ["structure_state", "volatility_ratio", "counterfactual_delta"]),
+        ("correlation_asymmetry_map", ["xau_dxy_corr", "xau_real_yield_corr", "volatility_response_corr"]),
+    ]
+    candidates: list[dict[str, Any]] = []
+    for index, (plane_name, derived_from) in enumerate(plane_specs):
+        predictive_value = round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    0.25
+                    + (counterfactual_advantage * 0.3)
+                    + (confidence_stability * 0.2)
+                    + (drawdown_cluster_pressure * 0.2)
+                    + (false_entry_frequency * 0.2)
+                    - (execution_penalty * 0.1)
+                    - (index * 0.03),
+                ),
+            ),
+            4,
+        )
+        candidates.append(
+            {
+                "synthetic_plane_name": plane_name,
+                "derived_from": derived_from,
+                "predictive_value": predictive_value,
+                "counterfactual_advantage": counterfactual_advantage,
+                "confidence_stability": confidence_stability,
+                "drawdown_cluster_pressure": drawdown_cluster_pressure,
+                "false_entry_frequency": false_entry_frequency,
+                "promotion_candidate": predictive_value >= 0.68 and counterfactual_advantage >= 0.35,
+                "governance": {"sandbox_only": True, "replay_validation_required": True},
+            }
+        )
+
+    payload = {
+        "synthetic_data_planes": candidates,
+        "input_context": {
+            "market_state_signature": {
+                "structure_state": str(market_state.get("structure_state", "unknown")),
+                "volatility_ratio": round(float(market_state.get("volatility_ratio", 1.0) or 1.0), 4),
+                "spread_ratio": round(float(market_state.get("spread_ratio", 1.0) or 1.0), 4),
+            },
+            "counterfactual_advantage": counterfactual_advantage,
+            "confidence_stability": confidence_stability,
+        },
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+    return {**payload, "paths": {"latest": str(latest_path), "history": str(history_path)}}
+
+
+def _capability_evolution_governance_ladder(
+    *,
+    memory_root: Path,
+    intelligence_gap_engine: dict[str, Any],
+    synthetic_data_plane_engine: dict[str, Any],
+    unified_market_intelligence_field: dict[str, Any],
+    replay_scope: str,
+) -> dict[str, Any]:
+    evolution_dir = memory_root / "capability_evolution"
+    evolution_dir.mkdir(parents=True, exist_ok=True)
+    candidates_path = evolution_dir / "capability_candidates.json"
+    validation_history_path = evolution_dir / "capability_validation_history.json"
+    promotion_registry_path = evolution_dir / "capability_promotion_registry.json"
+
+    gap_items = intelligence_gap_engine.get("intelligence_gaps", [])
+    if not isinstance(gap_items, list):
+        gap_items = []
+    plane_items = synthetic_data_plane_engine.get("synthetic_data_planes", [])
+    if not isinstance(plane_items, list):
+        plane_items = []
+    best_plane = sorted(
+        [item for item in plane_items if isinstance(item, dict)],
+        key=lambda item: float(item.get("predictive_value", 0.0) or 0.0),
+        reverse=True,
+    )[0] if plane_items else {}
+    unified_score = float(unified_market_intelligence_field.get("unified_field_score", 0.0) or 0.0)
+    unified_confidence = float(
+        unified_market_intelligence_field.get("confidence_structure", {}).get("composite_confidence", 0.0) or 0.0
+    )
+
+    candidates: list[dict[str, Any]] = []
+    validation_records: list[dict[str, Any]] = []
+    promotion_registry = {
+        "rejected": [],
+        "quarantined": [],
+        "sandbox_only_retained": [],
+        "promoted": [],
+    }
+    for index, gap in enumerate(item for item in gap_items if isinstance(item, dict)):
+        hypothesis = str(gap.get("hypothesized_capability", "autonomous_capability_candidate"))
+        evidence_strength = float(gap.get("evidence_strength", 0.0) or 0.0)
+        prototype_plane = str(best_plane.get("synthetic_plane_name", "none"))
+        prototype_predictive = float(best_plane.get("predictive_value", 0.0) or 0.0)
+        replay_score = round(min(1.0, (evidence_strength * 0.5) + (prototype_predictive * 0.3) + (unified_confidence * 0.2)), 4)
+        comparative_advantage = round(min(1.0, (replay_score * 0.55) + (prototype_predictive * 0.45)), 4)
+        conflict_with_unified = round(min(1.0, max(0.0, replay_score - unified_score + 0.2)), 4)
+        if replay_score < 0.42:
+            decision = "rejected"
+        elif conflict_with_unified >= 0.65:
+            decision = "quarantined"
+        elif replay_score >= 0.72 and comparative_advantage >= 0.58 and conflict_with_unified < 0.45:
+            decision = "promoted"
+        else:
+            decision = "sandbox_only_retained"
+        candidate = {
+            "capability_id": f"auto_cap_{index + 1}",
+            "gap_type": str(gap.get("gap_type", "unknown")),
+            "capability_hypothesis": hypothesis,
+            "synthetic_prototype": {
+                "synthetic_plane_name": prototype_plane,
+                "predictive_value": round(prototype_predictive, 4),
+            },
+            "lifecycle_stages": [
+                "gap_detection",
+                "capability_hypothesis_generation",
+                "synthetic_prototype_construction",
+                "replay_validation",
+                "comparative_advantage_test",
+                "conflict_check_unified_field",
+                "governor_promotion_decision",
+            ],
+            "replay_validation": {"scope": replay_scope, "score": replay_score, "passed": replay_score >= 0.52},
+            "comparative_advantage": comparative_advantage,
+            "unified_conflict_score": conflict_with_unified,
+            "governance_decision": decision,
+            "governance": {
+                "sandbox_only": True,
+                "replay_validation_required": True,
+                "live_deployment_allowed": False,
+            },
+        }
+        candidates.append(candidate)
+        validation_records.append(
+            {
+                "capability_id": candidate["capability_id"],
+                "hypothesis": hypothesis,
+                "replay_validation_score": replay_score,
+                "comparative_advantage": comparative_advantage,
+                "unified_conflict_score": conflict_with_unified,
+                "outcome": decision,
+            }
+        )
+        promotion_registry[decision].append(candidate)
+
+    write_json_atomic(candidates_path, {"capability_candidates": candidates})
+    write_json_atomic(validation_history_path, {"validation_history": validation_records})
+    write_json_atomic(promotion_registry_path, promotion_registry)
+    return {
+        "capability_candidates": candidates,
+        "validation_history": validation_records,
+        "promotion_registry": promotion_registry,
+        "paths": {
+            "capability_candidates": str(candidates_path),
+            "validation_history": str(validation_history_path),
+            "promotion_registry": str(promotion_registry_path),
+        },
+    }
+
+
 def _recursive_self_modeling(
     *,
     memory_root: Path,
@@ -839,6 +1402,7 @@ def _recursive_self_modeling(
     pain_geometry_engine: dict[str, Any],
     counterfactual_engine: dict[str, Any],
     liquidity_decay_engine: dict[str, Any],
+    execution_microstructure_engine: dict[str, Any],
     replay_scope: str,
 ) -> dict[str, Any]:
     self_model_dir = memory_root / "self_modeling"
@@ -862,6 +1426,9 @@ def _recursive_self_modeling(
     )
     liquidity_models = len(liquidity_decay_engine.get("liquidity_decay_models", []))
     negative_signal = bool(negative_space_engine.get("signal", {}).get("negative_space_signal", False))
+    execution_quality = round(float(execution_microstructure_engine.get("execution_quality_score", 0.5) or 0.5), 4)
+    execution_penalty = round(float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0), 4)
+    execution_cluster_risk = round(float(execution_microstructure_engine.get("failure_cluster_risk", 0.0) or 0.0), 4)
 
     configurations = [
         {"config_id": "cfg_balanced", "detector_set": "default+negative_space", "feature_set": "core+synthetic", "risk_behavior": "adaptive"},
@@ -873,7 +1440,22 @@ def _recursive_self_modeling(
         performance_stability = round(max(0.0, min(1.0, 0.7 + expectancy - (drawdown * 0.08) - (index * 0.04))), 4)
         discovery_potential = round(max(0.0, min(1.0, 0.45 + (synthetic_count * 0.08) + (mutation_count * 0.03) - (0.06 * index))), 4)
         regime_adaptability = round(max(0.0, min(1.0, 0.6 + (0.08 if negative_signal else 0.0) - (invariant_breaks * 0.1))), 4)
-        learning_efficiency = round(max(0.0, min(1.0, 0.6 + (liquidity_models * 0.05) - (counterfactual_edges * 0.04) - (pain_risk * 0.2))), 4)
+        learning_efficiency = round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    0.6
+                    + (liquidity_models * 0.05)
+                    - (counterfactual_edges * 0.04)
+                    - (pain_risk * 0.2)
+                    + ((execution_quality - 0.5) * 0.1)
+                    - (execution_penalty * 0.08)
+                    - (execution_cluster_risk * 0.06),
+                ),
+            ),
+            4,
+        )
         long_term_score = round(
             (performance_stability * 0.35)
             + (discovery_potential * 0.25)
@@ -900,6 +1482,11 @@ def _recursive_self_modeling(
             "sandbox_only": True,
             "direct_live_self_rewrite_allowed": False,
             "promotion_requires_governance": True,
+        },
+        "execution_microstructure_assessment": {
+            "execution_quality_score": execution_quality,
+            "execution_penalty": execution_penalty,
+            "failure_cluster_risk": execution_cluster_risk,
         },
     }
     write_json_atomic(path, payload)
@@ -965,6 +1552,7 @@ def _unified_market_intelligence_field(
     pain_geometry_engine: dict[str, Any],
     counterfactual_engine: dict[str, Any],
     liquidity_decay_engine: dict[str, Any],
+    execution_microstructure_engine: dict[str, Any],
 ) -> dict[str, Any]:
     intelligence_dir = memory_root / "market_intelligence"
     intelligence_dir.mkdir(parents=True, exist_ok=True)
@@ -1013,6 +1601,11 @@ def _unified_market_intelligence_field(
         4,
     )
     liquidity_state = "fragile" if avg_liquidity_vulnerability >= 0.55 else "resilient"
+    execution_quality_score = round(float(execution_microstructure_engine.get("execution_quality_score", 0.5) or 0.5), 4)
+    execution_confidence = round(float(execution_microstructure_engine.get("execution_confidence", 0.5) or 0.5), 4)
+    execution_penalty = round(float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0), 4)
+    execution_cluster_risk = round(float(execution_microstructure_engine.get("failure_cluster_risk", 0.0) or 0.0), 4)
+    execution_state = str(execution_microstructure_engine.get("execution_state", "insufficient_data"))
 
     synthetic_signal = round(min(1.0, len(synthetic_features) * 0.2), 4)
     negative_space_penalty = 0.12 if negative_signal else 0.0
@@ -1022,6 +1615,7 @@ def _unified_market_intelligence_field(
     regime_penalty = 0.2 if regime_state == "unstable" else 0.1 if regime_state == "expansion" else 0.0
     detector_support = float(detector_reliability.get("reliability_score", 0.0))
     counterfactual_support = counterfactual_edge_ratio
+    execution_support = round(max(0.0, min(1.0, execution_quality_score * (1.0 - (execution_penalty * 0.5)))), 4)
     macro_stability_support = max(0.0, 1.0 - abs(float(macro_state["volatility_ratio"]) - 1.0))
     macro_stability_support = round(max(0.0, min(1.0, macro_stability_support)), 4)
 
@@ -1034,11 +1628,13 @@ def _unified_market_intelligence_field(
                 + (detector_support * 0.22)
                 + (synthetic_signal * 0.12)
                 + (counterfactual_support * 0.1)
+                + (execution_support * 0.08)
                 + (macro_stability_support * 0.08)
                 - negative_space_penalty
                 - invariant_penalty
                 - pain_penalty
                 - liquidity_penalty
+                - min(0.18, execution_penalty * 0.18)
                 - regime_penalty,
             ),
         ),
@@ -1053,6 +1649,7 @@ def _unified_market_intelligence_field(
                 (unified_field_score * 0.45)
                 + (detector_support * 0.25)
                 + (counterfactual_support * 0.1)
+                + (execution_confidence * 0.08)
                 + (regime_confidence * 0.2),
             ),
         ),
@@ -1064,11 +1661,22 @@ def _unified_market_intelligence_field(
     base_risk_size = round(float(regime_payload.get("adjusted_risk_size", 1.0) or 1.0), 4)
     confidence_refinement_multiplier = round(0.8 + (composite_confidence * 0.4), 4)
     risk_refinement_multiplier = round(
-        max(0.2, min(1.2, 0.85 + (unified_field_score * 0.35) - (pain_risk * 0.2) - (invariant_break_count * 0.05))),
+        max(
+            0.2,
+            min(
+                1.2,
+                0.85
+                + (unified_field_score * 0.35)
+                - (pain_risk * 0.2)
+                - (invariant_break_count * 0.05)
+                - (execution_penalty * 0.2)
+                - (execution_cluster_risk * 0.12),
+            ),
+        ),
         4,
     )
     refined_signal_confidence = round(
-        max(0.0, min(1.0, base_signal_confidence * confidence_refinement_multiplier)),
+        max(0.0, min(1.0, base_signal_confidence * confidence_refinement_multiplier * (0.9 + (execution_confidence * 0.1)))),
         4,
     )
     refined_risk_size = round(max(0.05, base_risk_size * risk_refinement_multiplier), 4)
@@ -1087,6 +1695,10 @@ def _unified_market_intelligence_field(
         pause_reasons.append("unstable_regime_state")
     if liquidity_state == "fragile" and avg_liquidity_vulnerability >= 0.7:
         pause_reasons.append("liquidity_decay_fragility")
+    if bool(execution_microstructure_engine.get("should_refuse_trade", False)):
+        refusal_reasons.append("execution_microstructure_fragility")
+    if bool(execution_microstructure_engine.get("should_delay_entry", False)):
+        pause_reasons.append("execution_delay_recommendation")
     should_refuse = bool(refusal_reasons) and composite_confidence < 0.6
     should_pause = bool(pause_reasons) and unified_field_score < 0.55
 
@@ -1147,6 +1759,12 @@ def _unified_market_intelligence_field(
                 "state": liquidity_state,
                 "avg_vulnerability": avg_liquidity_vulnerability,
                 "model_count": len(liquidity_models),
+            },
+            "execution_microstructure_state": {
+                "state": execution_state,
+                "execution_quality_score": execution_quality_score,
+                "execution_penalty": execution_penalty,
+                "failure_cluster_risk": execution_cluster_risk,
             },
         },
         "unified_field_score": unified_field_score,
@@ -1213,6 +1831,7 @@ def _detect_improvement_gaps(
     autonomous_behavior: dict[str, Any],
     detector_generator: dict[str, Any],
     pain_memory_survival: dict[str, Any],
+    execution_microstructure_engine: dict[str, Any],
     mutation_candidates: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
@@ -1287,6 +1906,28 @@ def _detect_improvement_gaps(
                 "severity": 0.7,
             }
         )
+    execution_state = str(execution_microstructure_engine.get("execution_state", "insufficient_data"))
+    execution_penalty = float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0)
+    failure_cluster_risk = float(execution_microstructure_engine.get("failure_cluster_risk", 0.0) or 0.0)
+    entry_timing_degradation = float(execution_microstructure_engine.get("entry_timing_degradation", 0.0) or 0.0)
+    if execution_state in {"degraded", "fragile"} or execution_penalty >= 0.4 or failure_cluster_risk >= 0.4:
+        gaps.append(
+            {
+                "gap_type": "execution_microstructure_fragility",
+                "detail": execution_state,
+                "frequency": max(1, int(round((execution_penalty + failure_cluster_risk) * 4))),
+                "severity": round(min(1.0, max(execution_penalty, failure_cluster_risk)), 4),
+            }
+        )
+    if entry_timing_degradation >= 0.45 or bool(execution_microstructure_engine.get("should_delay_entry", False)):
+        gaps.append(
+            {
+                "gap_type": "entry_timing_degradation_gap",
+                "detail": "entry_timing_degradation",
+                "frequency": 1,
+                "severity": round(min(1.0, max(0.45, entry_timing_degradation)), 4),
+            }
+        )
 
     noisy_mutations = 0
     for candidate in mutation_candidates:
@@ -1343,12 +1984,23 @@ def _suggestion_templates(gap_type: str) -> list[dict[str, str]]:
         "execution_logic_gap": [
             {"suggestion_type": "new_execution_refinement", "target": "execution_failure_mitigation"},
         ],
+        "execution_microstructure_fragility": [
+            {"suggestion_type": "new_execution_refinement", "target": "execution_fragility_guard"},
+            {"suggestion_type": "new_strategy_mutation", "target": "partial_fill_aware_sizing"},
+        ],
+        "entry_timing_degradation_gap": [
+            {"suggestion_type": "new_execution_refinement", "target": "entry_delay_filter"},
+            {"suggestion_type": "new_detector_idea", "target": "execution_timing_survivability_detector"},
+        ],
         "low_value_noisy_mutations": [
             {"suggestion_type": "new_survival_rule", "target": "mutation_noise_filter"},
             {"suggestion_type": "new_strategy_mutation", "target": "quality_gated_mutation_generator"},
         ],
         "survival_rule_gap": [
             {"suggestion_type": "new_survival_rule", "target": "pain_memory_survival_strengthening"},
+        ],
+        "autonomous_capability_proposal": [
+            {"suggestion_type": "new_capability_hypothesis", "target": "autonomous_capability_discovery"},
         ],
     }
     return mapping.get(gap_type, [{"suggestion_type": "new_detector_idea", "target": "general_gap_detector"}])
@@ -1414,8 +2066,11 @@ def _component_for_gap(gap_type: str) -> str:
         "unstable_regime_behavior": "market_regime_classifier",
         "market_memory_dimension_gap": "market_condition_memory",
         "execution_logic_gap": "behavior_adjustment_engine",
+        "execution_microstructure_fragility": "execution_microstructure_intelligence_layer",
+        "entry_timing_degradation_gap": "execution_microstructure_intelligence_layer",
         "low_value_noisy_mutations": "strategy_evolution_engine",
         "survival_rule_gap": "pain_memory_survival_layer",
+        "autonomous_capability_proposal": "capability_evolution_governance_ladder",
     }
     return mapping.get(gap_type, "self_evolving_indicator_layer")
 
@@ -1466,7 +2121,9 @@ def _self_suggestion_governor(
     pain_memory_survival: dict[str, Any],
     discovery_state_tags: dict[str, Any],
     unified_market_intelligence_field: dict[str, Any],
+    execution_microstructure_engine: dict[str, Any],
     mutation_candidates: list[dict[str, Any]],
+    capability_evolution_ladder: dict[str, Any] | None = None,
     replay_scope: str,
 ) -> dict[str, Any]:
     registry_dir = memory_root / "capability_registry"
@@ -1506,8 +2163,27 @@ def _self_suggestion_governor(
         autonomous_behavior=autonomous_behavior,
         detector_generator=detector_generator,
         pain_memory_survival=pain_memory_survival,
+        execution_microstructure_engine=execution_microstructure_engine,
         mutation_candidates=mutation_candidates,
     )
+    capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
+    capability_candidates = capability_evolution_ladder.get("capability_candidates", [])
+    if isinstance(capability_candidates, list):
+        for candidate in capability_candidates:
+            if not isinstance(candidate, dict):
+                continue
+            hypothesis = str(candidate.get("capability_hypothesis", "")).strip()
+            if not hypothesis:
+                continue
+            replay_score = float(candidate.get("replay_validation", {}).get("score", 0.0) or 0.0)
+            gaps.append(
+                {
+                    "gap_type": "autonomous_capability_proposal",
+                    "detail": hypothesis[:80],
+                    "frequency": 1,
+                    "severity": round(min(1.0, max(0.35, replay_score)), 4),
+                }
+            )
     input_signature = {
         "replay_scope": replay_scope,
         "gap_signatures": sorted(_gap_signature(gap) for gap in gaps),
@@ -1520,6 +2196,8 @@ def _self_suggestion_governor(
             ),
             4,
         ),
+        "execution_quality_score": round(float(execution_microstructure_engine.get("execution_quality_score", 0.0) or 0.0), 4),
+        "execution_penalty": round(float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0), 4),
     }
     if previous_governor.get("input_signature") == input_signature:
         return previous_governor
@@ -1746,6 +2424,12 @@ def _self_suggestion_governor(
                 {},
             ),
         },
+        "execution_microstructure_intelligence_layer": {
+            "execution_quality_score": execution_microstructure_engine.get("execution_quality_score", 0.0),
+            "execution_penalty": execution_microstructure_engine.get("execution_penalty", 0.0),
+            "execution_state": execution_microstructure_engine.get("execution_state", "insufficient_data"),
+            "recommended_actions": execution_microstructure_engine.get("recommended_actions", []),
+        },
         "paths": {
             "registry": str(registry_path),
             "governor": str(governor_path),
@@ -1832,6 +2516,56 @@ def run_self_evolving_indicator_layer(
         closed=closed,
         market_state=market_state,
     )
+    execution_microstructure_engine = _execution_microstructure_intelligence_layer(
+        memory_root=memory_root,
+        closed=closed,
+        market_state=market_state,
+        replay_scope=replay_scope,
+    )
+    provisional_unified_market_intelligence = {
+        "unified_field_score": round(
+            float(_detector_reliability_state(detector_generator).get("reliability_score", 0.0) or 0.0),
+            4,
+        ),
+        "confidence_structure": {
+            "composite_confidence": round(
+                float(
+                    autonomous_behavior.get("market_regime_classifier", {}).get("confidence_multiplier", 0.0) or 0.0
+                ),
+                4,
+            ),
+        },
+        "decision_refinements": {
+            "refusal_pause_behavior": {
+                "should_refuse": str(execution_microstructure_engine.get("execution_state", "")) in {"fragile", "degraded"},
+                "should_pause": float(pain_geometry_engine.get("pain_risk_surface", {}).get("current_state_risk", 0.0) or 0.0)
+                >= 0.75,
+            }
+        },
+    }
+    intelligence_gap_engine = _intelligence_gap_discovery_engine(
+        memory_root=memory_root,
+        closed=closed,
+        counterfactual_engine=counterfactual_engine,
+        unified_market_intelligence_field=provisional_unified_market_intelligence,
+        pain_geometry_engine=pain_geometry_engine,
+        execution_microstructure_engine=execution_microstructure_engine,
+    )
+    synthetic_data_plane_engine = _synthetic_data_plane_expansion_engine(
+        memory_root=memory_root,
+        closed=closed,
+        market_state=market_state,
+        counterfactual_engine=counterfactual_engine,
+        unified_market_intelligence_field=provisional_unified_market_intelligence,
+        execution_microstructure_engine=execution_microstructure_engine,
+    )
+    capability_evolution_ladder = _capability_evolution_governance_ladder(
+        memory_root=memory_root,
+        intelligence_gap_engine=intelligence_gap_engine,
+        synthetic_data_plane_engine=synthetic_data_plane_engine,
+        unified_market_intelligence_field=provisional_unified_market_intelligence,
+        replay_scope=replay_scope,
+    )
     discovery_state_tags = _discovery_state_tags(
         synthetic_feature_engine=synthetic_feature_engine,
         negative_space_engine=negative_space_engine,
@@ -1850,6 +2584,7 @@ def run_self_evolving_indicator_layer(
         pain_geometry_engine=pain_geometry_engine,
         counterfactual_engine=counterfactual_engine,
         liquidity_decay_engine=liquidity_decay_engine,
+        execution_microstructure_engine=execution_microstructure_engine,
         replay_scope=replay_scope,
     )
     unified_market_intelligence_field = _unified_market_intelligence_field(
@@ -1864,6 +2599,7 @@ def run_self_evolving_indicator_layer(
         pain_geometry_engine=pain_geometry_engine,
         counterfactual_engine=counterfactual_engine,
         liquidity_decay_engine=liquidity_decay_engine,
+        execution_microstructure_engine=execution_microstructure_engine,
     )
     self_suggestion_governor = _self_suggestion_governor(
         memory_root=memory_root,
@@ -1875,7 +2611,9 @@ def run_self_evolving_indicator_layer(
         pain_memory_survival=pain_memory_survival,
         discovery_state_tags=discovery_state_tags,
         unified_market_intelligence_field=unified_market_intelligence_field,
+        execution_microstructure_engine=execution_microstructure_engine,
         mutation_candidates=mutation_candidates,
+        capability_evolution_ladder=capability_evolution_ladder,
         replay_scope=replay_scope,
     )
     survival_intelligence = {
@@ -1888,6 +2626,7 @@ def run_self_evolving_indicator_layer(
         "pain_geometry_fields": pain_geometry_engine,
         "counterfactual_trade_engine": counterfactual_engine,
         "fractal_liquidity_decay_functions": liquidity_decay_engine,
+        "execution_microstructure_intelligence_layer": execution_microstructure_engine,
         "recursive_self_modeling": recursive_self_modeling,
         "discovery_state_tags": discovery_state_tags,
         "unified_market_intelligence_field": unified_market_intelligence_field,
@@ -1914,6 +2653,7 @@ def run_self_evolving_indicator_layer(
         "pain_geometry_fields": pain_geometry_engine,
         "counterfactual_trade_engine": counterfactual_engine,
         "fractal_liquidity_decay_functions": liquidity_decay_engine,
+        "execution_microstructure_intelligence_layer": execution_microstructure_engine,
         "recursive_self_modeling": recursive_self_modeling,
         "discovery_state_tags": discovery_state_tags,
         "unified_market_intelligence_field": unified_market_intelligence_field,
