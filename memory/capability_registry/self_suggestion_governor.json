@@ -11,7 +11,9 @@
     "unified_field_score": 0.458,
     "unified_confidence": 0.4241,
     "execution_quality_score": 1.0,
-    "execution_penalty": 0.0
+    "execution_penalty": 0.0,
+    "contradiction_outcome": "reduce_size",
+    "contradiction_severity": 0.437
   },
   "detected_gaps": [
     {
@@ -74,6 +76,33 @@
     "recommended_actions": [
       "maintain_current_execution_controls"
     ]
+  },
+  "contradiction_arbitration_and_belief_resolution_layer": {
+    "arbitration": {
+      "outcome": "reduce_size",
+      "dominant_source": "unified_market_intelligence_field",
+      "max_contradiction_severity": 0.437,
+      "conflict_state": "active",
+      "reasons": [
+        "directional_opposition",
+        "directional_opposition",
+        "directional_opposition",
+        "directional_opposition",
+        "directional_opposition"
+      ]
+    },
+    "confidence_adjustments": {
+      "base_composite_confidence": 0.4241,
+      "contradiction_penalty": 0.153,
+      "contradiction_adjusted_confidence": 0.2711
+    },
+    "risk_adjustments": {
+      "contradiction_multiplier": 0.7596,
+      "recommended_action": "reduce_size",
+      "should_reduce_size": true,
+      "should_pause": false,
+      "should_refuse": false
+    }
   },
   "paths": {
     "registry": "memory/capability_registry/self_suggestion_registry.json",

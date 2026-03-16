@@ -716,3 +716,180 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "liquidity_decay_state",
         "execution_microstructure_state",
     }
+
+
+def test_contradiction_arbitration_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "ca1", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "ca2", "status": "closed", "result": "win", "pnl_points": 0.8, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.3, "spread_ratio": 1.4, "slippage_ratio": 1.2},
+        replay_scope="focused_replay",
+    )
+    contradiction_layer = result["contradiction_arbitration_and_belief_resolution_layer"]
+    assert Path(contradiction_layer["paths"]["latest"]).exists()
+    assert Path(contradiction_layer["paths"]["history"]).exists()
+    assert Path(contradiction_layer["paths"]["belief_state_registry"]).exists()
+    assert Path(contradiction_layer["paths"]["contradiction_events"]).exists()
+    assert Path(contradiction_layer["paths"]["resolution_outcome_registry"]).exists()
+    assert Path(contradiction_layer["paths"]["contextual_contradiction_clusters"]).exists()
+    assert Path(contradiction_layer["paths"]["governance_state"]).exists()
+
+
+def test_contradiction_arbitration_detects_directional_opposition_between_sources(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cd1", "status": "closed", "result": "loss", "pnl_points": -1.2, "entry_price": 2010.0, "average_fill_price": 2012.5, "signal_time": 10, "first_fill_time": 19, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "cd2", "status": "closed", "result": "win", "pnl_points": 1.1, "entry_price": 2012.0, "average_fill_price": 2012.2, "signal_time": 20, "first_fill_time": 21, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.2, "spread_ratio": 1.9, "slippage_ratio": 1.8},
+        replay_scope="full_replay",
+    )
+    contradictions = result["contradiction_arbitration_and_belief_resolution_layer"]["contradictions"]
+    assert any(item["contradiction_type"] == "directional_opposition" for item in contradictions)
+
+
+def test_contradiction_arbitration_flags_high_confidence_vs_execution_hostility_conflict(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {
+                "trade_id": "ceh1",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -0.2,
+                "entry_price": 2010.0,
+                "intended_entry_price": 2010.0,
+                "average_fill_price": 2014.0,
+                "signal_time": 10,
+                "first_fill_time": 60,
+                "session": "asia",
+                "failure_cause": "execution_failure",
+            },
+            {
+                "trade_id": "ceh2",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -0.1,
+                "entry_price": 2012.0,
+                "intended_entry_price": 2012.0,
+                "average_fill_price": 2015.0,
+                "signal_time": 20,
+                "first_fill_time": 75,
+                "session": "asia",
+                "failure_cause": "execution_failure",
+            },
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.0, "spread_ratio": 3.0, "slippage_ratio": 3.0},
+        replay_scope="full_replay",
+    )
+    contradictions = result["contradiction_arbitration_and_belief_resolution_layer"]["contradictions"]
+    assert any(item["contradiction_type"] == "confidence_execution_conflict" for item in contradictions)
+
+
+def test_contradiction_arbitration_updates_unified_field_additively_without_overwriting_base_fields(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cu1", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "cu2", "status": "closed", "result": "win", "pnl_points": 0.9, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.4, "spread_ratio": 1.7, "slippage_ratio": 1.5},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "unified_field_score" in unified
+    assert "composite_confidence" in unified["confidence_structure"]
+    assert "contradiction_arbitration" in unified
+    assert "contradiction_adjusted_confidence" in unified["confidence_structure"]
+    assert "contradiction_multiplier" in unified["decision_refinements"]["risk_sizing"]
+
+
+def test_contradiction_arbitration_feeds_self_suggestion_governor_gap_detection(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    trade_outcomes = [
+        {
+            "trade_id": "cg1",
+            "status": "closed",
+            "result": "loss",
+            "pnl_points": -0.2,
+            "entry_price": 2010.0,
+            "intended_entry_price": 2010.0,
+            "average_fill_price": 2014.5,
+            "signal_time": 10,
+            "first_fill_time": 65,
+            "session": "asia",
+            "failure_cause": "execution_failure",
+        },
+        {
+            "trade_id": "cg2",
+            "status": "closed",
+            "result": "loss",
+            "pnl_points": -0.2,
+            "entry_price": 2012.0,
+            "intended_entry_price": 2012.0,
+            "average_fill_price": 2016.0,
+            "signal_time": 20,
+            "first_fill_time": 80,
+            "session": "asia",
+            "failure_cause": "execution_failure",
+        },
+    ]
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 1.0, "spread_ratio": 3.0, "slippage_ratio": 3.0},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 1.0, "spread_ratio": 3.0, "slippage_ratio": 3.0},
+        replay_scope="focused_replay",
+    )
+    gap_types = {item.get("gap_type") for item in second["self_suggestion_governor"]["detected_gaps"]}
+    contradiction_gap_types = {
+        "high_confidence_vs_execution_hostility_conflict",
+        "chronic_risk_enable_vs_risk_disable_conflict",
+        "persistent_continuation_vs_trap_conflict",
+    }
+    assert gap_types.intersection(contradiction_gap_types)
+
+
+def test_contradiction_arbitration_governance_is_sandbox_and_replay_only(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cgov1", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "cgov2", "status": "closed", "result": "win", "pnl_points": 0.7, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.2, "spread_ratio": 1.3, "slippage_ratio": 1.1},
+        replay_scope="focused_replay",
+    )
+    governance = result["contradiction_arbitration_and_belief_resolution_layer"]["governance"]
+    assert governance["sandbox_only"] is True
+    assert governance["replay_validation_required"] is True
+    assert governance["live_deployment_allowed"] is False
+    assert governance["no_blind_live_rewrites"] is True
+
+
+def test_contradiction_arbitration_history_rolls_and_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    for index in range(3):
+        run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"ch{index}a", "status": "closed", "result": "loss", "pnl_points": -0.8},
+                {"trade_id": f"ch{index}b", "status": "closed", "result": "win", "pnl_points": 0.6},
+            ],
+            market_state={"structure_state": "range"},
+            replay_scope="focused_replay",
+        )
+    history_path = memory_root / "contradiction_arbitration" / "contradiction_arbitration_history.json"
+    assert history_path.exists()
+    payload = json.loads(history_path.read_text(encoding="utf-8"))
+    assert len(payload["snapshots"]) <= 200
+    assert payload["snapshots"]

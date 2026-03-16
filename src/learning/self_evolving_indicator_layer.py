@@ -1816,6 +1816,501 @@ def _unified_market_intelligence_field(
     return {**payload, "paths": {"latest": str(latest_path), "history": str(history_path)}}
 
 
+def _contradiction_arbitration_and_belief_resolution_layer(
+    *,
+    memory_root: Path,
+    market_state: dict[str, Any],
+    unified_market_intelligence_field: dict[str, Any],
+    negative_space_engine: dict[str, Any],
+    invariant_break_engine: dict[str, Any],
+    pain_geometry_engine: dict[str, Any],
+    counterfactual_engine: dict[str, Any],
+    liquidity_decay_engine: dict[str, Any],
+    execution_microstructure_engine: dict[str, Any],
+    strategy_evolution: dict[str, Any],
+    detector_generator: dict[str, Any],
+    replay_scope: str,
+) -> dict[str, Any]:
+    arbitration_dir = memory_root / "contradiction_arbitration"
+    arbitration_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = arbitration_dir / "contradiction_arbitration_latest.json"
+    history_path = arbitration_dir / "contradiction_arbitration_history.json"
+    belief_registry_path = arbitration_dir / "belief_state_registry.json"
+    contradiction_events_path = arbitration_dir / "contradiction_events.json"
+    resolution_registry_path = arbitration_dir / "resolution_outcome_registry.json"
+    contextual_clusters_path = arbitration_dir / "contextual_contradiction_clusters.json"
+    governance_path = arbitration_dir / "governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    unified_confidence = _bounded(
+        float(unified_market_intelligence_field.get("confidence_structure", {}).get("composite_confidence", 0.0) or 0.0)
+    )
+    detector_reliability = _bounded(
+        float(unified_market_intelligence_field.get("confidence_structure", {}).get("detector_confidence", 0.0) or 0.0)
+    )
+    execution_confidence = _bounded(float(execution_microstructure_engine.get("execution_confidence", 0.0) or 0.0))
+    execution_penalty = _bounded(float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0))
+    execution_quality = _bounded(float(execution_microstructure_engine.get("execution_quality_score", 0.0) or 0.0))
+    pain_risk = _bounded(float(pain_geometry_engine.get("pain_risk_surface", {}).get("current_state_risk", 0.0) or 0.0))
+    negative_score = _bounded(float(negative_space_engine.get("signal", {}).get("deviation_score", 0.0) or 0.0))
+    counterfactual_items = counterfactual_engine.get("counterfactual_evaluations", [])
+    if not isinstance(counterfactual_items, list):
+        counterfactual_items = []
+    counterfactual_advantage = _bounded(
+        sum(1 for item in counterfactual_items if isinstance(item, dict) and bool(item.get("strategy_improved_outcome", False)))
+        / max(1, len(counterfactual_items))
+    )
+    liquidity_models = liquidity_decay_engine.get("liquidity_decay_models", [])
+    if not isinstance(liquidity_models, list):
+        liquidity_models = []
+    liquidity_vulnerability = _bounded(
+        sum(
+            float(item.get("liquidity_decay_function", {}).get("vulnerability_score", 0.0) or 0.0)
+            for item in liquidity_models
+            if isinstance(item, dict)
+        )
+        / max(1, len(liquidity_models))
+    )
+    invariant_break_count = sum(
+        1
+        for item in invariant_break_engine.get("invariant_break_events", [])
+        if isinstance(item, dict) and bool(item.get("invariant_break", False))
+    )
+    strategy_mode = str(
+        unified_market_intelligence_field.get("decision_refinements", {}).get("strategy_selection", {}).get("mode", "adaptive")
+    )
+    should_pause = bool(
+        unified_market_intelligence_field.get("decision_refinements", {}).get("refusal_pause_behavior", {}).get("should_pause", False)
+    )
+    should_refuse = bool(
+        unified_market_intelligence_field.get("decision_refinements", {}).get("refusal_pause_behavior", {}).get("should_refuse", False)
+    )
+    should_delay = bool(execution_microstructure_engine.get("should_delay_entry", False))
+    should_reduce = bool(execution_microstructure_engine.get("should_reduce_size", False))
+    should_refuse_execution = bool(execution_microstructure_engine.get("should_refuse_trade", False))
+    negative_signal = bool(negative_space_engine.get("signal", {}).get("negative_space_signal", False))
+
+    context_signature = {
+        "replay_scope": replay_scope,
+        "structure_state": str(market_state.get("structure_state", "unknown")),
+        "volatility_ratio": _bounded(float(market_state.get("volatility_ratio", 1.0) or 1.0), low=0.0, high=10.0),
+        "spread_ratio": _bounded(float(market_state.get("spread_ratio", 1.0) or 1.0), low=0.0, high=10.0),
+        "slippage_ratio": _bounded(float(market_state.get("slippage_ratio", 1.0) or 1.0), low=0.0, high=10.0),
+        "regime_state": str(unified_market_intelligence_field.get("components", {}).get("regime_state", "unknown")),
+        "execution_state": str(execution_microstructure_engine.get("execution_state", "insufficient_data")),
+    }
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_rewrites": True,
+    }
+    input_signature = {
+        "context_signature": context_signature,
+        "unified_confidence": unified_confidence,
+        "execution_penalty": execution_penalty,
+        "execution_confidence": execution_confidence,
+        "negative_signal": negative_signal,
+        "negative_score": negative_score,
+        "invariant_break_count": invariant_break_count,
+        "pain_risk": pain_risk,
+        "counterfactual_advantage": counterfactual_advantage,
+        "liquidity_vulnerability": liquidity_vulnerability,
+        "strategy_mode": strategy_mode,
+    }
+    previous_latest = read_json_safe(latest_path, default={})
+    if isinstance(previous_latest, dict) and previous_latest.get("input_signature") == input_signature:
+        return {
+            **previous_latest,
+            "paths": {
+                "latest": str(latest_path),
+                "history": str(history_path),
+                "belief_state_registry": str(belief_registry_path),
+                "contradiction_events": str(contradiction_events_path),
+                "resolution_outcome_registry": str(resolution_registry_path),
+                "contextual_contradiction_clusters": str(contextual_clusters_path),
+                "governance_state": str(governance_path),
+            },
+        }
+
+    beliefs: list[dict[str, Any]] = []
+
+    def _belief(
+        *,
+        source_layer: str,
+        belief_direction: str,
+        belief_confidence: float,
+        belief_intent: str,
+        historical_reliability: float,
+        execution_adjusted_trust: float,
+    ) -> None:
+        beliefs.append(
+            {
+                "belief_id": f"belief_{len(beliefs) + 1}_{source_layer}",
+                "source_layer": source_layer,
+                "belief_direction": belief_direction,
+                "belief_confidence": _bounded(belief_confidence),
+                "belief_intent": belief_intent,
+                "historical_reliability": _bounded(historical_reliability),
+                "execution_adjusted_trust": _bounded(execution_adjusted_trust),
+                "context_signature": dict(context_signature),
+                "governance_flags": dict(governance_flags),
+            }
+        )
+
+    unified_direction = "continuation"
+    if should_refuse:
+        unified_direction = "risk_off"
+    elif should_pause:
+        unified_direction = "wait"
+    _belief(
+        source_layer="unified_market_intelligence_field",
+        belief_direction=unified_direction,
+        belief_confidence=unified_confidence,
+        belief_intent="composite_unified_intelligence",
+        historical_reliability=detector_reliability,
+        execution_adjusted_trust=unified_confidence * (1.0 - (execution_penalty * 0.55)),
+    )
+    execution_direction = "continuation"
+    if should_refuse_execution:
+        execution_direction = "risk_off"
+    elif should_delay or should_reduce:
+        execution_direction = "wait"
+    _belief(
+        source_layer="execution_microstructure_intelligence_layer",
+        belief_direction=execution_direction,
+        belief_confidence=execution_confidence,
+        belief_intent="execution_safety",
+        historical_reliability=execution_quality,
+        execution_adjusted_trust=execution_quality * (1.0 - execution_penalty),
+    )
+    _belief(
+        source_layer="negative_space_pattern_recognition",
+        belief_direction="risk_off" if negative_signal else "continuation",
+        belief_confidence=negative_score,
+        belief_intent="trap_detection",
+        historical_reliability=_bounded(float(negative_space_engine.get("signal", {}).get("validation", {}).get("validation_passed", False))),
+        execution_adjusted_trust=negative_score * (1.0 - (execution_penalty * 0.25)),
+    )
+    invariant_risk = _bounded(min(1.0, invariant_break_count * 0.35))
+    _belief(
+        source_layer="temporal_invariance_break_detection",
+        belief_direction="risk_off" if invariant_break_count > 0 else "continuation",
+        belief_confidence=invariant_risk if invariant_break_count > 0 else 0.45,
+        belief_intent="invariance_integrity_guard",
+        historical_reliability=_bounded(1.0 - (invariant_risk * 0.5)),
+        execution_adjusted_trust=_bounded((invariant_risk if invariant_break_count > 0 else 0.45) * (1.0 - (execution_penalty * 0.2))),
+    )
+    _belief(
+        source_layer="pain_geometry_fields",
+        belief_direction="risk_off" if pain_risk >= 0.6 else "continuation",
+        belief_confidence=pain_risk,
+        belief_intent="drawdown_surface_risk",
+        historical_reliability=_bounded(1.0 - min(1.0, pain_risk * 0.8)),
+        execution_adjusted_trust=_bounded(pain_risk * (1.0 - (execution_penalty * 0.2))),
+    )
+    _belief(
+        source_layer="counterfactual_trade_engine",
+        belief_direction="continuation" if counterfactual_advantage >= 0.5 else "wait",
+        belief_confidence=counterfactual_advantage,
+        belief_intent="counterfactual_continuation",
+        historical_reliability=_bounded(0.45 + (counterfactual_advantage * 0.45)),
+        execution_adjusted_trust=_bounded(counterfactual_advantage * (1.0 - (execution_penalty * 0.3))),
+    )
+    _belief(
+        source_layer="fractal_liquidity_decay_functions",
+        belief_direction="risk_off" if liquidity_vulnerability >= 0.6 else "continuation",
+        belief_confidence=liquidity_vulnerability,
+        belief_intent="liquidity_stability",
+        historical_reliability=_bounded(1.0 - min(1.0, liquidity_vulnerability)),
+        execution_adjusted_trust=_bounded(liquidity_vulnerability * (1.0 - (execution_penalty * 0.2))),
+    )
+
+    contradictions: list[dict[str, Any]] = []
+
+    def _push_contradiction(
+        *,
+        contradiction_type: str,
+        contradiction_severity: float,
+        partners: list[dict[str, Any]],
+        dominance_candidate: str,
+        arbitration_outcome: str,
+        resolution_rationale: list[str],
+        historical_recurrence: int,
+        historical_outcome_bias: str,
+    ) -> None:
+        contradictions.append(
+            {
+                "contradiction_id": f"contradiction_{len(contradictions) + 1}_{contradiction_type}",
+                "belief_sources": [item["source_layer"] for item in partners],
+                "contradiction_type": contradiction_type,
+                "contradiction_severity": _bounded(contradiction_severity),
+                "contradiction_partners": [item["belief_id"] for item in partners],
+                "dominance_candidate": dominance_candidate,
+                "historical_recurrence": historical_recurrence,
+                "historical_outcome_bias": historical_outcome_bias,
+                "arbitration_outcome": arbitration_outcome,
+                "resolution_rationale": resolution_rationale,
+                "governance_flags": dict(governance_flags),
+            }
+        )
+
+    history_state = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history_state, dict):
+        history_state = {"snapshots": []}
+    snapshots = history_state.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+
+    def _historical_recurrence(contradiction_type: str) -> int:
+        context_matches = 0
+        for snapshot in snapshots[-120:]:
+            if not isinstance(snapshot, dict):
+                continue
+            historical_context = snapshot.get("historical_context", {})
+            if not isinstance(historical_context, dict):
+                continue
+            snapshot_context = historical_context.get("context_signature", {})
+            if not isinstance(snapshot_context, dict):
+                continue
+            if snapshot_context == context_signature:
+                type_counts = historical_context.get("type_counts", {})
+                if isinstance(type_counts, dict):
+                    context_matches += int(type_counts.get(contradiction_type, 0) or 0)
+        return context_matches
+
+    outcome_state = read_json_safe(resolution_registry_path, default={"resolutions": []})
+    if not isinstance(outcome_state, dict):
+        outcome_state = {"resolutions": []}
+    prior_resolutions = outcome_state.get("resolutions", [])
+    if not isinstance(prior_resolutions, list):
+        prior_resolutions = []
+
+    def _historical_bias(contradiction_type: str) -> str:
+        counts = {"allow": 0, "reduce_size": 0, "pause": 0, "refuse": 0}
+        for entry in prior_resolutions[-200:]:
+            if not isinstance(entry, dict):
+                continue
+            if str(entry.get("contradiction_type", "")) != contradiction_type:
+                continue
+            outcome = str(entry.get("arbitration_outcome", "allow"))
+            if outcome in counts:
+                counts[outcome] += 1
+        strongest = sorted(counts.items(), key=lambda item: (item[1], item[0]), reverse=True)[0]
+        return strongest[0]
+
+    for left_index, left in enumerate(beliefs):
+        for right in beliefs[left_index + 1 :]:
+            left_direction = str(left.get("belief_direction", "wait"))
+            right_direction = str(right.get("belief_direction", "wait"))
+            if {left_direction, right_direction} == {"continuation", "risk_off"}:
+                severity = _bounded(
+                    (float(left.get("belief_confidence", 0.0) or 0.0) + float(right.get("belief_confidence", 0.0) or 0.0)) / 2.0
+                )
+                _push_contradiction(
+                    contradiction_type="directional_opposition",
+                    contradiction_severity=severity,
+                    partners=[left, right],
+                    dominance_candidate="execution_microstructure_intelligence_layer" if execution_penalty >= 0.45 else "unified_market_intelligence_field",
+                    arbitration_outcome="pause" if severity >= 0.55 else "reduce_size",
+                    resolution_rationale=["opposed_directional_beliefs_detected"],
+                    historical_recurrence=_historical_recurrence("directional_opposition"),
+                    historical_outcome_bias=_historical_bias("directional_opposition"),
+                )
+
+    confidence_execution_severity = _bounded((unified_confidence * 0.55) + (execution_penalty * 0.45))
+    if unified_confidence >= 0.12 and execution_penalty >= 0.35:
+        _push_contradiction(
+            contradiction_type="confidence_execution_conflict",
+            contradiction_severity=confidence_execution_severity,
+            partners=[beliefs[0], beliefs[1]],
+            dominance_candidate="execution_microstructure_intelligence_layer",
+            arbitration_outcome="refuse" if confidence_execution_severity >= 0.72 else "pause",
+            resolution_rationale=["high_confidence_with_execution_hostility"],
+            historical_recurrence=_historical_recurrence("confidence_execution_conflict"),
+            historical_outcome_bias=_historical_bias("confidence_execution_conflict"),
+        )
+
+    trap_signal_intensity = _bounded(max(negative_score, invariant_risk))
+    if beliefs[0]["belief_direction"] == "continuation" and (
+        beliefs[2]["belief_direction"] == "risk_off" or beliefs[3]["belief_direction"] == "risk_off"
+    ):
+        _push_contradiction(
+            contradiction_type="continuation_vs_trap",
+            contradiction_severity=_bounded((unified_confidence * 0.5) + (trap_signal_intensity * 0.5)),
+            partners=[beliefs[0], beliefs[2], beliefs[3]],
+            dominance_candidate="negative_space_pattern_recognition" if negative_signal else "temporal_invariance_break_detection",
+            arbitration_outcome="pause",
+            resolution_rationale=["continuation_signal_conflicts_with_trap_detection"],
+            historical_recurrence=_historical_recurrence("continuation_vs_trap"),
+            historical_outcome_bias=_historical_bias("continuation_vs_trap"),
+        )
+
+    risk_enable_signal = _bounded(
+        float(unified_market_intelligence_field.get("decision_refinements", {}).get("risk_sizing", {}).get("refined", 0.0) or 0.0)
+    )
+    risk_disable_signal = _bounded(max(pain_risk, execution_penalty, liquidity_vulnerability))
+    if risk_enable_signal >= 0.55 and (should_reduce or should_refuse_execution or pain_risk >= 0.6 or liquidity_vulnerability >= 0.6):
+        _push_contradiction(
+            contradiction_type="risk_enable_vs_risk_disable",
+            contradiction_severity=_bounded((risk_enable_signal * 0.45) + (risk_disable_signal * 0.55)),
+            partners=[beliefs[0], beliefs[1], beliefs[4], beliefs[6]],
+            dominance_candidate="execution_microstructure_intelligence_layer" if should_refuse_execution else "pain_geometry_fields",
+            arbitration_outcome="pause" if risk_disable_signal >= 0.6 else "reduce_size",
+            resolution_rationale=["risk_expansion_conflicts_with_risk_suppression_signals"],
+            historical_recurrence=_historical_recurrence("risk_enable_vs_risk_disable"),
+            historical_outcome_bias=_historical_bias("risk_enable_vs_risk_disable"),
+        )
+
+    type_counts: dict[str, int] = {}
+    for item in contradictions:
+        contradiction_type = str(item.get("contradiction_type", "unknown"))
+        type_counts[contradiction_type] = type_counts.get(contradiction_type, 0) + 1
+    max_severity = max(
+        [float(item.get("contradiction_severity", 0.0) or 0.0) for item in contradictions],
+        default=0.0,
+    )
+    total_recurrence = sum(int(item.get("historical_recurrence", 0) or 0) for item in contradictions)
+    recurrence_ratio = _bounded(min(1.0, total_recurrence / max(1, len(contradictions) * 3))) if contradictions else 0.0
+
+    arbitration_outcome = "allow"
+    dominant_source = "unified_market_intelligence_field"
+    if should_refuse_execution or any(
+        str(item.get("contradiction_type", "")) == "confidence_execution_conflict"
+        and float(item.get("contradiction_severity", 0.0) or 0.0) >= 0.72
+        for item in contradictions
+    ):
+        arbitration_outcome = "refuse"
+        dominant_source = "execution_microstructure_intelligence_layer"
+    elif any(
+        str(item.get("contradiction_type", "")) in {"continuation_vs_trap", "risk_enable_vs_risk_disable"}
+        and float(item.get("contradiction_severity", 0.0) or 0.0) >= 0.58
+        for item in contradictions
+    ):
+        arbitration_outcome = "pause"
+        dominant_source = "negative_space_pattern_recognition" if negative_signal else "pain_geometry_fields"
+    elif contradictions:
+        arbitration_outcome = "reduce_size"
+        dominant_source = "execution_microstructure_intelligence_layer" if should_reduce else "unified_market_intelligence_field"
+
+    confidence_penalty = _bounded((max_severity * 0.35) + (recurrence_ratio * 0.2))
+    contradiction_adjusted_confidence = _bounded(unified_confidence - confidence_penalty)
+    contradiction_multiplier = _bounded(1.0 - ((max_severity * 0.55) + (recurrence_ratio * 0.2)), low=0.25, high=1.0)
+    should_pause_due_to_contradiction = arbitration_outcome in {"pause", "refuse"}
+    should_refuse_due_to_contradiction = arbitration_outcome == "refuse"
+
+    arbitration = {
+        "outcome": arbitration_outcome,
+        "dominant_source": dominant_source,
+        "max_contradiction_severity": _bounded(max_severity),
+        "conflict_state": "active" if contradictions else "clear",
+        "reasons": [str(item.get("contradiction_type", "unknown")) for item in contradictions[:8]],
+    }
+    confidence_adjustments = {
+        "base_composite_confidence": unified_confidence,
+        "contradiction_penalty": confidence_penalty,
+        "contradiction_adjusted_confidence": contradiction_adjusted_confidence,
+    }
+    risk_adjustments = {
+        "contradiction_multiplier": contradiction_multiplier,
+        "recommended_action": arbitration_outcome,
+        "should_reduce_size": arbitration_outcome in {"reduce_size", "pause", "refuse"},
+        "should_pause": should_pause_due_to_contradiction,
+        "should_refuse": should_refuse_due_to_contradiction,
+    }
+    historical_context = {
+        "context_signature": context_signature,
+        "type_counts": type_counts,
+        "total_recurrence": total_recurrence,
+        "recurrence_ratio": recurrence_ratio,
+    }
+    governance = {
+        **governance_flags,
+        "conflict_override_requires_replay_validation": True,
+    }
+    payload = {
+        "input_signature": input_signature,
+        "beliefs": beliefs,
+        "contradictions": contradictions,
+        "arbitration": arbitration,
+        "confidence_adjustments": confidence_adjustments,
+        "risk_adjustments": risk_adjustments,
+        "historical_context": historical_context,
+        "governance": governance,
+    }
+
+    write_json_atomic(latest_path, payload)
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+    write_json_atomic(
+        belief_registry_path,
+        {
+            "context_signature": context_signature,
+            "beliefs": beliefs,
+            "strategy_branch": str(strategy_evolution.get("strongest_branch", {}).get("branch_id", "current_strategy")),
+            "detector_reliability": _detector_reliability_state(detector_generator),
+        },
+    )
+    event_payload = read_json_safe(contradiction_events_path, default={"events": []})
+    if not isinstance(event_payload, dict):
+        event_payload = {"events": []}
+    events = event_payload.get("events", [])
+    if not isinstance(events, list):
+        events = []
+    events.extend(contradictions)
+    write_json_atomic(contradiction_events_path, {"events": events[-600:]})
+
+    resolution_entries = prior_resolutions + [
+        {
+            "contradiction_type": str(item.get("contradiction_type", "unknown")),
+            "arbitration_outcome": str(item.get("arbitration_outcome", arbitration_outcome)),
+            "severity": _bounded(float(item.get("contradiction_severity", 0.0) or 0.0)),
+            "context_signature": context_signature,
+        }
+        for item in contradictions
+    ]
+    write_json_atomic(resolution_registry_path, {"resolutions": resolution_entries[-600:]})
+
+    contextual_clusters = read_json_safe(contextual_clusters_path, default={"clusters": {}})
+    if not isinstance(contextual_clusters, dict):
+        contextual_clusters = {"clusters": {}}
+    clusters = contextual_clusters.get("clusters", {})
+    if not isinstance(clusters, dict):
+        clusters = {}
+    cluster_key = (
+        f"{context_signature['replay_scope']}|{context_signature['structure_state']}|"
+        f"{context_signature['regime_state']}|{context_signature['execution_state']}"
+    )
+    cluster_state = clusters.get(cluster_key, {"occurrences": 0, "type_counts": {}})
+    if not isinstance(cluster_state, dict):
+        cluster_state = {"occurrences": 0, "type_counts": {}}
+    cluster_types = cluster_state.get("type_counts", {})
+    if not isinstance(cluster_types, dict):
+        cluster_types = {}
+    for contradiction_type, count in type_counts.items():
+        cluster_types[contradiction_type] = int(cluster_types.get(contradiction_type, 0) or 0) + int(count)
+    cluster_state["occurrences"] = int(cluster_state.get("occurrences", 0) or 0) + 1
+    cluster_state["type_counts"] = cluster_types
+    clusters[cluster_key] = cluster_state
+    write_json_atomic(contextual_clusters_path, {"clusters": clusters})
+    write_json_atomic(governance_path, governance)
+
+    return {
+        **payload,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "belief_state_registry": str(belief_registry_path),
+            "contradiction_events": str(contradiction_events_path),
+            "resolution_outcome_registry": str(resolution_registry_path),
+            "contextual_contradiction_clusters": str(contextual_clusters_path),
+            "governance_state": str(governance_path),
+        },
+    }
+
+
 def _gap_signature(gap: dict[str, Any]) -> str:
     return f"{gap.get('gap_type', 'unknown')}::{gap.get('detail', 'n/a')}"
 
@@ -1833,6 +2328,7 @@ def _detect_improvement_gaps(
     pain_memory_survival: dict[str, Any],
     execution_microstructure_engine: dict[str, Any],
     mutation_candidates: list[dict[str, Any]],
+    contradiction_arbitration_engine: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
     repeated = autonomous_behavior.get("trade_review_engine", {}).get("repeated_failure_patterns", [])
@@ -1958,6 +2454,49 @@ def _detect_improvement_gaps(
                 "severity": 0.65,
             }
         )
+    contradiction_arbitration_engine = contradiction_arbitration_engine if isinstance(contradiction_arbitration_engine, dict) else {}
+    contradiction_counts = contradiction_arbitration_engine.get("historical_context", {}).get("type_counts", {})
+    if not isinstance(contradiction_counts, dict):
+        contradiction_counts = {}
+    contradiction_events = contradiction_arbitration_engine.get("contradictions", [])
+    if not isinstance(contradiction_events, list):
+        contradiction_events = []
+    recurrence_ratio = float(
+        contradiction_arbitration_engine.get("historical_context", {}).get("recurrence_ratio", 0.0) or 0.0
+    )
+    for contradiction_type, gap_type, detail in (
+        ("continuation_vs_trap", "persistent_continuation_vs_trap_conflict", "continuation_vs_trap_conflict"),
+        (
+            "confidence_execution_conflict",
+            "high_confidence_vs_execution_hostility_conflict",
+            "high_confidence_vs_execution_hostility",
+        ),
+        (
+            "risk_enable_vs_risk_disable",
+            "chronic_risk_enable_vs_risk_disable_conflict",
+            "risk_enable_vs_risk_disable_conflict",
+        ),
+    ):
+        type_count = int(contradiction_counts.get(contradiction_type, 0) or 0)
+        type_events = [
+            item
+            for item in contradiction_events
+            if isinstance(item, dict) and str(item.get("contradiction_type", "")) == contradiction_type
+        ]
+        max_severity = max(
+            [float(item.get("contradiction_severity", 0.0) or 0.0) for item in type_events],
+            default=0.0,
+        )
+        persistent = type_count >= 1 and (recurrence_ratio >= 0.25 or len(type_events) >= 1)
+        if persistent:
+            gaps.append(
+                {
+                    "gap_type": gap_type,
+                    "detail": detail,
+                    "frequency": max(1, type_count),
+                    "severity": round(min(1.0, max(max_severity, 0.55 if type_count >= 1 else 0.0)), 4),
+                }
+            )
     return gaps
 
 
@@ -1998,6 +2537,17 @@ def _suggestion_templates(gap_type: str) -> list[dict[str, str]]:
         ],
         "survival_rule_gap": [
             {"suggestion_type": "new_survival_rule", "target": "pain_memory_survival_strengthening"},
+        ],
+        "persistent_continuation_vs_trap_conflict": [
+            {"suggestion_type": "new_detector_idea", "target": "continuation_trap_contradiction_resolver"},
+            {"suggestion_type": "new_survival_rule", "target": "trap_aware_continuation_guard"},
+        ],
+        "high_confidence_vs_execution_hostility_conflict": [
+            {"suggestion_type": "new_execution_refinement", "target": "confidence_execution_arbitration_guard"},
+        ],
+        "chronic_risk_enable_vs_risk_disable_conflict": [
+            {"suggestion_type": "new_strategy_mutation", "target": "contradiction_aware_risk_sizing"},
+            {"suggestion_type": "new_survival_rule", "target": "risk_disable_override_rule"},
         ],
         "autonomous_capability_proposal": [
             {"suggestion_type": "new_capability_hypothesis", "target": "autonomous_capability_discovery"},
@@ -2070,6 +2620,9 @@ def _component_for_gap(gap_type: str) -> str:
         "entry_timing_degradation_gap": "execution_microstructure_intelligence_layer",
         "low_value_noisy_mutations": "strategy_evolution_engine",
         "survival_rule_gap": "pain_memory_survival_layer",
+        "persistent_continuation_vs_trap_conflict": "contradiction_arbitration_and_belief_resolution_layer",
+        "high_confidence_vs_execution_hostility_conflict": "contradiction_arbitration_and_belief_resolution_layer",
+        "chronic_risk_enable_vs_risk_disable_conflict": "contradiction_arbitration_and_belief_resolution_layer",
         "autonomous_capability_proposal": "capability_evolution_governance_ladder",
     }
     return mapping.get(gap_type, "self_evolving_indicator_layer")
@@ -2122,6 +2675,7 @@ def _self_suggestion_governor(
     discovery_state_tags: dict[str, Any],
     unified_market_intelligence_field: dict[str, Any],
     execution_microstructure_engine: dict[str, Any],
+    contradiction_arbitration_engine: dict[str, Any],
     mutation_candidates: list[dict[str, Any]],
     capability_evolution_ladder: dict[str, Any] | None = None,
     replay_scope: str,
@@ -2165,6 +2719,7 @@ def _self_suggestion_governor(
         pain_memory_survival=pain_memory_survival,
         execution_microstructure_engine=execution_microstructure_engine,
         mutation_candidates=mutation_candidates,
+        contradiction_arbitration_engine=contradiction_arbitration_engine,
     )
     capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
     capability_candidates = capability_evolution_ladder.get("capability_candidates", [])
@@ -2198,6 +2753,11 @@ def _self_suggestion_governor(
         ),
         "execution_quality_score": round(float(execution_microstructure_engine.get("execution_quality_score", 0.0) or 0.0), 4),
         "execution_penalty": round(float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0), 4),
+        "contradiction_outcome": str(contradiction_arbitration_engine.get("arbitration", {}).get("outcome", "allow")),
+        "contradiction_severity": round(
+            float(contradiction_arbitration_engine.get("arbitration", {}).get("max_contradiction_severity", 0.0) or 0.0),
+            4,
+        ),
     }
     if previous_governor.get("input_signature") == input_signature:
         return previous_governor
@@ -2430,6 +2990,11 @@ def _self_suggestion_governor(
             "execution_state": execution_microstructure_engine.get("execution_state", "insufficient_data"),
             "recommended_actions": execution_microstructure_engine.get("recommended_actions", []),
         },
+        "contradiction_arbitration_and_belief_resolution_layer": {
+            "arbitration": contradiction_arbitration_engine.get("arbitration", {}),
+            "confidence_adjustments": contradiction_arbitration_engine.get("confidence_adjustments", {}),
+            "risk_adjustments": contradiction_arbitration_engine.get("risk_adjustments", {}),
+        },
         "paths": {
             "registry": str(registry_path),
             "governor": str(governor_path),
@@ -2601,6 +3166,63 @@ def run_self_evolving_indicator_layer(
         liquidity_decay_engine=liquidity_decay_engine,
         execution_microstructure_engine=execution_microstructure_engine,
     )
+    contradiction_arbitration_engine = _contradiction_arbitration_and_belief_resolution_layer(
+        memory_root=memory_root,
+        market_state=market_state,
+        unified_market_intelligence_field=unified_market_intelligence_field,
+        negative_space_engine=negative_space_engine,
+        invariant_break_engine=invariant_break_engine,
+        pain_geometry_engine=pain_geometry_engine,
+        counterfactual_engine=counterfactual_engine,
+        liquidity_decay_engine=liquidity_decay_engine,
+        execution_microstructure_engine=execution_microstructure_engine,
+        strategy_evolution=strategy_evolution,
+        detector_generator=detector_generator,
+        replay_scope=replay_scope,
+    )
+    contradiction_confidence = float(
+        contradiction_arbitration_engine.get("confidence_adjustments", {}).get("contradiction_adjusted_confidence", 0.0) or 0.0
+    )
+    contradiction_multiplier = float(
+        contradiction_arbitration_engine.get("risk_adjustments", {}).get("contradiction_multiplier", 1.0) or 1.0
+    )
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["contradiction_adjusted_confidence"] = round(max(0.0, min(1.0, contradiction_confidence)), 4)
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    risk_sizing = decision_refinements.get("risk_sizing", {})
+    if not isinstance(risk_sizing, dict):
+        risk_sizing = {}
+    risk_sizing["contradiction_multiplier"] = round(max(0.25, min(1.0, contradiction_multiplier)), 4)
+    decision_refinements["risk_sizing"] = risk_sizing
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    contradiction_outcome = str(contradiction_arbitration_engine.get("arbitration", {}).get("outcome", "allow"))
+    if contradiction_outcome == "refuse" and "contradiction_arbitration_refuse" not in refusal_reasons:
+        refusal_reasons.append("contradiction_arbitration_refuse")
+    if contradiction_outcome in {"pause", "refuse"} and "contradiction_arbitration_pause" not in pause_reasons:
+        pause_reasons.append("contradiction_arbitration_pause")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or contradiction_outcome == "refuse"
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or contradiction_outcome in {
+        "pause",
+        "refuse",
+    }
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    unified_market_intelligence_field["contradiction_arbitration"] = contradiction_arbitration_engine.get("arbitration", {})
     self_suggestion_governor = _self_suggestion_governor(
         memory_root=memory_root,
         closed=closed,
@@ -2612,6 +3234,7 @@ def run_self_evolving_indicator_layer(
         discovery_state_tags=discovery_state_tags,
         unified_market_intelligence_field=unified_market_intelligence_field,
         execution_microstructure_engine=execution_microstructure_engine,
+        contradiction_arbitration_engine=contradiction_arbitration_engine,
         mutation_candidates=mutation_candidates,
         capability_evolution_ladder=capability_evolution_ladder,
         replay_scope=replay_scope,
@@ -2627,6 +3250,7 @@ def run_self_evolving_indicator_layer(
         "counterfactual_trade_engine": counterfactual_engine,
         "fractal_liquidity_decay_functions": liquidity_decay_engine,
         "execution_microstructure_intelligence_layer": execution_microstructure_engine,
+        "contradiction_arbitration_and_belief_resolution_layer": contradiction_arbitration_engine,
         "recursive_self_modeling": recursive_self_modeling,
         "discovery_state_tags": discovery_state_tags,
         "unified_market_intelligence_field": unified_market_intelligence_field,
@@ -2654,6 +3278,7 @@ def run_self_evolving_indicator_layer(
         "counterfactual_trade_engine": counterfactual_engine,
         "fractal_liquidity_decay_functions": liquidity_decay_engine,
         "execution_microstructure_intelligence_layer": execution_microstructure_engine,
+        "contradiction_arbitration_and_belief_resolution_layer": contradiction_arbitration_engine,
         "recursive_self_modeling": recursive_self_modeling,
         "discovery_state_tags": discovery_state_tags,
         "unified_market_intelligence_field": unified_market_intelligence_field,

@@ -1,0 +1,189 @@
+{
+  "context_signature": {
+    "replay_scope": "evaluation_replay",
+    "structure_state": "range",
+    "volatility_ratio": 1.0,
+    "spread_ratio": 1.0,
+    "slippage_ratio": 1.0,
+    "regime_state": "range",
+    "execution_state": "insufficient_data"
+  },
+  "beliefs": [
+    {
+      "belief_id": "belief_1_unified_market_intelligence_field",
+      "source_layer": "unified_market_intelligence_field",
+      "belief_direction": "risk_off",
+      "belief_confidence": 0.4241,
+      "belief_intent": "composite_unified_intelligence",
+      "historical_reliability": 0.0,
+      "execution_adjusted_trust": 0.4241,
+      "context_signature": {
+        "replay_scope": "evaluation_replay",
+        "structure_state": "range",
+        "volatility_ratio": 1.0,
+        "spread_ratio": 1.0,
+        "slippage_ratio": 1.0,
+        "regime_state": "range",
+        "execution_state": "insufficient_data"
+      },
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_rewrites": true
+      }
+    },
+    {
+      "belief_id": "belief_2_execution_microstructure_intelligence_layer",
+      "source_layer": "execution_microstructure_intelligence_layer",
+      "belief_direction": "continuation",
+      "belief_confidence": 0.35,
+      "belief_intent": "execution_safety",
+      "historical_reliability": 1.0,
+      "execution_adjusted_trust": 1.0,
+      "context_signature": {
+        "replay_scope": "evaluation_replay",
+        "structure_state": "range",
+        "volatility_ratio": 1.0,
+        "spread_ratio": 1.0,
+        "slippage_ratio": 1.0,
+        "regime_state": "range",
+        "execution_state": "insufficient_data"
+      },
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_rewrites": true
+      }
+    },
+    {
+      "belief_id": "belief_3_negative_space_pattern_recognition",
+      "source_layer": "negative_space_pattern_recognition",
+      "belief_direction": "continuation",
+      "belief_confidence": 0.0,
+      "belief_intent": "trap_detection",
+      "historical_reliability": 0.0,
+      "execution_adjusted_trust": 0.0,
+      "context_signature": {
+        "replay_scope": "evaluation_replay",
+        "structure_state": "range",
+        "volatility_ratio": 1.0,
+        "spread_ratio": 1.0,
+        "slippage_ratio": 1.0,
+        "regime_state": "range",
+        "execution_state": "insufficient_data"
+      },
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_rewrites": true
+      }
+    },
+    {
+      "belief_id": "belief_4_temporal_invariance_break_detection",
+      "source_layer": "temporal_invariance_break_detection",
+      "belief_direction": "continuation",
+      "belief_confidence": 0.45,
+      "belief_intent": "invariance_integrity_guard",
+      "historical_reliability": 1.0,
+      "execution_adjusted_trust": 0.45,
+      "context_signature": {
+        "replay_scope": "evaluation_replay",
+        "structure_state": "range",
+        "volatility_ratio": 1.0,
+        "spread_ratio": 1.0,
+        "slippage_ratio": 1.0,
+        "regime_state": "range",
+        "execution_state": "insufficient_data"
+      },
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_rewrites": true
+      }
+    },
+    {
+      "belief_id": "belief_5_pain_geometry_fields",
+      "source_layer": "pain_geometry_fields",
+      "belief_direction": "continuation",
+      "belief_confidence": 0.0,
+      "belief_intent": "drawdown_surface_risk",
+      "historical_reliability": 1.0,
+      "execution_adjusted_trust": 0.0,
+      "context_signature": {
+        "replay_scope": "evaluation_replay",
+        "structure_state": "range",
+        "volatility_ratio": 1.0,
+        "spread_ratio": 1.0,
+        "slippage_ratio": 1.0,
+        "regime_state": "range",
+        "execution_state": "insufficient_data"
+      },
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_rewrites": true
+      }
+    },
+    {
+      "belief_id": "belief_6_counterfactual_trade_engine",
+      "source_layer": "counterfactual_trade_engine",
+      "belief_direction": "wait",
+      "belief_confidence": 0.0,
+      "belief_intent": "counterfactual_continuation",
+      "historical_reliability": 0.45,
+      "execution_adjusted_trust": 0.0,
+      "context_signature": {
+        "replay_scope": "evaluation_replay",
+        "structure_state": "range",
+        "volatility_ratio": 1.0,
+        "spread_ratio": 1.0,
+        "slippage_ratio": 1.0,
+        "regime_state": "range",
+        "execution_state": "insufficient_data"
+      },
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_rewrites": true
+      }
+    },
+    {
+      "belief_id": "belief_7_fractal_liquidity_decay_functions",
+      "source_layer": "fractal_liquidity_decay_functions",
+      "belief_direction": "continuation",
+      "belief_confidence": 0.0,
+      "belief_intent": "liquidity_stability",
+      "historical_reliability": 1.0,
+      "execution_adjusted_trust": 0.0,
+      "context_signature": {
+        "replay_scope": "evaluation_replay",
+        "structure_state": "range",
+        "volatility_ratio": 1.0,
+        "spread_ratio": 1.0,
+        "slippage_ratio": 1.0,
+        "regime_state": "range",
+        "execution_state": "insufficient_data"
+      },
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_rewrites": true
+      }
+    }
+  ],
+  "strategy_branch": "mutated_strategy_a",
+  "detector_reliability": {
+    "state": "weak",
+    "reliability_score": 0.0,
+    "passed_count": 0,
+    "failed_count": 5,
+    "candidate_count": 5
+  }
+}
