@@ -588,3 +588,131 @@ def test_execution_microstructure_missing_fields_stays_sandbox_and_nonbreaking(t
     assert execution_layer["governance"]["sandbox_only"] is True
     assert execution_layer["governance"]["no_blind_live_self_rewrites"] is True
     assert execution_layer["governance"]["replay_validation_required"] is True
+
+
+def test_intelligence_gap_discovery_persists_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {
+                "trade_id": "ig1",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -1.2,
+                "session": "asia",
+                "failure_cause": "execution_failure",
+            },
+            {
+                "trade_id": "ig2",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -1.1,
+                "session": "asia",
+                "failure_cause": "execution_failure",
+            },
+            {
+                "trade_id": "ig3",
+                "status": "closed",
+                "result": "win",
+                "pnl_points": 0.6,
+                "session": "london",
+                "failure_cause": "none",
+            },
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 1.9, "slippage_ratio": 1.6},
+        replay_scope="full_replay",
+    )
+    assert result["self_suggestion_governor"]["safety_controls"]["sandbox_only"] is True
+    latest_path = tmp_path / "memory" / "intelligence_gaps" / "intelligence_gap_latest.json"
+    history_path = tmp_path / "memory" / "intelligence_gaps" / "intelligence_gap_history.json"
+    assert latest_path.exists()
+    assert history_path.exists()
+    payload = json.loads(latest_path.read_text(encoding="utf-8"))
+    assert payload["intelligence_gaps"]
+    first_gap = payload["intelligence_gaps"][0]
+    assert first_gap["sandbox_only"] is True
+    assert first_gap["replay_validation_required"] is True
+
+
+def test_synthetic_data_plane_expansion_generates_safe_candidates(tmp_path: Path) -> None:
+    run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "spx1", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "spx2", "status": "closed", "result": "win", "pnl_points": 0.8, "session": "london", "failure_cause": "none"},
+            {"trade_id": "spx3", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "new_york", "failure_cause": "slippage_spike"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 1.8, "slippage_ratio": 1.7},
+        replay_scope="full_replay",
+    )
+    latest_path = tmp_path / "memory" / "synthetic_data_planes" / "synthetic_data_planes_latest.json"
+    history_path = tmp_path / "memory" / "synthetic_data_planes" / "synthetic_data_planes_history.json"
+    assert latest_path.exists()
+    assert history_path.exists()
+    payload = json.loads(latest_path.read_text(encoding="utf-8"))
+    assert payload["synthetic_data_planes"]
+    first_plane = payload["synthetic_data_planes"][0]
+    assert first_plane["synthetic_plane_name"]
+    assert first_plane["governance"]["sandbox_only"] is True
+    assert first_plane["governance"]["replay_validation_required"] is True
+
+
+def test_capability_evolution_ladder_enforces_sandbox_replay_promotion_flow(tmp_path: Path) -> None:
+    run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "ce1", "status": "closed", "result": "loss", "pnl_points": -1.3, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "ce2", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia", "failure_cause": "spread_spike"},
+            {"trade_id": "ce3", "status": "closed", "result": "win", "pnl_points": 0.7, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.0, "slippage_ratio": 1.9},
+        replay_scope="full_replay",
+    )
+    candidates_path = tmp_path / "memory" / "capability_evolution" / "capability_candidates.json"
+    validation_path = tmp_path / "memory" / "capability_evolution" / "capability_validation_history.json"
+    promotion_path = tmp_path / "memory" / "capability_evolution" / "capability_promotion_registry.json"
+    assert candidates_path.exists()
+    assert validation_path.exists()
+    assert promotion_path.exists()
+    candidates_payload = json.loads(candidates_path.read_text(encoding="utf-8"))
+    assert candidates_payload["capability_candidates"]
+    candidate = candidates_payload["capability_candidates"][0]
+    assert candidate["lifecycle_stages"] == [
+        "gap_detection",
+        "capability_hypothesis_generation",
+        "synthetic_prototype_construction",
+        "replay_validation",
+        "comparative_advantage_test",
+        "conflict_check_unified_field",
+        "governor_promotion_decision",
+    ]
+    assert candidate["governance"]["sandbox_only"] is True
+    assert candidate["governance"]["live_deployment_allowed"] is False
+    assert candidate["governance_decision"] in {"rejected", "quarantined", "sandbox_only_retained", "promoted"}
+    registry_payload = json.loads(promotion_path.read_text(encoding="utf-8"))
+    assert set(registry_payload) == {"rejected", "quarantined", "sandbox_only_retained", "promoted"}
+
+
+def test_unified_market_intelligence_field_non_regression_with_meta_capability_layers(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "ur1", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "ur2", "status": "closed", "result": "win", "pnl_points": 0.9, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.3, "spread_ratio": 1.4, "slippage_ratio": 1.2},
+        replay_scope="focused_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert set(unified["components"]) == {
+        "macro_state",
+        "regime_state",
+        "detector_reliability",
+        "synthetic_feature_state",
+        "negative_space_state",
+        "invariant_break_state",
+        "pain_geometry_risk",
+        "counterfactual_evaluation",
+        "liquidity_decay_state",
+        "execution_microstructure_state",
+    }
