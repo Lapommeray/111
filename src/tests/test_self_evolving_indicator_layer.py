@@ -273,6 +273,22 @@ def test_self_suggestion_governor_rejects_vague_suggestions(tmp_path: Path) -> N
     assert any(item.get("reason") == "vague_suggestion_rejected" for item in governor["rejected_improvements"])
 
 
+def test_self_suggestion_governor_rejects_partially_specific_suggestions(tmp_path: Path) -> None:
+    trade_outcomes = [
+        {"trade_id": "pv1", "status": "closed", "result": "loss", "pnl_points": -0.6, "failure_cause": "execution_failure", "setup_type": "", "session": "london"},
+        {"trade_id": "pv2", "status": "closed", "result": "loss", "pnl_points": -0.7, "failure_cause": "execution_failure", "setup_type": "", "session": "london"},
+    ]
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 1.2, "spread_ratio": 1.1, "slippage_ratio": 1.1},
+        replay_scope="focused_replay",
+    )
+    governor = result["self_suggestion_governor"]
+    assert governor["anti_noise_controls"]["vague_rejected"] >= 1
+    assert any(item.get("reason") == "vague_suggestion_rejected" for item in governor["rejected_improvements"])
+
+
 def test_self_suggestion_governor_boosts_priority_for_repeated_specific_failure_cluster(tmp_path: Path) -> None:
     trade_outcomes = [
         {"trade_id": "p1", "status": "closed", "result": "loss", "pnl_points": -1.1, "failure_cause": "execution_failure", "setup_type": "breakout", "session": "london", "direction": "BUY"},
@@ -286,9 +302,9 @@ def test_self_suggestion_governor_boosts_priority_for_repeated_specific_failure_
         market_state={"structure_state": "range", "volatility_ratio": 1.2, "spread_ratio": 1.1, "slippage_ratio": 1.0},
         replay_scope="full_replay",
     )
-    repeated_failure_suggestions = [
+    specific_repeated_failure_suggestions = [
         item for item in result["self_suggestion_governor"]["proposed_improvements"] if item.get("gap_type") == "repeated_failure_pattern"
     ]
-    assert repeated_failure_suggestions
-    assert all(item["is_repeated_specific_failure_cluster"] is True for item in repeated_failure_suggestions)
-    assert all(item["cluster_specificity_boost"] > 0 for item in repeated_failure_suggestions)
+    assert specific_repeated_failure_suggestions
+    assert all(item["is_repeated_specific_failure_cluster"] is True for item in specific_repeated_failure_suggestions)
+    assert all(item["cluster_specificity_boost"] > 0 for item in specific_repeated_failure_suggestions)

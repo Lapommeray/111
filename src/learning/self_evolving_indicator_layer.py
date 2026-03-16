@@ -17,6 +17,8 @@ _SUGGESTION_MAX_PER_NOISY_CYCLE = 3
 _SUGGESTION_LOW_VALUE_THRESHOLD = 0.35
 _SUGGESTION_PROMOTE_THRESHOLD = 0.68
 _SUGGESTION_RETAIN_THRESHOLD = 0.5
+_MAX_CLUSTER_SPECIFICITY_BOOST = 0.2
+_CLUSTER_SPECIFICITY_BOOST_PER_OCCURRENCE = 0.05
 
 
 def _closed_outcomes(trade_outcomes: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -766,7 +768,7 @@ def _self_suggestion_governor(
     duplicate_suppressed = 0
     pruned_low_value = 0
     cooldown_suppressed = 0
-    vague_rejected = 0
+    vague_suppressed = 0
     vague_rejections: list[dict[str, Any]] = []
     for gap in gaps:
         frequency = int(gap.get("frequency", 1) or 1)
@@ -778,7 +780,13 @@ def _self_suggestion_governor(
         component = _component_for_gap(str(gap.get("gap_type", "")))
         cluster_specificity_boost = 0.0
         if str(gap.get("gap_type", "")) == "repeated_failure_pattern" and strongest_failure_cluster["is_repeated_specific_cluster"]:
-            cluster_specificity_boost = round(min(0.2, (strongest_failure_cluster["count"] - 1) * 0.05), 4)
+            cluster_specificity_boost = round(
+                min(
+                    _MAX_CLUSTER_SPECIFICITY_BOOST,
+                    (strongest_failure_cluster["count"] - 1) * _CLUSTER_SPECIFICITY_BOOST_PER_OCCURRENCE,
+                ),
+                4,
+            )
         for template in _suggestion_templates(str(gap.get("gap_type", ""))):
             base_priority = _priority_score(
                 expected_usefulness=expected_usefulness,
@@ -833,7 +841,7 @@ def _self_suggestion_governor(
                 cooldown_suppressed += 1
                 continue
             if _is_vague_suggestion(suggestion):
-                vague_rejected += 1
+                vague_suppressed += 1
                 vague_rejections.append(
                     {
                         "cycle_index": cycle_index,
@@ -926,7 +934,7 @@ def _self_suggestion_governor(
             "duplicate_suppression": duplicate_suppressed,
             "low_value_pruned": pruned_low_value,
             "cooldown_suppressed": cooldown_suppressed,
-            "vague_rejected": vague_rejected,
+            "vague_rejected": vague_suppressed,
             "max_suggestions_per_cycle": max_per_cycle,
             "stricter_thresholds_active": noisy_cluster,
             "priority_threshold": round(min_threshold, 4),
