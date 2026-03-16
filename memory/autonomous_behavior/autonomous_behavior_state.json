@@ -35,12 +35,6 @@
       "decision": "resume",
       "pause_trading": false,
       "trigger_refusal": false
-    },
-    {
-      "regime": "range",
-      "decision": "resume",
-      "pause_trading": false,
-      "trigger_refusal": false
     }
   ]
 }
