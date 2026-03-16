@@ -893,3 +893,245 @@ def test_contradiction_arbitration_history_rolls_and_nonbreaking_with_missing_in
     payload = json.loads(history_path.read_text(encoding="utf-8"))
     assert len(payload["snapshots"]) <= 200
     assert payload["snapshots"]
+
+
+def test_calibration_uncertainty_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cuap1", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "cuap2", "status": "closed", "result": "win", "pnl_points": 0.9, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.2, "spread_ratio": 1.4, "slippage_ratio": 1.2},
+        replay_scope="focused_replay",
+    )
+    calibration = result["calibration_and_uncertainty_governance_layer"]
+    assert Path(calibration["paths"]["latest"]).exists()
+    assert Path(calibration["paths"]["history"]).exists()
+    assert Path(calibration["paths"]["confidence_error_registry"]).exists()
+    assert Path(calibration["paths"]["regime_reliability_registry"]).exists()
+    assert Path(calibration["paths"]["governance_state"]).exists()
+
+
+def test_calibration_uncertainty_adds_calibrated_confidence_without_overwriting_composite_confidence(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cuac1", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "cuac2", "status": "closed", "result": "win", "pnl_points": 1.1, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.3, "spread_ratio": 1.6, "slippage_ratio": 1.3},
+        replay_scope="full_replay",
+    )
+    confidence = result["unified_market_intelligence_field"]["confidence_structure"]
+    assert "composite_confidence" in confidence
+    assert "calibrated_confidence" in confidence
+    assert "calibration_drift" in confidence
+    assert "confidence_reliability_band" in confidence
+    assert 0.0 <= confidence["composite_confidence"] <= 1.0
+    assert 0.0 <= confidence["calibrated_confidence"] <= 1.0
+
+
+def test_calibration_uncertainty_increases_pause_or_refusal_when_drift_and_execution_hostility_are_high(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "cuph1", "status": "closed", "result": "win", "pnl_points": 1.2, "session": "asia", "failure_cause": "none"},
+            {"trade_id": "cuph2", "status": "closed", "result": "win", "pnl_points": 1.0, "session": "asia", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.0, "spread_ratio": 1.0, "slippage_ratio": 1.0},
+        replay_scope="focused_replay",
+    )
+    result = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {
+                "trade_id": "cuph3",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -0.1,
+                "intended_entry_price": 2010.0,
+                "average_fill_price": 2015.0,
+                "signal_time": 10,
+                "first_fill_time": 70,
+                "session": "asia",
+                "failure_cause": "execution_failure",
+            },
+            {
+                "trade_id": "cuph4",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -0.1,
+                "intended_entry_price": 2011.0,
+                "average_fill_price": 2016.0,
+                "signal_time": 20,
+                "first_fill_time": 90,
+                "session": "asia",
+                "failure_cause": "execution_failure",
+            },
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.0, "spread_ratio": 3.0, "slippage_ratio": 3.0},
+        replay_scope="focused_replay",
+    )
+    behavior = result["unified_market_intelligence_field"]["decision_refinements"]["refusal_pause_behavior"]
+    reasons = set(behavior["pause_reasons"] + behavior["refusal_reasons"])
+    assert behavior["should_pause"] or behavior["should_refuse"]
+    assert (
+        "calibration_drift_elevated" in reasons
+        or "calibration_uncertainty_refuse_guard" in reasons
+        or "execution_adjusted_uncertainty_elevated" in reasons
+    )
+
+
+def test_calibration_uncertainty_updates_unified_risk_sizing_with_governed_multiplier(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cur1", "status": "closed", "result": "loss", "pnl_points": -1.1, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "cur2", "status": "closed", "result": "win", "pnl_points": 0.7, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 1.8, "slippage_ratio": 1.7},
+        replay_scope="full_replay",
+    )
+    risk = result["unified_market_intelligence_field"]["decision_refinements"]["risk_sizing"]
+    assert "calibration_multiplier" in risk
+    assert "calibration_adjusted_refined" in risk
+    assert 0.25 <= risk["calibration_multiplier"] <= 1.0
+    assert risk["calibration_adjusted_refined"] <= risk["refined"]
+
+
+def test_calibration_uncertainty_feeds_contradiction_layer_input_confidence_path_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cuc1", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "cuc2", "status": "closed", "result": "win", "pnl_points": 0.8, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.2, "spread_ratio": 1.4, "slippage_ratio": 1.3},
+        replay_scope="focused_replay",
+    )
+    confidence = result["unified_market_intelligence_field"]["confidence_structure"]
+    calibrated = confidence["calibrated_confidence"]
+    composite = confidence["composite_confidence"]
+    contradiction = result["contradiction_arbitration_and_belief_resolution_layer"]
+    assert contradiction["beliefs"]
+    assert contradiction["beliefs"][0]["source_layer"] == "unified_market_intelligence_field"
+    assert contradiction["beliefs"][0]["belief_confidence"] >= composite
+    assert contradiction["beliefs"][0]["belief_confidence"] >= calibrated
+
+
+def test_calibration_uncertainty_feeds_self_suggestion_governor_gap_detection(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "cug_base1", "status": "closed", "result": "win", "pnl_points": 1.1, "session": "asia", "failure_cause": "none"},
+            {"trade_id": "cug_base2", "status": "closed", "result": "win", "pnl_points": 1.0, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.0, "spread_ratio": 1.0, "slippage_ratio": 1.0},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {
+                "trade_id": "cug1",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -0.2,
+                "intended_entry_price": 2010.0,
+                "average_fill_price": 2015.0,
+                "signal_time": 10,
+                "first_fill_time": 70,
+                "session": "asia",
+                "failure_cause": "execution_failure",
+            },
+            {
+                "trade_id": "cug2",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -0.1,
+                "intended_entry_price": 2012.0,
+                "average_fill_price": 2017.0,
+                "signal_time": 20,
+                "first_fill_time": 85,
+                "session": "asia",
+                "failure_cause": "execution_failure",
+            },
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.0, "spread_ratio": 3.0, "slippage_ratio": 3.0},
+        replay_scope="focused_replay",
+    )
+    gap_types = {item.get("gap_type") for item in second["self_suggestion_governor"]["detected_gaps"]}
+    expected = {
+        "confidence_miscalibration_drift",
+        "regime_reliability_decay",
+        "chronic_overconfidence_under_execution_hostility",
+    }
+    assert gap_types.intersection(expected)
+
+
+def test_capability_evolution_ladder_reads_prior_calibration_reliability_nonbreaking(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "cul1", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "cul2", "status": "closed", "result": "win", "pnl_points": 0.8, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.2, "spread_ratio": 1.4, "slippage_ratio": 1.2},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "cul3", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "cul4", "status": "closed", "result": "win", "pnl_points": 0.7, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.3, "spread_ratio": 1.5, "slippage_ratio": 1.3},
+        replay_scope="focused_replay",
+    )
+    candidates_path = memory_root / "capability_evolution" / "capability_candidates.json"
+    payload = json.loads(candidates_path.read_text(encoding="utf-8"))
+    candidates = payload.get("capability_candidates", [])
+    if candidates:
+        assert "calibration_reliability_context" in candidates[0]
+        assert 0.0 <= candidates[0]["calibration_reliability_context"]["prior_cycle_reliability"] <= 1.0
+
+
+def test_calibration_uncertainty_history_rolls_and_missing_inputs_are_nonbreaking(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    for index in range(3):
+        run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"cuh{index}a", "status": "closed", "result": "loss", "pnl_points": -0.8},
+                {"trade_id": f"cuh{index}b", "status": "closed", "result": "win", "pnl_points": 0.6},
+            ],
+            market_state={"structure_state": "range"},
+            replay_scope="focused_replay",
+        )
+    history_path = memory_root / "calibration_uncertainty" / "calibration_uncertainty_history.json"
+    assert history_path.exists()
+    payload = json.loads(history_path.read_text(encoding="utf-8"))
+    assert len(payload["snapshots"]) <= 200
+    assert payload["snapshots"]
+    assert "calibration_state" in payload["snapshots"][-1]
+
+
+def test_calibration_uncertainty_governance_is_sandbox_and_replay_only(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cugov1", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "cugov2", "status": "closed", "result": "win", "pnl_points": 0.7, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.1, "spread_ratio": 1.3, "slippage_ratio": 1.2},
+        replay_scope="focused_replay",
+    )
+    governance = result["calibration_and_uncertainty_governance_layer"]["governance"]
+    assert governance["sandbox_only"] is True
+    assert governance["replay_validation_required"] is True
+    assert governance["live_deployment_allowed"] is False
+    assert governance["no_blind_live_self_rewrites"] is True

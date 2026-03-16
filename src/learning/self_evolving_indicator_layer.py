@@ -1311,6 +1311,22 @@ def _capability_evolution_governance_ladder(
     unified_confidence = float(
         unified_market_intelligence_field.get("confidence_structure", {}).get("composite_confidence", 0.0) or 0.0
     )
+    reliability_registry = read_json_safe(
+        memory_root / "calibration_uncertainty" / "regime_reliability_registry.json",
+        default={"regimes": {}},
+    )
+    if not isinstance(reliability_registry, dict):
+        reliability_registry = {"regimes": {}}
+    reliability_items = reliability_registry.get("regimes", {})
+    if not isinstance(reliability_items, dict):
+        reliability_items = {}
+    historical_reliability_scores = [
+        float(item.get("reliability_score", 0.5) or 0.5) for item in reliability_items.values() if isinstance(item, dict)
+    ]
+    calibration_reliability = round(
+        max(0.0, min(1.0, sum(historical_reliability_scores) / max(1, len(historical_reliability_scores)))),
+        4,
+    )
 
     candidates: list[dict[str, Any]] = []
     validation_records: list[dict[str, Any]] = []
@@ -1325,7 +1341,16 @@ def _capability_evolution_governance_ladder(
         evidence_strength = float(gap.get("evidence_strength", 0.0) or 0.0)
         prototype_plane = str(best_plane.get("synthetic_plane_name", "none"))
         prototype_predictive = float(best_plane.get("predictive_value", 0.0) or 0.0)
-        replay_score = round(min(1.0, (evidence_strength * 0.5) + (prototype_predictive * 0.3) + (unified_confidence * 0.2)), 4)
+        replay_score = round(
+            min(
+                1.0,
+                (evidence_strength * 0.5)
+                + (prototype_predictive * 0.3)
+                + (unified_confidence * 0.2)
+                + ((calibration_reliability - 0.5) * 0.08),
+            ),
+            4,
+        )
         comparative_advantage = round(min(1.0, (replay_score * 0.55) + (prototype_predictive * 0.45)), 4)
         conflict_with_unified = round(min(1.0, max(0.0, replay_score - unified_score + 0.2)), 4)
         if replay_score < 0.42:
@@ -1357,6 +1382,10 @@ def _capability_evolution_governance_ladder(
             "comparative_advantage": comparative_advantage,
             "unified_conflict_score": conflict_with_unified,
             "governance_decision": decision,
+            "calibration_reliability_context": {
+                "prior_cycle_reliability": calibration_reliability,
+                "source": "memory/calibration_uncertainty/regime_reliability_registry.json",
+            },
             "governance": {
                 "sandbox_only": True,
                 "replay_validation_required": True,
@@ -1816,6 +1845,247 @@ def _unified_market_intelligence_field(
     return {**payload, "paths": {"latest": str(latest_path), "history": str(history_path)}}
 
 
+def _calibration_and_uncertainty_governance_layer(
+    *,
+    memory_root: Path,
+    closed: list[dict[str, Any]],
+    market_state: dict[str, Any],
+    unified_market_intelligence_field: dict[str, Any],
+    execution_microstructure_engine: dict[str, Any],
+    contradiction_arbitration_engine: dict[str, Any] | None = None,
+    replay_scope: str,
+) -> dict[str, Any]:
+    calibration_dir = memory_root / "calibration_uncertainty"
+    calibration_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = calibration_dir / "calibration_uncertainty_latest.json"
+    history_path = calibration_dir / "calibration_uncertainty_history.json"
+    error_registry_path = calibration_dir / "confidence_error_registry.json"
+    regime_registry_path = calibration_dir / "regime_reliability_registry.json"
+    governance_path = calibration_dir / "calibration_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+
+    raw_confidence = _bounded(float(confidence_structure.get("composite_confidence", 0.0) or 0.0))
+    detector_confidence = _bounded(float(confidence_structure.get("detector_confidence", 0.0) or 0.0))
+    execution_penalty = _bounded(float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0))
+    execution_confidence = _bounded(float(execution_microstructure_engine.get("execution_confidence", 0.0) or 0.0))
+    failure_cluster_risk = _bounded(float(execution_microstructure_engine.get("failure_cluster_risk", 0.0) or 0.0))
+    contradiction_arbitration_engine = (
+        contradiction_arbitration_engine if isinstance(contradiction_arbitration_engine, dict) else {}
+    )
+    contradiction_penalty = _bounded(
+        float(contradiction_arbitration_engine.get("confidence_adjustments", {}).get("contradiction_penalty", 0.0) or 0.0)
+    )
+
+    settled = [
+        item
+        for item in closed[-40:]
+        if isinstance(item, dict) and str(item.get("result", "")).lower() in {"win", "loss", "flat"}
+    ]
+    outcome_proxy = [
+        1.0
+        if str(item.get("result", "")).lower() == "win"
+        else 0.0
+        if str(item.get("result", "")).lower() == "loss"
+        else 0.5
+        for item in settled
+    ]
+    observed_accuracy = _bounded(sum(outcome_proxy) / max(1, len(outcome_proxy)))
+    current_error = _bounded(abs(raw_confidence - observed_accuracy))
+    regime = str(
+        unified_market_intelligence_field.get("components", {}).get("regime_state", market_state.get("structure_state", "unknown"))
+    )
+    execution_state = str(execution_microstructure_engine.get("execution_state", "insufficient_data"))
+    regime_key = f"{replay_scope}|{regime}|{execution_state}"
+    input_signature = {
+        "replay_scope": replay_scope,
+        "raw_confidence": raw_confidence,
+        "observed_accuracy": observed_accuracy,
+        "execution_penalty": execution_penalty,
+        "execution_confidence": execution_confidence,
+        "failure_cluster_risk": failure_cluster_risk,
+        "regime_key": regime_key,
+        "settled_count": len(outcome_proxy),
+    }
+    previous_latest = read_json_safe(latest_path, default={})
+    if isinstance(previous_latest, dict) and previous_latest.get("input_signature") == input_signature:
+        return {
+            **previous_latest,
+            "paths": {
+                "latest": str(latest_path),
+                "history": str(history_path),
+                "confidence_error_registry": str(error_registry_path),
+                "regime_reliability_registry": str(regime_registry_path),
+                "governance_state": str(governance_path),
+            },
+        }
+
+    error_registry = read_json_safe(error_registry_path, default={"errors": []})
+    if not isinstance(error_registry, dict):
+        error_registry = {"errors": []}
+    errors = error_registry.get("errors", [])
+    if not isinstance(errors, list):
+        errors = []
+    errors.append(
+        {
+            "replay_scope": replay_scope,
+            "raw_confidence": raw_confidence,
+            "observed_accuracy": observed_accuracy,
+            "absolute_error": current_error,
+            "sample_size": len(outcome_proxy),
+        }
+    )
+    rolling_errors = [float(item.get("absolute_error", 0.0) or 0.0) for item in errors[-120:] if isinstance(item, dict)]
+    historical_confidence_error = _bounded(sum(rolling_errors) / max(1, len(rolling_errors)))
+    write_json_atomic(error_registry_path, {"errors": errors[-600:]})
+
+    if not isinstance(previous_latest, dict):
+        previous_latest = {}
+    previous_error = _bounded(float(previous_latest.get("calibration_state", {}).get("historical_confidence_error", 0.0) or 0.0))
+    calibration_drift = _bounded(abs(historical_confidence_error - previous_error) + (current_error * 0.6))
+    regime_registry = read_json_safe(regime_registry_path, default={"regimes": {}})
+    if not isinstance(regime_registry, dict):
+        regime_registry = {"regimes": {}}
+    regimes = regime_registry.get("regimes", {})
+    if not isinstance(regimes, dict):
+        regimes = {}
+    prior_regime_state = regimes.get(regime_key, {})
+    if not isinstance(prior_regime_state, dict):
+        prior_regime_state = {}
+    prior_count = int(prior_regime_state.get("observations", 0) or 0)
+    prior_reliability = _bounded(float(prior_regime_state.get("reliability_score", 0.5) or 0.5))
+    current_reliability = _bounded(max(0.0, min(1.0, 1.0 - current_error)))
+    observations = prior_count + 1
+    regime_reliability_score = _bounded(((prior_reliability * prior_count) + current_reliability) / max(1, observations))
+    regime_specific_reliability = {
+        "context_key": regime_key,
+        "reliability_score": regime_reliability_score,
+        "observations": observations,
+    }
+    regimes[regime_key] = regime_specific_reliability
+    write_json_atomic(regime_registry_path, {"regimes": regimes})
+
+    spread_stress = _bounded(max(0.0, float(market_state.get("spread_ratio", 1.0) or 1.0) - 1.0))
+    slippage_stress = _bounded(max(0.0, float(market_state.get("slippage_ratio", 1.0) or 1.0) - 1.0))
+    aleatoric_proxy = _bounded((execution_penalty * 0.5) + (failure_cluster_risk * 0.35) + ((spread_stress + slippage_stress) * 0.075))
+    epistemic_uncertainty = _bounded((1.0 - detector_confidence) * 0.6 + min(1.0, 1.0 / max(1, len(outcome_proxy))) * 0.4)
+    execution_adjusted_uncertainty = _bounded(
+        (epistemic_uncertainty * 0.4) + (aleatoric_proxy * 0.45) + ((1.0 - execution_confidence) * 0.15)
+    )
+
+    reliability_signal = _bounded(
+        1.0 - ((historical_confidence_error * 0.5) + (calibration_drift * 0.3) + (execution_adjusted_uncertainty * 0.2))
+    )
+    if reliability_signal >= 0.72:
+        confidence_reliability_band = "high"
+    elif reliability_signal >= 0.52:
+        confidence_reliability_band = "moderate"
+    elif reliability_signal >= 0.35:
+        confidence_reliability_band = "low"
+    else:
+        confidence_reliability_band = "fragile"
+
+    calibrated_confidence = _bounded(
+        raw_confidence
+        - (historical_confidence_error * 0.45)
+        - (execution_adjusted_uncertainty * 0.25)
+        - (contradiction_penalty * 0.2)
+        + ((observed_accuracy - 0.5) * 0.08)
+    )
+    confidence_delta = _bounded(raw_confidence - calibrated_confidence)
+    risk_multiplier = _bounded(
+        1.0 - (confidence_delta * 0.45) - (execution_adjusted_uncertainty * 0.35) - (calibration_drift * 0.2),
+        low=0.25,
+        high=1.0,
+    )
+
+    should_pause = bool(
+        calibration_drift >= 0.26
+        or execution_adjusted_uncertainty >= 0.62
+        or confidence_reliability_band in {"low", "fragile"}
+    )
+    should_refuse = bool(
+        (confidence_reliability_band == "fragile" and execution_penalty >= 0.4)
+        or (calibration_drift >= 0.4 and execution_penalty >= 0.45)
+    )
+    refusal_reasons: list[str] = []
+    pause_reasons: list[str] = []
+    if should_refuse:
+        refusal_reasons.append("calibration_uncertainty_refuse_guard")
+    if calibration_drift >= 0.26:
+        pause_reasons.append("calibration_drift_elevated")
+    if execution_adjusted_uncertainty >= 0.62:
+        pause_reasons.append("execution_adjusted_uncertainty_elevated")
+    if confidence_reliability_band in {"low", "fragile"}:
+        pause_reasons.append("confidence_reliability_band_degraded")
+
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "pause_guard_triggered": should_pause,
+        "refuse_guard_triggered": should_refuse,
+    }
+    calibration_state = {
+        "raw_confidence": raw_confidence,
+        "calibrated_confidence": calibrated_confidence,
+        "calibration_drift": calibration_drift,
+        "confidence_reliability_band": confidence_reliability_band,
+        "epistemic_uncertainty": epistemic_uncertainty,
+        "aleatoric_proxy": aleatoric_proxy,
+        "historical_confidence_error": historical_confidence_error,
+        "regime_specific_reliability": regime_specific_reliability,
+        "execution_adjusted_uncertainty": execution_adjusted_uncertainty,
+        "governance_flags": governance_flags,
+    }
+    confidence_adjustments = {
+        "confidence_delta": confidence_delta,
+        "risk_multiplier": risk_multiplier,
+        "should_pause": should_pause,
+        "should_refuse": should_refuse,
+        "pause_reasons": pause_reasons,
+        "refusal_reasons": refusal_reasons,
+    }
+    governance = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+    }
+    payload = {
+        "input_signature": input_signature,
+        "calibration_state": calibration_state,
+        "confidence_adjustments": confidence_adjustments,
+        "governance": governance,
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+    write_json_atomic(governance_path, governance_flags)
+    return {
+        **payload,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "confidence_error_registry": str(error_registry_path),
+            "regime_reliability_registry": str(regime_registry_path),
+            "governance_state": str(governance_path),
+        },
+    }
+
+
 def _contradiction_arbitration_and_belief_resolution_layer(
     *,
     memory_root: Path,
@@ -1844,9 +2114,16 @@ def _contradiction_arbitration_and_belief_resolution_layer(
     def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
         return round(max(low, min(high, value)), 4)
 
-    unified_confidence = _bounded(
-        float(unified_market_intelligence_field.get("confidence_structure", {}).get("composite_confidence", 0.0) or 0.0)
-    )
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    composite_confidence = _bounded(float(confidence_structure.get("composite_confidence", 0.0) or 0.0))
+    calibrated_confidence = confidence_structure.get("calibrated_confidence")
+    if isinstance(calibrated_confidence, (int, float)):
+        blended_confidence = _bounded((composite_confidence * 0.75) + (float(calibrated_confidence) * 0.25))
+        unified_confidence = _bounded(max(composite_confidence, blended_confidence))
+    else:
+        unified_confidence = composite_confidence
     detector_reliability = _bounded(
         float(unified_market_intelligence_field.get("confidence_structure", {}).get("detector_confidence", 0.0) or 0.0)
     )
@@ -2329,6 +2606,7 @@ def _detect_improvement_gaps(
     execution_microstructure_engine: dict[str, Any],
     mutation_candidates: list[dict[str, Any]],
     contradiction_arbitration_engine: dict[str, Any] | None = None,
+    calibration_uncertainty_engine: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
     repeated = autonomous_behavior.get("trade_review_engine", {}).get("repeated_failure_patterns", [])
@@ -2497,6 +2775,54 @@ def _detect_improvement_gaps(
                     "severity": round(min(1.0, max(max_severity, 0.55 if type_count >= 1 else 0.0)), 4),
                 }
             )
+    calibration_uncertainty_engine = (
+        calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
+    )
+    calibration_state = calibration_uncertainty_engine.get("calibration_state", {})
+    if isinstance(calibration_state, dict) and calibration_state:
+        calibration_drift = float(calibration_state.get("calibration_drift", 0.0) or 0.0)
+        historical_error = float(calibration_state.get("historical_confidence_error", 0.0) or 0.0)
+        calibrated_confidence = float(calibration_state.get("calibrated_confidence", 0.0) or 0.0)
+        raw_confidence = float(calibration_state.get("raw_confidence", 0.0) or 0.0)
+        band = str(calibration_state.get("confidence_reliability_band", "moderate"))
+        execution_adjusted_uncertainty = float(calibration_state.get("execution_adjusted_uncertainty", 0.0) or 0.0)
+        regime_reliability = calibration_state.get("regime_specific_reliability", {})
+        if not isinstance(regime_reliability, dict):
+            regime_reliability = {}
+        regime_score = float(regime_reliability.get("reliability_score", 0.5) or 0.5)
+        regime_observations = int(regime_reliability.get("observations", 0) or 0)
+        execution_penalty = float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0)
+
+        if calibration_drift >= 0.18 or historical_error >= 0.2 or execution_adjusted_uncertainty >= 0.6:
+            gaps.append(
+                {
+                    "gap_type": "confidence_miscalibration_drift",
+                    "detail": "confidence_calibration_drift",
+                    "frequency": max(1, int(round((calibration_drift + historical_error + execution_adjusted_uncertainty) * 4))),
+                    "severity": round(min(1.0, max(calibration_drift, historical_error, execution_adjusted_uncertainty)), 4),
+                }
+            )
+        if regime_observations >= 2 and regime_score < 0.48:
+            gaps.append(
+                {
+                    "gap_type": "regime_reliability_decay",
+                    "detail": str(regime_reliability.get("context_key", "regime_reliability_decay")),
+                    "frequency": regime_observations,
+                    "severity": round(min(1.0, 1.0 - regime_score), 4),
+                }
+            )
+        if (raw_confidence - calibrated_confidence) >= 0.08 and execution_penalty >= 0.4:
+            gaps.append(
+                {
+                    "gap_type": "chronic_overconfidence_under_execution_hostility",
+                    "detail": "overconfidence_execution_hostility",
+                    "frequency": max(1, int(round((raw_confidence - calibrated_confidence) * 8))),
+                    "severity": round(
+                        min(1.0, ((raw_confidence - calibrated_confidence) * 0.65) + (execution_penalty * 0.35)),
+                        4,
+                    ),
+                }
+            )
     return gaps
 
 
@@ -2548,6 +2874,16 @@ def _suggestion_templates(gap_type: str) -> list[dict[str, str]]:
         "chronic_risk_enable_vs_risk_disable_conflict": [
             {"suggestion_type": "new_strategy_mutation", "target": "contradiction_aware_risk_sizing"},
             {"suggestion_type": "new_survival_rule", "target": "risk_disable_override_rule"},
+        ],
+        "confidence_miscalibration_drift": [
+            {"suggestion_type": "new_execution_refinement", "target": "confidence_calibration_guard"},
+            {"suggestion_type": "new_survival_rule", "target": "miscalibration_pause_rule"},
+        ],
+        "regime_reliability_decay": [
+            {"suggestion_type": "new_detector_idea", "target": "regime_reliability_recovery_detector"},
+        ],
+        "chronic_overconfidence_under_execution_hostility": [
+            {"suggestion_type": "new_execution_refinement", "target": "overconfidence_execution_hostility_guard"},
         ],
         "autonomous_capability_proposal": [
             {"suggestion_type": "new_capability_hypothesis", "target": "autonomous_capability_discovery"},
@@ -2623,6 +2959,9 @@ def _component_for_gap(gap_type: str) -> str:
         "persistent_continuation_vs_trap_conflict": "contradiction_arbitration_and_belief_resolution_layer",
         "high_confidence_vs_execution_hostility_conflict": "contradiction_arbitration_and_belief_resolution_layer",
         "chronic_risk_enable_vs_risk_disable_conflict": "contradiction_arbitration_and_belief_resolution_layer",
+        "confidence_miscalibration_drift": "calibration_and_uncertainty_governance_layer",
+        "regime_reliability_decay": "calibration_and_uncertainty_governance_layer",
+        "chronic_overconfidence_under_execution_hostility": "calibration_and_uncertainty_governance_layer",
         "autonomous_capability_proposal": "capability_evolution_governance_ladder",
     }
     return mapping.get(gap_type, "self_evolving_indicator_layer")
@@ -2676,6 +3015,7 @@ def _self_suggestion_governor(
     unified_market_intelligence_field: dict[str, Any],
     execution_microstructure_engine: dict[str, Any],
     contradiction_arbitration_engine: dict[str, Any],
+    calibration_uncertainty_engine: dict[str, Any] | None = None,
     mutation_candidates: list[dict[str, Any]],
     capability_evolution_ladder: dict[str, Any] | None = None,
     replay_scope: str,
@@ -2720,7 +3060,14 @@ def _self_suggestion_governor(
         execution_microstructure_engine=execution_microstructure_engine,
         mutation_candidates=mutation_candidates,
         contradiction_arbitration_engine=contradiction_arbitration_engine,
+        calibration_uncertainty_engine=calibration_uncertainty_engine,
     )
+    calibration_uncertainty_engine = (
+        calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
+    )
+    calibration_state = calibration_uncertainty_engine.get("calibration_state", {})
+    if not isinstance(calibration_state, dict):
+        calibration_state = {}
     capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
     capability_candidates = capability_evolution_ladder.get("capability_candidates", [])
     if isinstance(capability_candidates, list):
@@ -2756,6 +3103,12 @@ def _self_suggestion_governor(
         "contradiction_outcome": str(contradiction_arbitration_engine.get("arbitration", {}).get("outcome", "allow")),
         "contradiction_severity": round(
             float(contradiction_arbitration_engine.get("arbitration", {}).get("max_contradiction_severity", 0.0) or 0.0),
+            4,
+        ),
+        "calibration_drift": round(float(calibration_state.get("calibration_drift", 0.0) or 0.0), 4),
+        "confidence_reliability_band": str(calibration_state.get("confidence_reliability_band", "unknown")),
+        "execution_adjusted_uncertainty": round(
+            float(calibration_state.get("execution_adjusted_uncertainty", 0.0) or 0.0),
             4,
         ),
     }
@@ -2995,6 +3348,11 @@ def _self_suggestion_governor(
             "confidence_adjustments": contradiction_arbitration_engine.get("confidence_adjustments", {}),
             "risk_adjustments": contradiction_arbitration_engine.get("risk_adjustments", {}),
         },
+        "calibration_and_uncertainty_governance_layer": {
+            "calibration_state": calibration_state,
+            "confidence_adjustments": calibration_uncertainty_engine.get("confidence_adjustments", {}),
+            "governance": calibration_uncertainty_engine.get("governance", {}),
+        },
         "paths": {
             "registry": str(registry_path),
             "governor": str(governor_path),
@@ -3166,6 +3524,71 @@ def run_self_evolving_indicator_layer(
         liquidity_decay_engine=liquidity_decay_engine,
         execution_microstructure_engine=execution_microstructure_engine,
     )
+    calibration_uncertainty_engine = _calibration_and_uncertainty_governance_layer(
+        memory_root=memory_root,
+        closed=closed,
+        market_state=market_state,
+        unified_market_intelligence_field=unified_market_intelligence_field,
+        execution_microstructure_engine=execution_microstructure_engine,
+        replay_scope=replay_scope,
+    )
+    calibration_state = calibration_uncertainty_engine.get("calibration_state", {})
+    if not isinstance(calibration_state, dict):
+        calibration_state = {}
+    calibration_adjustments = calibration_uncertainty_engine.get("confidence_adjustments", {})
+    if not isinstance(calibration_adjustments, dict):
+        calibration_adjustments = {}
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    for key in (
+        "calibrated_confidence",
+        "calibration_drift",
+        "confidence_reliability_band",
+        "historical_confidence_error",
+        "execution_adjusted_uncertainty",
+    ):
+        if key in calibration_state:
+            confidence_structure[key] = calibration_state[key]
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    risk_sizing = decision_refinements.get("risk_sizing", {})
+    if not isinstance(risk_sizing, dict):
+        risk_sizing = {}
+    calibration_multiplier = round(float(calibration_adjustments.get("risk_multiplier", 1.0) or 1.0), 4)
+    risk_sizing["calibration_multiplier"] = max(0.25, min(1.0, calibration_multiplier))
+    risk_sizing["calibration_adjusted_refined"] = round(
+        max(0.05, float(risk_sizing.get("refined", 0.05) or 0.05) * risk_sizing["calibration_multiplier"]),
+        4,
+    )
+    decision_refinements["risk_sizing"] = risk_sizing
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    for reason in calibration_adjustments.get("refusal_reasons", []):
+        if reason not in refusal_reasons:
+            refusal_reasons.append(str(reason))
+    for reason in calibration_adjustments.get("pause_reasons", []):
+        if reason not in pause_reasons:
+            pause_reasons.append(str(reason))
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        calibration_adjustments.get("should_refuse", False)
+    )
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        calibration_adjustments.get("should_pause", False)
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
     contradiction_arbitration_engine = _contradiction_arbitration_and_belief_resolution_layer(
         memory_root=memory_root,
         market_state=market_state,
@@ -3235,6 +3658,7 @@ def run_self_evolving_indicator_layer(
         unified_market_intelligence_field=unified_market_intelligence_field,
         execution_microstructure_engine=execution_microstructure_engine,
         contradiction_arbitration_engine=contradiction_arbitration_engine,
+        calibration_uncertainty_engine=calibration_uncertainty_engine,
         mutation_candidates=mutation_candidates,
         capability_evolution_ladder=capability_evolution_ladder,
         replay_scope=replay_scope,
@@ -3250,6 +3674,7 @@ def run_self_evolving_indicator_layer(
         "counterfactual_trade_engine": counterfactual_engine,
         "fractal_liquidity_decay_functions": liquidity_decay_engine,
         "execution_microstructure_intelligence_layer": execution_microstructure_engine,
+        "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
         "contradiction_arbitration_and_belief_resolution_layer": contradiction_arbitration_engine,
         "recursive_self_modeling": recursive_self_modeling,
         "discovery_state_tags": discovery_state_tags,
@@ -3278,6 +3703,7 @@ def run_self_evolving_indicator_layer(
         "counterfactual_trade_engine": counterfactual_engine,
         "fractal_liquidity_decay_functions": liquidity_decay_engine,
         "execution_microstructure_intelligence_layer": execution_microstructure_engine,
+        "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
         "contradiction_arbitration_and_belief_resolution_layer": contradiction_arbitration_engine,
         "recursive_self_modeling": recursive_self_modeling,
         "discovery_state_tags": discovery_state_tags,
