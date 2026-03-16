@@ -1095,6 +1095,12 @@ def collect_xauusd_macro_state(
         "dxy_proxy_state": str(dxy_proxy_state.get("state", "unavailable")),
         "gld_flow_state": gld_flow_state,
         "macro_feed_health": feed_health_status,
+        "synthetic_feature_state": "sandbox_pending",
+        "negative_space_state": "sandbox_pending",
+        "invariant_break_state": "sandbox_pending",
+        "pain_geometry_risk": 0.0,
+        "counterfactual_evaluation": "sandbox_pending",
+        "liquidity_decay_state": "sandbox_pending",
     }
     risk_behavior = {
         "size_multiplier": round(clamp(size_multiplier, 0.1, 1.0), 4),

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,15 @@ _SUGGESTION_PROMOTE_THRESHOLD = 0.68
 _SUGGESTION_RETAIN_THRESHOLD = 0.5
 _MAX_CLUSTER_SPECIFICITY_BOOST = 0.2
 _CLUSTER_SPECIFICITY_BOOST_PER_OCCURRENCE = 0.05
+_SYNTHETIC_FEATURE_MIN_SCORE = 0.08
+_NEGATIVE_SPACE_DEVIATION_THRESHOLD = 0.55
+_INVARIANT_BREAK_THRESHOLD = 0.6
+_FEATURE_VALUE_WEIGHT = 0.1
+_LOSS_RATIO_WEIGHT = 0.35
+_PRICE_LEVEL_BUCKET_SIZE = 5.0
+_DEFAULT_RETEST_INTERVAL_PADDING = 1.0
+_PAIN_GEOMETRY_MAX_DISTANCE_SQ = 60.0
+_LIQUIDITY_REGEN_SCALE = 5.0
 
 
 def _closed_outcomes(trade_outcomes: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -422,6 +432,772 @@ def _pain_memory_survival_layer(*, memory_root: Path, closed: list[dict[str, Any
     }
 
 
+def _trade_tag(outcome: dict[str, Any], key: str, default: Any) -> Any:
+    tags = outcome.get("trade_tags", {})
+    if not isinstance(tags, dict):
+        return default
+    return tags.get(key, default)
+
+
+def _synthetic_feature_invention_engine(
+    *,
+    memory_root: Path,
+    closed: list[dict[str, Any]],
+    market_state: dict[str, Any],
+    replay_scope: str,
+) -> dict[str, Any]:
+    synthetic_dir = memory_root / "synthetic_features"
+    candidate_dir = memory_root / "feature_candidates"
+    performance_dir = memory_root / "feature_performance"
+    synthetic_dir.mkdir(parents=True, exist_ok=True)
+    candidate_dir.mkdir(parents=True, exist_ok=True)
+    performance_dir.mkdir(parents=True, exist_ok=True)
+
+    volatility_ratio = float(market_state.get("volatility_ratio", 1.0) or 1.0)
+    spread_ratio = float(market_state.get("spread_ratio", 1.0) or 1.0)
+    slippage_ratio = float(market_state.get("slippage_ratio", 1.0) or 1.0)
+    detector_pressure = 1.0 if float(market_state.get("detector_trigger_count", 0.0) or 0.0) > 0 else 0.5
+    dxy_bias = 1.0 if str(market_state.get("dxy_state", "")).lower() in {"strong_usd", "risk_off"} else 0.0
+    yield_bias = 1.0 if str(market_state.get("yield_state", "")).lower() in {"bearish_gold", "steepening"} else 0.0
+    session_state = str(market_state.get("session_state", "unknown")).lower()
+    session_fragility = 1.0 if session_state in {"off_hours", "asia"} else 0.5
+    macro_conflict_score = round(abs(dxy_bias - yield_bias), 4)
+    liquidity_pressure_index = round((spread_ratio * 0.5) + (slippage_ratio * 0.35) + (detector_pressure * 0.15), 4)
+    session_fragility_score = round(session_fragility * volatility_ratio, 4)
+    trap_probability_factor = round((volatility_ratio * 0.45) + (spread_ratio * 0.35) + macro_conflict_score, 4)
+
+    candidates = [
+        {
+            "feature_name": "macro_conflict_score",
+            "value": macro_conflict_score,
+            "inputs_used": ["dxy_state", "yield_state"],
+        },
+        {
+            "feature_name": "liquidity_pressure_index",
+            "value": liquidity_pressure_index,
+            "inputs_used": ["spread_ratio", "slippage_ratio", "detector_trigger_count"],
+        },
+        {
+            "feature_name": "session_fragility_score",
+            "value": session_fragility_score,
+            "inputs_used": ["session_state", "volatility_ratio"],
+        },
+        {
+            "feature_name": "trap_probability_factor",
+            "value": trap_probability_factor,
+            "inputs_used": ["volatility_ratio", "spread_ratio", "dxy_state", "yield_state"],
+        },
+    ]
+    performance = []
+    promoted_features = []
+    losses = sum(1 for item in closed if str(item.get("result", "")).lower() == "loss")
+    loss_ratio = losses / max(1, len(closed))
+    for candidate in candidates:
+        value = float(candidate["value"])
+        predictive_usefulness = round(
+            max(0.0, min(1.0, (value * _FEATURE_VALUE_WEIGHT) + (loss_ratio * _LOSS_RATIO_WEIGHT))),
+            4,
+        )
+        candidate_performance = {
+            "feature_name": candidate["feature_name"],
+            "predictive_usefulness": predictive_usefulness,
+            "signal_quality_delta": round(predictive_usefulness - 0.25, 4),
+            "validation": {
+                "scope": replay_scope,
+                "historical_sample_size": len(closed),
+                "sandbox_only": True,
+                "explainable": True,
+                "testable": True,
+            },
+        }
+        performance.append(candidate_performance)
+        if predictive_usefulness >= _SYNTHETIC_FEATURE_MIN_SCORE:
+            promoted_features.append({**candidate, **candidate_performance})
+
+    candidate_path = candidate_dir / "synthetic_feature_candidates.json"
+    performance_path = performance_dir / "synthetic_feature_performance.json"
+    synthetic_path = synthetic_dir / "synthetic_features_latest.json"
+    write_json_atomic(candidate_path, {"feature_candidates": candidates})
+    write_json_atomic(performance_path, {"feature_performance": performance})
+    write_json_atomic(
+        synthetic_path,
+        {
+            "synthetic_features": promoted_features,
+            "pruned_feature_count": len(candidates) - len(promoted_features),
+            "governance": {"sandbox_only": True, "replay_validation_required": True},
+        },
+    )
+    return {
+        "feature_candidates": candidates,
+        "feature_performance": performance,
+        "synthetic_features": promoted_features,
+        "pruned_feature_count": len(candidates) - len(promoted_features),
+        "paths": {
+            "synthetic_features": str(synthetic_path),
+            "feature_candidates": str(candidate_path),
+            "feature_performance": str(performance_path),
+        },
+    }
+
+
+def _negative_space_pattern_recognition(
+    *,
+    memory_root: Path,
+    closed: list[dict[str, Any]],
+    market_state: dict[str, Any],
+    replay_scope: str,
+) -> dict[str, Any]:
+    negative_dir = memory_root / "negative_space_signals"
+    negative_dir.mkdir(parents=True, exist_ok=True)
+    history_path = negative_dir / "negative_space_history.json"
+
+    latest = closed[-1] if closed else {}
+    actual_pnl = float(latest.get("pnl_points", 0.0) or 0.0)
+    actual_direction = "up" if actual_pnl > 0 else "down" if actual_pnl < 0 else "flat"
+    dxy_state = str(market_state.get("dxy_state", _trade_tag(latest, "dxy_state", "unknown"))).lower()
+    yield_state = str(market_state.get("yield_state", _trade_tag(latest, "yield_state", "unknown"))).lower()
+    volatility_ratio = float(market_state.get("volatility_ratio", _trade_tag(latest, "volatility_ratio", 1.0)) or 1.0)
+
+    expectation = {
+        "context": "baseline",
+        "expected_direction": "flat",
+        "expected_distribution_center": 0.0,
+    }
+    if dxy_state in {"strong_usd", "risk_off"} and yield_state in {"bearish_gold", "steepening"}:
+        expectation = {
+            "context": "dxy_up_yields_up",
+            "expected_direction": "down",
+            "expected_distribution_center": -0.4,
+        }
+    elif volatility_ratio >= 1.25:
+        expectation = {
+            "context": "volatility_expansion",
+            "expected_direction": "breakout",
+            "expected_distribution_center": 0.35,
+        }
+
+    mismatch = expectation["expected_direction"] == "down" and actual_direction in {"flat", "up"}
+    if expectation["expected_direction"] == "breakout":
+        mismatch = abs(actual_pnl) < 0.2
+    deviation_score = round(min(1.0, abs(actual_pnl - expectation["expected_distribution_center"])), 4)
+    signal = {
+        "negative_space_signal": bool(mismatch and deviation_score >= _NEGATIVE_SPACE_DEVIATION_THRESHOLD),
+        "expectation_model": expectation,
+        "actual_behavior": {"direction": actual_direction, "pnl_points": round(actual_pnl, 4)},
+        "deviation_score": deviation_score,
+        "validation": {
+            "scope": replay_scope,
+            "sandbox_only": True,
+            "validation_passed": deviation_score >= _NEGATIVE_SPACE_DEVIATION_THRESHOLD,
+        },
+    }
+
+    history = read_json_safe(history_path, default={"signals": []})
+    if not isinstance(history, dict):
+        history = {"signals": []}
+    signals = history.get("signals", [])
+    if not isinstance(signals, list):
+        signals = []
+    signals.append(signal)
+    latest_path = negative_dir / "negative_space_signal_latest.json"
+    write_json_atomic(latest_path, signal)
+    write_json_atomic(history_path, {"signals": signals[-300:]})
+    return {"signal": signal, "paths": {"latest": str(latest_path), "history": str(history_path)}}
+
+
+def _temporal_invariance_break_detection(
+    *,
+    memory_root: Path,
+    market_state: dict[str, Any],
+    replay_scope: str,
+) -> dict[str, Any]:
+    invariant_dir = memory_root / "invariant_break_events"
+    invariant_dir.mkdir(parents=True, exist_ok=True)
+    model_path = invariant_dir / "invariant_models.json"
+    events_path = invariant_dir / "invariant_break_events_latest.json"
+
+    previous = read_json_safe(model_path, default={"invariants": []})
+    if not isinstance(previous, dict):
+        previous = {"invariants": []}
+    previous_models = previous.get("invariants", [])
+    if not isinstance(previous_models, list):
+        previous_models = []
+    previous_map = {
+        str(item.get("invariant_name", "")): float(item.get("stability", 0.8) or 0.8)
+        for item in previous_models
+        if isinstance(item, dict)
+    }
+
+    observed_xau_dxy = float(market_state.get("xau_dxy_corr", -0.35) or -0.35)
+    observed_xau_real_yield = float(market_state.get("xau_real_yield_corr", -0.3) or -0.3)
+    volatility_response = float(market_state.get("volatility_response_corr", 0.35) or 0.35)
+    input_signature = {
+        "xau_dxy_corr": round(observed_xau_dxy, 6),
+        "xau_real_yield_corr": round(observed_xau_real_yield, 6),
+        "volatility_response_corr": round(volatility_response, 6),
+        "scope": replay_scope,
+    }
+    previous_events = read_json_safe(events_path, default={})
+    if isinstance(previous_events, dict) and previous_events.get("input_signature") == input_signature:
+        return {
+            "invariant_break_events": previous_events.get("invariant_break_events", []),
+            "paths": {"events": str(events_path), "models": str(model_path)},
+        }
+    current_models = [
+        {"invariant_name": "gold_vs_dxy_inverse", "observed_strength": observed_xau_dxy, "expected_sign": -1},
+        {"invariant_name": "gold_vs_real_yields_inverse", "observed_strength": observed_xau_real_yield, "expected_sign": -1},
+        {"invariant_name": "volatility_breakout_response", "observed_strength": volatility_response, "expected_sign": 1},
+    ]
+    events = []
+    updated_models = []
+    for model in current_models:
+        name = model["invariant_name"]
+        observed = float(model["observed_strength"])
+        expected_sign = int(model["expected_sign"])
+        sign_flip = observed * expected_sign < 0
+        strength_gap = abs(abs(observed) - 0.35)
+        stability = round(max(0.0, min(1.0, 1.0 - strength_gap - (0.35 if sign_flip else 0.0))), 4)
+        previous_stability = float(previous_map.get(name, 0.8))
+        broke = sign_flip or (previous_stability - stability) >= _INVARIANT_BREAK_THRESHOLD
+        event = {
+            "invariant_name": name,
+            "sign_flip": sign_flip,
+            "stability": stability,
+            "previous_stability": previous_stability,
+            "invariant_break": broke,
+            "confidence_multiplier": 0.7 if broke else 1.0,
+            "trigger_deeper_analysis": bool(broke),
+            "validation": {"scope": replay_scope, "sandbox_only": True},
+        }
+        events.append(event)
+        updated_models.append({"invariant_name": name, "stability": stability, "observed_strength": observed})
+
+    write_json_atomic(events_path, {"input_signature": input_signature, "invariant_break_events": events})
+    write_json_atomic(model_path, {"invariants": updated_models})
+    return {
+        "invariant_break_events": events,
+        "paths": {"events": str(events_path), "models": str(model_path)},
+    }
+
+
+def _pain_geometry_fields(
+    *,
+    memory_root: Path,
+    closed: list[dict[str, Any]],
+    market_state: dict[str, Any],
+) -> dict[str, Any]:
+    geometry_dir = memory_root / "pain_geometry"
+    geometry_dir.mkdir(parents=True, exist_ok=True)
+    coordinates_path = geometry_dir / "loss_coordinates.json"
+    surface_path = geometry_dir / "pain_risk_surface.json"
+
+    loss_coordinates = []
+    for outcome in closed:
+        if str(outcome.get("result", "")).lower() != "loss":
+            continue
+        loss_coordinates.append(
+            {
+                "session": str(outcome.get("session", _trade_tag(outcome, "session", "unknown"))),
+                "spread": float(_trade_tag(outcome, "spread_ratio", market_state.get("spread_ratio", 1.0)) or 1.0),
+                "volatility": float(_trade_tag(outcome, "volatility_ratio", market_state.get("volatility_ratio", 1.0)) or 1.0),
+                "macro_state": str(_trade_tag(outcome, "macro_state", market_state.get("macro_state", "balanced"))),
+                "correlation_state": str(_trade_tag(outcome, "correlation_regime_state", "unknown")),
+                "liquidity_signal": str(_trade_tag(outcome, "liquidity_state", market_state.get("liquidity_state", "normal"))),
+                "time_of_day": str(_trade_tag(outcome, "session", "unknown")),
+            }
+        )
+
+    current_spread = float(market_state.get("spread_ratio", 1.0) or 1.0)
+    current_volatility = float(market_state.get("volatility_ratio", 1.0) or 1.0)
+    if not loss_coordinates:
+        risk = 0.0
+    else:
+        kernel_values = []
+        for coordinate in loss_coordinates:
+            spread_distance = current_spread - float(coordinate["spread"])
+            vol_distance = current_volatility - float(coordinate["volatility"])
+            distance_sq = (spread_distance * spread_distance) + (vol_distance * vol_distance)
+            kernel_values.append(math.exp(-min(_PAIN_GEOMETRY_MAX_DISTANCE_SQ, distance_sq)))
+        risk = round(sum(kernel_values) / max(1, len(kernel_values)), 4)
+    surface = {
+        "pain_risk_surface": {
+            "current_state_risk": risk,
+            "sample_count": len(loss_coordinates),
+            "method": "gaussian_kde_proxy",
+        },
+        "governance": {"sandbox_only": True, "validation_required": True},
+    }
+    write_json_atomic(coordinates_path, {"loss_coordinates": loss_coordinates})
+    write_json_atomic(surface_path, surface)
+    return {
+        "loss_coordinates": loss_coordinates,
+        "pain_risk_surface": surface["pain_risk_surface"],
+        "paths": {"coordinates": str(coordinates_path), "surface": str(surface_path)},
+    }
+
+
+def _counterfactual_trade_engine(*, memory_root: Path, closed: list[dict[str, Any]]) -> dict[str, Any]:
+    counterfactual_dir = memory_root / "counterfactual_results"
+    counterfactual_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = counterfactual_dir / "counterfactual_latest.json"
+    history_path = counterfactual_dir / "counterfactual_history.json"
+
+    evaluations = []
+    for trade in closed[-40:]:
+        pnl = float(trade.get("pnl_points", 0.0) or 0.0)
+        scenarios = {
+            "no_trade_taken": 0.0,
+            "opposite_trade": round(-pnl, 4),
+            "smaller_position": round(pnl * 0.5, 4),
+            "delayed_entry": round(pnl - (0.15 * abs(pnl)), 4),
+            "delayed_exit": round(pnl + (0.1 * abs(pnl) if pnl < 0 else -0.1 * abs(pnl)), 4),
+        }
+        best_name, best_value = sorted(scenarios.items(), key=lambda item: item[1], reverse=True)[0]
+        evaluations.append(
+            {
+                "trade_id": str(trade.get("trade_id", "")),
+                "actual_outcome": round(pnl, 4),
+                "counterfactual_scenarios": scenarios,
+                "strategy_improved_outcome": pnl >= best_value,
+                "best_alternative_action": best_name,
+                "best_alternative_outcome": round(best_value, 4),
+                "outcome_delta_vs_best": round(pnl - best_value, 4),
+            }
+        )
+    latest_payload = {
+        "counterfactual_evaluations": evaluations,
+        "governance": {"sandbox_only": True, "validation_required": True},
+    }
+    write_json_atomic(latest_path, latest_payload)
+    history = read_json_safe(history_path, default={"cycles": []})
+    if not isinstance(history, dict):
+        history = {"cycles": []}
+    cycles = history.get("cycles", [])
+    if not isinstance(cycles, list):
+        cycles = []
+    cycles.append(latest_payload)
+    write_json_atomic(history_path, {"cycles": cycles[-120:]})
+    return {"counterfactual_evaluations": evaluations, "paths": {"latest": str(latest_path), "history": str(history_path)}}
+
+
+def _fractal_liquidity_decay_functions(
+    *,
+    memory_root: Path,
+    closed: list[dict[str, Any]],
+    market_state: dict[str, Any],
+) -> dict[str, Any]:
+    decay_dir = memory_root / "liquidity_decay_models"
+    decay_dir.mkdir(parents=True, exist_ok=True)
+    model_path = decay_dir / "liquidity_decay_latest.json"
+
+    levels: dict[str, list[int]] = {}
+    for index, trade in enumerate(closed):
+        level_price = float(trade.get("entry_price", market_state.get("reference_price", 0.0)) or 0.0)
+        if level_price <= 0.0:
+            continue
+        level_bucket = int(round(level_price / _PRICE_LEVEL_BUCKET_SIZE))
+        level_key = str(level_bucket * _PRICE_LEVEL_BUCKET_SIZE)
+        levels.setdefault(level_key, []).append(index)
+    models = []
+    for level, hits in sorted(levels.items()):
+        intervals = [hits[i] - hits[i - 1] for i in range(1, len(hits))]
+        avg_interval = (
+            sum(intervals) / max(1, len(intervals))
+            if intervals
+            else float(len(closed)) + _DEFAULT_RETEST_INTERVAL_PADDING
+        )
+        regeneration = round(min(1.0, math.sqrt(max(1.0, avg_interval)) / _LIQUIDITY_REGEN_SCALE), 4)
+        vulnerability = round(max(0.0, 1.0 - regeneration), 4)
+        models.append(
+            {
+                "level": level,
+                "test_count": len(hits),
+                "avg_retest_interval": round(avg_interval, 4),
+                "liquidity_decay_function": {
+                    "model": "fractal_interval_sqrt",
+                    "regeneration_score": regeneration,
+                    "vulnerability_score": vulnerability,
+                },
+            }
+        )
+    payload = {
+        "liquidity_decay_models": models,
+        "governance": {"sandbox_only": True, "validation_required": True},
+    }
+    write_json_atomic(model_path, payload)
+    return {"liquidity_decay_models": models, "path": str(model_path)}
+
+
+def _recursive_self_modeling(
+    *,
+    memory_root: Path,
+    closed: list[dict[str, Any]],
+    mutation_candidates: list[dict[str, Any]],
+    synthetic_feature_engine: dict[str, Any],
+    negative_space_engine: dict[str, Any],
+    invariant_break_engine: dict[str, Any],
+    pain_geometry_engine: dict[str, Any],
+    counterfactual_engine: dict[str, Any],
+    liquidity_decay_engine: dict[str, Any],
+    replay_scope: str,
+) -> dict[str, Any]:
+    self_model_dir = memory_root / "self_modeling"
+    self_model_dir.mkdir(parents=True, exist_ok=True)
+    path = self_model_dir / "self_modeling_latest.json"
+
+    expectancy = _expectancy(closed)
+    drawdown = _drawdown(closed)
+    mutation_count = sum(1 for item in mutation_candidates if isinstance(item, dict))
+    synthetic_count = len(synthetic_feature_engine.get("synthetic_features", []))
+    invariant_breaks = sum(
+        1
+        for item in invariant_break_engine.get("invariant_break_events", [])
+        if isinstance(item, dict) and bool(item.get("invariant_break", False))
+    )
+    pain_risk = float(pain_geometry_engine.get("pain_risk_surface", {}).get("current_state_risk", 0.0) or 0.0)
+    counterfactual_edges = sum(
+        1
+        for item in counterfactual_engine.get("counterfactual_evaluations", [])
+        if isinstance(item, dict) and not bool(item.get("strategy_improved_outcome", False))
+    )
+    liquidity_models = len(liquidity_decay_engine.get("liquidity_decay_models", []))
+    negative_signal = bool(negative_space_engine.get("signal", {}).get("negative_space_signal", False))
+
+    configurations = [
+        {"config_id": "cfg_balanced", "detector_set": "default+negative_space", "feature_set": "core+synthetic", "risk_behavior": "adaptive"},
+        {"config_id": "cfg_survival", "detector_set": "survival_priority", "feature_set": "core+pain_geometry", "risk_behavior": "defensive"},
+        {"config_id": "cfg_discovery", "detector_set": "expanded", "feature_set": "core+synthetic+counterfactual", "risk_behavior": "exploratory"},
+    ]
+    evaluations = []
+    for index, config in enumerate(configurations):
+        performance_stability = round(max(0.0, min(1.0, 0.7 + expectancy - (drawdown * 0.08) - (index * 0.04))), 4)
+        discovery_potential = round(max(0.0, min(1.0, 0.45 + (synthetic_count * 0.08) + (mutation_count * 0.03) - (0.06 * index))), 4)
+        regime_adaptability = round(max(0.0, min(1.0, 0.6 + (0.08 if negative_signal else 0.0) - (invariant_breaks * 0.1))), 4)
+        learning_efficiency = round(max(0.0, min(1.0, 0.6 + (liquidity_models * 0.05) - (counterfactual_edges * 0.04) - (pain_risk * 0.2))), 4)
+        long_term_score = round(
+            (performance_stability * 0.35)
+            + (discovery_potential * 0.25)
+            + (regime_adaptability * 0.2)
+            + (learning_efficiency * 0.2),
+            4,
+        )
+        evaluations.append(
+            {
+                **config,
+                "performance_stability": performance_stability,
+                "discovery_potential": discovery_potential,
+                "regime_adaptability": regime_adaptability,
+                "learning_efficiency": learning_efficiency,
+                "long_term_improvement_score": long_term_score,
+                "validation": {"scope": replay_scope, "sandbox_only": True},
+            }
+        )
+    chosen = sorted(evaluations, key=lambda item: item["long_term_improvement_score"], reverse=True)[0]
+    payload = {
+        "configuration_evaluations": evaluations,
+        "selected_configuration": chosen,
+        "governance": {
+            "sandbox_only": True,
+            "direct_live_self_rewrite_allowed": False,
+            "promotion_requires_governance": True,
+        },
+    }
+    write_json_atomic(path, payload)
+    return {**payload, "path": str(path)}
+
+
+def _discovery_state_tags(
+    *,
+    synthetic_feature_engine: dict[str, Any],
+    negative_space_engine: dict[str, Any],
+    invariant_break_engine: dict[str, Any],
+    pain_geometry_engine: dict[str, Any],
+    counterfactual_engine: dict[str, Any],
+    liquidity_decay_engine: dict[str, Any],
+) -> dict[str, Any]:
+    invariant_break_active = any(
+        bool(item.get("invariant_break", False))
+        for item in invariant_break_engine.get("invariant_break_events", [])
+        if isinstance(item, dict)
+    )
+    return {
+        "synthetic_feature_state": "active" if synthetic_feature_engine.get("synthetic_features") else "idle",
+        "negative_space_state": "anomaly" if negative_space_engine.get("signal", {}).get("negative_space_signal", False) else "normal",
+        "invariant_break_state": "break_detected" if invariant_break_active else "stable",
+        "pain_geometry_risk": round(float(pain_geometry_engine.get("pain_risk_surface", {}).get("current_state_risk", 0.0) or 0.0), 4),
+        "counterfactual_evaluation": "alternatives_logged" if counterfactual_engine.get("counterfactual_evaluations") else "none",
+        "liquidity_decay_state": "modeled" if liquidity_decay_engine.get("liquidity_decay_models") else "insufficient_data",
+    }
+
+
+def _detector_reliability_state(detector_generator: dict[str, Any]) -> dict[str, Any]:
+    candidates = detector_generator.get("detector_candidates", [])
+    if not isinstance(candidates, list):
+        candidates = []
+    total = len(candidates)
+    passed = sum(1 for item in candidates if isinstance(item, dict) and bool(item.get("sandbox_test_passed", False)))
+    reliability = round(passed / max(1, total), 4)
+    if reliability >= 0.75:
+        state = "stable"
+    elif reliability >= 0.5:
+        state = "mixed"
+    else:
+        state = "weak"
+    return {
+        "state": state,
+        "reliability_score": reliability,
+        "passed_count": passed,
+        "failed_count": max(0, total - passed),
+        "candidate_count": total,
+    }
+
+
+def _unified_market_intelligence_field(
+    *,
+    memory_root: Path,
+    market_state: dict[str, Any],
+    autonomous_behavior: dict[str, Any],
+    detector_generator: dict[str, Any],
+    strategy_evolution: dict[str, Any],
+    synthetic_feature_engine: dict[str, Any],
+    negative_space_engine: dict[str, Any],
+    invariant_break_engine: dict[str, Any],
+    pain_geometry_engine: dict[str, Any],
+    counterfactual_engine: dict[str, Any],
+    liquidity_decay_engine: dict[str, Any],
+) -> dict[str, Any]:
+    intelligence_dir = memory_root / "market_intelligence"
+    intelligence_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = intelligence_dir / "unified_market_intelligence_latest.json"
+    history_path = intelligence_dir / "unified_market_intelligence_history.json"
+
+    detector_reliability = _detector_reliability_state(detector_generator)
+    regime_payload = autonomous_behavior.get("market_regime_classifier", {})
+    regime_state = str(regime_payload.get("regime", "unknown"))
+    macro_state = {
+        "session_state": str(market_state.get("session_state", "unknown")),
+        "structure_state": str(market_state.get("structure_state", "unknown")),
+        "volatility_ratio": round(float(market_state.get("volatility_ratio", 1.0) or 1.0), 4),
+        "spread_ratio": round(float(market_state.get("spread_ratio", 1.0) or 1.0), 4),
+        "dxy_state": str(market_state.get("dxy_state", "unknown")),
+        "yield_state": str(market_state.get("yield_state", "unknown")),
+    }
+
+    synthetic_features = synthetic_feature_engine.get("synthetic_features", [])
+    if not isinstance(synthetic_features, list):
+        synthetic_features = []
+    negative_signal = bool(negative_space_engine.get("signal", {}).get("negative_space_signal", False))
+    invariant_break_count = sum(
+        1
+        for item in invariant_break_engine.get("invariant_break_events", [])
+        if isinstance(item, dict) and bool(item.get("invariant_break", False))
+    )
+    pain_risk = round(float(pain_geometry_engine.get("pain_risk_surface", {}).get("current_state_risk", 0.0) or 0.0), 4)
+    counterfactual_items = counterfactual_engine.get("counterfactual_evaluations", [])
+    if not isinstance(counterfactual_items, list):
+        counterfactual_items = []
+    counterfactual_improved_count = sum(
+        1 for item in counterfactual_items if isinstance(item, dict) and bool(item.get("strategy_improved_outcome", False))
+    )
+    counterfactual_edge_ratio = round(counterfactual_improved_count / max(1, len(counterfactual_items)), 4)
+    liquidity_models = liquidity_decay_engine.get("liquidity_decay_models", [])
+    if not isinstance(liquidity_models, list):
+        liquidity_models = []
+    avg_liquidity_vulnerability = round(
+        sum(
+            float(item.get("liquidity_decay_function", {}).get("vulnerability_score", 0.0) or 0.0)
+            for item in liquidity_models
+            if isinstance(item, dict)
+        )
+        / max(1, len(liquidity_models)),
+        4,
+    )
+    liquidity_state = "fragile" if avg_liquidity_vulnerability >= 0.55 else "resilient"
+
+    synthetic_signal = round(min(1.0, len(synthetic_features) * 0.2), 4)
+    negative_space_penalty = 0.12 if negative_signal else 0.0
+    invariant_penalty = min(0.25, invariant_break_count * 0.08)
+    pain_penalty = min(0.3, pain_risk * 0.35)
+    liquidity_penalty = min(0.2, avg_liquidity_vulnerability * 0.25)
+    regime_penalty = 0.2 if regime_state == "unstable" else 0.1 if regime_state == "expansion" else 0.0
+    detector_support = float(detector_reliability.get("reliability_score", 0.0))
+    counterfactual_support = counterfactual_edge_ratio
+    macro_stability_support = max(0.0, 1.0 - abs(float(macro_state["volatility_ratio"]) - 1.0))
+    macro_stability_support = round(max(0.0, min(1.0, macro_stability_support)), 4)
+
+    unified_field_score = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                0.25
+                + (detector_support * 0.22)
+                + (synthetic_signal * 0.12)
+                + (counterfactual_support * 0.1)
+                + (macro_stability_support * 0.08)
+                - negative_space_penalty
+                - invariant_penalty
+                - pain_penalty
+                - liquidity_penalty
+                - regime_penalty,
+            ),
+        ),
+        4,
+    )
+    regime_confidence = round(float(regime_payload.get("confidence_multiplier", 0.5) or 0.5), 4)
+    composite_confidence = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                (unified_field_score * 0.45)
+                + (detector_support * 0.25)
+                + (counterfactual_support * 0.1)
+                + (regime_confidence * 0.2),
+            ),
+        ),
+        4,
+    )
+    confidence_band = "high" if composite_confidence >= 0.7 else "moderate" if composite_confidence >= 0.45 else "low"
+
+    base_signal_confidence = round(float(regime_payload.get("adjusted_signal_confidence", 0.5) or 0.5), 4)
+    base_risk_size = round(float(regime_payload.get("adjusted_risk_size", 1.0) or 1.0), 4)
+    confidence_refinement_multiplier = round(0.8 + (composite_confidence * 0.4), 4)
+    risk_refinement_multiplier = round(
+        max(0.2, min(1.2, 0.85 + (unified_field_score * 0.35) - (pain_risk * 0.2) - (invariant_break_count * 0.05))),
+        4,
+    )
+    refined_signal_confidence = round(
+        max(0.0, min(1.0, base_signal_confidence * confidence_refinement_multiplier)),
+        4,
+    )
+    refined_risk_size = round(max(0.05, base_risk_size * risk_refinement_multiplier), 4)
+
+    refusal_reasons: list[str] = []
+    pause_reasons: list[str] = []
+    if negative_signal:
+        refusal_reasons.append("negative_space_anomaly_detected")
+    if invariant_break_count > 0:
+        refusal_reasons.append("invariant_break_detected")
+    if detector_reliability.get("state") == "weak":
+        refusal_reasons.append("weak_detector_reliability")
+    if pain_risk >= 0.75:
+        pause_reasons.append("pain_geometry_risk_elevated")
+    if regime_state == "unstable":
+        pause_reasons.append("unstable_regime_state")
+    if liquidity_state == "fragile" and avg_liquidity_vulnerability >= 0.7:
+        pause_reasons.append("liquidity_decay_fragility")
+    should_refuse = bool(refusal_reasons) and composite_confidence < 0.6
+    should_pause = bool(pause_reasons) and unified_field_score < 0.55
+
+    branches = strategy_evolution.get("strategy_branches", [])
+    if not isinstance(branches, list):
+        branches = []
+    strongest_branch = strategy_evolution.get("strongest_branch", {})
+    strongest_branch_id = str(strongest_branch.get("branch_id", "current_strategy"))
+    strategy_mode = "defensive" if should_pause or should_refuse else "adaptive" if unified_field_score < 0.65 else "offensive"
+    selected_branch_id = strongest_branch_id
+    if branches and strategy_mode == "defensive":
+        selected_branch = sorted(
+            [item for item in branches if isinstance(item, dict)],
+            key=lambda item: (
+                -float(item.get("stability", 0.0) or 0.0),
+                float(item.get("drawdown", 0.0) or 0.0),
+                str(item.get("branch_id", "")),
+            ),
+        )[0]
+        selected_branch_id = str(selected_branch.get("branch_id", strongest_branch_id))
+    elif branches and strategy_mode == "offensive":
+        selected_branch = sorted(
+            [item for item in branches if isinstance(item, dict)],
+            key=lambda item: (
+                float(item.get("expectancy", 0.0) or 0.0),
+                float(item.get("stability", 0.0) or 0.0),
+                str(item.get("branch_id", "")),
+            ),
+            reverse=True,
+        )[0]
+        selected_branch_id = str(selected_branch.get("branch_id", strongest_branch_id))
+
+    payload = {
+        "components": {
+            "macro_state": macro_state,
+            "regime_state": regime_state,
+            "detector_reliability": detector_reliability,
+            "synthetic_feature_state": {
+                "state": "active" if synthetic_features else "idle",
+                "feature_count": len(synthetic_features),
+            },
+            "negative_space_state": {
+                "state": "anomaly" if negative_signal else "normal",
+                "deviation_score": round(float(negative_space_engine.get("signal", {}).get("deviation_score", 0.0) or 0.0), 4),
+            },
+            "invariant_break_state": {
+                "state": "break_detected" if invariant_break_count > 0 else "stable",
+                "break_count": invariant_break_count,
+            },
+            "pain_geometry_risk": {
+                "current_state_risk": pain_risk,
+            },
+            "counterfactual_evaluation": {
+                "state": "alternatives_logged" if counterfactual_items else "none",
+                "edge_ratio": counterfactual_edge_ratio,
+            },
+            "liquidity_decay_state": {
+                "state": liquidity_state,
+                "avg_vulnerability": avg_liquidity_vulnerability,
+                "model_count": len(liquidity_models),
+            },
+        },
+        "unified_field_score": unified_field_score,
+        "confidence_structure": {
+            "regime_confidence": regime_confidence,
+            "detector_confidence": detector_support,
+            "counterfactual_confidence": counterfactual_support,
+            "composite_confidence": composite_confidence,
+            "confidence_band": confidence_band,
+        },
+        "decision_refinements": {
+            "signal_confidence": {
+                "base": base_signal_confidence,
+                "refined": refined_signal_confidence,
+                "multiplier": confidence_refinement_multiplier,
+            },
+            "risk_sizing": {
+                "base": base_risk_size,
+                "refined": refined_risk_size,
+                "multiplier": risk_refinement_multiplier,
+            },
+            "refusal_pause_behavior": {
+                "should_refuse": should_refuse,
+                "should_pause": should_pause,
+                "refusal_reasons": refusal_reasons,
+                "pause_reasons": pause_reasons,
+            },
+            "strategy_selection": {
+                "mode": strategy_mode,
+                "selected_branch_id": selected_branch_id,
+                "default_branch_id": strongest_branch_id,
+            },
+        },
+        "governance": {
+            "sandbox_only": True,
+            "live_protection_preserved": True,
+            "direct_live_override_allowed": False,
+        },
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+    return {**payload, "paths": {"latest": str(latest_path), "history": str(history_path)}}
+
+
 def _gap_signature(gap: dict[str, Any]) -> str:
     return f"{gap.get('gap_type', 'unknown')}::{gap.get('detail', 'n/a')}"
 
@@ -688,6 +1464,8 @@ def _self_suggestion_governor(
     detector_generator: dict[str, Any],
     strategy_evolution: dict[str, Any],
     pain_memory_survival: dict[str, Any],
+    discovery_state_tags: dict[str, Any],
+    unified_market_intelligence_field: dict[str, Any],
     mutation_candidates: list[dict[str, Any]],
     replay_scope: str,
 ) -> dict[str, Any]:
@@ -735,6 +1513,13 @@ def _self_suggestion_governor(
         "gap_signatures": sorted(_gap_signature(gap) for gap in gaps),
         "strongest_branch": str(strategy_evolution.get("strongest_branch", {}).get("branch_id", "current_strategy")),
         "closed_count": len(closed),
+        "unified_field_score": round(float(unified_market_intelligence_field.get("unified_field_score", 0.0) or 0.0), 4),
+        "unified_confidence": round(
+            float(
+                unified_market_intelligence_field.get("confidence_structure", {}).get("composite_confidence", 0.0) or 0.0
+            ),
+            4,
+        ),
     }
     if previous_governor.get("input_signature") == input_signature:
         return previous_governor
@@ -863,12 +1648,15 @@ def _self_suggestion_governor(
     rejected: list[dict[str, Any]] = []
     for index, suggestion in enumerate(proposed):
         strategy_expectancy = float(strategy_evolution.get("strongest_branch", {}).get("expectancy", 0.0) or 0.0)
+        unified_confidence = float(
+            unified_market_intelligence_field.get("confidence_structure", {}).get("composite_confidence", 0.0) or 0.0
+        )
         replay_score = round(
             max(
                 0.0,
                 min(
                     1.0,
-                    suggestion["priority_score"] + (strategy_expectancy * 0.15) - (0.02 * index),
+                    suggestion["priority_score"] + (strategy_expectancy * 0.15) + (unified_confidence * 0.08) - (0.02 * index),
                 ),
             ),
             4,
@@ -946,6 +1734,18 @@ def _self_suggestion_governor(
             "no_blind_live_self_rewrites": True,
             "stable_core_module_deletion_blocked": True,
         },
+        "discovery_state_tags": dict(discovery_state_tags),
+        "unified_market_intelligence_field": {
+            "unified_field_score": unified_market_intelligence_field.get("unified_field_score", 0.0),
+            "composite_confidence": unified_market_intelligence_field.get("confidence_structure", {}).get(
+                "composite_confidence",
+                0.0,
+            ),
+            "refusal_pause_behavior": unified_market_intelligence_field.get("decision_refinements", {}).get(
+                "refusal_pause_behavior",
+                {},
+            ),
+        },
         "paths": {
             "registry": str(registry_path),
             "governor": str(governor_path),
@@ -1004,6 +1804,67 @@ def run_self_evolving_indicator_layer(
         closed=closed,
         replay_scope=replay_scope,
     )
+    synthetic_feature_engine = _synthetic_feature_invention_engine(
+        memory_root=memory_root,
+        closed=closed,
+        market_state=market_state,
+        replay_scope=replay_scope,
+    )
+    negative_space_engine = _negative_space_pattern_recognition(
+        memory_root=memory_root,
+        closed=closed,
+        market_state=market_state,
+        replay_scope=replay_scope,
+    )
+    invariant_break_engine = _temporal_invariance_break_detection(
+        memory_root=memory_root,
+        market_state=market_state,
+        replay_scope=replay_scope,
+    )
+    pain_geometry_engine = _pain_geometry_fields(
+        memory_root=memory_root,
+        closed=closed,
+        market_state=market_state,
+    )
+    counterfactual_engine = _counterfactual_trade_engine(memory_root=memory_root, closed=closed)
+    liquidity_decay_engine = _fractal_liquidity_decay_functions(
+        memory_root=memory_root,
+        closed=closed,
+        market_state=market_state,
+    )
+    discovery_state_tags = _discovery_state_tags(
+        synthetic_feature_engine=synthetic_feature_engine,
+        negative_space_engine=negative_space_engine,
+        invariant_break_engine=invariant_break_engine,
+        pain_geometry_engine=pain_geometry_engine,
+        counterfactual_engine=counterfactual_engine,
+        liquidity_decay_engine=liquidity_decay_engine,
+    )
+    recursive_self_modeling = _recursive_self_modeling(
+        memory_root=memory_root,
+        closed=closed,
+        mutation_candidates=mutation_candidates,
+        synthetic_feature_engine=synthetic_feature_engine,
+        negative_space_engine=negative_space_engine,
+        invariant_break_engine=invariant_break_engine,
+        pain_geometry_engine=pain_geometry_engine,
+        counterfactual_engine=counterfactual_engine,
+        liquidity_decay_engine=liquidity_decay_engine,
+        replay_scope=replay_scope,
+    )
+    unified_market_intelligence_field = _unified_market_intelligence_field(
+        memory_root=memory_root,
+        market_state=market_state,
+        autonomous_behavior=autonomous_behavior,
+        detector_generator=detector_generator,
+        strategy_evolution=strategy_evolution,
+        synthetic_feature_engine=synthetic_feature_engine,
+        negative_space_engine=negative_space_engine,
+        invariant_break_engine=invariant_break_engine,
+        pain_geometry_engine=pain_geometry_engine,
+        counterfactual_engine=counterfactual_engine,
+        liquidity_decay_engine=liquidity_decay_engine,
+    )
     self_suggestion_governor = _self_suggestion_governor(
         memory_root=memory_root,
         closed=closed,
@@ -1012,6 +1873,8 @@ def run_self_evolving_indicator_layer(
         detector_generator=detector_generator,
         strategy_evolution=strategy_evolution,
         pain_memory_survival=pain_memory_survival,
+        discovery_state_tags=discovery_state_tags,
+        unified_market_intelligence_field=unified_market_intelligence_field,
         mutation_candidates=mutation_candidates,
         replay_scope=replay_scope,
     )
@@ -1019,6 +1882,15 @@ def run_self_evolving_indicator_layer(
         "capital_survival_engine": autonomous_behavior.get("capital_survival_engine", {}),
         "pain_memory_survival_layer": pain_memory_survival,
         "self_suggestion_governor": self_suggestion_governor,
+        "synthetic_feature_invention_engine": synthetic_feature_engine,
+        "negative_space_pattern_recognition": negative_space_engine,
+        "temporal_invariance_break_detection": invariant_break_engine,
+        "pain_geometry_fields": pain_geometry_engine,
+        "counterfactual_trade_engine": counterfactual_engine,
+        "fractal_liquidity_decay_functions": liquidity_decay_engine,
+        "recursive_self_modeling": recursive_self_modeling,
+        "discovery_state_tags": discovery_state_tags,
+        "unified_market_intelligence_field": unified_market_intelligence_field,
     }
     meta_learning_loop = _meta_learning_loop(
         memory_root=memory_root,
@@ -1036,5 +1908,14 @@ def run_self_evolving_indicator_layer(
         "survival_intelligence_layer": survival_intelligence,
         "pain_memory_survival_layer": pain_memory_survival,
         "self_suggestion_governor": self_suggestion_governor,
+        "synthetic_feature_invention_engine": synthetic_feature_engine,
+        "negative_space_pattern_recognition": negative_space_engine,
+        "temporal_invariance_break_detection": invariant_break_engine,
+        "pain_geometry_fields": pain_geometry_engine,
+        "counterfactual_trade_engine": counterfactual_engine,
+        "fractal_liquidity_decay_functions": liquidity_decay_engine,
+        "recursive_self_modeling": recursive_self_modeling,
+        "discovery_state_tags": discovery_state_tags,
+        "unified_market_intelligence_field": unified_market_intelligence_field,
         "meta_learning_loop": meta_learning_loop,
     }
