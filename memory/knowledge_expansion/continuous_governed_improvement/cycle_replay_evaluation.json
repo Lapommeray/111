@@ -1356,6 +1356,312 @@
           "governor": "memory/capability_registry/self_suggestion_governor.json",
           "history": "memory/capability_registry/self_suggestion_governor_history.json"
         }
+      },
+      "synthetic_feature_invention_engine": {
+        "feature_candidates": [
+          {
+            "feature_name": "macro_conflict_score",
+            "value": 0.0,
+            "inputs_used": [
+              "dxy_state",
+              "yield_state"
+            ]
+          },
+          {
+            "feature_name": "liquidity_pressure_index",
+            "value": 0.925,
+            "inputs_used": [
+              "spread_ratio",
+              "slippage_ratio",
+              "detector_trigger_count"
+            ]
+          },
+          {
+            "feature_name": "session_fragility_score",
+            "value": 0.5,
+            "inputs_used": [
+              "session_state",
+              "volatility_ratio"
+            ]
+          },
+          {
+            "feature_name": "trap_probability_factor",
+            "value": 0.8,
+            "inputs_used": [
+              "volatility_ratio",
+              "spread_ratio",
+              "dxy_state",
+              "yield_state"
+            ]
+          }
+        ],
+        "feature_performance": [
+          {
+            "feature_name": "macro_conflict_score",
+            "predictive_usefulness": 0.0,
+            "signal_quality_delta": -0.25,
+            "validation": {
+              "scope": "evaluation_replay",
+              "historical_sample_size": 0,
+              "sandbox_only": true,
+              "explainable": true,
+              "testable": true
+            }
+          },
+          {
+            "feature_name": "liquidity_pressure_index",
+            "predictive_usefulness": 0.0925,
+            "signal_quality_delta": -0.1575,
+            "validation": {
+              "scope": "evaluation_replay",
+              "historical_sample_size": 0,
+              "sandbox_only": true,
+              "explainable": true,
+              "testable": true
+            }
+          },
+          {
+            "feature_name": "session_fragility_score",
+            "predictive_usefulness": 0.05,
+            "signal_quality_delta": -0.2,
+            "validation": {
+              "scope": "evaluation_replay",
+              "historical_sample_size": 0,
+              "sandbox_only": true,
+              "explainable": true,
+              "testable": true
+            }
+          },
+          {
+            "feature_name": "trap_probability_factor",
+            "predictive_usefulness": 0.08,
+            "signal_quality_delta": -0.17,
+            "validation": {
+              "scope": "evaluation_replay",
+              "historical_sample_size": 0,
+              "sandbox_only": true,
+              "explainable": true,
+              "testable": true
+            }
+          }
+        ],
+        "synthetic_features": [
+          {
+            "feature_name": "liquidity_pressure_index",
+            "value": 0.925,
+            "inputs_used": [
+              "spread_ratio",
+              "slippage_ratio",
+              "detector_trigger_count"
+            ],
+            "predictive_usefulness": 0.0925,
+            "signal_quality_delta": -0.1575,
+            "validation": {
+              "scope": "evaluation_replay",
+              "historical_sample_size": 0,
+              "sandbox_only": true,
+              "explainable": true,
+              "testable": true
+            }
+          },
+          {
+            "feature_name": "trap_probability_factor",
+            "value": 0.8,
+            "inputs_used": [
+              "volatility_ratio",
+              "spread_ratio",
+              "dxy_state",
+              "yield_state"
+            ],
+            "predictive_usefulness": 0.08,
+            "signal_quality_delta": -0.17,
+            "validation": {
+              "scope": "evaluation_replay",
+              "historical_sample_size": 0,
+              "sandbox_only": true,
+              "explainable": true,
+              "testable": true
+            }
+          }
+        ],
+        "pruned_feature_count": 2,
+        "paths": {
+          "synthetic_features": "memory/synthetic_features/synthetic_features_latest.json",
+          "feature_candidates": "memory/feature_candidates/synthetic_feature_candidates.json",
+          "feature_performance": "memory/feature_performance/synthetic_feature_performance.json"
+        }
+      },
+      "negative_space_pattern_recognition": {
+        "signal": {
+          "negative_space_signal": false,
+          "expectation_model": {
+            "context": "baseline",
+            "expected_direction": "flat",
+            "expected_distribution_center": 0.0
+          },
+          "actual_behavior": {
+            "direction": "flat",
+            "pnl_points": 0.0
+          },
+          "deviation_score": 0.0,
+          "validation": {
+            "scope": "evaluation_replay",
+            "sandbox_only": true,
+            "validation_passed": false
+          }
+        },
+        "paths": {
+          "latest": "memory/negative_space_signals/negative_space_signal_latest.json",
+          "history": "memory/negative_space_signals/negative_space_history.json"
+        }
+      },
+      "temporal_invariance_break_detection": {
+        "invariant_break_events": [
+          {
+            "invariant_name": "gold_vs_dxy_inverse",
+            "sign_flip": false,
+            "stability": 1.0,
+            "previous_stability": 0.8,
+            "invariant_break": false,
+            "confidence_multiplier": 1.0,
+            "trigger_deeper_analysis": false,
+            "validation": {
+              "scope": "evaluation_replay",
+              "sandbox_only": true
+            }
+          },
+          {
+            "invariant_name": "gold_vs_real_yields_inverse",
+            "sign_flip": false,
+            "stability": 0.95,
+            "previous_stability": 0.8,
+            "invariant_break": false,
+            "confidence_multiplier": 1.0,
+            "trigger_deeper_analysis": false,
+            "validation": {
+              "scope": "evaluation_replay",
+              "sandbox_only": true
+            }
+          },
+          {
+            "invariant_name": "volatility_breakout_response",
+            "sign_flip": false,
+            "stability": 1.0,
+            "previous_stability": 0.8,
+            "invariant_break": false,
+            "confidence_multiplier": 1.0,
+            "trigger_deeper_analysis": false,
+            "validation": {
+              "scope": "evaluation_replay",
+              "sandbox_only": true
+            }
+          }
+        ],
+        "paths": {
+          "events": "memory/invariant_break_events/invariant_break_events_latest.json",
+          "models": "memory/invariant_break_events/invariant_models.json"
+        }
+      },
+      "pain_geometry_fields": {
+        "loss_coordinates": [],
+        "pain_risk_surface": {
+          "current_state_risk": 0.0,
+          "sample_count": 0,
+          "method": "gaussian_kde_proxy"
+        },
+        "paths": {
+          "coordinates": "memory/pain_geometry/loss_coordinates.json",
+          "surface": "memory/pain_geometry/pain_risk_surface.json"
+        }
+      },
+      "counterfactual_trade_engine": {
+        "counterfactual_evaluations": [],
+        "paths": {
+          "latest": "memory/counterfactual_results/counterfactual_latest.json",
+          "history": "memory/counterfactual_results/counterfactual_history.json"
+        }
+      },
+      "fractal_liquidity_decay_functions": {
+        "liquidity_decay_models": [],
+        "path": "memory/liquidity_decay_models/liquidity_decay_latest.json"
+      },
+      "recursive_self_modeling": {
+        "configuration_evaluations": [
+          {
+            "config_id": "cfg_balanced",
+            "detector_set": "default+negative_space",
+            "feature_set": "core+synthetic",
+            "risk_behavior": "adaptive",
+            "performance_stability": 0.7,
+            "discovery_potential": 0.64,
+            "regime_adaptability": 0.6,
+            "learning_efficiency": 0.6,
+            "long_term_improvement_score": 0.645,
+            "validation": {
+              "scope": "evaluation_replay",
+              "sandbox_only": true
+            }
+          },
+          {
+            "config_id": "cfg_survival",
+            "detector_set": "survival_priority",
+            "feature_set": "core+pain_geometry",
+            "risk_behavior": "defensive",
+            "performance_stability": 0.66,
+            "discovery_potential": 0.58,
+            "regime_adaptability": 0.6,
+            "learning_efficiency": 0.6,
+            "long_term_improvement_score": 0.616,
+            "validation": {
+              "scope": "evaluation_replay",
+              "sandbox_only": true
+            }
+          },
+          {
+            "config_id": "cfg_discovery",
+            "detector_set": "expanded",
+            "feature_set": "core+synthetic+counterfactual",
+            "risk_behavior": "exploratory",
+            "performance_stability": 0.62,
+            "discovery_potential": 0.52,
+            "regime_adaptability": 0.6,
+            "learning_efficiency": 0.6,
+            "long_term_improvement_score": 0.587,
+            "validation": {
+              "scope": "evaluation_replay",
+              "sandbox_only": true
+            }
+          }
+        ],
+        "selected_configuration": {
+          "config_id": "cfg_balanced",
+          "detector_set": "default+negative_space",
+          "feature_set": "core+synthetic",
+          "risk_behavior": "adaptive",
+          "performance_stability": 0.7,
+          "discovery_potential": 0.64,
+          "regime_adaptability": 0.6,
+          "learning_efficiency": 0.6,
+          "long_term_improvement_score": 0.645,
+          "validation": {
+            "scope": "evaluation_replay",
+            "sandbox_only": true
+          }
+        },
+        "governance": {
+          "sandbox_only": true,
+          "direct_live_self_rewrite_allowed": false,
+          "promotion_requires_governance": true
+        },
+        "path": "memory/self_modeling/self_modeling_latest.json"
+      },
+      "discovery_state_tags": {
+        "synthetic_feature_state": "active",
+        "negative_space_state": "normal",
+        "invariant_break_state": "stable",
+        "pain_geometry_risk": 0.0,
+        "counterfactual_evaluation": "none",
+        "liquidity_decay_state": "insufficient_data"
       }
     },
     "pain_memory_survival_layer": {
@@ -1663,6 +1969,312 @@
         "governor": "memory/capability_registry/self_suggestion_governor.json",
         "history": "memory/capability_registry/self_suggestion_governor_history.json"
       }
+    },
+    "synthetic_feature_invention_engine": {
+      "feature_candidates": [
+        {
+          "feature_name": "macro_conflict_score",
+          "value": 0.0,
+          "inputs_used": [
+            "dxy_state",
+            "yield_state"
+          ]
+        },
+        {
+          "feature_name": "liquidity_pressure_index",
+          "value": 0.925,
+          "inputs_used": [
+            "spread_ratio",
+            "slippage_ratio",
+            "detector_trigger_count"
+          ]
+        },
+        {
+          "feature_name": "session_fragility_score",
+          "value": 0.5,
+          "inputs_used": [
+            "session_state",
+            "volatility_ratio"
+          ]
+        },
+        {
+          "feature_name": "trap_probability_factor",
+          "value": 0.8,
+          "inputs_used": [
+            "volatility_ratio",
+            "spread_ratio",
+            "dxy_state",
+            "yield_state"
+          ]
+        }
+      ],
+      "feature_performance": [
+        {
+          "feature_name": "macro_conflict_score",
+          "predictive_usefulness": 0.0,
+          "signal_quality_delta": -0.25,
+          "validation": {
+            "scope": "evaluation_replay",
+            "historical_sample_size": 0,
+            "sandbox_only": true,
+            "explainable": true,
+            "testable": true
+          }
+        },
+        {
+          "feature_name": "liquidity_pressure_index",
+          "predictive_usefulness": 0.0925,
+          "signal_quality_delta": -0.1575,
+          "validation": {
+            "scope": "evaluation_replay",
+            "historical_sample_size": 0,
+            "sandbox_only": true,
+            "explainable": true,
+            "testable": true
+          }
+        },
+        {
+          "feature_name": "session_fragility_score",
+          "predictive_usefulness": 0.05,
+          "signal_quality_delta": -0.2,
+          "validation": {
+            "scope": "evaluation_replay",
+            "historical_sample_size": 0,
+            "sandbox_only": true,
+            "explainable": true,
+            "testable": true
+          }
+        },
+        {
+          "feature_name": "trap_probability_factor",
+          "predictive_usefulness": 0.08,
+          "signal_quality_delta": -0.17,
+          "validation": {
+            "scope": "evaluation_replay",
+            "historical_sample_size": 0,
+            "sandbox_only": true,
+            "explainable": true,
+            "testable": true
+          }
+        }
+      ],
+      "synthetic_features": [
+        {
+          "feature_name": "liquidity_pressure_index",
+          "value": 0.925,
+          "inputs_used": [
+            "spread_ratio",
+            "slippage_ratio",
+            "detector_trigger_count"
+          ],
+          "predictive_usefulness": 0.0925,
+          "signal_quality_delta": -0.1575,
+          "validation": {
+            "scope": "evaluation_replay",
+            "historical_sample_size": 0,
+            "sandbox_only": true,
+            "explainable": true,
+            "testable": true
+          }
+        },
+        {
+          "feature_name": "trap_probability_factor",
+          "value": 0.8,
+          "inputs_used": [
+            "volatility_ratio",
+            "spread_ratio",
+            "dxy_state",
+            "yield_state"
+          ],
+          "predictive_usefulness": 0.08,
+          "signal_quality_delta": -0.17,
+          "validation": {
+            "scope": "evaluation_replay",
+            "historical_sample_size": 0,
+            "sandbox_only": true,
+            "explainable": true,
+            "testable": true
+          }
+        }
+      ],
+      "pruned_feature_count": 2,
+      "paths": {
+        "synthetic_features": "memory/synthetic_features/synthetic_features_latest.json",
+        "feature_candidates": "memory/feature_candidates/synthetic_feature_candidates.json",
+        "feature_performance": "memory/feature_performance/synthetic_feature_performance.json"
+      }
+    },
+    "negative_space_pattern_recognition": {
+      "signal": {
+        "negative_space_signal": false,
+        "expectation_model": {
+          "context": "baseline",
+          "expected_direction": "flat",
+          "expected_distribution_center": 0.0
+        },
+        "actual_behavior": {
+          "direction": "flat",
+          "pnl_points": 0.0
+        },
+        "deviation_score": 0.0,
+        "validation": {
+          "scope": "evaluation_replay",
+          "sandbox_only": true,
+          "validation_passed": false
+        }
+      },
+      "paths": {
+        "latest": "memory/negative_space_signals/negative_space_signal_latest.json",
+        "history": "memory/negative_space_signals/negative_space_history.json"
+      }
+    },
+    "temporal_invariance_break_detection": {
+      "invariant_break_events": [
+        {
+          "invariant_name": "gold_vs_dxy_inverse",
+          "sign_flip": false,
+          "stability": 1.0,
+          "previous_stability": 0.8,
+          "invariant_break": false,
+          "confidence_multiplier": 1.0,
+          "trigger_deeper_analysis": false,
+          "validation": {
+            "scope": "evaluation_replay",
+            "sandbox_only": true
+          }
+        },
+        {
+          "invariant_name": "gold_vs_real_yields_inverse",
+          "sign_flip": false,
+          "stability": 0.95,
+          "previous_stability": 0.8,
+          "invariant_break": false,
+          "confidence_multiplier": 1.0,
+          "trigger_deeper_analysis": false,
+          "validation": {
+            "scope": "evaluation_replay",
+            "sandbox_only": true
+          }
+        },
+        {
+          "invariant_name": "volatility_breakout_response",
+          "sign_flip": false,
+          "stability": 1.0,
+          "previous_stability": 0.8,
+          "invariant_break": false,
+          "confidence_multiplier": 1.0,
+          "trigger_deeper_analysis": false,
+          "validation": {
+            "scope": "evaluation_replay",
+            "sandbox_only": true
+          }
+        }
+      ],
+      "paths": {
+        "events": "memory/invariant_break_events/invariant_break_events_latest.json",
+        "models": "memory/invariant_break_events/invariant_models.json"
+      }
+    },
+    "pain_geometry_fields": {
+      "loss_coordinates": [],
+      "pain_risk_surface": {
+        "current_state_risk": 0.0,
+        "sample_count": 0,
+        "method": "gaussian_kde_proxy"
+      },
+      "paths": {
+        "coordinates": "memory/pain_geometry/loss_coordinates.json",
+        "surface": "memory/pain_geometry/pain_risk_surface.json"
+      }
+    },
+    "counterfactual_trade_engine": {
+      "counterfactual_evaluations": [],
+      "paths": {
+        "latest": "memory/counterfactual_results/counterfactual_latest.json",
+        "history": "memory/counterfactual_results/counterfactual_history.json"
+      }
+    },
+    "fractal_liquidity_decay_functions": {
+      "liquidity_decay_models": [],
+      "path": "memory/liquidity_decay_models/liquidity_decay_latest.json"
+    },
+    "recursive_self_modeling": {
+      "configuration_evaluations": [
+        {
+          "config_id": "cfg_balanced",
+          "detector_set": "default+negative_space",
+          "feature_set": "core+synthetic",
+          "risk_behavior": "adaptive",
+          "performance_stability": 0.7,
+          "discovery_potential": 0.64,
+          "regime_adaptability": 0.6,
+          "learning_efficiency": 0.6,
+          "long_term_improvement_score": 0.645,
+          "validation": {
+            "scope": "evaluation_replay",
+            "sandbox_only": true
+          }
+        },
+        {
+          "config_id": "cfg_survival",
+          "detector_set": "survival_priority",
+          "feature_set": "core+pain_geometry",
+          "risk_behavior": "defensive",
+          "performance_stability": 0.66,
+          "discovery_potential": 0.58,
+          "regime_adaptability": 0.6,
+          "learning_efficiency": 0.6,
+          "long_term_improvement_score": 0.616,
+          "validation": {
+            "scope": "evaluation_replay",
+            "sandbox_only": true
+          }
+        },
+        {
+          "config_id": "cfg_discovery",
+          "detector_set": "expanded",
+          "feature_set": "core+synthetic+counterfactual",
+          "risk_behavior": "exploratory",
+          "performance_stability": 0.62,
+          "discovery_potential": 0.52,
+          "regime_adaptability": 0.6,
+          "learning_efficiency": 0.6,
+          "long_term_improvement_score": 0.587,
+          "validation": {
+            "scope": "evaluation_replay",
+            "sandbox_only": true
+          }
+        }
+      ],
+      "selected_configuration": {
+        "config_id": "cfg_balanced",
+        "detector_set": "default+negative_space",
+        "feature_set": "core+synthetic",
+        "risk_behavior": "adaptive",
+        "performance_stability": 0.7,
+        "discovery_potential": 0.64,
+        "regime_adaptability": 0.6,
+        "learning_efficiency": 0.6,
+        "long_term_improvement_score": 0.645,
+        "validation": {
+          "scope": "evaluation_replay",
+          "sandbox_only": true
+        }
+      },
+      "governance": {
+        "sandbox_only": true,
+        "direct_live_self_rewrite_allowed": false,
+        "promotion_requires_governance": true
+      },
+      "path": "memory/self_modeling/self_modeling_latest.json"
+    },
+    "discovery_state_tags": {
+      "synthetic_feature_state": "active",
+      "negative_space_state": "normal",
+      "invariant_break_state": "stable",
+      "pain_geometry_risk": 0.0,
+      "counterfactual_evaluation": "none",
+      "liquidity_decay_state": "insufficient_data"
     },
     "meta_learning_loop": {
       "loop": [
