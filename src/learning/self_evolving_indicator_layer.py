@@ -11,6 +11,14 @@ _PAIN_REPLAY_BASE_SCORE = 0.5
 _PAIN_REPLAY_RECURRENCE_WEIGHT = 0.4
 _PAIN_REPLAY_SEVERITY_WEIGHT = 0.05
 _PAIN_REPLAY_PROMOTION_THRESHOLD = 0.6
+_SUGGESTION_COOLDOWN_CYCLES = 2
+_SUGGESTION_MAX_PER_CYCLE = 6
+_SUGGESTION_MAX_PER_NOISY_CYCLE = 3
+_SUGGESTION_LOW_VALUE_THRESHOLD = 0.35
+_SUGGESTION_PROMOTE_THRESHOLD = 0.68
+_SUGGESTION_RETAIN_THRESHOLD = 0.5
+_MAX_CLUSTER_SPECIFICITY_BOOST = 0.2
+_CLUSTER_SPECIFICITY_BOOST_PER_OCCURRENCE = 0.05
 
 
 def _closed_outcomes(trade_outcomes: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -414,6 +422,548 @@ def _pain_memory_survival_layer(*, memory_root: Path, closed: list[dict[str, Any
     }
 
 
+def _gap_signature(gap: dict[str, Any]) -> str:
+    return f"{gap.get('gap_type', 'unknown')}::{gap.get('detail', 'n/a')}"
+
+
+def _suggestion_signature(suggestion: dict[str, Any]) -> str:
+    return f"{suggestion.get('suggestion_type', 'unknown')}::{suggestion.get('target', 'n/a')}"
+
+
+def _detect_improvement_gaps(
+    *,
+    closed: list[dict[str, Any]],
+    market_state: dict[str, Any],
+    autonomous_behavior: dict[str, Any],
+    detector_generator: dict[str, Any],
+    pain_memory_survival: dict[str, Any],
+    mutation_candidates: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    gaps: list[dict[str, Any]] = []
+    repeated = autonomous_behavior.get("trade_review_engine", {}).get("repeated_failure_patterns", [])
+    if isinstance(repeated, list):
+        for item in repeated:
+            if not isinstance(item, dict):
+                continue
+            count = int(item.get("count", 0) or 0)
+            cause = str(item.get("failure_cause", "execution_failure"))
+            if count >= 2:
+                gaps.append({"gap_type": "repeated_failure_pattern", "detail": cause, "frequency": count, "severity": 0.7})
+
+    detector_candidates = detector_generator.get("detector_candidates", [])
+    if isinstance(detector_candidates, list) and detector_candidates:
+        failed = sum(
+            1
+            for item in detector_candidates
+            if isinstance(item, dict) and not bool(item.get("sandbox_test_passed", False))
+        )
+        reliability = 1.0 - (failed / max(1, len(detector_candidates)))
+        if reliability < 0.6:
+            gaps.append(
+                {
+                    "gap_type": "weak_detector_reliability",
+                    "detail": "detector_sandbox_failures",
+                    "frequency": failed,
+                    "severity": round(1.0 - reliability, 4),
+                }
+            )
+
+    losses = [item for item in closed if str(item.get("result", "")).lower() == "loss"]
+    if losses:
+        missing_context = sum(
+            1
+            for item in losses
+            if not str(item.get("session", "")).strip() or not str(item.get("setup_type", "")).strip()
+        )
+        if missing_context > 0:
+            gaps.append(
+                {
+                    "gap_type": "missing_context_in_losing_trades",
+                    "detail": "session_or_setup_missing",
+                    "frequency": missing_context,
+                    "severity": 0.6,
+                }
+            )
+
+    regime = str(autonomous_behavior.get("market_regime_classifier", {}).get("regime", "unknown"))
+    if regime in {"unstable", "expansion"}:
+        gaps.append({"gap_type": "unstable_regime_behavior", "detail": regime, "frequency": 1, "severity": 0.75})
+
+    missing_market_dimensions = [
+        key for key in ("volatility_ratio", "spread_ratio", "slippage_ratio", "structure_state") if key not in market_state
+    ]
+    if missing_market_dimensions:
+        gaps.append(
+            {
+                "gap_type": "market_memory_dimension_gap",
+                "detail": ",".join(sorted(missing_market_dimensions)),
+                "frequency": len(missing_market_dimensions),
+                "severity": 0.55,
+            }
+        )
+
+    if bool(autonomous_behavior.get("environment_anomaly_detection", {}).get("anomalies", {}).get("repeated_execution_failures", False)):
+        gaps.append(
+            {
+                "gap_type": "execution_logic_gap",
+                "detail": "repeated_execution_failures",
+                "frequency": 2,
+                "severity": 0.7,
+            }
+        )
+
+    noisy_mutations = 0
+    for candidate in mutation_candidates:
+        if not isinstance(candidate, dict):
+            continue
+        score = float(candidate.get("mutation_score", 0.0) or 0.0)
+        replay_validation = candidate.get("replay_validation", {})
+        replay_passed = bool(replay_validation.get("passed", False)) if isinstance(replay_validation, dict) else False
+        if score <= 0.0 or not replay_passed:
+            noisy_mutations += 1
+    if noisy_mutations > 0:
+        gaps.append(
+            {
+                "gap_type": "low_value_noisy_mutations",
+                "detail": "mutation_noise_cluster",
+                "frequency": noisy_mutations,
+                "severity": 0.5,
+            }
+        )
+
+    unresolved_pain = pain_memory_survival.get("promotion_decisions", {}).get("quarantined", [])
+    if isinstance(unresolved_pain, list) and unresolved_pain:
+        gaps.append(
+            {
+                "gap_type": "survival_rule_gap",
+                "detail": "quarantined_pain_memory_survival_rules",
+                "frequency": len(unresolved_pain),
+                "severity": 0.65,
+            }
+        )
+    return gaps
+
+
+def _suggestion_templates(gap_type: str) -> list[dict[str, str]]:
+    mapping = {
+        "repeated_failure_pattern": [
+            {"suggestion_type": "new_detector_idea", "target": "failure_cause_detector"},
+            {"suggestion_type": "new_survival_rule", "target": "context_refusal_rule"},
+        ],
+        "weak_detector_reliability": [
+            {"suggestion_type": "new_feature_combination", "target": "detector_ensemble_features"},
+            {"suggestion_type": "new_strategy_mutation", "target": "detector_threshold_mutation"},
+        ],
+        "missing_context_in_losing_trades": [
+            {"suggestion_type": "new_market_condition_memory_dimension", "target": "loss_context_dimensions"},
+        ],
+        "unstable_regime_behavior": [
+            {"suggestion_type": "new_execution_refinement", "target": "unstable_regime_execution_safety"},
+        ],
+        "market_memory_dimension_gap": [
+            {"suggestion_type": "new_market_condition_memory_dimension", "target": "missing_market_state_dimensions"},
+            {"suggestion_type": "new_data_source_adapter_stub", "target": "market_context_adapter_stub"},
+        ],
+        "execution_logic_gap": [
+            {"suggestion_type": "new_execution_refinement", "target": "execution_failure_mitigation"},
+        ],
+        "low_value_noisy_mutations": [
+            {"suggestion_type": "new_survival_rule", "target": "mutation_noise_filter"},
+            {"suggestion_type": "new_strategy_mutation", "target": "quality_gated_mutation_generator"},
+        ],
+        "survival_rule_gap": [
+            {"suggestion_type": "new_survival_rule", "target": "pain_memory_survival_strengthening"},
+        ],
+    }
+    return mapping.get(gap_type, [{"suggestion_type": "new_detector_idea", "target": "general_gap_detector"}])
+
+
+def _priority_score(*, expected_usefulness: float, pain_frequency: int, regime_sensitivity: float, execution_impact: float, survival_impact: float) -> float:
+    score = (
+        (expected_usefulness * 0.35)
+        + (min(1.0, pain_frequency / 5.0) * 0.2)
+        + (regime_sensitivity * 0.15)
+        + (execution_impact * 0.15)
+        + (survival_impact * 0.15)
+    )
+    return round(max(0.0, min(1.0, score)), 4)
+
+
+def _macro_state_snapshot(market_state: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "structure_state": str(market_state.get("structure_state", "unknown")),
+        "volatility_ratio": float(market_state.get("volatility_ratio", 1.0)),
+        "spread_ratio": float(market_state.get("spread_ratio", 1.0)),
+        "slippage_ratio": float(market_state.get("slippage_ratio", 1.0)),
+    }
+
+
+def _specific_failure_cluster(closed: list[dict[str, Any]]) -> dict[str, Any]:
+    losses = [item for item in closed if str(item.get("result", "")).lower() == "loss"]
+    clustered: dict[tuple[str, str, str, str], int] = {}
+    for item in losses:
+        key = (
+            str(item.get("failure_cause", "unknown")),
+            str(item.get("setup_type", "unknown")),
+            str(item.get("session", "unknown")),
+            str(item.get("direction", "unknown")).upper(),
+        )
+        clustered[key] = clustered.get(key, 0) + 1
+    if not clustered:
+        return {
+            "failure_cause": "unknown",
+            "setup_type": "unknown",
+            "session": "unknown",
+            "direction": "unknown",
+            "count": 0,
+            "is_repeated_specific_cluster": False,
+        }
+    strongest_key = sorted(clustered.items(), key=lambda entry: (entry[1], entry[0]), reverse=True)[0][0]
+    count = clustered[strongest_key]
+    return {
+        "failure_cause": strongest_key[0],
+        "setup_type": strongest_key[1],
+        "session": strongest_key[2],
+        "direction": strongest_key[3],
+        "count": count,
+        "is_repeated_specific_cluster": count >= 2 and "unknown" not in strongest_key,
+    }
+
+
+def _component_for_gap(gap_type: str) -> str:
+    mapping = {
+        "repeated_failure_pattern": "trade_review_engine",
+        "weak_detector_reliability": "detector_generator",
+        "missing_context_in_losing_trades": "trade_review_engine",
+        "unstable_regime_behavior": "market_regime_classifier",
+        "market_memory_dimension_gap": "market_condition_memory",
+        "execution_logic_gap": "behavior_adjustment_engine",
+        "low_value_noisy_mutations": "strategy_evolution_engine",
+        "survival_rule_gap": "pain_memory_survival_layer",
+    }
+    return mapping.get(gap_type, "self_evolving_indicator_layer")
+
+
+def _missing_capability_hypothesis(*, gap_type: str, gap_detail: str, regime: str, component: str) -> str:
+    return (
+        f"Missing {gap_type} mitigation capability for {gap_detail} in regime {regime} "
+        f"across component {component}"
+    )
+
+
+def _is_vague_suggestion(suggestion: dict[str, Any]) -> bool:
+    required_string_paths = (
+        ("failure_context", "failure_cause"),
+        ("failure_context", "setup_type"),
+        ("failure_context", "session"),
+        ("session",),
+        ("regime",),
+        ("detector_or_strategy_component",),
+        ("missing_capability_hypothesis",),
+    )
+    for path in required_string_paths:
+        value: Any = suggestion
+        for key in path:
+            if not isinstance(value, dict):
+                return True
+            value = value.get(key)
+        text = str(value).strip().lower()
+        if not text or text in {"unknown", "n/a", "none"}:
+            return True
+    macro_state = suggestion.get("macro_state")
+    if not isinstance(macro_state, dict):
+        return True
+    for key in ("structure_state", "volatility_ratio", "spread_ratio", "slippage_ratio"):
+        if key not in macro_state:
+            return True
+    return False
+
+
+def _self_suggestion_governor(
+    *,
+    memory_root: Path,
+    closed: list[dict[str, Any]],
+    market_state: dict[str, Any],
+    autonomous_behavior: dict[str, Any],
+    detector_generator: dict[str, Any],
+    strategy_evolution: dict[str, Any],
+    pain_memory_survival: dict[str, Any],
+    mutation_candidates: list[dict[str, Any]],
+    replay_scope: str,
+) -> dict[str, Any]:
+    registry_dir = memory_root / "capability_registry"
+    registry_dir.mkdir(parents=True, exist_ok=True)
+    governor_path = registry_dir / "self_suggestion_governor.json"
+    history_path = registry_dir / "self_suggestion_governor_history.json"
+    registry_path = registry_dir / "self_suggestion_registry.json"
+    previous_registry = read_json_safe(
+        registry_path,
+        default={
+            "cycle_index": 0,
+            "proposed_improvements": [],
+            "implemented_improvements": [],
+            "rejected_improvements": [],
+            "promoted_improvements": [],
+            "repeated_unresolved_gaps": [],
+            "cooldowns": {},
+        },
+    )
+    if not isinstance(previous_registry, dict):
+        previous_registry = {
+            "cycle_index": 0,
+            "proposed_improvements": [],
+            "implemented_improvements": [],
+            "rejected_improvements": [],
+            "promoted_improvements": [],
+            "repeated_unresolved_gaps": [],
+            "cooldowns": {},
+        }
+    previous_governor = read_json_safe(governor_path, default={})
+    if not isinstance(previous_governor, dict):
+        previous_governor = {}
+
+    gaps = _detect_improvement_gaps(
+        closed=closed,
+        market_state=market_state,
+        autonomous_behavior=autonomous_behavior,
+        detector_generator=detector_generator,
+        pain_memory_survival=pain_memory_survival,
+        mutation_candidates=mutation_candidates,
+    )
+    input_signature = {
+        "replay_scope": replay_scope,
+        "gap_signatures": sorted(_gap_signature(gap) for gap in gaps),
+        "strongest_branch": str(strategy_evolution.get("strongest_branch", {}).get("branch_id", "current_strategy")),
+        "closed_count": len(closed),
+    }
+    if previous_governor.get("input_signature") == input_signature:
+        return previous_governor
+
+    cycle_index = int(previous_registry.get("cycle_index", 0) or 0) + 1
+    regime = str(autonomous_behavior.get("market_regime_classifier", {}).get("regime", "unknown"))
+    macro_state = _macro_state_snapshot(market_state)
+    strongest_failure_cluster = _specific_failure_cluster(closed)
+    unresolved_counter: dict[str, int] = {}
+    for entry in previous_registry.get("repeated_unresolved_gaps", []):
+        if isinstance(entry, dict):
+            unresolved_counter[str(entry.get("gap_signature", ""))] = int(entry.get("repeat_count", 0) or 0)
+    for gap in gaps:
+        sig = _gap_signature(gap)
+        unresolved_counter[sig] = unresolved_counter.get(sig, 0) + 1
+
+    noisy_cluster = len(gaps) >= 4
+    min_threshold = _SUGGESTION_LOW_VALUE_THRESHOLD + (0.08 if noisy_cluster else 0.0)
+    max_per_cycle = _SUGGESTION_MAX_PER_NOISY_CYCLE if noisy_cluster else _SUGGESTION_MAX_PER_CYCLE
+
+    previous_proposed = previous_registry.get("proposed_improvements", [])
+    prior_signatures = {
+        str(item.get("signature", ""))
+        for item in previous_proposed
+        if isinstance(item, dict)
+    }
+    cooldowns = previous_registry.get("cooldowns", {})
+    if not isinstance(cooldowns, dict):
+        cooldowns = {}
+    proposed: list[dict[str, Any]] = []
+    duplicate_suppressed = 0
+    pruned_low_value = 0
+    cooldown_suppressed = 0
+    vague_suppressed = 0
+    vague_rejections: list[dict[str, Any]] = []
+    for gap in gaps:
+        frequency = int(gap.get("frequency", 1) or 1)
+        severity = float(gap.get("severity", 0.5) or 0.5)
+        expected_usefulness = round(min(1.0, 0.45 + (severity * 0.5)), 4)
+        regime_sensitivity = 0.8 if "regime" in str(gap.get("gap_type", "")) else 0.5
+        execution_impact = 0.85 if "execution" in str(gap.get("gap_type", "")) else 0.45
+        survival_impact = 0.85 if "survival" in str(gap.get("gap_type", "")) or "failure" in str(gap.get("gap_type", "")) else 0.5
+        component = _component_for_gap(str(gap.get("gap_type", "")))
+        cluster_specificity_boost = 0.0
+        if str(gap.get("gap_type", "")) == "repeated_failure_pattern" and strongest_failure_cluster["is_repeated_specific_cluster"]:
+            cluster_specificity_boost = round(
+                min(
+                    _MAX_CLUSTER_SPECIFICITY_BOOST,
+                    (strongest_failure_cluster["count"] - 1) * _CLUSTER_SPECIFICITY_BOOST_PER_OCCURRENCE,
+                ),
+                4,
+            )
+        for template in _suggestion_templates(str(gap.get("gap_type", ""))):
+            base_priority = _priority_score(
+                expected_usefulness=expected_usefulness,
+                pain_frequency=frequency,
+                regime_sensitivity=regime_sensitivity,
+                execution_impact=execution_impact,
+                survival_impact=survival_impact,
+            )
+            suggestion = {
+                "cycle_index": cycle_index,
+                "suggestion_type": template["suggestion_type"],
+                "target": template["target"],
+                "gap_type": gap.get("gap_type"),
+                "gap_detail": gap.get("detail"),
+                "failure_context": {
+                    "failure_cause": strongest_failure_cluster["failure_cause"],
+                    "setup_type": strongest_failure_cluster["setup_type"],
+                    "session": strongest_failure_cluster["session"],
+                    "direction": strongest_failure_cluster["direction"],
+                },
+                "session": strongest_failure_cluster["session"],
+                "regime": regime,
+                "macro_state": macro_state,
+                "detector_or_strategy_component": component,
+                "missing_capability_hypothesis": _missing_capability_hypothesis(
+                    gap_type=str(gap.get("gap_type", "unknown")),
+                    gap_detail=str(gap.get("detail", "n/a")),
+                    regime=regime,
+                    component=component,
+                ),
+                "specific_cluster_count": strongest_failure_cluster["count"],
+                "is_repeated_specific_failure_cluster": strongest_failure_cluster["is_repeated_specific_cluster"],
+                "cluster_specificity_boost": cluster_specificity_boost,
+                "expected_usefulness": expected_usefulness,
+                "pain_failure_frequency": frequency,
+                "regime_sensitivity": regime_sensitivity,
+                "execution_impact": execution_impact,
+                "survival_impact": survival_impact,
+                "priority_score": round(min(1.0, base_priority + cluster_specificity_boost), 4),
+                "governance": {
+                    "sandbox_only": True,
+                    "live_deployment_allowed": False,
+                    "blind_live_rewrite_blocked": True,
+                },
+            }
+            suggestion["signature"] = _suggestion_signature(suggestion)
+            if suggestion["signature"] in prior_signatures:
+                duplicate_suppressed += 1
+                continue
+            available_cycle = int(cooldowns.get(suggestion["signature"], 0) or 0)
+            if cycle_index < available_cycle:
+                cooldown_suppressed += 1
+                continue
+            if _is_vague_suggestion(suggestion):
+                vague_suppressed += 1
+                vague_rejections.append(
+                    {
+                        "cycle_index": cycle_index,
+                        "signature": suggestion["signature"],
+                        "gap_type": suggestion["gap_type"],
+                        "reason": "vague_suggestion_rejected",
+                    }
+                )
+                continue
+            if suggestion["priority_score"] < min_threshold:
+                pruned_low_value += 1
+                continue
+            proposed.append(suggestion)
+
+    proposed = sorted(proposed, key=lambda item: (item["priority_score"], item["expected_usefulness"]), reverse=True)[:max_per_cycle]
+
+    implemented: list[dict[str, Any]] = []
+    promoted: list[dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
+    for index, suggestion in enumerate(proposed):
+        strategy_expectancy = float(strategy_evolution.get("strongest_branch", {}).get("expectancy", 0.0) or 0.0)
+        replay_score = round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    suggestion["priority_score"] + (strategy_expectancy * 0.15) - (0.02 * index),
+                ),
+            ),
+            4,
+        )
+        decision = "quarantine"
+        if replay_score >= _SUGGESTION_PROMOTE_THRESHOLD:
+            decision = "promote"
+        elif replay_score >= _SUGGESTION_RETAIN_THRESHOLD:
+            decision = "retain"
+        implementation = {
+            "suggestion_signature": suggestion["signature"],
+            "implementation_id": f"sandbox_impl_{cycle_index}_{index + 1}",
+            "sandbox_module_name": f"sandbox_{suggestion['target']}",
+            "suggestion_type": suggestion["suggestion_type"],
+            "target": suggestion["target"],
+            "replay_test": {
+                "scope": replay_scope,
+                "baseline": strategy_evolution.get("strongest_branch", {}).get("branch_id", "current_strategy"),
+                "comparison": "sandbox_vs_baseline",
+                "score": replay_score,
+            },
+            "governance_decision": decision,
+            "governance": {
+                "sandbox_only": True,
+                "live_activation_allowed": False,
+                "core_module_deletion_allowed": False,
+                "quarantine_supported": True,
+            },
+        }
+        implemented.append(implementation)
+        cooldowns[suggestion["signature"]] = cycle_index + _SUGGESTION_COOLDOWN_CYCLES
+        if decision == "promote":
+            promoted.append(implementation)
+        elif decision == "quarantine":
+            rejected.append(implementation)
+
+    repeated_unresolved = [
+        {"gap_signature": sig, "repeat_count": count}
+        for sig, count in sorted(unresolved_counter.items())
+        if count >= 2
+    ]
+
+    updated_registry = {
+        "cycle_index": cycle_index,
+        "proposed_improvements": (previous_registry.get("proposed_improvements", []) + proposed)[-400:],
+        "implemented_improvements": (previous_registry.get("implemented_improvements", []) + implemented)[-400:],
+        "rejected_improvements": (previous_registry.get("rejected_improvements", []) + rejected + vague_rejections)[-400:],
+        "promoted_improvements": (previous_registry.get("promoted_improvements", []) + promoted)[-400:],
+        "repeated_unresolved_gaps": repeated_unresolved[-200:],
+        "cooldowns": cooldowns,
+    }
+    write_json_atomic(registry_path, updated_registry)
+
+    cycle_payload = {
+        "cycle_index": cycle_index,
+        "input_signature": input_signature,
+        "detected_gaps": gaps,
+        "proposed_improvements": proposed,
+        "implemented_improvements": implemented,
+        "promoted_improvements": promoted,
+        "rejected_improvements": rejected + vague_rejections,
+        "anti_noise_controls": {
+            "duplicate_suppression": duplicate_suppressed,
+            "low_value_pruned": pruned_low_value,
+            "cooldown_suppressed": cooldown_suppressed,
+            "vague_rejected": vague_suppressed,
+            "max_suggestions_per_cycle": max_per_cycle,
+            "stricter_thresholds_active": noisy_cluster,
+            "priority_threshold": round(min_threshold, 4),
+        },
+        "repeated_unresolved_gaps": repeated_unresolved,
+        "safety_controls": {
+            "sandbox_only": True,
+            "direct_live_deployment_blocked": True,
+            "no_blind_live_self_rewrites": True,
+            "stable_core_module_deletion_blocked": True,
+        },
+        "paths": {
+            "registry": str(registry_path),
+            "governor": str(governor_path),
+            "history": str(history_path),
+        },
+    }
+    write_json_atomic(governor_path, cycle_payload)
+    history = read_json_safe(history_path, default={"cycles": []})
+    if not isinstance(history, dict):
+        history = {"cycles": []}
+    cycles = history.get("cycles", [])
+    if not isinstance(cycles, list):
+        cycles = []
+    cycles.append(cycle_payload)
+    write_json_atomic(history_path, {"cycles": cycles[-150:]})
+    return cycle_payload
+
+
 def run_self_evolving_indicator_layer(
     *,
     memory_root: Path,
@@ -454,9 +1004,21 @@ def run_self_evolving_indicator_layer(
         closed=closed,
         replay_scope=replay_scope,
     )
+    self_suggestion_governor = _self_suggestion_governor(
+        memory_root=memory_root,
+        closed=closed,
+        market_state=market_state,
+        autonomous_behavior=autonomous_behavior,
+        detector_generator=detector_generator,
+        strategy_evolution=strategy_evolution,
+        pain_memory_survival=pain_memory_survival,
+        mutation_candidates=mutation_candidates,
+        replay_scope=replay_scope,
+    )
     survival_intelligence = {
         "capital_survival_engine": autonomous_behavior.get("capital_survival_engine", {}),
         "pain_memory_survival_layer": pain_memory_survival,
+        "self_suggestion_governor": self_suggestion_governor,
     }
     meta_learning_loop = _meta_learning_loop(
         memory_root=memory_root,
@@ -473,5 +1035,6 @@ def run_self_evolving_indicator_layer(
         "strategy_evolution_engine": strategy_evolution,
         "survival_intelligence_layer": survival_intelligence,
         "pain_memory_survival_layer": pain_memory_survival,
+        "self_suggestion_governor": self_suggestion_governor,
         "meta_learning_loop": meta_learning_loop,
     }

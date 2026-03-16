@@ -4,6 +4,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 from datetime import datetime, timezone
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,6 +16,7 @@ from src.evolution.code_generator import CodeGenerator
 from src.evolution.duplication_audit import DuplicationAudit
 from src.evolution.evolution_registry import EvolutionRegistry
 from src.evolution.gap_discovery import GapDiscovery
+from src.evolution.promotion_policy import PromotionThresholds, evaluate_module_promotion_policy
 from src.evolution.promoter import Promoter
 from src.evolution.self_inspector import SelfInspector
 from src.evolution.verifier import Verifier
@@ -35,6 +37,7 @@ from src.mt5.execution_state import ExecutionState
 from src.mt5.symbol_guard import SymbolGuard
 from src.pipeline import OversoulDirector, run_advanced_modules, state_to_dict
 from src.learning.live_feedback import process_live_trade_feedback
+from src.macro.gold_macro import MacroFeedConfig, collect_xauusd_macro_state
 from src.risk.capital_guard import evaluate_capital_protection
 from src.scoring.confidence_score import compute_confidence
 from src.strategy.intelligence import score_signal_intelligence
@@ -42,6 +45,7 @@ from src.utils import normalize_reasons, register_generated_artifact, write_json
 
 
 SUPPORTED_TIMEFRAMES = {"M1", "M5", "M15", "H1", "H4"}
+MIN_TRADE_VOLUME = 0.01
 
 
 @dataclass(frozen=True)
@@ -69,6 +73,25 @@ class RuntimeConfig:
     knowledge_candidate_limit: int = 6
     live_execution_enabled: bool = True
     live_order_volume: float = 0.01
+    alpha_vantage_api_key: str = ""
+    fred_api_key: str = ""
+    treasury_yields_endpoint: str = "https://moneymatter.me/api/treasury/interest-rates"
+    economic_calendar_endpoint: str = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+    comex_open_interest_endpoint: str = ""
+    gold_etf_flows_endpoint: str = ""
+    option_magnet_levels_endpoint: str = ""
+    physical_premium_discount_endpoint: str = ""
+    central_bank_reserve_endpoint: str = ""
+    macro_feed_enabled: bool = True
+    macro_feed_allow_replay_fetch: bool = False
+    max_daily_loss_points: float = 3.0
+    max_total_drawdown_points: float = 12.0
+    max_consecutive_loss_streak: int = 3
+    max_anomaly_clusters: int = 2
+    promotion_minimum_replay_sample_size: int = 30
+    promotion_minimum_expectancy_points: float = 0.05
+    promotion_maximum_drawdown_points: float = 4.0
+    promotion_minimum_stability_score: float = 0.55
 
 
 def ensure_sample_data(path: Path) -> None:
@@ -140,6 +163,31 @@ def load_runtime_config(path: Path) -> RuntimeConfig:
         knowledge_candidate_limit=int(data.get("knowledge_candidate_limit", 6)),
         live_execution_enabled=bool(data.get("live_execution_enabled", True)),
         live_order_volume=float(data.get("live_order_volume", 0.01)),
+        alpha_vantage_api_key=str(
+            data.get("alpha_vantage_api_key", os.getenv("ALPHA_VANTAGE_API_KEY", ""))
+        ),
+        fred_api_key=str(data.get("fred_api_key", os.getenv("FRED_API_KEY", ""))),
+        treasury_yields_endpoint=str(
+            data.get("treasury_yields_endpoint", "https://moneymatter.me/api/treasury/interest-rates")
+        ),
+        economic_calendar_endpoint=str(
+            data.get("economic_calendar_endpoint", "https://nfs.faireconomy.media/ff_calendar_thisweek.json")
+        ),
+        comex_open_interest_endpoint=str(data.get("comex_open_interest_endpoint", "")),
+        gold_etf_flows_endpoint=str(data.get("gold_etf_flows_endpoint", "")),
+        option_magnet_levels_endpoint=str(data.get("option_magnet_levels_endpoint", "")),
+        physical_premium_discount_endpoint=str(data.get("physical_premium_discount_endpoint", "")),
+        central_bank_reserve_endpoint=str(data.get("central_bank_reserve_endpoint", "")),
+        macro_feed_enabled=bool(data.get("macro_feed_enabled", True)),
+        macro_feed_allow_replay_fetch=bool(data.get("macro_feed_allow_replay_fetch", False)),
+        max_daily_loss_points=float(data.get("max_daily_loss_points", 3.0)),
+        max_total_drawdown_points=float(data.get("max_total_drawdown_points", 12.0)),
+        max_consecutive_loss_streak=int(data.get("max_consecutive_loss_streak", 3)),
+        max_anomaly_clusters=int(data.get("max_anomaly_clusters", 2)),
+        promotion_minimum_replay_sample_size=int(data.get("promotion_minimum_replay_sample_size", 30)),
+        promotion_minimum_expectancy_points=float(data.get("promotion_minimum_expectancy_points", 0.05)),
+        promotion_maximum_drawdown_points=float(data.get("promotion_maximum_drawdown_points", 4.0)),
+        promotion_minimum_stability_score=float(data.get("promotion_minimum_stability_score", 0.55)),
     )
 
 
@@ -168,6 +216,14 @@ def validate_runtime_config(config: RuntimeConfig) -> None:
         raise ValueError("evaluation_stride must be > 0")
     if config.live_order_volume <= 0:
         raise ValueError("live_order_volume must be > 0")
+    if config.max_daily_loss_points <= 0:
+        raise ValueError("max_daily_loss_points must be > 0")
+    if config.max_total_drawdown_points <= 0:
+        raise ValueError("max_total_drawdown_points must be > 0")
+    if config.max_consecutive_loss_streak <= 0:
+        raise ValueError("max_consecutive_loss_streak must be > 0")
+    if config.max_anomaly_clusters <= 0:
+        raise ValueError("max_anomaly_clusters must be > 0")
 
 
 def load_bars_from_csv(csv_path: Path, bars: int) -> list[dict[str, Any]]:
@@ -551,6 +607,7 @@ def _run_controlled_mt5_live_execution(
     quarantine_state: dict[str, Any],
     risk_state_valid: bool,
     fail_safe_state_clear: bool,
+    trade_tags: dict[str, Any] | None = None,
     mt5_module: Any | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, str]]:
     persistent_state = _load_mt5_controlled_execution_state(memory_root)
@@ -708,6 +765,9 @@ def _run_controlled_mt5_live_execution(
         "stop_loss_take_profit": stop_loss_take_profit,
         "rejection_reason": rollback_reasons[0] if rollback_reasons else "",
         "rollback_refusal_reasons": rollback_reasons,
+        "trade_tags": dict(trade_tags or {}),
+        "refusal_tags": dict(trade_tags or {}) if rollback_reasons else {},
+        "failure_tags": dict(trade_tags or {}) if is_failure_state else {},
         "open_position_state": open_position_state,
         "exit_decision": exit_decision,
         "pnl_snapshot": pnl_snapshot,
@@ -847,6 +907,8 @@ def _build_compact_signal_payload(signal_payload: dict[str, Any]) -> dict[str, A
         "signal_score": signal_payload.get("signal_score", 0.0),
         "confidence": signal_payload.get("confidence", 0.0),
         "feature_contributors": signal_payload.get("feature_contributors", {}),
+        "trade_tags": signal_payload.get("trade_tags", {}),
+        "macro_state": signal_payload.get("macro_state", {}),
         "reasons": signal_payload.get("reasons", []),
         "blocked": signal_payload.get("blocked", False),
         "setup_classification": signal_payload.get("setup_classification", "observe"),
@@ -867,6 +929,7 @@ def _build_compact_signal_payload(signal_payload: dict[str, Any]) -> dict[str, A
         },
         "generated_code_visibility": signal_payload.get("generated_code_visibility", {}),
         "capital_guard": signal_payload.get("capital_guard", {}),
+        "strategy_promotion_policy": signal_payload.get("strategy_promotion_policy", {}),
         "live_learning_loop": signal_payload.get("live_learning_loop", {}),
         "evolution_kernel": {
             "enabled": signal_payload.get("evolution_kernel", {}).get("enabled", False),
@@ -1052,6 +1115,29 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         symbol=config.symbol,
         mode=config.mode,
     )
+    session_state = str(advanced_state.module_results.get("sessions", {}).payload.get("state", "unknown"))
+    volatility_regime = str(advanced_state.module_results.get("volatility", {}).payload.get("state", "unknown"))
+    macro_state = collect_xauusd_macro_state(
+        memory_root=config.memory_root,
+        bars=bars,
+        session_state=session_state,
+        volatility_regime=volatility_regime,
+        config=MacroFeedConfig(
+            alpha_vantage_api_key=config.alpha_vantage_api_key,
+            fred_api_key=config.fred_api_key,
+            treasury_endpoint=config.treasury_yields_endpoint,
+            economic_calendar_endpoint=config.economic_calendar_endpoint,
+            comex_open_interest_endpoint=config.comex_open_interest_endpoint,
+            gold_etf_flows_endpoint=config.gold_etf_flows_endpoint,
+            option_magnet_levels_endpoint=config.option_magnet_levels_endpoint,
+            physical_premium_discount_endpoint=config.physical_premium_discount_endpoint,
+            central_bank_reserve_endpoint=config.central_bank_reserve_endpoint,
+            enabled=bool(config.macro_feed_enabled)
+            and (config.mode == "live" or bool(config.macro_feed_allow_replay_fetch)),
+        ),
+    )
+    macro_tags = dict(macro_state.get("trade_tags", {}))
+    macro_risk = dict(macro_state.get("risk_behavior", {}))
 
     blocker = LossBlocker(min_confidence=0.6, max_spread_points=60.0)
     spread_points = float(
@@ -1071,14 +1157,27 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         module_results=advanced_state.as_module_payload(),
         outcomes=trade_outcomes,
     )
+    macro_confidence_penalty = float(macro_risk.get("confidence_penalty", 0.0) or 0.0)
+    effective_signal_confidence = round(
+        max(0.0, float(strategy_intelligence["confidence"]) - macro_confidence_penalty),
+        4,
+    )
+    macro_adjusted_volume = round(
+        float(config.live_order_volume) * float(macro_risk.get("size_multiplier", 1.0) or 1.0),
+        4,
+    )
     capital_guard = evaluate_capital_protection(
         memory_root=config.memory_root,
         latest_bar_time=int(bars[-1].get("time", 0)) if bars else 0,
-        requested_volume=float(config.live_order_volume),
+        requested_volume=max(MIN_TRADE_VOLUME, macro_adjusted_volume),
         volatility_value=float(
             advanced_state.module_results.get("volatility", {}).payload.get("volatility_ratio", 1.0)
         ),
         latest_outcome=trade_outcomes[-1] if trade_outcomes else {},
+        max_daily_loss_points=float(config.max_daily_loss_points),
+        max_total_drawdown_points=float(config.max_total_drawdown_points),
+        max_consecutive_loss_streak=int(config.max_consecutive_loss_streak),
+        max_anomaly_clusters=int(config.max_anomaly_clusters),
     )
 
     refusal_reasons = [
@@ -1105,6 +1204,14 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
                 "capital_guard_daily_loss_limit_exceeded",
                 f"capital_guard_volume={capital_guard.get('effective_volume', 0.0)}",
             ]
+            + [f"capital_guard:{reason}" for reason in capital_guard.get("trigger_reasons", [])]
+        )
+    if bool(macro_risk.get("pause_trading", False)):
+        combined_blocked = True
+        combined_reasons = normalize_reasons(
+            combined_reasons
+            + ["macro_feed_unsafe_pause"]
+            + [f"macro_risk:{reason}" for reason in macro_risk.get("reasons", [])]
         )
 
     decision = advanced_state.final_direction
@@ -1121,7 +1228,7 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         mode=config.mode,
         symbol=config.symbol,
         decision=decision,
-        confidence=strategy_intelligence["confidence"],
+        confidence=effective_signal_confidence,
         bars=bars,
         live_execution_enabled=config.live_execution_enabled,
         live_order_volume=float(capital_guard.get("effective_volume", config.live_order_volume)),
@@ -1130,6 +1237,7 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         quarantine_state=quarantine_state,
         risk_state_valid=risk_state_valid,
         fail_safe_state_clear=fail_safe_state_clear,
+        trade_tags=macro_tags,
     )
     if decision in {"BUY", "SELL"} and controlled_execution.get("order_result", {}).get("status") != "accepted":
         decision = "WAIT"
@@ -1186,9 +1294,11 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         capital_guard=dict(capital_guard),
         strategy_intelligence={
             "signal_score": strategy_intelligence["signal_score"],
-            "confidence": strategy_intelligence["confidence"],
+            "confidence": effective_signal_confidence,
             "feature_contributors": strategy_intelligence["feature_contributors"],
+            "macro_confidence_penalty": macro_confidence_penalty,
         },
+        macro_state=macro_state,
     )
 
     snapshot_id = store.record_snapshot(
@@ -1211,6 +1321,7 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
                 "snapshot_id": snapshot_id,
                 "direction": advanced_state.final_direction,
                 "reasons": reasons,
+                "trade_tags": macro_tags,
             }
         )
         trade_id = f"blocked_{snapshot_id}"
@@ -1222,6 +1333,7 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
                 "direction": decision,
                 "confidence": advanced_state.final_confidence,
                 "reasons": reasons,
+                "trade_tags": macro_tags,
             }
         )
 
@@ -1230,10 +1342,21 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         trade_id=trade_id,
         decision=decision,
         bars=bars,
-        confidence=strategy_intelligence["confidence"],
+        confidence=effective_signal_confidence,
         reasons=reasons,
+        trade_tags=macro_tags,
     )
     updated_trade_outcomes = store.load("trade_outcomes")
+    promotion_policy = evaluate_module_promotion_policy(
+        memory_root=config.memory_root,
+        outcomes=updated_trade_outcomes,
+        thresholds=PromotionThresholds(
+            minimum_replay_sample_size=int(config.promotion_minimum_replay_sample_size),
+            minimum_expectancy_points=float(config.promotion_minimum_expectancy_points),
+            maximum_drawdown_points=float(config.promotion_maximum_drawdown_points),
+            minimum_stability_score=float(config.promotion_minimum_stability_score),
+        ),
+    )
     live_learning = process_live_trade_feedback(
         memory_root=Path(config.memory_root),
         trade_outcomes=updated_trade_outcomes,
@@ -1304,16 +1427,21 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         "lifecycle": evolution_result["lifecycle"],
     }
     signal_payload["signal_score"] = strategy_intelligence["signal_score"]
-    signal_payload["confidence"] = strategy_intelligence["confidence"]
+    signal_payload["confidence"] = effective_signal_confidence
     signal_payload["feature_contributors"] = strategy_intelligence["feature_contributors"]
+    signal_payload["macro_state"] = macro_state
+    signal_payload["trade_tags"] = macro_tags
     signal_payload["live_learning_loop"] = {
         "latest_trade_evaluation": live_learning["latest_trade_evaluation"],
         "mutation_candidate": live_learning["mutation_candidate"],
     }
+    signal_payload["strategy_promotion_policy"] = promotion_policy
     signal_payload["capital_guard"] = {
         "effective_volume": capital_guard["effective_volume"],
         "trade_refused": capital_guard["trade_refused"],
         "daily_loss_check": capital_guard["daily_loss_check"],
+        "trigger_reasons": capital_guard.get("trigger_reasons", []),
+        "macro_size_multiplier": float(macro_risk.get("size_multiplier", 1.0) or 1.0),
     }
 
     if config.compact_output:
@@ -1367,6 +1495,9 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     }
     status_panel["execution_state"] = execution_state.to_dict()
     status_panel["system_monitor"] = monitoring_state["system_state"]
+    status_panel["macro_state"] = macro_state
+    status_panel["trade_tags"] = macro_tags
+    status_panel["strategy_promotion_policy"] = promotion_policy
 
     return build_indicator_output(
         symbol=config.symbol,
