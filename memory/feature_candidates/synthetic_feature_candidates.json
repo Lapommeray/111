@@ -1,0 +1,39 @@
+{
+  "feature_candidates": [
+    {
+      "feature_name": "macro_conflict_score",
+      "value": 0.0,
+      "inputs_used": [
+        "dxy_state",
+        "yield_state"
+      ]
+    },
+    {
+      "feature_name": "liquidity_pressure_index",
+      "value": 0.925,
+      "inputs_used": [
+        "spread_ratio",
+        "slippage_ratio",
+        "detector_trigger_count"
+      ]
+    },
+    {
+      "feature_name": "session_fragility_score",
+      "value": 0.5,
+      "inputs_used": [
+        "session_state",
+        "volatility_ratio"
+      ]
+    },
+    {
+      "feature_name": "trap_probability_factor",
+      "value": 0.8,
+      "inputs_used": [
+        "volatility_ratio",
+        "spread_ratio",
+        "dxy_state",
+        "yield_state"
+      ]
+    }
+  ]
+}

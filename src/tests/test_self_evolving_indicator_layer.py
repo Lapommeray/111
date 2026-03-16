@@ -415,6 +415,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "pain_geometry_risk",
         "counterfactual_evaluation",
         "liquidity_decay_state",
+        "execution_microstructure_state",
     }
     assert 0.0 <= unified["unified_field_score"] <= 1.0
     assert 0.0 <= unified["confidence_structure"]["composite_confidence"] <= 1.0
@@ -493,3 +494,97 @@ def test_unified_market_intelligence_field_refines_pause_and_strategy_selection(
     assert refinements["strategy_selection"]["selected_branch_id"]
     assert refinements["refusal_pause_behavior"]["should_pause"] in {True, False}
     assert refinements["refusal_pause_behavior"]["should_refuse"] in {True, False}
+
+
+def test_execution_microstructure_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    trade_outcomes = [
+        {
+            "trade_id": "em1",
+            "status": "closed",
+            "result": "loss",
+            "pnl_points": -1.0,
+            "failure_cause": "execution_failure",
+            "intended_entry_price": 2010.0,
+            "average_fill_price": 2011.2,
+            "signal_time": 10,
+            "first_fill_time": 14,
+            "requested_size": 1.0,
+            "filled_size": 0.7,
+        },
+        {
+            "trade_id": "em2",
+            "status": "closed",
+            "result": "win",
+            "pnl_points": 0.8,
+            "failure_cause": "none",
+            "intended_entry_price": 2012.0,
+            "average_fill_price": 2012.4,
+            "signal_time": 20,
+            "first_fill_time": 21,
+            "requested_size": 1.0,
+            "filled_size": 1.0,
+        },
+    ]
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "spread_ratio": 1.3, "slippage_ratio": 1.2},
+        replay_scope="full_replay",
+    )
+    execution_layer = result["execution_microstructure_intelligence_layer"]
+    assert Path(execution_layer["paths"]["latest"]).exists()
+    assert Path(execution_layer["paths"]["history"]).exists()
+    assert Path(execution_layer["paths"]["failure_clusters"]).exists()
+    assert Path(execution_layer["paths"]["quality_baselines"]).exists()
+    assert Path(execution_layer["paths"]["entry_timing_degradation"]).exists()
+
+
+def test_execution_microstructure_layer_is_wired_between_liquidity_and_recursive_outputs(tmp_path: Path) -> None:
+    trade_outcomes = [
+        {
+            "trade_id": "emw1",
+            "status": "closed",
+            "result": "loss",
+            "pnl_points": -1.2,
+            "failure_cause": "execution_failure",
+            "intended_entry_price": 2005.0,
+            "average_fill_price": 2007.0,
+            "requested_size": 1.0,
+            "filled_size": 0.6,
+            "signal_time": 10,
+            "first_fill_time": 17,
+        },
+        {"trade_id": "emw2", "status": "closed", "result": "win", "pnl_points": 0.7, "failure_cause": "none"},
+    ]
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "spread_ratio": 1.6, "slippage_ratio": 1.5},
+        replay_scope="full_replay",
+    )
+    assert "execution_microstructure_intelligence_layer" in result
+    assert "execution_microstructure_intelligence_layer" in result["survival_intelligence_layer"]
+    assert "execution_microstructure_assessment" in result["recursive_self_modeling"]
+    assert "execution_microstructure_state" in result["unified_market_intelligence_field"]["components"]
+    assert "execution_microstructure_intelligence_layer" in result["self_suggestion_governor"]
+
+
+def test_execution_microstructure_missing_fields_stays_sandbox_and_nonbreaking(tmp_path: Path) -> None:
+    trade_outcomes = [
+        {"trade_id": "emn1", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "execution_failure"},
+        {"trade_id": "emn2", "status": "closed", "result": "win", "pnl_points": 0.9, "failure_cause": "none"},
+    ]
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    execution_layer = result["execution_microstructure_intelligence_layer"]
+    assert 0.0 <= execution_layer["execution_quality_score"] <= 1.0
+    assert 0.25 <= execution_layer["execution_confidence"] <= 1.0
+    assert 0.0 <= execution_layer["execution_penalty"] <= 1.0
+    assert 0.0 <= execution_layer["failure_cluster_risk"] <= 1.0
+    assert execution_layer["governance"]["sandbox_only"] is True
+    assert execution_layer["governance"]["no_blind_live_self_rewrites"] is True
+    assert execution_layer["governance"]["replay_validation_required"] is True
