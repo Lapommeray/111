@@ -1,5 +1,5 @@
 {
-  "cycle_index": 2,
+  "cycle_index": 1,
   "input_signature": {
     "replay_scope": "evaluation_replay",
     "gap_signatures": [
@@ -7,11 +7,7 @@
       "weak_detector_reliability::detector_sandbox_failures"
     ],
     "strongest_branch": "mutated_strategy_a",
-    "closed_count": 0,
-    "unified_field_score": 0.458,
-    "unified_confidence": 0.4241,
-    "execution_quality_score": 1.0,
-    "execution_penalty": 0.0
+    "closed_count": 0
   },
   "detected_gaps": [
     {
@@ -27,15 +23,254 @@
       "severity": 0.5
     }
   ],
-  "proposed_improvements": [],
-  "implemented_improvements": [],
-  "promoted_improvements": [],
-  "rejected_improvements": [],
+  "proposed_improvements": [
+    {
+      "cycle_index": 1,
+      "suggestion_type": "new_feature_combination",
+      "target": "detector_ensemble_features",
+      "gap_type": "weak_detector_reliability",
+      "gap_detail": "detector_sandbox_failures",
+      "expected_usefulness": 0.95,
+      "pain_failure_frequency": 5,
+      "regime_sensitivity": 0.5,
+      "execution_impact": 0.45,
+      "survival_impact": 0.5,
+      "priority_score": 0.75,
+      "governance": {
+        "sandbox_only": true,
+        "live_deployment_allowed": false,
+        "blind_live_rewrite_blocked": true
+      },
+      "signature": "new_feature_combination::detector_ensemble_features"
+    },
+    {
+      "cycle_index": 1,
+      "suggestion_type": "new_strategy_mutation",
+      "target": "detector_threshold_mutation",
+      "gap_type": "weak_detector_reliability",
+      "gap_detail": "detector_sandbox_failures",
+      "expected_usefulness": 0.95,
+      "pain_failure_frequency": 5,
+      "regime_sensitivity": 0.5,
+      "execution_impact": 0.45,
+      "survival_impact": 0.5,
+      "priority_score": 0.75,
+      "governance": {
+        "sandbox_only": true,
+        "live_deployment_allowed": false,
+        "blind_live_rewrite_blocked": true
+      },
+      "signature": "new_strategy_mutation::detector_threshold_mutation"
+    },
+    {
+      "cycle_index": 1,
+      "suggestion_type": "new_survival_rule",
+      "target": "mutation_noise_filter",
+      "gap_type": "low_value_noisy_mutations",
+      "gap_detail": "mutation_noise_cluster",
+      "expected_usefulness": 0.7,
+      "pain_failure_frequency": 1,
+      "regime_sensitivity": 0.5,
+      "execution_impact": 0.45,
+      "survival_impact": 0.5,
+      "priority_score": 0.5025,
+      "governance": {
+        "sandbox_only": true,
+        "live_deployment_allowed": false,
+        "blind_live_rewrite_blocked": true
+      },
+      "signature": "new_survival_rule::mutation_noise_filter"
+    },
+    {
+      "cycle_index": 1,
+      "suggestion_type": "new_strategy_mutation",
+      "target": "quality_gated_mutation_generator",
+      "gap_type": "low_value_noisy_mutations",
+      "gap_detail": "mutation_noise_cluster",
+      "expected_usefulness": 0.7,
+      "pain_failure_frequency": 1,
+      "regime_sensitivity": 0.5,
+      "execution_impact": 0.45,
+      "survival_impact": 0.5,
+      "priority_score": 0.5025,
+      "governance": {
+        "sandbox_only": true,
+        "live_deployment_allowed": false,
+        "blind_live_rewrite_blocked": true
+      },
+      "signature": "new_strategy_mutation::quality_gated_mutation_generator"
+    }
+  ],
+  "implemented_improvements": [
+    {
+      "suggestion_signature": "new_feature_combination::detector_ensemble_features",
+      "implementation_id": "sandbox_impl_1_1",
+      "sandbox_module_name": "sandbox_detector_ensemble_features",
+      "suggestion_type": "new_feature_combination",
+      "target": "detector_ensemble_features",
+      "replay_test": {
+        "scope": "evaluation_replay",
+        "baseline": "mutated_strategy_a",
+        "comparison": "sandbox_vs_baseline",
+        "score": 0.7575
+      },
+      "governance_decision": "promote",
+      "governance": {
+        "sandbox_only": true,
+        "live_activation_allowed": false,
+        "core_module_deletion_allowed": false,
+        "quarantine_supported": true
+      }
+    },
+    {
+      "suggestion_signature": "new_strategy_mutation::detector_threshold_mutation",
+      "implementation_id": "sandbox_impl_1_2",
+      "sandbox_module_name": "sandbox_detector_threshold_mutation",
+      "suggestion_type": "new_strategy_mutation",
+      "target": "detector_threshold_mutation",
+      "replay_test": {
+        "scope": "evaluation_replay",
+        "baseline": "mutated_strategy_a",
+        "comparison": "sandbox_vs_baseline",
+        "score": 0.7375
+      },
+      "governance_decision": "promote",
+      "governance": {
+        "sandbox_only": true,
+        "live_activation_allowed": false,
+        "core_module_deletion_allowed": false,
+        "quarantine_supported": true
+      }
+    },
+    {
+      "suggestion_signature": "new_survival_rule::mutation_noise_filter",
+      "implementation_id": "sandbox_impl_1_3",
+      "sandbox_module_name": "sandbox_mutation_noise_filter",
+      "suggestion_type": "new_survival_rule",
+      "target": "mutation_noise_filter",
+      "replay_test": {
+        "scope": "evaluation_replay",
+        "baseline": "mutated_strategy_a",
+        "comparison": "sandbox_vs_baseline",
+        "score": 0.47
+      },
+      "governance_decision": "quarantine",
+      "governance": {
+        "sandbox_only": true,
+        "live_activation_allowed": false,
+        "core_module_deletion_allowed": false,
+        "quarantine_supported": true
+      }
+    },
+    {
+      "suggestion_signature": "new_strategy_mutation::quality_gated_mutation_generator",
+      "implementation_id": "sandbox_impl_1_4",
+      "sandbox_module_name": "sandbox_quality_gated_mutation_generator",
+      "suggestion_type": "new_strategy_mutation",
+      "target": "quality_gated_mutation_generator",
+      "replay_test": {
+        "scope": "evaluation_replay",
+        "baseline": "mutated_strategy_a",
+        "comparison": "sandbox_vs_baseline",
+        "score": 0.45
+      },
+      "governance_decision": "quarantine",
+      "governance": {
+        "sandbox_only": true,
+        "live_activation_allowed": false,
+        "core_module_deletion_allowed": false,
+        "quarantine_supported": true
+      }
+    }
+  ],
+  "promoted_improvements": [
+    {
+      "suggestion_signature": "new_feature_combination::detector_ensemble_features",
+      "implementation_id": "sandbox_impl_1_1",
+      "sandbox_module_name": "sandbox_detector_ensemble_features",
+      "suggestion_type": "new_feature_combination",
+      "target": "detector_ensemble_features",
+      "replay_test": {
+        "scope": "evaluation_replay",
+        "baseline": "mutated_strategy_a",
+        "comparison": "sandbox_vs_baseline",
+        "score": 0.7575
+      },
+      "governance_decision": "promote",
+      "governance": {
+        "sandbox_only": true,
+        "live_activation_allowed": false,
+        "core_module_deletion_allowed": false,
+        "quarantine_supported": true
+      }
+    },
+    {
+      "suggestion_signature": "new_strategy_mutation::detector_threshold_mutation",
+      "implementation_id": "sandbox_impl_1_2",
+      "sandbox_module_name": "sandbox_detector_threshold_mutation",
+      "suggestion_type": "new_strategy_mutation",
+      "target": "detector_threshold_mutation",
+      "replay_test": {
+        "scope": "evaluation_replay",
+        "baseline": "mutated_strategy_a",
+        "comparison": "sandbox_vs_baseline",
+        "score": 0.7375
+      },
+      "governance_decision": "promote",
+      "governance": {
+        "sandbox_only": true,
+        "live_activation_allowed": false,
+        "core_module_deletion_allowed": false,
+        "quarantine_supported": true
+      }
+    }
+  ],
+  "rejected_improvements": [
+    {
+      "suggestion_signature": "new_survival_rule::mutation_noise_filter",
+      "implementation_id": "sandbox_impl_1_3",
+      "sandbox_module_name": "sandbox_mutation_noise_filter",
+      "suggestion_type": "new_survival_rule",
+      "target": "mutation_noise_filter",
+      "replay_test": {
+        "scope": "evaluation_replay",
+        "baseline": "mutated_strategy_a",
+        "comparison": "sandbox_vs_baseline",
+        "score": 0.47
+      },
+      "governance_decision": "quarantine",
+      "governance": {
+        "sandbox_only": true,
+        "live_activation_allowed": false,
+        "core_module_deletion_allowed": false,
+        "quarantine_supported": true
+      }
+    },
+    {
+      "suggestion_signature": "new_strategy_mutation::quality_gated_mutation_generator",
+      "implementation_id": "sandbox_impl_1_4",
+      "sandbox_module_name": "sandbox_quality_gated_mutation_generator",
+      "suggestion_type": "new_strategy_mutation",
+      "target": "quality_gated_mutation_generator",
+      "replay_test": {
+        "scope": "evaluation_replay",
+        "baseline": "mutated_strategy_a",
+        "comparison": "sandbox_vs_baseline",
+        "score": 0.45
+      },
+      "governance_decision": "quarantine",
+      "governance": {
+        "sandbox_only": true,
+        "live_activation_allowed": false,
+        "core_module_deletion_allowed": false,
+        "quarantine_supported": true
+      }
+    }
+  ],
   "anti_noise_controls": {
-    "duplicate_suppression": 4,
+    "duplicate_suppression": 0,
     "low_value_pruned": 0,
     "cooldown_suppressed": 0,
-    "vague_rejected": 0,
     "max_suggestions_per_cycle": 6,
     "stricter_thresholds_active": false,
     "priority_threshold": 0.35
@@ -46,34 +281,6 @@
     "direct_live_deployment_blocked": true,
     "no_blind_live_self_rewrites": true,
     "stable_core_module_deletion_blocked": true
-  },
-  "discovery_state_tags": {
-    "synthetic_feature_state": "active",
-    "negative_space_state": "normal",
-    "invariant_break_state": "stable",
-    "pain_geometry_risk": 0.0,
-    "counterfactual_evaluation": "none",
-    "liquidity_decay_state": "insufficient_data"
-  },
-  "unified_market_intelligence_field": {
-    "unified_field_score": 0.458,
-    "composite_confidence": 0.4241,
-    "refusal_pause_behavior": {
-      "should_refuse": true,
-      "should_pause": false,
-      "refusal_reasons": [
-        "weak_detector_reliability"
-      ],
-      "pause_reasons": []
-    }
-  },
-  "execution_microstructure_intelligence_layer": {
-    "execution_quality_score": 1.0,
-    "execution_penalty": 0.0,
-    "execution_state": "insufficient_data",
-    "recommended_actions": [
-      "maintain_current_execution_controls"
-    ]
   },
   "paths": {
     "registry": "memory/capability_registry/self_suggestion_registry.json",
