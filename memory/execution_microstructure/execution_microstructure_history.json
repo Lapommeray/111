@@ -23,30 +23,6 @@
         "replay_validation_required": true,
         "direct_live_override_allowed": false
       }
-    },
-    {
-      "execution_quality_score": 1.0,
-      "execution_confidence": 0.35,
-      "execution_state": "insufficient_data",
-      "slippage_state": "normal",
-      "spread_state": "normal",
-      "fill_delay_state": "normal",
-      "partial_fill_state": "normal",
-      "failure_cluster_risk": 0.0,
-      "entry_timing_degradation": 0.0,
-      "execution_penalty": 0.0,
-      "should_reduce_size": false,
-      "should_delay_entry": false,
-      "should_refuse_trade": false,
-      "recommended_actions": [
-        "maintain_current_execution_controls"
-      ],
-      "governance": {
-        "sandbox_only": true,
-        "no_blind_live_self_rewrites": true,
-        "replay_validation_required": true,
-        "direct_live_override_allowed": false
-      }
     }
   ]
 }
