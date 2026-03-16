@@ -4684,339 +4684,339 @@
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:05.347426+00:00",
+      "timestamp": "2026-03-16T17:15:37.073040+00:00",
       "artifact_type": "generated_rules",
-      "artifact_path": "/tmp/pytest-of-runner/pytest-1/test_strategy_intelligence_sig0/memory/generated_rules.json",
+      "artifact_path": "/tmp/pytest-of-runner/pytest-2/test_strategy_intelligence_sig0/memory/generated_rules.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
         "rule_count": 0,
-        "snapshot_id": "snap_20260316171405340716"
+        "snapshot_id": "snap_20260316171537066526"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:05.351376+00:00",
+      "timestamp": "2026-03-16T17:15:37.076690+00:00",
       "artifact_type": "meta_adaptive_profile",
       "artifact_path": "memory/meta_adaptive_profile.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
-        "snapshot_id": "snap_20260316171405340716"
+        "snapshot_id": "snap_20260316171537066526"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:05.664192+00:00",
+      "timestamp": "2026-03-16T17:15:37.399770+00:00",
       "artifact_type": "generated_rules",
-      "artifact_path": "/tmp/pytest-of-runner/pytest-1/test_run_pipeline_first_run_li0/memory_live/generated_rules.json",
+      "artifact_path": "/tmp/pytest-of-runner/pytest-2/test_run_pipeline_first_run_li0/memory_live/generated_rules.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "live",
         "rule_count": 0,
-        "snapshot_id": "snap_20260316171405657204"
+        "snapshot_id": "snap_20260316171537393057"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:05.668003+00:00",
-      "artifact_type": "meta_adaptive_profile",
-      "artifact_path": "memory/meta_adaptive_profile.json",
-      "metadata": {
-        "symbol": "XAUUSD",
-        "mode": "live",
-        "snapshot_id": "snap_20260316171405657204"
-      }
-    },
-    {
-      "timestamp": "2026-03-16T17:14:05.698060+00:00",
-      "artifact_type": "generated_rules",
-      "artifact_path": "/tmp/pytest-of-runner/pytest-1/test_run_pipeline_first_run_li0/memory_replay/generated_rules.json",
-      "metadata": {
-        "symbol": "XAUUSD",
-        "mode": "replay",
-        "rule_count": 0,
-        "snapshot_id": "snap_20260316171405691361"
-      }
-    },
-    {
-      "timestamp": "2026-03-16T17:14:05.701828+00:00",
-      "artifact_type": "meta_adaptive_profile",
-      "artifact_path": "memory/meta_adaptive_profile.json",
-      "metadata": {
-        "symbol": "XAUUSD",
-        "mode": "replay",
-        "snapshot_id": "snap_20260316171405691361"
-      }
-    },
-    {
-      "timestamp": "2026-03-16T17:14:05.735414+00:00",
-      "artifact_type": "generated_rules",
-      "artifact_path": "/tmp/pytest-of-runner/pytest-1/test_market_structure_detector0/memory/generated_rules.json",
-      "metadata": {
-        "symbol": "XAUUSD",
-        "mode": "replay",
-        "rule_count": 0,
-        "snapshot_id": "snap_20260316171405728720"
-      }
-    },
-    {
-      "timestamp": "2026-03-16T17:14:05.739239+00:00",
-      "artifact_type": "meta_adaptive_profile",
-      "artifact_path": "memory/meta_adaptive_profile.json",
-      "metadata": {
-        "symbol": "XAUUSD",
-        "mode": "replay",
-        "snapshot_id": "snap_20260316171405728720"
-      }
-    },
-    {
-      "timestamp": "2026-03-16T17:14:05.773517+00:00",
-      "artifact_type": "generated_rules",
-      "artifact_path": "/tmp/pytest-of-runner/pytest-1/test_run_pipeline_compact_outp0/memory/generated_rules.json",
-      "metadata": {
-        "symbol": "XAUUSD",
-        "mode": "replay",
-        "rule_count": 0,
-        "snapshot_id": "snap_20260316171405766874"
-      }
-    },
-    {
-      "timestamp": "2026-03-16T17:14:05.777210+00:00",
-      "artifact_type": "meta_adaptive_profile",
-      "artifact_path": "memory/meta_adaptive_profile.json",
-      "metadata": {
-        "symbol": "XAUUSD",
-        "mode": "replay",
-        "snapshot_id": "snap_20260316171405766874"
-      }
-    },
-    {
-      "timestamp": "2026-03-16T17:14:05.810110+00:00",
-      "artifact_type": "generated_rules",
-      "artifact_path": "/tmp/pytest-of-runner/pytest-1/test_status_panel_exposes_evol0/memory/generated_rules.json",
-      "metadata": {
-        "symbol": "XAUUSD",
-        "mode": "replay",
-        "rule_count": 0,
-        "snapshot_id": "snap_20260316171405803444"
-      }
-    },
-    {
-      "timestamp": "2026-03-16T17:14:05.813834+00:00",
-      "artifact_type": "meta_adaptive_profile",
-      "artifact_path": "memory/meta_adaptive_profile.json",
-      "metadata": {
-        "symbol": "XAUUSD",
-        "mode": "replay",
-        "snapshot_id": "snap_20260316171405803444"
-      }
-    },
-    {
-      "timestamp": "2026-03-16T17:14:05.849868+00:00",
-      "artifact_type": "generated_rules",
-      "artifact_path": "/tmp/pytest-of-runner/pytest-1/test_replay_from_memory_uses_s0/memory/generated_rules.json",
-      "metadata": {
-        "symbol": "XAUUSD",
-        "mode": "live",
-        "rule_count": 0,
-        "snapshot_id": "snap_20260316171405843101"
-      }
-    },
-    {
-      "timestamp": "2026-03-16T17:14:05.853751+00:00",
+      "timestamp": "2026-03-16T17:15:37.403544+00:00",
       "artifact_type": "meta_adaptive_profile",
       "artifact_path": "memory/meta_adaptive_profile.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "live",
-        "snapshot_id": "snap_20260316171405843101"
+        "snapshot_id": "snap_20260316171537393057"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:05.889533+00:00",
+      "timestamp": "2026-03-16T17:15:37.432723+00:00",
       "artifact_type": "generated_rules",
-      "artifact_path": "/tmp/pytest-of-runner/pytest-1/test_replay_from_memory_uses_s0/memory/generated_rules.json",
+      "artifact_path": "/tmp/pytest-of-runner/pytest-2/test_run_pipeline_first_run_li0/memory_replay/generated_rules.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
         "rule_count": 0,
-        "snapshot_id": "snap_20260316171405877979"
+        "snapshot_id": "snap_20260316171537426387"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:05.893427+00:00",
+      "timestamp": "2026-03-16T17:15:37.436304+00:00",
       "artifact_type": "meta_adaptive_profile",
       "artifact_path": "memory/meta_adaptive_profile.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
-        "snapshot_id": "snap_20260316171405877979"
+        "snapshot_id": "snap_20260316171537426387"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:05.936937+00:00",
+      "timestamp": "2026-03-16T17:15:37.468545+00:00",
       "artifact_type": "generated_rules",
-      "artifact_path": "/tmp/pytest-of-runner/pytest-1/test_run_pipeline_persists_con0/memory/generated_rules.json",
+      "artifact_path": "/tmp/pytest-of-runner/pytest-2/test_market_structure_detector0/memory/generated_rules.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
         "rule_count": 0,
-        "snapshot_id": "snap_20260316171405930225"
+        "snapshot_id": "snap_20260316171537462120"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:05.940710+00:00",
+      "timestamp": "2026-03-16T17:15:37.472146+00:00",
       "artifact_type": "meta_adaptive_profile",
       "artifact_path": "memory/meta_adaptive_profile.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
-        "snapshot_id": "snap_20260316171405930225"
+        "snapshot_id": "snap_20260316171537462120"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:05.976270+00:00",
+      "timestamp": "2026-03-16T17:15:37.505034+00:00",
       "artifact_type": "generated_rules",
-      "artifact_path": "/tmp/pytest-of-runner/pytest-1/test_live_mode_refuses_unsafe_0/memory_live_refusal/generated_rules.json",
+      "artifact_path": "/tmp/pytest-of-runner/pytest-2/test_run_pipeline_compact_outp0/memory/generated_rules.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "replay",
+        "rule_count": 0,
+        "snapshot_id": "snap_20260316171537498655"
+      }
+    },
+    {
+      "timestamp": "2026-03-16T17:15:37.508652+00:00",
+      "artifact_type": "meta_adaptive_profile",
+      "artifact_path": "memory/meta_adaptive_profile.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "replay",
+        "snapshot_id": "snap_20260316171537498655"
+      }
+    },
+    {
+      "timestamp": "2026-03-16T17:15:37.540444+00:00",
+      "artifact_type": "generated_rules",
+      "artifact_path": "/tmp/pytest-of-runner/pytest-2/test_status_panel_exposes_evol0/memory/generated_rules.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "replay",
+        "rule_count": 0,
+        "snapshot_id": "snap_20260316171537534119"
+      }
+    },
+    {
+      "timestamp": "2026-03-16T17:15:37.544112+00:00",
+      "artifact_type": "meta_adaptive_profile",
+      "artifact_path": "memory/meta_adaptive_profile.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "replay",
+        "snapshot_id": "snap_20260316171537534119"
+      }
+    },
+    {
+      "timestamp": "2026-03-16T17:15:37.578284+00:00",
+      "artifact_type": "generated_rules",
+      "artifact_path": "/tmp/pytest-of-runner/pytest-2/test_replay_from_memory_uses_s0/memory/generated_rules.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "live",
         "rule_count": 0,
-        "snapshot_id": "snap_20260316171405969489"
+        "snapshot_id": "snap_20260316171537571756"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:05.980163+00:00",
+      "timestamp": "2026-03-16T17:15:37.582042+00:00",
       "artifact_type": "meta_adaptive_profile",
       "artifact_path": "memory/meta_adaptive_profile.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "live",
-        "snapshot_id": "snap_20260316171405969489"
+        "snapshot_id": "snap_20260316171537571756"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:06.009506+00:00",
+      "timestamp": "2026-03-16T17:15:37.617711+00:00",
       "artifact_type": "generated_rules",
-      "artifact_path": "/tmp/pytest-of-runner/pytest-1/test_mt5_pack3_self_audit_arti0/memory_pack3_audit/generated_rules.json",
+      "artifact_path": "/tmp/pytest-of-runner/pytest-2/test_replay_from_memory_uses_s0/memory/generated_rules.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
         "rule_count": 0,
-        "snapshot_id": "snap_20260316171406004280"
+        "snapshot_id": "snap_20260316171537606056"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:06.013468+00:00",
+      "timestamp": "2026-03-16T17:15:37.621521+00:00",
       "artifact_type": "meta_adaptive_profile",
       "artifact_path": "memory/meta_adaptive_profile.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
-        "snapshot_id": "snap_20260316171406004280"
+        "snapshot_id": "snap_20260316171537606056"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:06.046457+00:00",
+      "timestamp": "2026-03-16T17:15:37.662102+00:00",
       "artifact_type": "generated_rules",
-      "artifact_path": "/tmp/pytest-of-runner/pytest-1/test_mt5_pack3_self_audit_arti0/memory_pack3_audit/generated_rules.json",
+      "artifact_path": "/tmp/pytest-of-runner/pytest-2/test_run_pipeline_persists_con0/memory/generated_rules.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
         "rule_count": 0,
-        "snapshot_id": "snap_20260316171406037832"
+        "snapshot_id": "snap_20260316171537655699"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:06.050344+00:00",
+      "timestamp": "2026-03-16T17:15:37.665803+00:00",
       "artifact_type": "meta_adaptive_profile",
       "artifact_path": "memory/meta_adaptive_profile.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
-        "snapshot_id": "snap_20260316171406037832"
+        "snapshot_id": "snap_20260316171537655699"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:06.080981+00:00",
+      "timestamp": "2026-03-16T17:15:37.700553+00:00",
       "artifact_type": "generated_rules",
-      "artifact_path": "/tmp/pytest-of-runner/pytest-1/test_mt5_pack3_safe_resume_aft0/memory_pack3_resume/generated_rules.json",
+      "artifact_path": "/tmp/pytest-of-runner/pytest-2/test_live_mode_refuses_unsafe_0/memory_live_refusal/generated_rules.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "live",
+        "rule_count": 0,
+        "snapshot_id": "snap_20260316171537693865"
+      }
+    },
+    {
+      "timestamp": "2026-03-16T17:15:37.704394+00:00",
+      "artifact_type": "meta_adaptive_profile",
+      "artifact_path": "memory/meta_adaptive_profile.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "live",
+        "snapshot_id": "snap_20260316171537693865"
+      }
+    },
+    {
+      "timestamp": "2026-03-16T17:15:37.738365+00:00",
+      "artifact_type": "generated_rules",
+      "artifact_path": "/tmp/pytest-of-runner/pytest-2/test_mt5_pack3_self_audit_arti0/memory_pack3_audit/generated_rules.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
         "rule_count": 0,
-        "snapshot_id": "snap_20260316171406075467"
+        "snapshot_id": "snap_20260316171537730091"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:06.085061+00:00",
+      "timestamp": "2026-03-16T17:15:37.742311+00:00",
       "artifact_type": "meta_adaptive_profile",
       "artifact_path": "memory/meta_adaptive_profile.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
-        "snapshot_id": "snap_20260316171406075467"
+        "snapshot_id": "snap_20260316171537730091"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:06.118669+00:00",
+      "timestamp": "2026-03-16T17:15:37.774213+00:00",
       "artifact_type": "generated_rules",
-      "artifact_path": "/tmp/pytest-of-runner/pytest-1/test_mt5_pack3_safe_resume_aft0/memory_pack3_resume/generated_rules.json",
+      "artifact_path": "/tmp/pytest-of-runner/pytest-2/test_mt5_pack3_self_audit_arti0/memory_pack3_audit/generated_rules.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
         "rule_count": 0,
-        "snapshot_id": "snap_20260316171406109688"
+        "snapshot_id": "snap_20260316171537765765"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:06.122929+00:00",
+      "timestamp": "2026-03-16T17:15:37.778037+00:00",
       "artifact_type": "meta_adaptive_profile",
       "artifact_path": "memory/meta_adaptive_profile.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
-        "snapshot_id": "snap_20260316171406109688"
+        "snapshot_id": "snap_20260316171537765765"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:06.162938+00:00",
+      "timestamp": "2026-03-16T17:15:37.806812+00:00",
       "artifact_type": "generated_rules",
-      "artifact_path": "/tmp/pytest-of-runner/pytest-1/test_run_pipeline_persists_con1/memory_execution_artifacts/generated_rules.json",
+      "artifact_path": "/tmp/pytest-of-runner/pytest-2/test_mt5_pack3_safe_resume_aft0/memory_pack3_resume/generated_rules.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
         "rule_count": 0,
-        "snapshot_id": "snap_20260316171406155898"
+        "snapshot_id": "snap_20260316171537801815"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:06.167172+00:00",
+      "timestamp": "2026-03-16T17:15:37.810698+00:00",
       "artifact_type": "meta_adaptive_profile",
       "artifact_path": "memory/meta_adaptive_profile.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
-        "snapshot_id": "snap_20260316171406155898"
+        "snapshot_id": "snap_20260316171537801815"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:06.201759+00:00",
+      "timestamp": "2026-03-16T17:15:37.842928+00:00",
       "artifact_type": "generated_rules",
-      "artifact_path": "/tmp/pytest-of-runner/pytest-1/test_run_pipeline_persists_mac0/memory_macro/generated_rules.json",
+      "artifact_path": "/tmp/pytest-of-runner/pytest-2/test_mt5_pack3_safe_resume_aft0/memory_pack3_resume/generated_rules.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
         "rule_count": 0,
-        "snapshot_id": "snap_20260316171406195054"
+        "snapshot_id": "snap_20260316171537834183"
       }
     },
     {
-      "timestamp": "2026-03-16T17:14:06.205845+00:00",
+      "timestamp": "2026-03-16T17:15:37.846688+00:00",
       "artifact_type": "meta_adaptive_profile",
       "artifact_path": "memory/meta_adaptive_profile.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
-        "snapshot_id": "snap_20260316171406195054"
+        "snapshot_id": "snap_20260316171537834183"
+      }
+    },
+    {
+      "timestamp": "2026-03-16T17:15:37.879186+00:00",
+      "artifact_type": "generated_rules",
+      "artifact_path": "/tmp/pytest-of-runner/pytest-2/test_run_pipeline_persists_con1/memory_execution_artifacts/generated_rules.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "replay",
+        "rule_count": 0,
+        "snapshot_id": "snap_20260316171537872681"
+      }
+    },
+    {
+      "timestamp": "2026-03-16T17:15:37.883023+00:00",
+      "artifact_type": "meta_adaptive_profile",
+      "artifact_path": "memory/meta_adaptive_profile.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "replay",
+        "snapshot_id": "snap_20260316171537872681"
+      }
+    },
+    {
+      "timestamp": "2026-03-16T17:15:37.915225+00:00",
+      "artifact_type": "generated_rules",
+      "artifact_path": "/tmp/pytest-of-runner/pytest-2/test_run_pipeline_persists_mac0/memory_macro/generated_rules.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "replay",
+        "rule_count": 0,
+        "snapshot_id": "snap_20260316171537908748"
+      }
+    },
+    {
+      "timestamp": "2026-03-16T17:15:37.919058+00:00",
+      "artifact_type": "meta_adaptive_profile",
+      "artifact_path": "memory/meta_adaptive_profile.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "replay",
+        "snapshot_id": "snap_20260316171537908748"
       }
     }
   ],
