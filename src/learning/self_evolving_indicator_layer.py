@@ -2522,11 +2522,32 @@ def run_self_evolving_indicator_layer(
         market_state=market_state,
         replay_scope=replay_scope,
     )
+    provisional_unified_market_intelligence = {
+        "unified_field_score": round(
+            float(_detector_reliability_state(detector_generator).get("reliability_score", 0.0) or 0.0),
+            4,
+        ),
+        "confidence_structure": {
+            "composite_confidence": round(
+                float(
+                    autonomous_behavior.get("market_regime_classifier", {}).get("confidence_multiplier", 0.0) or 0.0
+                ),
+                4,
+            ),
+        },
+        "decision_refinements": {
+            "refusal_pause_behavior": {
+                "should_refuse": str(execution_microstructure_engine.get("execution_state", "")) in {"fragile", "degraded"},
+                "should_pause": float(pain_geometry_engine.get("pain_risk_surface", {}).get("current_state_risk", 0.0) or 0.0)
+                >= 0.75,
+            }
+        },
+    }
     intelligence_gap_engine = _intelligence_gap_discovery_engine(
         memory_root=memory_root,
         closed=closed,
         counterfactual_engine=counterfactual_engine,
-        unified_market_intelligence_field={},
+        unified_market_intelligence_field=provisional_unified_market_intelligence,
         pain_geometry_engine=pain_geometry_engine,
         execution_microstructure_engine=execution_microstructure_engine,
     )
@@ -2535,14 +2556,14 @@ def run_self_evolving_indicator_layer(
         closed=closed,
         market_state=market_state,
         counterfactual_engine=counterfactual_engine,
-        unified_market_intelligence_field={},
+        unified_market_intelligence_field=provisional_unified_market_intelligence,
         execution_microstructure_engine=execution_microstructure_engine,
     )
     capability_evolution_ladder = _capability_evolution_governance_ladder(
         memory_root=memory_root,
         intelligence_gap_engine=intelligence_gap_engine,
         synthetic_data_plane_engine=synthetic_data_plane_engine,
-        unified_market_intelligence_field={},
+        unified_market_intelligence_field=provisional_unified_market_intelligence,
         replay_scope=replay_scope,
     )
     discovery_state_tags = _discovery_state_tags(
