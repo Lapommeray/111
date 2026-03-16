@@ -167,6 +167,14 @@ def test_self_suggestion_governor_detects_gaps_and_creates_suggestions(tmp_path:
     assert governor["detected_gaps"]
     assert governor["proposed_improvements"]
     assert governor["implemented_improvements"]
+    first_suggestion = governor["proposed_improvements"][0]
+    assert first_suggestion["failure_context"]["failure_cause"]
+    assert first_suggestion["failure_context"]["session"]
+    assert first_suggestion["session"]
+    assert first_suggestion["regime"]
+    assert "structure_state" in first_suggestion["macro_state"]
+    assert first_suggestion["detector_or_strategy_component"]
+    assert first_suggestion["missing_capability_hypothesis"]
     assert governor["safety_controls"]["direct_live_deployment_blocked"] is True
     assert Path(governor["paths"]["registry"]).exists()
     assert Path(governor["paths"]["governor"]).exists()
@@ -247,3 +255,40 @@ def test_self_suggestion_governor_pruning_and_unresolved_gap_registry(tmp_path: 
     assert "rejected_improvements" in registry
     assert "promoted_improvements" in registry
     assert "repeated_unresolved_gaps" in registry
+
+
+def test_self_suggestion_governor_rejects_vague_suggestions(tmp_path: Path) -> None:
+    trade_outcomes = [
+        {"trade_id": "v1", "status": "closed", "result": "loss", "pnl_points": -0.6, "failure_cause": "unknown", "setup_type": "", "session": ""},
+        {"trade_id": "v2", "status": "closed", "result": "loss", "pnl_points": -0.7, "failure_cause": "unknown", "setup_type": "", "session": ""},
+    ]
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=trade_outcomes,
+        market_state={},
+        replay_scope="focused_replay",
+    )
+    governor = result["self_suggestion_governor"]
+    assert governor["anti_noise_controls"]["vague_rejected"] >= 1
+    assert any(item.get("reason") == "vague_suggestion_rejected" for item in governor["rejected_improvements"])
+
+
+def test_self_suggestion_governor_boosts_priority_for_repeated_specific_failure_cluster(tmp_path: Path) -> None:
+    trade_outcomes = [
+        {"trade_id": "p1", "status": "closed", "result": "loss", "pnl_points": -1.1, "failure_cause": "execution_failure", "setup_type": "breakout", "session": "london", "direction": "BUY"},
+        {"trade_id": "p2", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "execution_failure", "setup_type": "breakout", "session": "london", "direction": "BUY"},
+        {"trade_id": "p3", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "execution_failure", "setup_type": "breakout", "session": "london", "direction": "BUY"},
+        {"trade_id": "p4", "status": "closed", "result": "win", "pnl_points": 1.0, "failure_cause": "none", "setup_type": "reversal", "session": "new_york", "direction": "SELL"},
+    ]
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 1.2, "spread_ratio": 1.1, "slippage_ratio": 1.0},
+        replay_scope="full_replay",
+    )
+    repeated_failure_suggestions = [
+        item for item in result["self_suggestion_governor"]["proposed_improvements"] if item.get("gap_type") == "repeated_failure_pattern"
+    ]
+    assert repeated_failure_suggestions
+    assert all(item["is_repeated_specific_failure_cluster"] is True for item in repeated_failure_suggestions)
+    assert all(item["cluster_specificity_boost"] > 0 for item in repeated_failure_suggestions)

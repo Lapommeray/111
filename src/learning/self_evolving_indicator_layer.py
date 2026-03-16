@@ -587,6 +587,96 @@ def _priority_score(*, expected_usefulness: float, pain_frequency: int, regime_s
     return round(max(0.0, min(1.0, score)), 4)
 
 
+def _macro_state_snapshot(market_state: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "structure_state": str(market_state.get("structure_state", "unknown")),
+        "volatility_ratio": float(market_state.get("volatility_ratio", 1.0)),
+        "spread_ratio": float(market_state.get("spread_ratio", 1.0)),
+        "slippage_ratio": float(market_state.get("slippage_ratio", 1.0)),
+    }
+
+
+def _specific_failure_cluster(closed: list[dict[str, Any]]) -> dict[str, Any]:
+    losses = [item for item in closed if str(item.get("result", "")).lower() == "loss"]
+    clustered: dict[tuple[str, str, str, str], int] = {}
+    for item in losses:
+        key = (
+            str(item.get("failure_cause", "unknown")),
+            str(item.get("setup_type", "unknown")),
+            str(item.get("session", "unknown")),
+            str(item.get("direction", "unknown")).upper(),
+        )
+        clustered[key] = clustered.get(key, 0) + 1
+    if not clustered:
+        return {
+            "failure_cause": "unknown",
+            "setup_type": "unknown",
+            "session": "unknown",
+            "direction": "unknown",
+            "count": 0,
+            "is_repeated_specific_cluster": False,
+        }
+    strongest_key = sorted(clustered.items(), key=lambda entry: (entry[1], entry[0]), reverse=True)[0][0]
+    count = clustered[strongest_key]
+    return {
+        "failure_cause": strongest_key[0],
+        "setup_type": strongest_key[1],
+        "session": strongest_key[2],
+        "direction": strongest_key[3],
+        "count": count,
+        "is_repeated_specific_cluster": count >= 2 and "unknown" not in strongest_key,
+    }
+
+
+def _component_for_gap(gap_type: str) -> str:
+    mapping = {
+        "repeated_failure_pattern": "trade_review_engine",
+        "weak_detector_reliability": "detector_generator",
+        "missing_context_in_losing_trades": "trade_review_engine",
+        "unstable_regime_behavior": "market_regime_classifier",
+        "market_memory_dimension_gap": "market_condition_memory",
+        "execution_logic_gap": "behavior_adjustment_engine",
+        "low_value_noisy_mutations": "strategy_evolution_engine",
+        "survival_rule_gap": "pain_memory_survival_layer",
+    }
+    return mapping.get(gap_type, "self_evolving_indicator_layer")
+
+
+def _missing_capability_hypothesis(*, gap_type: str, gap_detail: str, regime: str, component: str) -> str:
+    return (
+        f"Missing {gap_type} mitigation capability for {gap_detail} in regime {regime} "
+        f"across component {component}"
+    )
+
+
+def _is_vague_suggestion(suggestion: dict[str, Any]) -> bool:
+    required_string_paths = (
+        ("failure_context", "failure_cause"),
+        ("failure_context", "setup_type"),
+        ("failure_context", "session"),
+        ("session",),
+        ("regime",),
+        ("detector_or_strategy_component",),
+        ("missing_capability_hypothesis",),
+    )
+    for path in required_string_paths:
+        value: Any = suggestion
+        for key in path:
+            if not isinstance(value, dict):
+                return True
+            value = value.get(key)
+        text = str(value).strip().lower()
+        if not text or text in {"unknown", "n/a", "none"}:
+            return True
+    macro_state = suggestion.get("macro_state")
+    if not isinstance(macro_state, dict):
+        return True
+    for key in ("structure_state", "volatility_ratio", "spread_ratio", "slippage_ratio"):
+        if key not in macro_state:
+            return True
+    return False
+
+
 def _self_suggestion_governor(
     *,
     memory_root: Path,
@@ -648,6 +738,9 @@ def _self_suggestion_governor(
         return previous_governor
 
     cycle_index = int(previous_registry.get("cycle_index", 0) or 0) + 1
+    regime = str(autonomous_behavior.get("market_regime_classifier", {}).get("regime", "unknown"))
+    macro_state = _macro_state_snapshot(market_state)
+    strongest_failure_cluster = _specific_failure_cluster(closed)
     unresolved_counter: dict[str, int] = {}
     for entry in previous_registry.get("repeated_unresolved_gaps", []):
         if isinstance(entry, dict):
@@ -673,6 +766,8 @@ def _self_suggestion_governor(
     duplicate_suppressed = 0
     pruned_low_value = 0
     cooldown_suppressed = 0
+    vague_rejected = 0
+    vague_rejections: list[dict[str, Any]] = []
     for gap in gaps:
         frequency = int(gap.get("frequency", 1) or 1)
         severity = float(gap.get("severity", 0.5) or 0.5)
@@ -680,25 +775,49 @@ def _self_suggestion_governor(
         regime_sensitivity = 0.8 if "regime" in str(gap.get("gap_type", "")) else 0.5
         execution_impact = 0.85 if "execution" in str(gap.get("gap_type", "")) else 0.45
         survival_impact = 0.85 if "survival" in str(gap.get("gap_type", "")) or "failure" in str(gap.get("gap_type", "")) else 0.5
+        component = _component_for_gap(str(gap.get("gap_type", "")))
+        cluster_specificity_boost = 0.0
+        if str(gap.get("gap_type", "")) == "repeated_failure_pattern" and strongest_failure_cluster["is_repeated_specific_cluster"]:
+            cluster_specificity_boost = round(min(0.2, (strongest_failure_cluster["count"] - 1) * 0.05), 4)
         for template in _suggestion_templates(str(gap.get("gap_type", ""))):
+            base_priority = _priority_score(
+                expected_usefulness=expected_usefulness,
+                pain_frequency=frequency,
+                regime_sensitivity=regime_sensitivity,
+                execution_impact=execution_impact,
+                survival_impact=survival_impact,
+            )
             suggestion = {
                 "cycle_index": cycle_index,
                 "suggestion_type": template["suggestion_type"],
                 "target": template["target"],
                 "gap_type": gap.get("gap_type"),
                 "gap_detail": gap.get("detail"),
+                "failure_context": {
+                    "failure_cause": strongest_failure_cluster["failure_cause"],
+                    "setup_type": strongest_failure_cluster["setup_type"],
+                    "session": strongest_failure_cluster["session"],
+                    "direction": strongest_failure_cluster["direction"],
+                },
+                "session": strongest_failure_cluster["session"],
+                "regime": regime,
+                "macro_state": macro_state,
+                "detector_or_strategy_component": component,
+                "missing_capability_hypothesis": _missing_capability_hypothesis(
+                    gap_type=str(gap.get("gap_type", "unknown")),
+                    gap_detail=str(gap.get("detail", "n/a")),
+                    regime=regime,
+                    component=component,
+                ),
+                "specific_cluster_count": strongest_failure_cluster["count"],
+                "is_repeated_specific_failure_cluster": strongest_failure_cluster["is_repeated_specific_cluster"],
+                "cluster_specificity_boost": cluster_specificity_boost,
                 "expected_usefulness": expected_usefulness,
                 "pain_failure_frequency": frequency,
                 "regime_sensitivity": regime_sensitivity,
                 "execution_impact": execution_impact,
                 "survival_impact": survival_impact,
-                "priority_score": _priority_score(
-                    expected_usefulness=expected_usefulness,
-                    pain_frequency=frequency,
-                    regime_sensitivity=regime_sensitivity,
-                    execution_impact=execution_impact,
-                    survival_impact=survival_impact,
-                ),
+                "priority_score": round(min(1.0, base_priority + cluster_specificity_boost), 4),
                 "governance": {
                     "sandbox_only": True,
                     "live_deployment_allowed": False,
@@ -712,6 +831,17 @@ def _self_suggestion_governor(
             available_cycle = int(cooldowns.get(suggestion["signature"], 0) or 0)
             if cycle_index < available_cycle:
                 cooldown_suppressed += 1
+                continue
+            if _is_vague_suggestion(suggestion):
+                vague_rejected += 1
+                vague_rejections.append(
+                    {
+                        "cycle_index": cycle_index,
+                        "signature": suggestion["signature"],
+                        "gap_type": suggestion["gap_type"],
+                        "reason": "vague_suggestion_rejected",
+                    }
+                )
                 continue
             if suggestion["priority_score"] < min_threshold:
                 pruned_low_value += 1
@@ -777,7 +907,7 @@ def _self_suggestion_governor(
         "cycle_index": cycle_index,
         "proposed_improvements": (previous_registry.get("proposed_improvements", []) + proposed)[-400:],
         "implemented_improvements": (previous_registry.get("implemented_improvements", []) + implemented)[-400:],
-        "rejected_improvements": (previous_registry.get("rejected_improvements", []) + rejected)[-400:],
+        "rejected_improvements": (previous_registry.get("rejected_improvements", []) + rejected + vague_rejections)[-400:],
         "promoted_improvements": (previous_registry.get("promoted_improvements", []) + promoted)[-400:],
         "repeated_unresolved_gaps": repeated_unresolved[-200:],
         "cooldowns": cooldowns,
@@ -791,11 +921,12 @@ def _self_suggestion_governor(
         "proposed_improvements": proposed,
         "implemented_improvements": implemented,
         "promoted_improvements": promoted,
-        "rejected_improvements": rejected,
+        "rejected_improvements": rejected + vague_rejections,
         "anti_noise_controls": {
             "duplicate_suppression": duplicate_suppressed,
             "low_value_pruned": pruned_low_value,
             "cooldown_suppressed": cooldown_suppressed,
+            "vague_rejected": vague_rejected,
             "max_suggestions_per_cycle": max_per_cycle,
             "stricter_thresholds_active": noisy_cluster,
             "priority_threshold": round(min_threshold, 4),
