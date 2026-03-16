@@ -1,0 +1,19 @@
+{
+  "invariants": [
+    {
+      "invariant_name": "gold_vs_dxy_inverse",
+      "stability": 1.0,
+      "observed_strength": -0.35
+    },
+    {
+      "invariant_name": "gold_vs_real_yields_inverse",
+      "stability": 0.95,
+      "observed_strength": -0.3
+    },
+    {
+      "invariant_name": "volatility_breakout_response",
+      "stability": 1.0,
+      "observed_strength": 0.35
+    }
+  ]
+}
