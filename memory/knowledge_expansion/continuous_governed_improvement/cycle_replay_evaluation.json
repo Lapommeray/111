@@ -1068,7 +1068,7 @@
         }
       },
       "self_suggestion_governor": {
-        "cycle_index": 3,
+        "cycle_index": 1,
         "input_signature": {
           "replay_scope": "evaluation_replay",
           "gap_signatures": [
@@ -1076,11 +1076,7 @@
             "weak_detector_reliability::detector_sandbox_failures"
           ],
           "strongest_branch": "mutated_strategy_a",
-          "closed_count": 0,
-          "unified_field_score": 0.458,
-          "unified_confidence": 0.4241,
-          "execution_quality_score": 1.0,
-          "execution_penalty": 0.0
+          "closed_count": 0
         },
         "detected_gaps": [
           {
@@ -1096,15 +1092,254 @@
             "severity": 0.5
           }
         ],
-        "proposed_improvements": [],
-        "implemented_improvements": [],
-        "promoted_improvements": [],
-        "rejected_improvements": [],
+        "proposed_improvements": [
+          {
+            "cycle_index": 1,
+            "suggestion_type": "new_feature_combination",
+            "target": "detector_ensemble_features",
+            "gap_type": "weak_detector_reliability",
+            "gap_detail": "detector_sandbox_failures",
+            "expected_usefulness": 0.95,
+            "pain_failure_frequency": 5,
+            "regime_sensitivity": 0.5,
+            "execution_impact": 0.45,
+            "survival_impact": 0.5,
+            "priority_score": 0.75,
+            "governance": {
+              "sandbox_only": true,
+              "live_deployment_allowed": false,
+              "blind_live_rewrite_blocked": true
+            },
+            "signature": "new_feature_combination::detector_ensemble_features"
+          },
+          {
+            "cycle_index": 1,
+            "suggestion_type": "new_strategy_mutation",
+            "target": "detector_threshold_mutation",
+            "gap_type": "weak_detector_reliability",
+            "gap_detail": "detector_sandbox_failures",
+            "expected_usefulness": 0.95,
+            "pain_failure_frequency": 5,
+            "regime_sensitivity": 0.5,
+            "execution_impact": 0.45,
+            "survival_impact": 0.5,
+            "priority_score": 0.75,
+            "governance": {
+              "sandbox_only": true,
+              "live_deployment_allowed": false,
+              "blind_live_rewrite_blocked": true
+            },
+            "signature": "new_strategy_mutation::detector_threshold_mutation"
+          },
+          {
+            "cycle_index": 1,
+            "suggestion_type": "new_survival_rule",
+            "target": "mutation_noise_filter",
+            "gap_type": "low_value_noisy_mutations",
+            "gap_detail": "mutation_noise_cluster",
+            "expected_usefulness": 0.7,
+            "pain_failure_frequency": 1,
+            "regime_sensitivity": 0.5,
+            "execution_impact": 0.45,
+            "survival_impact": 0.5,
+            "priority_score": 0.5025,
+            "governance": {
+              "sandbox_only": true,
+              "live_deployment_allowed": false,
+              "blind_live_rewrite_blocked": true
+            },
+            "signature": "new_survival_rule::mutation_noise_filter"
+          },
+          {
+            "cycle_index": 1,
+            "suggestion_type": "new_strategy_mutation",
+            "target": "quality_gated_mutation_generator",
+            "gap_type": "low_value_noisy_mutations",
+            "gap_detail": "mutation_noise_cluster",
+            "expected_usefulness": 0.7,
+            "pain_failure_frequency": 1,
+            "regime_sensitivity": 0.5,
+            "execution_impact": 0.45,
+            "survival_impact": 0.5,
+            "priority_score": 0.5025,
+            "governance": {
+              "sandbox_only": true,
+              "live_deployment_allowed": false,
+              "blind_live_rewrite_blocked": true
+            },
+            "signature": "new_strategy_mutation::quality_gated_mutation_generator"
+          }
+        ],
+        "implemented_improvements": [
+          {
+            "suggestion_signature": "new_feature_combination::detector_ensemble_features",
+            "implementation_id": "sandbox_impl_1_1",
+            "sandbox_module_name": "sandbox_detector_ensemble_features",
+            "suggestion_type": "new_feature_combination",
+            "target": "detector_ensemble_features",
+            "replay_test": {
+              "scope": "evaluation_replay",
+              "baseline": "mutated_strategy_a",
+              "comparison": "sandbox_vs_baseline",
+              "score": 0.7575
+            },
+            "governance_decision": "promote",
+            "governance": {
+              "sandbox_only": true,
+              "live_activation_allowed": false,
+              "core_module_deletion_allowed": false,
+              "quarantine_supported": true
+            }
+          },
+          {
+            "suggestion_signature": "new_strategy_mutation::detector_threshold_mutation",
+            "implementation_id": "sandbox_impl_1_2",
+            "sandbox_module_name": "sandbox_detector_threshold_mutation",
+            "suggestion_type": "new_strategy_mutation",
+            "target": "detector_threshold_mutation",
+            "replay_test": {
+              "scope": "evaluation_replay",
+              "baseline": "mutated_strategy_a",
+              "comparison": "sandbox_vs_baseline",
+              "score": 0.7375
+            },
+            "governance_decision": "promote",
+            "governance": {
+              "sandbox_only": true,
+              "live_activation_allowed": false,
+              "core_module_deletion_allowed": false,
+              "quarantine_supported": true
+            }
+          },
+          {
+            "suggestion_signature": "new_survival_rule::mutation_noise_filter",
+            "implementation_id": "sandbox_impl_1_3",
+            "sandbox_module_name": "sandbox_mutation_noise_filter",
+            "suggestion_type": "new_survival_rule",
+            "target": "mutation_noise_filter",
+            "replay_test": {
+              "scope": "evaluation_replay",
+              "baseline": "mutated_strategy_a",
+              "comparison": "sandbox_vs_baseline",
+              "score": 0.47
+            },
+            "governance_decision": "quarantine",
+            "governance": {
+              "sandbox_only": true,
+              "live_activation_allowed": false,
+              "core_module_deletion_allowed": false,
+              "quarantine_supported": true
+            }
+          },
+          {
+            "suggestion_signature": "new_strategy_mutation::quality_gated_mutation_generator",
+            "implementation_id": "sandbox_impl_1_4",
+            "sandbox_module_name": "sandbox_quality_gated_mutation_generator",
+            "suggestion_type": "new_strategy_mutation",
+            "target": "quality_gated_mutation_generator",
+            "replay_test": {
+              "scope": "evaluation_replay",
+              "baseline": "mutated_strategy_a",
+              "comparison": "sandbox_vs_baseline",
+              "score": 0.45
+            },
+            "governance_decision": "quarantine",
+            "governance": {
+              "sandbox_only": true,
+              "live_activation_allowed": false,
+              "core_module_deletion_allowed": false,
+              "quarantine_supported": true
+            }
+          }
+        ],
+        "promoted_improvements": [
+          {
+            "suggestion_signature": "new_feature_combination::detector_ensemble_features",
+            "implementation_id": "sandbox_impl_1_1",
+            "sandbox_module_name": "sandbox_detector_ensemble_features",
+            "suggestion_type": "new_feature_combination",
+            "target": "detector_ensemble_features",
+            "replay_test": {
+              "scope": "evaluation_replay",
+              "baseline": "mutated_strategy_a",
+              "comparison": "sandbox_vs_baseline",
+              "score": 0.7575
+            },
+            "governance_decision": "promote",
+            "governance": {
+              "sandbox_only": true,
+              "live_activation_allowed": false,
+              "core_module_deletion_allowed": false,
+              "quarantine_supported": true
+            }
+          },
+          {
+            "suggestion_signature": "new_strategy_mutation::detector_threshold_mutation",
+            "implementation_id": "sandbox_impl_1_2",
+            "sandbox_module_name": "sandbox_detector_threshold_mutation",
+            "suggestion_type": "new_strategy_mutation",
+            "target": "detector_threshold_mutation",
+            "replay_test": {
+              "scope": "evaluation_replay",
+              "baseline": "mutated_strategy_a",
+              "comparison": "sandbox_vs_baseline",
+              "score": 0.7375
+            },
+            "governance_decision": "promote",
+            "governance": {
+              "sandbox_only": true,
+              "live_activation_allowed": false,
+              "core_module_deletion_allowed": false,
+              "quarantine_supported": true
+            }
+          }
+        ],
+        "rejected_improvements": [
+          {
+            "suggestion_signature": "new_survival_rule::mutation_noise_filter",
+            "implementation_id": "sandbox_impl_1_3",
+            "sandbox_module_name": "sandbox_mutation_noise_filter",
+            "suggestion_type": "new_survival_rule",
+            "target": "mutation_noise_filter",
+            "replay_test": {
+              "scope": "evaluation_replay",
+              "baseline": "mutated_strategy_a",
+              "comparison": "sandbox_vs_baseline",
+              "score": 0.47
+            },
+            "governance_decision": "quarantine",
+            "governance": {
+              "sandbox_only": true,
+              "live_activation_allowed": false,
+              "core_module_deletion_allowed": false,
+              "quarantine_supported": true
+            }
+          },
+          {
+            "suggestion_signature": "new_strategy_mutation::quality_gated_mutation_generator",
+            "implementation_id": "sandbox_impl_1_4",
+            "sandbox_module_name": "sandbox_quality_gated_mutation_generator",
+            "suggestion_type": "new_strategy_mutation",
+            "target": "quality_gated_mutation_generator",
+            "replay_test": {
+              "scope": "evaluation_replay",
+              "baseline": "mutated_strategy_a",
+              "comparison": "sandbox_vs_baseline",
+              "score": 0.45
+            },
+            "governance_decision": "quarantine",
+            "governance": {
+              "sandbox_only": true,
+              "live_activation_allowed": false,
+              "core_module_deletion_allowed": false,
+              "quarantine_supported": true
+            }
+          }
+        ],
         "anti_noise_controls": {
-          "duplicate_suppression": 4,
+          "duplicate_suppression": 0,
           "low_value_pruned": 0,
           "cooldown_suppressed": 0,
-          "vague_rejected": 0,
           "max_suggestions_per_cycle": 6,
           "stricter_thresholds_active": false,
           "priority_threshold": 0.35
@@ -1116,472 +1351,10 @@
           "no_blind_live_self_rewrites": true,
           "stable_core_module_deletion_blocked": true
         },
-        "discovery_state_tags": {
-          "synthetic_feature_state": "active",
-          "negative_space_state": "normal",
-          "invariant_break_state": "stable",
-          "pain_geometry_risk": 0.0,
-          "counterfactual_evaluation": "none",
-          "liquidity_decay_state": "insufficient_data"
-        },
-        "unified_market_intelligence_field": {
-          "unified_field_score": 0.458,
-          "composite_confidence": 0.4241,
-          "refusal_pause_behavior": {
-            "should_refuse": true,
-            "should_pause": false,
-            "refusal_reasons": [
-              "weak_detector_reliability"
-            ],
-            "pause_reasons": []
-          }
-        },
-        "execution_microstructure_intelligence_layer": {
-          "execution_quality_score": 1.0,
-          "execution_penalty": 0.0,
-          "execution_state": "insufficient_data",
-          "recommended_actions": [
-            "maintain_current_execution_controls"
-          ]
-        },
         "paths": {
           "registry": "memory/capability_registry/self_suggestion_registry.json",
           "governor": "memory/capability_registry/self_suggestion_governor.json",
           "history": "memory/capability_registry/self_suggestion_governor_history.json"
-        }
-      },
-      "synthetic_feature_invention_engine": {
-        "feature_candidates": [
-          {
-            "feature_name": "macro_conflict_score",
-            "value": 0.0,
-            "inputs_used": [
-              "dxy_state",
-              "yield_state"
-            ]
-          },
-          {
-            "feature_name": "liquidity_pressure_index",
-            "value": 0.925,
-            "inputs_used": [
-              "spread_ratio",
-              "slippage_ratio",
-              "detector_trigger_count"
-            ]
-          },
-          {
-            "feature_name": "session_fragility_score",
-            "value": 0.5,
-            "inputs_used": [
-              "session_state",
-              "volatility_ratio"
-            ]
-          },
-          {
-            "feature_name": "trap_probability_factor",
-            "value": 0.8,
-            "inputs_used": [
-              "volatility_ratio",
-              "spread_ratio",
-              "dxy_state",
-              "yield_state"
-            ]
-          }
-        ],
-        "feature_performance": [
-          {
-            "feature_name": "macro_conflict_score",
-            "predictive_usefulness": 0.0,
-            "signal_quality_delta": -0.25,
-            "validation": {
-              "scope": "evaluation_replay",
-              "historical_sample_size": 0,
-              "sandbox_only": true,
-              "explainable": true,
-              "testable": true
-            }
-          },
-          {
-            "feature_name": "liquidity_pressure_index",
-            "predictive_usefulness": 0.0925,
-            "signal_quality_delta": -0.1575,
-            "validation": {
-              "scope": "evaluation_replay",
-              "historical_sample_size": 0,
-              "sandbox_only": true,
-              "explainable": true,
-              "testable": true
-            }
-          },
-          {
-            "feature_name": "session_fragility_score",
-            "predictive_usefulness": 0.05,
-            "signal_quality_delta": -0.2,
-            "validation": {
-              "scope": "evaluation_replay",
-              "historical_sample_size": 0,
-              "sandbox_only": true,
-              "explainable": true,
-              "testable": true
-            }
-          },
-          {
-            "feature_name": "trap_probability_factor",
-            "predictive_usefulness": 0.08,
-            "signal_quality_delta": -0.17,
-            "validation": {
-              "scope": "evaluation_replay",
-              "historical_sample_size": 0,
-              "sandbox_only": true,
-              "explainable": true,
-              "testable": true
-            }
-          }
-        ],
-        "synthetic_features": [
-          {
-            "feature_name": "liquidity_pressure_index",
-            "value": 0.925,
-            "inputs_used": [
-              "spread_ratio",
-              "slippage_ratio",
-              "detector_trigger_count"
-            ],
-            "predictive_usefulness": 0.0925,
-            "signal_quality_delta": -0.1575,
-            "validation": {
-              "scope": "evaluation_replay",
-              "historical_sample_size": 0,
-              "sandbox_only": true,
-              "explainable": true,
-              "testable": true
-            }
-          },
-          {
-            "feature_name": "trap_probability_factor",
-            "value": 0.8,
-            "inputs_used": [
-              "volatility_ratio",
-              "spread_ratio",
-              "dxy_state",
-              "yield_state"
-            ],
-            "predictive_usefulness": 0.08,
-            "signal_quality_delta": -0.17,
-            "validation": {
-              "scope": "evaluation_replay",
-              "historical_sample_size": 0,
-              "sandbox_only": true,
-              "explainable": true,
-              "testable": true
-            }
-          }
-        ],
-        "pruned_feature_count": 2,
-        "paths": {
-          "synthetic_features": "memory/synthetic_features/synthetic_features_latest.json",
-          "feature_candidates": "memory/feature_candidates/synthetic_feature_candidates.json",
-          "feature_performance": "memory/feature_performance/synthetic_feature_performance.json"
-        }
-      },
-      "negative_space_pattern_recognition": {
-        "signal": {
-          "negative_space_signal": false,
-          "expectation_model": {
-            "context": "baseline",
-            "expected_direction": "flat",
-            "expected_distribution_center": 0.0
-          },
-          "actual_behavior": {
-            "direction": "flat",
-            "pnl_points": 0.0
-          },
-          "deviation_score": 0.0,
-          "validation": {
-            "scope": "evaluation_replay",
-            "sandbox_only": true,
-            "validation_passed": false
-          }
-        },
-        "paths": {
-          "latest": "memory/negative_space_signals/negative_space_signal_latest.json",
-          "history": "memory/negative_space_signals/negative_space_history.json"
-        }
-      },
-      "temporal_invariance_break_detection": {
-        "invariant_break_events": [
-          {
-            "invariant_name": "gold_vs_dxy_inverse",
-            "sign_flip": false,
-            "stability": 1.0,
-            "previous_stability": 0.8,
-            "invariant_break": false,
-            "confidence_multiplier": 1.0,
-            "trigger_deeper_analysis": false,
-            "validation": {
-              "scope": "evaluation_replay",
-              "sandbox_only": true
-            }
-          },
-          {
-            "invariant_name": "gold_vs_real_yields_inverse",
-            "sign_flip": false,
-            "stability": 0.95,
-            "previous_stability": 0.8,
-            "invariant_break": false,
-            "confidence_multiplier": 1.0,
-            "trigger_deeper_analysis": false,
-            "validation": {
-              "scope": "evaluation_replay",
-              "sandbox_only": true
-            }
-          },
-          {
-            "invariant_name": "volatility_breakout_response",
-            "sign_flip": false,
-            "stability": 1.0,
-            "previous_stability": 0.8,
-            "invariant_break": false,
-            "confidence_multiplier": 1.0,
-            "trigger_deeper_analysis": false,
-            "validation": {
-              "scope": "evaluation_replay",
-              "sandbox_only": true
-            }
-          }
-        ],
-        "paths": {
-          "events": "memory/invariant_break_events/invariant_break_events_latest.json",
-          "models": "memory/invariant_break_events/invariant_models.json"
-        }
-      },
-      "pain_geometry_fields": {
-        "loss_coordinates": [],
-        "pain_risk_surface": {
-          "current_state_risk": 0.0,
-          "sample_count": 0,
-          "method": "gaussian_kde_proxy"
-        },
-        "paths": {
-          "coordinates": "memory/pain_geometry/loss_coordinates.json",
-          "surface": "memory/pain_geometry/pain_risk_surface.json"
-        }
-      },
-      "counterfactual_trade_engine": {
-        "counterfactual_evaluations": [],
-        "paths": {
-          "latest": "memory/counterfactual_results/counterfactual_latest.json",
-          "history": "memory/counterfactual_results/counterfactual_history.json"
-        }
-      },
-      "fractal_liquidity_decay_functions": {
-        "liquidity_decay_models": [],
-        "path": "memory/liquidity_decay_models/liquidity_decay_latest.json"
-      },
-      "execution_microstructure_intelligence_layer": {
-        "execution_quality_score": 1.0,
-        "execution_confidence": 0.35,
-        "execution_state": "insufficient_data",
-        "slippage_state": "normal",
-        "spread_state": "normal",
-        "fill_delay_state": "normal",
-        "partial_fill_state": "normal",
-        "failure_cluster_risk": 0.0,
-        "entry_timing_degradation": 0.0,
-        "execution_penalty": 0.0,
-        "should_reduce_size": false,
-        "should_delay_entry": false,
-        "should_refuse_trade": false,
-        "recommended_actions": [
-          "maintain_current_execution_controls"
-        ],
-        "governance": {
-          "sandbox_only": true,
-          "no_blind_live_self_rewrites": true,
-          "replay_validation_required": true,
-          "direct_live_override_allowed": false
-        },
-        "paths": {
-          "latest": "memory/execution_microstructure/execution_microstructure_latest.json",
-          "history": "memory/execution_microstructure/execution_microstructure_history.json",
-          "failure_clusters": "memory/execution_microstructure/execution_failure_clusters.json",
-          "quality_baselines": "memory/execution_microstructure/execution_quality_baselines.json",
-          "entry_timing_degradation": "memory/execution_microstructure/entry_timing_degradation.json"
-        }
-      },
-      "recursive_self_modeling": {
-        "configuration_evaluations": [
-          {
-            "config_id": "cfg_balanced",
-            "detector_set": "default+negative_space",
-            "feature_set": "core+synthetic",
-            "risk_behavior": "adaptive",
-            "performance_stability": 0.7,
-            "discovery_potential": 0.64,
-            "regime_adaptability": 0.6,
-            "learning_efficiency": 0.65,
-            "long_term_improvement_score": 0.655,
-            "validation": {
-              "scope": "evaluation_replay",
-              "sandbox_only": true
-            }
-          },
-          {
-            "config_id": "cfg_survival",
-            "detector_set": "survival_priority",
-            "feature_set": "core+pain_geometry",
-            "risk_behavior": "defensive",
-            "performance_stability": 0.66,
-            "discovery_potential": 0.58,
-            "regime_adaptability": 0.6,
-            "learning_efficiency": 0.65,
-            "long_term_improvement_score": 0.626,
-            "validation": {
-              "scope": "evaluation_replay",
-              "sandbox_only": true
-            }
-          },
-          {
-            "config_id": "cfg_discovery",
-            "detector_set": "expanded",
-            "feature_set": "core+synthetic+counterfactual",
-            "risk_behavior": "exploratory",
-            "performance_stability": 0.62,
-            "discovery_potential": 0.52,
-            "regime_adaptability": 0.6,
-            "learning_efficiency": 0.65,
-            "long_term_improvement_score": 0.597,
-            "validation": {
-              "scope": "evaluation_replay",
-              "sandbox_only": true
-            }
-          }
-        ],
-        "selected_configuration": {
-          "config_id": "cfg_balanced",
-          "detector_set": "default+negative_space",
-          "feature_set": "core+synthetic",
-          "risk_behavior": "adaptive",
-          "performance_stability": 0.7,
-          "discovery_potential": 0.64,
-          "regime_adaptability": 0.6,
-          "learning_efficiency": 0.65,
-          "long_term_improvement_score": 0.655,
-          "validation": {
-            "scope": "evaluation_replay",
-            "sandbox_only": true
-          }
-        },
-        "governance": {
-          "sandbox_only": true,
-          "direct_live_self_rewrite_allowed": false,
-          "promotion_requires_governance": true
-        },
-        "execution_microstructure_assessment": {
-          "execution_quality_score": 1.0,
-          "execution_penalty": 0.0,
-          "failure_cluster_risk": 0.0
-        },
-        "path": "memory/self_modeling/self_modeling_latest.json"
-      },
-      "discovery_state_tags": {
-        "synthetic_feature_state": "active",
-        "negative_space_state": "normal",
-        "invariant_break_state": "stable",
-        "pain_geometry_risk": 0.0,
-        "counterfactual_evaluation": "none",
-        "liquidity_decay_state": "insufficient_data"
-      },
-      "unified_market_intelligence_field": {
-        "components": {
-          "macro_state": {
-            "session_state": "unknown",
-            "structure_state": "range",
-            "volatility_ratio": 1.0,
-            "spread_ratio": 1.0,
-            "dxy_state": "unknown",
-            "yield_state": "unknown"
-          },
-          "regime_state": "range",
-          "detector_reliability": {
-            "state": "weak",
-            "reliability_score": 0.0,
-            "passed_count": 0,
-            "failed_count": 5,
-            "candidate_count": 5
-          },
-          "synthetic_feature_state": {
-            "state": "active",
-            "feature_count": 2
-          },
-          "negative_space_state": {
-            "state": "normal",
-            "deviation_score": 0.0
-          },
-          "invariant_break_state": {
-            "state": "stable",
-            "break_count": 0
-          },
-          "pain_geometry_risk": {
-            "current_state_risk": 0.0
-          },
-          "counterfactual_evaluation": {
-            "state": "none",
-            "edge_ratio": 0.0
-          },
-          "liquidity_decay_state": {
-            "state": "resilient",
-            "avg_vulnerability": 0.0,
-            "model_count": 0
-          },
-          "execution_microstructure_state": {
-            "state": "insufficient_data",
-            "execution_quality_score": 1.0,
-            "execution_penalty": 0.0,
-            "failure_cluster_risk": 0.0
-          }
-        },
-        "unified_field_score": 0.458,
-        "confidence_structure": {
-          "regime_confidence": 0.95,
-          "detector_confidence": 0.0,
-          "counterfactual_confidence": 0.0,
-          "composite_confidence": 0.4241,
-          "confidence_band": "low"
-        },
-        "decision_refinements": {
-          "signal_confidence": {
-            "base": 0.475,
-            "refined": 0.4306,
-            "multiplier": 0.9696
-          },
-          "risk_sizing": {
-            "base": 0.85,
-            "refined": 0.8588,
-            "multiplier": 1.0103
-          },
-          "refusal_pause_behavior": {
-            "should_refuse": true,
-            "should_pause": false,
-            "refusal_reasons": [
-              "weak_detector_reliability"
-            ],
-            "pause_reasons": []
-          },
-          "strategy_selection": {
-            "mode": "defensive",
-            "selected_branch_id": "mutated_strategy_a",
-            "default_branch_id": "mutated_strategy_a"
-          }
-        },
-        "governance": {
-          "sandbox_only": true,
-          "live_protection_preserved": true,
-          "direct_live_override_allowed": false
-        },
-        "paths": {
-          "latest": "memory/market_intelligence/unified_market_intelligence_latest.json",
-          "history": "memory/market_intelligence/unified_market_intelligence_history.json"
         }
       }
     },
@@ -1602,7 +1375,7 @@
       }
     },
     "self_suggestion_governor": {
-      "cycle_index": 3,
+      "cycle_index": 1,
       "input_signature": {
         "replay_scope": "evaluation_replay",
         "gap_signatures": [
@@ -1610,11 +1383,7 @@
           "weak_detector_reliability::detector_sandbox_failures"
         ],
         "strongest_branch": "mutated_strategy_a",
-        "closed_count": 0,
-        "unified_field_score": 0.458,
-        "unified_confidence": 0.4241,
-        "execution_quality_score": 1.0,
-        "execution_penalty": 0.0
+        "closed_count": 0
       },
       "detected_gaps": [
         {
@@ -1630,15 +1399,254 @@
           "severity": 0.5
         }
       ],
-      "proposed_improvements": [],
-      "implemented_improvements": [],
-      "promoted_improvements": [],
-      "rejected_improvements": [],
+      "proposed_improvements": [
+        {
+          "cycle_index": 1,
+          "suggestion_type": "new_feature_combination",
+          "target": "detector_ensemble_features",
+          "gap_type": "weak_detector_reliability",
+          "gap_detail": "detector_sandbox_failures",
+          "expected_usefulness": 0.95,
+          "pain_failure_frequency": 5,
+          "regime_sensitivity": 0.5,
+          "execution_impact": 0.45,
+          "survival_impact": 0.5,
+          "priority_score": 0.75,
+          "governance": {
+            "sandbox_only": true,
+            "live_deployment_allowed": false,
+            "blind_live_rewrite_blocked": true
+          },
+          "signature": "new_feature_combination::detector_ensemble_features"
+        },
+        {
+          "cycle_index": 1,
+          "suggestion_type": "new_strategy_mutation",
+          "target": "detector_threshold_mutation",
+          "gap_type": "weak_detector_reliability",
+          "gap_detail": "detector_sandbox_failures",
+          "expected_usefulness": 0.95,
+          "pain_failure_frequency": 5,
+          "regime_sensitivity": 0.5,
+          "execution_impact": 0.45,
+          "survival_impact": 0.5,
+          "priority_score": 0.75,
+          "governance": {
+            "sandbox_only": true,
+            "live_deployment_allowed": false,
+            "blind_live_rewrite_blocked": true
+          },
+          "signature": "new_strategy_mutation::detector_threshold_mutation"
+        },
+        {
+          "cycle_index": 1,
+          "suggestion_type": "new_survival_rule",
+          "target": "mutation_noise_filter",
+          "gap_type": "low_value_noisy_mutations",
+          "gap_detail": "mutation_noise_cluster",
+          "expected_usefulness": 0.7,
+          "pain_failure_frequency": 1,
+          "regime_sensitivity": 0.5,
+          "execution_impact": 0.45,
+          "survival_impact": 0.5,
+          "priority_score": 0.5025,
+          "governance": {
+            "sandbox_only": true,
+            "live_deployment_allowed": false,
+            "blind_live_rewrite_blocked": true
+          },
+          "signature": "new_survival_rule::mutation_noise_filter"
+        },
+        {
+          "cycle_index": 1,
+          "suggestion_type": "new_strategy_mutation",
+          "target": "quality_gated_mutation_generator",
+          "gap_type": "low_value_noisy_mutations",
+          "gap_detail": "mutation_noise_cluster",
+          "expected_usefulness": 0.7,
+          "pain_failure_frequency": 1,
+          "regime_sensitivity": 0.5,
+          "execution_impact": 0.45,
+          "survival_impact": 0.5,
+          "priority_score": 0.5025,
+          "governance": {
+            "sandbox_only": true,
+            "live_deployment_allowed": false,
+            "blind_live_rewrite_blocked": true
+          },
+          "signature": "new_strategy_mutation::quality_gated_mutation_generator"
+        }
+      ],
+      "implemented_improvements": [
+        {
+          "suggestion_signature": "new_feature_combination::detector_ensemble_features",
+          "implementation_id": "sandbox_impl_1_1",
+          "sandbox_module_name": "sandbox_detector_ensemble_features",
+          "suggestion_type": "new_feature_combination",
+          "target": "detector_ensemble_features",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "baseline": "mutated_strategy_a",
+            "comparison": "sandbox_vs_baseline",
+            "score": 0.7575
+          },
+          "governance_decision": "promote",
+          "governance": {
+            "sandbox_only": true,
+            "live_activation_allowed": false,
+            "core_module_deletion_allowed": false,
+            "quarantine_supported": true
+          }
+        },
+        {
+          "suggestion_signature": "new_strategy_mutation::detector_threshold_mutation",
+          "implementation_id": "sandbox_impl_1_2",
+          "sandbox_module_name": "sandbox_detector_threshold_mutation",
+          "suggestion_type": "new_strategy_mutation",
+          "target": "detector_threshold_mutation",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "baseline": "mutated_strategy_a",
+            "comparison": "sandbox_vs_baseline",
+            "score": 0.7375
+          },
+          "governance_decision": "promote",
+          "governance": {
+            "sandbox_only": true,
+            "live_activation_allowed": false,
+            "core_module_deletion_allowed": false,
+            "quarantine_supported": true
+          }
+        },
+        {
+          "suggestion_signature": "new_survival_rule::mutation_noise_filter",
+          "implementation_id": "sandbox_impl_1_3",
+          "sandbox_module_name": "sandbox_mutation_noise_filter",
+          "suggestion_type": "new_survival_rule",
+          "target": "mutation_noise_filter",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "baseline": "mutated_strategy_a",
+            "comparison": "sandbox_vs_baseline",
+            "score": 0.47
+          },
+          "governance_decision": "quarantine",
+          "governance": {
+            "sandbox_only": true,
+            "live_activation_allowed": false,
+            "core_module_deletion_allowed": false,
+            "quarantine_supported": true
+          }
+        },
+        {
+          "suggestion_signature": "new_strategy_mutation::quality_gated_mutation_generator",
+          "implementation_id": "sandbox_impl_1_4",
+          "sandbox_module_name": "sandbox_quality_gated_mutation_generator",
+          "suggestion_type": "new_strategy_mutation",
+          "target": "quality_gated_mutation_generator",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "baseline": "mutated_strategy_a",
+            "comparison": "sandbox_vs_baseline",
+            "score": 0.45
+          },
+          "governance_decision": "quarantine",
+          "governance": {
+            "sandbox_only": true,
+            "live_activation_allowed": false,
+            "core_module_deletion_allowed": false,
+            "quarantine_supported": true
+          }
+        }
+      ],
+      "promoted_improvements": [
+        {
+          "suggestion_signature": "new_feature_combination::detector_ensemble_features",
+          "implementation_id": "sandbox_impl_1_1",
+          "sandbox_module_name": "sandbox_detector_ensemble_features",
+          "suggestion_type": "new_feature_combination",
+          "target": "detector_ensemble_features",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "baseline": "mutated_strategy_a",
+            "comparison": "sandbox_vs_baseline",
+            "score": 0.7575
+          },
+          "governance_decision": "promote",
+          "governance": {
+            "sandbox_only": true,
+            "live_activation_allowed": false,
+            "core_module_deletion_allowed": false,
+            "quarantine_supported": true
+          }
+        },
+        {
+          "suggestion_signature": "new_strategy_mutation::detector_threshold_mutation",
+          "implementation_id": "sandbox_impl_1_2",
+          "sandbox_module_name": "sandbox_detector_threshold_mutation",
+          "suggestion_type": "new_strategy_mutation",
+          "target": "detector_threshold_mutation",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "baseline": "mutated_strategy_a",
+            "comparison": "sandbox_vs_baseline",
+            "score": 0.7375
+          },
+          "governance_decision": "promote",
+          "governance": {
+            "sandbox_only": true,
+            "live_activation_allowed": false,
+            "core_module_deletion_allowed": false,
+            "quarantine_supported": true
+          }
+        }
+      ],
+      "rejected_improvements": [
+        {
+          "suggestion_signature": "new_survival_rule::mutation_noise_filter",
+          "implementation_id": "sandbox_impl_1_3",
+          "sandbox_module_name": "sandbox_mutation_noise_filter",
+          "suggestion_type": "new_survival_rule",
+          "target": "mutation_noise_filter",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "baseline": "mutated_strategy_a",
+            "comparison": "sandbox_vs_baseline",
+            "score": 0.47
+          },
+          "governance_decision": "quarantine",
+          "governance": {
+            "sandbox_only": true,
+            "live_activation_allowed": false,
+            "core_module_deletion_allowed": false,
+            "quarantine_supported": true
+          }
+        },
+        {
+          "suggestion_signature": "new_strategy_mutation::quality_gated_mutation_generator",
+          "implementation_id": "sandbox_impl_1_4",
+          "sandbox_module_name": "sandbox_quality_gated_mutation_generator",
+          "suggestion_type": "new_strategy_mutation",
+          "target": "quality_gated_mutation_generator",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "baseline": "mutated_strategy_a",
+            "comparison": "sandbox_vs_baseline",
+            "score": 0.45
+          },
+          "governance_decision": "quarantine",
+          "governance": {
+            "sandbox_only": true,
+            "live_activation_allowed": false,
+            "core_module_deletion_allowed": false,
+            "quarantine_supported": true
+          }
+        }
+      ],
       "anti_noise_controls": {
-        "duplicate_suppression": 4,
+        "duplicate_suppression": 0,
         "low_value_pruned": 0,
         "cooldown_suppressed": 0,
-        "vague_rejected": 0,
         "max_suggestions_per_cycle": 6,
         "stricter_thresholds_active": false,
         "priority_threshold": 0.35
@@ -1650,472 +1658,10 @@
         "no_blind_live_self_rewrites": true,
         "stable_core_module_deletion_blocked": true
       },
-      "discovery_state_tags": {
-        "synthetic_feature_state": "active",
-        "negative_space_state": "normal",
-        "invariant_break_state": "stable",
-        "pain_geometry_risk": 0.0,
-        "counterfactual_evaluation": "none",
-        "liquidity_decay_state": "insufficient_data"
-      },
-      "unified_market_intelligence_field": {
-        "unified_field_score": 0.458,
-        "composite_confidence": 0.4241,
-        "refusal_pause_behavior": {
-          "should_refuse": true,
-          "should_pause": false,
-          "refusal_reasons": [
-            "weak_detector_reliability"
-          ],
-          "pause_reasons": []
-        }
-      },
-      "execution_microstructure_intelligence_layer": {
-        "execution_quality_score": 1.0,
-        "execution_penalty": 0.0,
-        "execution_state": "insufficient_data",
-        "recommended_actions": [
-          "maintain_current_execution_controls"
-        ]
-      },
       "paths": {
         "registry": "memory/capability_registry/self_suggestion_registry.json",
         "governor": "memory/capability_registry/self_suggestion_governor.json",
         "history": "memory/capability_registry/self_suggestion_governor_history.json"
-      }
-    },
-    "synthetic_feature_invention_engine": {
-      "feature_candidates": [
-        {
-          "feature_name": "macro_conflict_score",
-          "value": 0.0,
-          "inputs_used": [
-            "dxy_state",
-            "yield_state"
-          ]
-        },
-        {
-          "feature_name": "liquidity_pressure_index",
-          "value": 0.925,
-          "inputs_used": [
-            "spread_ratio",
-            "slippage_ratio",
-            "detector_trigger_count"
-          ]
-        },
-        {
-          "feature_name": "session_fragility_score",
-          "value": 0.5,
-          "inputs_used": [
-            "session_state",
-            "volatility_ratio"
-          ]
-        },
-        {
-          "feature_name": "trap_probability_factor",
-          "value": 0.8,
-          "inputs_used": [
-            "volatility_ratio",
-            "spread_ratio",
-            "dxy_state",
-            "yield_state"
-          ]
-        }
-      ],
-      "feature_performance": [
-        {
-          "feature_name": "macro_conflict_score",
-          "predictive_usefulness": 0.0,
-          "signal_quality_delta": -0.25,
-          "validation": {
-            "scope": "evaluation_replay",
-            "historical_sample_size": 0,
-            "sandbox_only": true,
-            "explainable": true,
-            "testable": true
-          }
-        },
-        {
-          "feature_name": "liquidity_pressure_index",
-          "predictive_usefulness": 0.0925,
-          "signal_quality_delta": -0.1575,
-          "validation": {
-            "scope": "evaluation_replay",
-            "historical_sample_size": 0,
-            "sandbox_only": true,
-            "explainable": true,
-            "testable": true
-          }
-        },
-        {
-          "feature_name": "session_fragility_score",
-          "predictive_usefulness": 0.05,
-          "signal_quality_delta": -0.2,
-          "validation": {
-            "scope": "evaluation_replay",
-            "historical_sample_size": 0,
-            "sandbox_only": true,
-            "explainable": true,
-            "testable": true
-          }
-        },
-        {
-          "feature_name": "trap_probability_factor",
-          "predictive_usefulness": 0.08,
-          "signal_quality_delta": -0.17,
-          "validation": {
-            "scope": "evaluation_replay",
-            "historical_sample_size": 0,
-            "sandbox_only": true,
-            "explainable": true,
-            "testable": true
-          }
-        }
-      ],
-      "synthetic_features": [
-        {
-          "feature_name": "liquidity_pressure_index",
-          "value": 0.925,
-          "inputs_used": [
-            "spread_ratio",
-            "slippage_ratio",
-            "detector_trigger_count"
-          ],
-          "predictive_usefulness": 0.0925,
-          "signal_quality_delta": -0.1575,
-          "validation": {
-            "scope": "evaluation_replay",
-            "historical_sample_size": 0,
-            "sandbox_only": true,
-            "explainable": true,
-            "testable": true
-          }
-        },
-        {
-          "feature_name": "trap_probability_factor",
-          "value": 0.8,
-          "inputs_used": [
-            "volatility_ratio",
-            "spread_ratio",
-            "dxy_state",
-            "yield_state"
-          ],
-          "predictive_usefulness": 0.08,
-          "signal_quality_delta": -0.17,
-          "validation": {
-            "scope": "evaluation_replay",
-            "historical_sample_size": 0,
-            "sandbox_only": true,
-            "explainable": true,
-            "testable": true
-          }
-        }
-      ],
-      "pruned_feature_count": 2,
-      "paths": {
-        "synthetic_features": "memory/synthetic_features/synthetic_features_latest.json",
-        "feature_candidates": "memory/feature_candidates/synthetic_feature_candidates.json",
-        "feature_performance": "memory/feature_performance/synthetic_feature_performance.json"
-      }
-    },
-    "negative_space_pattern_recognition": {
-      "signal": {
-        "negative_space_signal": false,
-        "expectation_model": {
-          "context": "baseline",
-          "expected_direction": "flat",
-          "expected_distribution_center": 0.0
-        },
-        "actual_behavior": {
-          "direction": "flat",
-          "pnl_points": 0.0
-        },
-        "deviation_score": 0.0,
-        "validation": {
-          "scope": "evaluation_replay",
-          "sandbox_only": true,
-          "validation_passed": false
-        }
-      },
-      "paths": {
-        "latest": "memory/negative_space_signals/negative_space_signal_latest.json",
-        "history": "memory/negative_space_signals/negative_space_history.json"
-      }
-    },
-    "temporal_invariance_break_detection": {
-      "invariant_break_events": [
-        {
-          "invariant_name": "gold_vs_dxy_inverse",
-          "sign_flip": false,
-          "stability": 1.0,
-          "previous_stability": 0.8,
-          "invariant_break": false,
-          "confidence_multiplier": 1.0,
-          "trigger_deeper_analysis": false,
-          "validation": {
-            "scope": "evaluation_replay",
-            "sandbox_only": true
-          }
-        },
-        {
-          "invariant_name": "gold_vs_real_yields_inverse",
-          "sign_flip": false,
-          "stability": 0.95,
-          "previous_stability": 0.8,
-          "invariant_break": false,
-          "confidence_multiplier": 1.0,
-          "trigger_deeper_analysis": false,
-          "validation": {
-            "scope": "evaluation_replay",
-            "sandbox_only": true
-          }
-        },
-        {
-          "invariant_name": "volatility_breakout_response",
-          "sign_flip": false,
-          "stability": 1.0,
-          "previous_stability": 0.8,
-          "invariant_break": false,
-          "confidence_multiplier": 1.0,
-          "trigger_deeper_analysis": false,
-          "validation": {
-            "scope": "evaluation_replay",
-            "sandbox_only": true
-          }
-        }
-      ],
-      "paths": {
-        "events": "memory/invariant_break_events/invariant_break_events_latest.json",
-        "models": "memory/invariant_break_events/invariant_models.json"
-      }
-    },
-    "pain_geometry_fields": {
-      "loss_coordinates": [],
-      "pain_risk_surface": {
-        "current_state_risk": 0.0,
-        "sample_count": 0,
-        "method": "gaussian_kde_proxy"
-      },
-      "paths": {
-        "coordinates": "memory/pain_geometry/loss_coordinates.json",
-        "surface": "memory/pain_geometry/pain_risk_surface.json"
-      }
-    },
-    "counterfactual_trade_engine": {
-      "counterfactual_evaluations": [],
-      "paths": {
-        "latest": "memory/counterfactual_results/counterfactual_latest.json",
-        "history": "memory/counterfactual_results/counterfactual_history.json"
-      }
-    },
-    "fractal_liquidity_decay_functions": {
-      "liquidity_decay_models": [],
-      "path": "memory/liquidity_decay_models/liquidity_decay_latest.json"
-    },
-    "execution_microstructure_intelligence_layer": {
-      "execution_quality_score": 1.0,
-      "execution_confidence": 0.35,
-      "execution_state": "insufficient_data",
-      "slippage_state": "normal",
-      "spread_state": "normal",
-      "fill_delay_state": "normal",
-      "partial_fill_state": "normal",
-      "failure_cluster_risk": 0.0,
-      "entry_timing_degradation": 0.0,
-      "execution_penalty": 0.0,
-      "should_reduce_size": false,
-      "should_delay_entry": false,
-      "should_refuse_trade": false,
-      "recommended_actions": [
-        "maintain_current_execution_controls"
-      ],
-      "governance": {
-        "sandbox_only": true,
-        "no_blind_live_self_rewrites": true,
-        "replay_validation_required": true,
-        "direct_live_override_allowed": false
-      },
-      "paths": {
-        "latest": "memory/execution_microstructure/execution_microstructure_latest.json",
-        "history": "memory/execution_microstructure/execution_microstructure_history.json",
-        "failure_clusters": "memory/execution_microstructure/execution_failure_clusters.json",
-        "quality_baselines": "memory/execution_microstructure/execution_quality_baselines.json",
-        "entry_timing_degradation": "memory/execution_microstructure/entry_timing_degradation.json"
-      }
-    },
-    "recursive_self_modeling": {
-      "configuration_evaluations": [
-        {
-          "config_id": "cfg_balanced",
-          "detector_set": "default+negative_space",
-          "feature_set": "core+synthetic",
-          "risk_behavior": "adaptive",
-          "performance_stability": 0.7,
-          "discovery_potential": 0.64,
-          "regime_adaptability": 0.6,
-          "learning_efficiency": 0.65,
-          "long_term_improvement_score": 0.655,
-          "validation": {
-            "scope": "evaluation_replay",
-            "sandbox_only": true
-          }
-        },
-        {
-          "config_id": "cfg_survival",
-          "detector_set": "survival_priority",
-          "feature_set": "core+pain_geometry",
-          "risk_behavior": "defensive",
-          "performance_stability": 0.66,
-          "discovery_potential": 0.58,
-          "regime_adaptability": 0.6,
-          "learning_efficiency": 0.65,
-          "long_term_improvement_score": 0.626,
-          "validation": {
-            "scope": "evaluation_replay",
-            "sandbox_only": true
-          }
-        },
-        {
-          "config_id": "cfg_discovery",
-          "detector_set": "expanded",
-          "feature_set": "core+synthetic+counterfactual",
-          "risk_behavior": "exploratory",
-          "performance_stability": 0.62,
-          "discovery_potential": 0.52,
-          "regime_adaptability": 0.6,
-          "learning_efficiency": 0.65,
-          "long_term_improvement_score": 0.597,
-          "validation": {
-            "scope": "evaluation_replay",
-            "sandbox_only": true
-          }
-        }
-      ],
-      "selected_configuration": {
-        "config_id": "cfg_balanced",
-        "detector_set": "default+negative_space",
-        "feature_set": "core+synthetic",
-        "risk_behavior": "adaptive",
-        "performance_stability": 0.7,
-        "discovery_potential": 0.64,
-        "regime_adaptability": 0.6,
-        "learning_efficiency": 0.65,
-        "long_term_improvement_score": 0.655,
-        "validation": {
-          "scope": "evaluation_replay",
-          "sandbox_only": true
-        }
-      },
-      "governance": {
-        "sandbox_only": true,
-        "direct_live_self_rewrite_allowed": false,
-        "promotion_requires_governance": true
-      },
-      "execution_microstructure_assessment": {
-        "execution_quality_score": 1.0,
-        "execution_penalty": 0.0,
-        "failure_cluster_risk": 0.0
-      },
-      "path": "memory/self_modeling/self_modeling_latest.json"
-    },
-    "discovery_state_tags": {
-      "synthetic_feature_state": "active",
-      "negative_space_state": "normal",
-      "invariant_break_state": "stable",
-      "pain_geometry_risk": 0.0,
-      "counterfactual_evaluation": "none",
-      "liquidity_decay_state": "insufficient_data"
-    },
-    "unified_market_intelligence_field": {
-      "components": {
-        "macro_state": {
-          "session_state": "unknown",
-          "structure_state": "range",
-          "volatility_ratio": 1.0,
-          "spread_ratio": 1.0,
-          "dxy_state": "unknown",
-          "yield_state": "unknown"
-        },
-        "regime_state": "range",
-        "detector_reliability": {
-          "state": "weak",
-          "reliability_score": 0.0,
-          "passed_count": 0,
-          "failed_count": 5,
-          "candidate_count": 5
-        },
-        "synthetic_feature_state": {
-          "state": "active",
-          "feature_count": 2
-        },
-        "negative_space_state": {
-          "state": "normal",
-          "deviation_score": 0.0
-        },
-        "invariant_break_state": {
-          "state": "stable",
-          "break_count": 0
-        },
-        "pain_geometry_risk": {
-          "current_state_risk": 0.0
-        },
-        "counterfactual_evaluation": {
-          "state": "none",
-          "edge_ratio": 0.0
-        },
-        "liquidity_decay_state": {
-          "state": "resilient",
-          "avg_vulnerability": 0.0,
-          "model_count": 0
-        },
-        "execution_microstructure_state": {
-          "state": "insufficient_data",
-          "execution_quality_score": 1.0,
-          "execution_penalty": 0.0,
-          "failure_cluster_risk": 0.0
-        }
-      },
-      "unified_field_score": 0.458,
-      "confidence_structure": {
-        "regime_confidence": 0.95,
-        "detector_confidence": 0.0,
-        "counterfactual_confidence": 0.0,
-        "composite_confidence": 0.4241,
-        "confidence_band": "low"
-      },
-      "decision_refinements": {
-        "signal_confidence": {
-          "base": 0.475,
-          "refined": 0.4306,
-          "multiplier": 0.9696
-        },
-        "risk_sizing": {
-          "base": 0.85,
-          "refined": 0.8588,
-          "multiplier": 1.0103
-        },
-        "refusal_pause_behavior": {
-          "should_refuse": true,
-          "should_pause": false,
-          "refusal_reasons": [
-            "weak_detector_reliability"
-          ],
-          "pause_reasons": []
-        },
-        "strategy_selection": {
-          "mode": "defensive",
-          "selected_branch_id": "mutated_strategy_a",
-          "default_branch_id": "mutated_strategy_a"
-        }
-      },
-      "governance": {
-        "sandbox_only": true,
-        "live_protection_preserved": true,
-        "direct_live_override_allowed": false
-      },
-      "paths": {
-        "latest": "memory/market_intelligence/unified_market_intelligence_latest.json",
-        "history": "memory/market_intelligence/unified_market_intelligence_history.json"
       }
     },
     "meta_learning_loop": {
