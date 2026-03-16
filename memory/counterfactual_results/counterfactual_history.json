@@ -1,0 +1,11 @@
+{
+  "cycles": [
+    {
+      "counterfactual_evaluations": [],
+      "governance": {
+        "sandbox_only": true,
+        "validation_required": true
+      }
+    }
+  ]
+}
