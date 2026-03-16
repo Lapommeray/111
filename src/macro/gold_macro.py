@@ -39,6 +39,16 @@ MAJOR_ROUND_LEVELS = [1800.0, 1850.0, 1900.0, 1950.0, 2000.0]
 MAJOR_ROUND_NEAR_THRESHOLD = 1.5
 FEED_UNAVAILABLE_CONFIDENCE_STEP = 0.03
 FEED_UNAVAILABLE_CONFIDENCE_CAP = 0.18
+CORRELATION_WINDOW_SIZE = 30
+CORRELATION_MIN_SAMPLES = 5
+CORRELATION_BREAKDOWN_DROP = 0.55
+CORRELATION_BREAKDOWN_WEAK = 0.2
+CORRELATION_BREAK_SIZE_MULTIPLIER = 0.65
+CORRELATION_BREAK_CONFIDENCE_PENALTY = 0.07
+DEFAULT_NEGATIVE_CORRELATION = -0.5
+DEFAULT_POSITIVE_CORRELATION = 0.5
+HIGH_REAL_RATE_THRESHOLD = 1.6
+LOW_REAL_RATE_THRESHOLD = 0.2
 
 
 @dataclass(frozen=True)
@@ -108,6 +118,176 @@ def _major_round_number_proximity(price: float) -> dict[str, Any]:
     return {"state": state, "distance": round(distance, 4), "nearest_level": round(nearest, 4)}
 
 
+def _pearson_correlation(x_values: list[float], y_values: list[float]) -> float | None:
+    if len(x_values) != len(y_values) or len(x_values) < CORRELATION_MIN_SAMPLES:
+        return None
+    n = len(x_values)
+    x_mean = sum(x_values) / n
+    y_mean = sum(y_values) / n
+    x_centered = [x - x_mean for x in x_values]
+    y_centered = [y - y_mean for y in y_values]
+    x_var = sum(item * item for item in x_centered)
+    y_var = sum(item * item for item in y_centered)
+    if x_var <= 0 or y_var <= 0:
+        return None
+    covariance = sum(xc * yc for xc, yc in zip(x_centered, y_centered))
+    return round(covariance / ((x_var * y_var) ** 0.5), 6)
+
+
+def _detect_correlation_shift(
+    *,
+    previous_corr: float | None,
+    current_corr: float | None,
+    expected_sign: int,
+) -> dict[str, Any]:
+    if current_corr is None:
+        return {
+            "break_detected": False,
+            "state": "insufficient_data",
+            "reason": "insufficient_samples",
+            "expected_sign": expected_sign,
+        }
+
+    prior = previous_corr
+    if prior is None:
+        prior = DEFAULT_NEGATIVE_CORRELATION if expected_sign < 0 else DEFAULT_POSITIVE_CORRELATION
+    sign_flip = (prior * current_corr) < 0 and abs(current_corr) >= CORRELATION_BREAKDOWN_WEAK
+    sharp_breakdown = abs(prior) >= 0.5 and (abs(prior) - abs(current_corr)) >= CORRELATION_BREAKDOWN_DROP
+    break_detected = bool(sign_flip or sharp_breakdown)
+    state = "correlation_break_detected" if break_detected else "correlation_stable"
+    reason = "sign_flip" if sign_flip else "sharp_breakdown" if sharp_breakdown else "stable"
+    return {
+        "break_detected": break_detected,
+        "state": state,
+        "reason": reason,
+        "expected_sign": expected_sign,
+    }
+
+
+def _compute_correlation_regime(
+    *,
+    macro_root: Path,
+    latest_time: int,
+    xau_return: float,
+    dxy_change: float | None,
+    us10y_change: float | None,
+) -> dict[str, Any]:
+    state_path = macro_root / "correlation_regime_state.json"
+    history_path = macro_root / "correlation_regime_history.json"
+    state_payload = read_json_safe(
+        state_path,
+        default={
+            "samples": [],
+            "last_correlations": {"xau_dxy": None, "xau_us10y": None},
+        },
+    )
+    if not isinstance(state_payload, dict):
+        state_payload = {"samples": [], "last_correlations": {"xau_dxy": None, "xau_us10y": None}}
+    samples = state_payload.get("samples", [])
+    if not isinstance(samples, list):
+        samples = []
+
+    samples.append(
+        {
+            "time": int(latest_time),
+            "xau_return": round(float(xau_return), 8),
+            "dxy_change": None if dxy_change is None else round(float(dxy_change), 8),
+            "us10y_change": None if us10y_change is None else round(float(us10y_change), 8),
+        }
+    )
+    samples = samples[-(CORRELATION_WINDOW_SIZE * 3) :]
+
+    dxy_pairs = [
+        (float(item["xau_return"]), float(item["dxy_change"]))
+        for item in samples
+        if isinstance(item, dict) and item.get("dxy_change") is not None
+    ]
+    us10y_pairs = [
+        (float(item["xau_return"]), float(item["us10y_change"]))
+        for item in samples
+        if isinstance(item, dict) and item.get("us10y_change") is not None
+    ]
+    dxy_pairs = dxy_pairs[-CORRELATION_WINDOW_SIZE:]
+    us10y_pairs = us10y_pairs[-CORRELATION_WINDOW_SIZE:]
+
+    current_corr_dxy = _pearson_correlation(
+        [pair[0] for pair in dxy_pairs],
+        [pair[1] for pair in dxy_pairs],
+    )
+    current_corr_us10y = _pearson_correlation(
+        [pair[0] for pair in us10y_pairs],
+        [pair[1] for pair in us10y_pairs],
+    )
+
+    last_corr = state_payload.get("last_correlations", {})
+    previous_corr_dxy = last_corr.get("xau_dxy") if isinstance(last_corr, dict) else None
+    previous_corr_us10y = last_corr.get("xau_us10y") if isinstance(last_corr, dict) else None
+
+    dxy_shift = _detect_correlation_shift(
+        previous_corr=previous_corr_dxy if isinstance(previous_corr_dxy, (int, float)) else None,
+        current_corr=current_corr_dxy,
+        expected_sign=-1,
+    )
+    us10y_shift = _detect_correlation_shift(
+        previous_corr=previous_corr_us10y if isinstance(previous_corr_us10y, (int, float)) else None,
+        current_corr=current_corr_us10y,
+        expected_sign=-1,
+    )
+
+    break_detected = bool(dxy_shift["break_detected"] or us10y_shift["break_detected"])
+    state = "correlation_break_detected" if break_detected else (
+        "insufficient_data" if current_corr_dxy is None and current_corr_us10y is None else "correlation_stable"
+    )
+    break_reasons = []
+    if dxy_shift["break_detected"]:
+        break_reasons.append(f"xau_dxy:{dxy_shift['reason']}")
+    if us10y_shift["break_detected"]:
+        break_reasons.append(f"xau_us10y:{us10y_shift['reason']}")
+
+    correlation_state = {
+        "state": state,
+        "break_detected": break_detected,
+        "rolling_correlations": {
+            "xau_dxy": current_corr_dxy,
+            "xau_us10y": current_corr_us10y,
+        },
+        "previous_correlations": {
+            "xau_dxy": previous_corr_dxy if isinstance(previous_corr_dxy, (int, float)) else None,
+            "xau_us10y": previous_corr_us10y if isinstance(previous_corr_us10y, (int, float)) else None,
+        },
+        "window_samples": {
+            "xau_dxy": len(dxy_pairs),
+            "xau_us10y": len(us10y_pairs),
+        },
+        "break_reasons": break_reasons,
+        "pairs": {
+            "xau_dxy": dxy_shift,
+            "xau_us10y": us10y_shift,
+        },
+        "logged_at": datetime.now(tz=timezone.utc).isoformat(),
+    }
+
+    state_payload["samples"] = samples
+    state_payload["last_correlations"] = {
+        "xau_dxy": current_corr_dxy,
+        "xau_us10y": current_corr_us10y,
+    }
+    state_payload["last_state"] = correlation_state
+    write_json_atomic(state_path, state_payload)
+
+    history = read_json_safe(history_path, default=[])
+    if not isinstance(history, list):
+        history = []
+    history.append(correlation_state)
+    write_json_atomic(history_path, history[-300:])
+
+    correlation_state["paths"] = {
+        "state": str(state_path),
+        "history": str(history_path),
+    }
+    return correlation_state
+
+
 def collect_xauusd_macro_state(
     *,
     memory_root: str,
@@ -168,7 +348,12 @@ def collect_xauusd_macro_state(
 
     real_rate_state = "unknown"
     if isinstance(real_rate, (int, float)):
-        real_rate_state = "high_real_rate" if float(real_rate) >= 1.6 else "low_real_rate" if float(real_rate) <= 0.2 else "balanced_real_rate"
+        if real_rate >= HIGH_REAL_RATE_THRESHOLD:
+            real_rate_state = "high_real_rate"
+        elif real_rate <= LOW_REAL_RATE_THRESHOLD:
+            real_rate_state = "low_real_rate"
+        else:
+            real_rate_state = "balanced_real_rate"
 
     event_state = "high_risk" if major_event_count > 0 or high_impact_count >= 2 else "watch" if high_impact_count > 0 else "calm"
     session_event_state = (
@@ -192,6 +377,15 @@ def collect_xauusd_macro_state(
     elif session_state == "london":
         session_policy_state = "london_normal_size"
         session_size_multiplier = LONDON_SESSION_SIZE_MULTIPLIER
+
+    macro_root = Path(memory_root) / "macro_state"
+    correlation_regime = _compute_correlation_regime(
+        macro_root=macro_root,
+        latest_time=last_bar_time,
+        xau_return=price_change,
+        dxy_change=dxy_change if bool(alpha_state.get("available", False)) else None,
+        us10y_change=yield_change if bool(fred_state.get("DGS10", {}).get("available", False)) else None,
+    )
 
     size_multiplier = 1.0
     confidence_penalty = 0.0
@@ -226,6 +420,10 @@ def collect_xauusd_macro_state(
     if major_round_state.get("state") == "near_major_round_number":
         size_multiplier *= 0.7
         risk_reasons.append("near_major_round_number")
+    if bool(correlation_regime.get("break_detected", False)):
+        size_multiplier *= CORRELATION_BREAK_SIZE_MULTIPLIER
+        confidence_penalty += CORRELATION_BREAK_CONFIDENCE_PENALTY
+        risk_reasons.append("correlation_regime_break_detected")
 
     feed_unavailable = []
     if not bool(alpha_state.get("available", False)):
@@ -295,6 +493,15 @@ def collect_xauusd_macro_state(
             "active": session_event_state == "major_session_event_overlap",
             "metrics": {"session": session_state, "event_state": event_state},
         },
+        "correlation_regime_break_detector": {
+            "state": str(correlation_regime.get("state", "insufficient_data")),
+            "active": bool(correlation_regime.get("break_detected", False)),
+            "metrics": {
+                "xau_dxy_corr": correlation_regime.get("rolling_correlations", {}).get("xau_dxy"),
+                "xau_us10y_corr": correlation_regime.get("rolling_correlations", {}).get("xau_us10y"),
+                "reasons": correlation_regime.get("break_reasons", []),
+            },
+        },
     }
 
     trade_tags = {
@@ -307,6 +514,7 @@ def collect_xauusd_macro_state(
         "yield_state": macro_states["yield_state"],
         "event_news_state": macro_states["event_news_state"],
         "round_number_proximity": round_number_state["state"],
+        "correlation_regime_state": str(correlation_regime.get("state", "insufficient_data")),
         "major_round_number_proximity": major_round_state["state"],
         "event_type": str(calendar_state.get("metrics", {}).get("event_type", "unknown")),
         "session_policy": session_policy_state,
@@ -346,6 +554,7 @@ def collect_xauusd_macro_state(
             "reduce_after_major_release": recent_major_events_30m > 0,
             "event_type": str(calendar_state.get("metrics", {}).get("event_type", "unknown")),
         },
+        "correlation_regime": correlation_regime,
         "logged_at": datetime.now(tz=timezone.utc).isoformat(),
     }
 
