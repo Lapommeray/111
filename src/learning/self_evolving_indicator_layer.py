@@ -2522,17 +2522,11 @@ def run_self_evolving_indicator_layer(
         market_state=market_state,
         replay_scope=replay_scope,
     )
-    previous_unified_market_intelligence = read_json_safe(
-        memory_root / "market_intelligence" / "unified_market_intelligence_latest.json",
-        default={},
-    )
-    if not isinstance(previous_unified_market_intelligence, dict):
-        previous_unified_market_intelligence = {}
     intelligence_gap_engine = _intelligence_gap_discovery_engine(
         memory_root=memory_root,
         closed=closed,
         counterfactual_engine=counterfactual_engine,
-        unified_market_intelligence_field=previous_unified_market_intelligence,
+        unified_market_intelligence_field={},
         pain_geometry_engine=pain_geometry_engine,
         execution_microstructure_engine=execution_microstructure_engine,
     )
@@ -2541,14 +2535,14 @@ def run_self_evolving_indicator_layer(
         closed=closed,
         market_state=market_state,
         counterfactual_engine=counterfactual_engine,
-        unified_market_intelligence_field=previous_unified_market_intelligence,
+        unified_market_intelligence_field={},
         execution_microstructure_engine=execution_microstructure_engine,
     )
     capability_evolution_ladder = _capability_evolution_governance_ladder(
         memory_root=memory_root,
         intelligence_gap_engine=intelligence_gap_engine,
         synthetic_data_plane_engine=synthetic_data_plane_engine,
-        unified_market_intelligence_field=previous_unified_market_intelligence,
+        unified_market_intelligence_field={},
         replay_scope=replay_scope,
     )
     discovery_state_tags = _discovery_state_tags(
@@ -2558,6 +2552,19 @@ def run_self_evolving_indicator_layer(
         pain_geometry_engine=pain_geometry_engine,
         counterfactual_engine=counterfactual_engine,
         liquidity_decay_engine=liquidity_decay_engine,
+    )
+    recursive_self_modeling = _recursive_self_modeling(
+        memory_root=memory_root,
+        closed=closed,
+        mutation_candidates=mutation_candidates,
+        synthetic_feature_engine=synthetic_feature_engine,
+        negative_space_engine=negative_space_engine,
+        invariant_break_engine=invariant_break_engine,
+        pain_geometry_engine=pain_geometry_engine,
+        counterfactual_engine=counterfactual_engine,
+        liquidity_decay_engine=liquidity_decay_engine,
+        execution_microstructure_engine=execution_microstructure_engine,
+        replay_scope=replay_scope,
     )
     unified_market_intelligence_field = _unified_market_intelligence_field(
         memory_root=memory_root,
@@ -2572,19 +2579,6 @@ def run_self_evolving_indicator_layer(
         counterfactual_engine=counterfactual_engine,
         liquidity_decay_engine=liquidity_decay_engine,
         execution_microstructure_engine=execution_microstructure_engine,
-    )
-    recursive_self_modeling = _recursive_self_modeling(
-        memory_root=memory_root,
-        closed=closed,
-        mutation_candidates=mutation_candidates,
-        synthetic_feature_engine=synthetic_feature_engine,
-        negative_space_engine=negative_space_engine,
-        invariant_break_engine=invariant_break_engine,
-        pain_geometry_engine=pain_geometry_engine,
-        counterfactual_engine=counterfactual_engine,
-        liquidity_decay_engine=liquidity_decay_engine,
-        execution_microstructure_engine=execution_microstructure_engine,
-        replay_scope=replay_scope,
     )
     self_suggestion_governor = _self_suggestion_governor(
         memory_root=memory_root,
