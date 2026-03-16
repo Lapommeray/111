@@ -23,6 +23,12 @@ _CLUSTER_SPECIFICITY_BOOST_PER_OCCURRENCE = 0.05
 _SYNTHETIC_FEATURE_MIN_SCORE = 0.08
 _NEGATIVE_SPACE_DEVIATION_THRESHOLD = 0.55
 _INVARIANT_BREAK_THRESHOLD = 0.6
+_FEATURE_VALUE_WEIGHT = 0.1
+_LOSS_RATIO_WEIGHT = 0.35
+_PRICE_LEVEL_BUCKET_SIZE = 5.0
+_DEFAULT_RETEST_INTERVAL_PADDING = 1.0
+_PAIN_GEOMETRY_MAX_DISTANCE_SQ = 60.0
+_LIQUIDITY_REGEN_SCALE = 5.0
 
 
 def _closed_outcomes(trade_outcomes: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -488,7 +494,10 @@ def _synthetic_feature_invention_engine(
     loss_ratio = losses / max(1, len(closed))
     for candidate in candidates:
         value = float(candidate["value"])
-        predictive_usefulness = round(max(0.0, min(1.0, (value * 0.1) + (loss_ratio * 0.35))), 4)
+        predictive_usefulness = round(
+            max(0.0, min(1.0, (value * _FEATURE_VALUE_WEIGHT) + (loss_ratio * _LOSS_RATIO_WEIGHT))),
+            4,
+        )
         candidate_performance = {
             "feature_name": candidate["feature_name"],
             "predictive_usefulness": predictive_usefulness,
@@ -605,6 +614,7 @@ def _temporal_invariance_break_detection(
     invariant_dir = memory_root / "invariant_break_events"
     invariant_dir.mkdir(parents=True, exist_ok=True)
     model_path = invariant_dir / "invariant_models.json"
+    events_path = invariant_dir / "invariant_break_events_latest.json"
 
     previous = read_json_safe(model_path, default={"invariants": []})
     if not isinstance(previous, dict):
@@ -621,6 +631,18 @@ def _temporal_invariance_break_detection(
     observed_xau_dxy = float(market_state.get("xau_dxy_corr", -0.35) or -0.35)
     observed_xau_real_yield = float(market_state.get("xau_real_yield_corr", -0.3) or -0.3)
     volatility_response = float(market_state.get("volatility_response_corr", 0.35) or 0.35)
+    input_signature = {
+        "xau_dxy_corr": round(observed_xau_dxy, 6),
+        "xau_real_yield_corr": round(observed_xau_real_yield, 6),
+        "volatility_response_corr": round(volatility_response, 6),
+        "scope": replay_scope,
+    }
+    previous_events = read_json_safe(events_path, default={})
+    if isinstance(previous_events, dict) and previous_events.get("input_signature") == input_signature:
+        return {
+            "invariant_break_events": previous_events.get("invariant_break_events", []),
+            "paths": {"events": str(events_path), "models": str(model_path)},
+        }
     current_models = [
         {"invariant_name": "gold_vs_dxy_inverse", "observed_strength": observed_xau_dxy, "expected_sign": -1},
         {"invariant_name": "gold_vs_real_yields_inverse", "observed_strength": observed_xau_real_yield, "expected_sign": -1},
@@ -650,8 +672,7 @@ def _temporal_invariance_break_detection(
         events.append(event)
         updated_models.append({"invariant_name": name, "stability": stability, "observed_strength": observed})
 
-    events_path = invariant_dir / "invariant_break_events_latest.json"
-    write_json_atomic(events_path, {"invariant_break_events": events})
+    write_json_atomic(events_path, {"input_signature": input_signature, "invariant_break_events": events})
     write_json_atomic(model_path, {"invariants": updated_models})
     return {
         "invariant_break_events": events,
@@ -696,7 +717,7 @@ def _pain_geometry_fields(
             spread_distance = current_spread - float(coordinate["spread"])
             vol_distance = current_volatility - float(coordinate["volatility"])
             distance_sq = (spread_distance * spread_distance) + (vol_distance * vol_distance)
-            kernel_values.append(math.exp(-distance_sq))
+            kernel_values.append(math.exp(-min(_PAIN_GEOMETRY_MAX_DISTANCE_SQ, distance_sq)))
         risk = round(sum(kernel_values) / max(1, len(kernel_values)), 4)
     surface = {
         "pain_risk_surface": {
@@ -774,13 +795,18 @@ def _fractal_liquidity_decay_functions(
         level_price = float(trade.get("entry_price", market_state.get("reference_price", 0.0)) or 0.0)
         if level_price <= 0.0:
             continue
-        level_key = str(round(level_price / 5.0) * 5.0)
+        level_bucket = int(round(level_price / _PRICE_LEVEL_BUCKET_SIZE))
+        level_key = str(level_bucket * _PRICE_LEVEL_BUCKET_SIZE)
         levels.setdefault(level_key, []).append(index)
     models = []
     for level, hits in sorted(levels.items()):
         intervals = [hits[i] - hits[i - 1] for i in range(1, len(hits))]
-        avg_interval = sum(intervals) / max(1, len(intervals)) if intervals else float(len(closed) + 1)
-        regeneration = round(min(1.0, math.sqrt(max(1.0, avg_interval)) / 5.0), 4)
+        avg_interval = (
+            sum(intervals) / max(1, len(intervals))
+            if intervals
+            else float(len(closed)) + _DEFAULT_RETEST_INTERVAL_PADDING
+        )
+        regeneration = round(min(1.0, math.sqrt(max(1.0, avg_interval)) / _LIQUIDITY_REGEN_SCALE), 4)
         vulnerability = round(max(0.0, 1.0 - regeneration), 4)
         models.append(
             {
