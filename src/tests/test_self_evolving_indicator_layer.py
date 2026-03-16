@@ -404,6 +404,29 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
     assert self_modeling["governance"]["direct_live_self_rewrite_allowed"] is False
     assert Path(self_modeling["path"]).exists()
 
+    unified = result["unified_market_intelligence_field"]
+    assert set(unified["components"]) == {
+        "macro_state",
+        "regime_state",
+        "detector_reliability",
+        "synthetic_feature_state",
+        "negative_space_state",
+        "invariant_break_state",
+        "pain_geometry_risk",
+        "counterfactual_evaluation",
+        "liquidity_decay_state",
+    }
+    assert 0.0 <= unified["unified_field_score"] <= 1.0
+    assert 0.0 <= unified["confidence_structure"]["composite_confidence"] <= 1.0
+    assert unified["decision_refinements"]["signal_confidence"]["refined"] <= 1.0
+    assert unified["decision_refinements"]["risk_sizing"]["refined"] >= 0.05
+    assert Path(unified["paths"]["latest"]).exists()
+    assert Path(unified["paths"]["history"]).exists()
+    governor_unified = result["self_suggestion_governor"]["unified_market_intelligence_field"]
+    assert "unified_field_score" in governor_unified
+    assert "composite_confidence" in governor_unified
+    assert "refusal_pause_behavior" in governor_unified
+
     tags = result["discovery_state_tags"]
     assert set(tags) == {
         "synthetic_feature_state",
@@ -437,3 +460,36 @@ def test_synthetic_feature_engine_prunes_low_value_features(tmp_path: Path) -> N
     )
     synthetic = result["synthetic_feature_invention_engine"]
     assert synthetic["pruned_feature_count"] >= 1
+
+
+def test_unified_market_intelligence_field_refines_pause_and_strategy_selection(tmp_path: Path) -> None:
+    trade_outcomes = [
+        {"trade_id": "u-mi-1", "status": "closed", "result": "loss", "pnl_points": -1.2, "entry_price": 2010.0, "direction": "BUY", "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+        {"trade_id": "u-mi-2", "status": "closed", "result": "loss", "pnl_points": -1.1, "entry_price": 2012.0, "direction": "BUY", "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+        {"trade_id": "u-mi-3", "status": "closed", "result": "loss", "pnl_points": -0.9, "entry_price": 2014.0, "direction": "BUY", "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+        {"trade_id": "u-mi-4", "status": "closed", "result": "win", "pnl_points": 0.6, "entry_price": 2013.0, "direction": "SELL", "setup_type": "reversal", "session": "london", "failure_cause": "none"},
+    ]
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=trade_outcomes,
+        market_state={
+            "structure_state": "range",
+            "session_state": "asia",
+            "volatility_ratio": 1.9,
+            "spread_ratio": 2.2,
+            "slippage_ratio": 1.8,
+            "base_signal_confidence": 0.55,
+            "base_risk_size": 1.0,
+            "stale_price_data": True,
+            "mt5_ready": False,
+        },
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    refinements = unified["decision_refinements"]
+    assert refinements["signal_confidence"]["refined"] <= refinements["signal_confidence"]["base"]
+    assert refinements["risk_sizing"]["refined"] <= refinements["risk_sizing"]["base"]
+    assert refinements["strategy_selection"]["mode"] in {"defensive", "adaptive", "offensive"}
+    assert refinements["strategy_selection"]["selected_branch_id"]
+    assert refinements["refusal_pause_behavior"]["should_pause"] in {True, False}
+    assert refinements["refusal_pause_behavior"]["should_refuse"] in {True, False}
