@@ -308,3 +308,132 @@ def test_self_suggestion_governor_boosts_priority_for_repeated_specific_failure_
     assert specific_repeated_failure_suggestions
     assert all(item["is_repeated_specific_failure_cluster"] is True for item in specific_repeated_failure_suggestions)
     assert all(item["cluster_specificity_boost"] > 0 for item in specific_repeated_failure_suggestions)
+
+
+def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_path: Path) -> None:
+    trade_outcomes = [
+        {
+            "trade_id": "ad1",
+            "status": "closed",
+            "result": "loss",
+            "pnl_points": -1.2,
+            "entry_price": 2010.0,
+            "direction": "BUY",
+            "setup_type": "breakout",
+            "session": "asia",
+            "failure_cause": "execution_failure",
+            "trade_tags": {"session": "asia", "spread_ratio": 1.8, "volatility_ratio": 1.5, "macro_state": "risk_off"},
+        },
+        {
+            "trade_id": "ad2",
+            "status": "closed",
+            "result": "loss",
+            "pnl_points": -0.8,
+            "entry_price": 2010.0,
+            "direction": "BUY",
+            "setup_type": "breakout",
+            "session": "asia",
+            "failure_cause": "execution_failure",
+            "trade_tags": {"session": "asia", "spread_ratio": 1.7, "volatility_ratio": 1.4, "macro_state": "risk_off"},
+        },
+        {
+            "trade_id": "ad3",
+            "status": "closed",
+            "result": "win",
+            "pnl_points": 1.1,
+            "entry_price": 2015.0,
+            "direction": "SELL",
+            "setup_type": "reversal",
+            "session": "london",
+            "failure_cause": "none",
+            "trade_tags": {"session": "london", "spread_ratio": 1.2, "volatility_ratio": 1.1, "macro_state": "balanced"},
+        },
+    ]
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=trade_outcomes,
+        market_state={
+            "structure_state": "range",
+            "session_state": "asia",
+            "volatility_ratio": 1.45,
+            "spread_ratio": 1.85,
+            "slippage_ratio": 1.7,
+            "dxy_state": "strong_usd",
+            "yield_state": "bearish_gold",
+            "xau_dxy_corr": 0.25,
+            "xau_real_yield_corr": 0.2,
+            "volatility_response_corr": -0.2,
+        },
+        replay_scope="full_replay",
+    )
+
+    synthetic = result["synthetic_feature_invention_engine"]
+    assert synthetic["feature_candidates"]
+    assert synthetic["feature_performance"]
+    assert Path(synthetic["paths"]["synthetic_features"]).exists()
+    assert Path(synthetic["paths"]["feature_candidates"]).exists()
+    assert Path(synthetic["paths"]["feature_performance"]).exists()
+
+    negative_space = result["negative_space_pattern_recognition"]["signal"]
+    assert "negative_space_signal" in negative_space
+    assert negative_space["validation"]["sandbox_only"] is True
+    assert Path(result["negative_space_pattern_recognition"]["paths"]["latest"]).exists()
+
+    invariant = result["temporal_invariance_break_detection"]
+    assert invariant["invariant_break_events"]
+    assert any(item["trigger_deeper_analysis"] for item in invariant["invariant_break_events"])
+    assert Path(invariant["paths"]["events"]).exists()
+    assert Path(invariant["paths"]["models"]).exists()
+
+    pain_geometry = result["pain_geometry_fields"]
+    assert pain_geometry["pain_risk_surface"]["current_state_risk"] >= 0.0
+    assert Path(pain_geometry["paths"]["coordinates"]).exists()
+    assert Path(pain_geometry["paths"]["surface"]).exists()
+
+    counterfactual = result["counterfactual_trade_engine"]["counterfactual_evaluations"]
+    assert counterfactual
+    assert "opposite_trade" in counterfactual[0]["counterfactual_scenarios"]
+    assert Path(result["counterfactual_trade_engine"]["paths"]["latest"]).exists()
+
+    liquidity_decay = result["fractal_liquidity_decay_functions"]
+    assert liquidity_decay["liquidity_decay_models"]
+    assert Path(liquidity_decay["path"]).exists()
+
+    self_modeling = result["recursive_self_modeling"]
+    assert self_modeling["selected_configuration"]["config_id"]
+    assert self_modeling["governance"]["direct_live_self_rewrite_allowed"] is False
+    assert Path(self_modeling["path"]).exists()
+
+    tags = result["discovery_state_tags"]
+    assert set(tags) == {
+        "synthetic_feature_state",
+        "negative_space_state",
+        "invariant_break_state",
+        "pain_geometry_risk",
+        "counterfactual_evaluation",
+        "liquidity_decay_state",
+    }
+    assert result["self_suggestion_governor"]["discovery_state_tags"] == tags
+
+
+def test_synthetic_feature_engine_prunes_low_value_features(tmp_path: Path) -> None:
+    trade_outcomes = [
+        {"trade_id": "sp1", "status": "closed", "result": "win", "pnl_points": 0.9, "session": "london", "failure_cause": "none"},
+        {"trade_id": "sp2", "status": "closed", "result": "win", "pnl_points": 0.8, "session": "new_york", "failure_cause": "none"},
+    ]
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=trade_outcomes,
+        market_state={
+            "structure_state": "range",
+            "session_state": "london",
+            "volatility_ratio": 1.0,
+            "spread_ratio": 1.0,
+            "slippage_ratio": 1.0,
+            "dxy_state": "neutral",
+            "yield_state": "neutral",
+        },
+        replay_scope="focused_replay",
+    )
+    synthetic = result["synthetic_feature_invention_engine"]
+    assert synthetic["pruned_feature_count"] >= 1

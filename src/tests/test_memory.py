@@ -470,6 +470,15 @@ def test_run_pipeline_persists_macro_state_and_trade_tags(tmp_path: Path) -> Non
         "routine_calendar",
         "unknown",
     }
+    for key in (
+        "synthetic_feature_state",
+        "negative_space_state",
+        "invariant_break_state",
+        "pain_geometry_risk",
+        "counterfactual_evaluation",
+        "liquidity_decay_state",
+    ):
+        assert key in signal["trade_tags"]
     outcomes = json.loads((memory_root / "trade_outcomes.json").read_text(encoding="utf-8"))
     assert outcomes[-1]["trade_tags"]["session"] in {"asia", "london", "new_york", "off_hours"}
 
