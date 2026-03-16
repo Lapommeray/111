@@ -87,6 +87,94 @@
         "live_protection_preserved": true,
         "direct_live_override_allowed": false
       }
+    },
+    {
+      "components": {
+        "macro_state": {
+          "session_state": "unknown",
+          "structure_state": "range",
+          "volatility_ratio": 1.0,
+          "spread_ratio": 1.0,
+          "dxy_state": "unknown",
+          "yield_state": "unknown"
+        },
+        "regime_state": "range",
+        "detector_reliability": {
+          "state": "weak",
+          "reliability_score": 0.0,
+          "passed_count": 0,
+          "failed_count": 5,
+          "candidate_count": 5
+        },
+        "synthetic_feature_state": {
+          "state": "active",
+          "feature_count": 2
+        },
+        "negative_space_state": {
+          "state": "normal",
+          "deviation_score": 0.0
+        },
+        "invariant_break_state": {
+          "state": "stable",
+          "break_count": 0
+        },
+        "pain_geometry_risk": {
+          "current_state_risk": 0.0
+        },
+        "counterfactual_evaluation": {
+          "state": "none",
+          "edge_ratio": 0.0
+        },
+        "liquidity_decay_state": {
+          "state": "resilient",
+          "avg_vulnerability": 0.0,
+          "model_count": 0
+        },
+        "execution_microstructure_state": {
+          "state": "insufficient_data",
+          "execution_quality_score": 1.0,
+          "execution_penalty": 0.0,
+          "failure_cluster_risk": 0.0
+        }
+      },
+      "unified_field_score": 0.458,
+      "confidence_structure": {
+        "regime_confidence": 0.95,
+        "detector_confidence": 0.0,
+        "counterfactual_confidence": 0.0,
+        "composite_confidence": 0.4241,
+        "confidence_band": "low"
+      },
+      "decision_refinements": {
+        "signal_confidence": {
+          "base": 0.475,
+          "refined": 0.4306,
+          "multiplier": 0.9696
+        },
+        "risk_sizing": {
+          "base": 0.85,
+          "refined": 0.8588,
+          "multiplier": 1.0103
+        },
+        "refusal_pause_behavior": {
+          "should_refuse": true,
+          "should_pause": false,
+          "refusal_reasons": [
+            "weak_detector_reliability"
+          ],
+          "pause_reasons": []
+        },
+        "strategy_selection": {
+          "mode": "defensive",
+          "selected_branch_id": "mutated_strategy_a",
+          "default_branch_id": "mutated_strategy_a"
+        }
+      },
+      "governance": {
+        "sandbox_only": true,
+        "live_protection_preserved": true,
+        "direct_live_override_allowed": false
+      }
     }
   ]
 }
