@@ -289,6 +289,89 @@
         "governor": "memory/capability_registry/self_suggestion_governor.json",
         "history": "memory/capability_registry/self_suggestion_governor_history.json"
       }
+    },
+    {
+      "cycle_index": 2,
+      "input_signature": {
+        "replay_scope": "evaluation_replay",
+        "gap_signatures": [
+          "low_value_noisy_mutations::mutation_noise_cluster",
+          "weak_detector_reliability::detector_sandbox_failures"
+        ],
+        "strongest_branch": "mutated_strategy_a",
+        "closed_count": 0,
+        "unified_field_score": 0.458,
+        "unified_confidence": 0.4241,
+        "execution_quality_score": 1.0,
+        "execution_penalty": 0.0
+      },
+      "detected_gaps": [
+        {
+          "gap_type": "weak_detector_reliability",
+          "detail": "detector_sandbox_failures",
+          "frequency": 5,
+          "severity": 1.0
+        },
+        {
+          "gap_type": "low_value_noisy_mutations",
+          "detail": "mutation_noise_cluster",
+          "frequency": 1,
+          "severity": 0.5
+        }
+      ],
+      "proposed_improvements": [],
+      "implemented_improvements": [],
+      "promoted_improvements": [],
+      "rejected_improvements": [],
+      "anti_noise_controls": {
+        "duplicate_suppression": 4,
+        "low_value_pruned": 0,
+        "cooldown_suppressed": 0,
+        "vague_rejected": 0,
+        "max_suggestions_per_cycle": 6,
+        "stricter_thresholds_active": false,
+        "priority_threshold": 0.35
+      },
+      "repeated_unresolved_gaps": [],
+      "safety_controls": {
+        "sandbox_only": true,
+        "direct_live_deployment_blocked": true,
+        "no_blind_live_self_rewrites": true,
+        "stable_core_module_deletion_blocked": true
+      },
+      "discovery_state_tags": {
+        "synthetic_feature_state": "active",
+        "negative_space_state": "normal",
+        "invariant_break_state": "stable",
+        "pain_geometry_risk": 0.0,
+        "counterfactual_evaluation": "none",
+        "liquidity_decay_state": "insufficient_data"
+      },
+      "unified_market_intelligence_field": {
+        "unified_field_score": 0.458,
+        "composite_confidence": 0.4241,
+        "refusal_pause_behavior": {
+          "should_refuse": true,
+          "should_pause": false,
+          "refusal_reasons": [
+            "weak_detector_reliability"
+          ],
+          "pause_reasons": []
+        }
+      },
+      "execution_microstructure_intelligence_layer": {
+        "execution_quality_score": 1.0,
+        "execution_penalty": 0.0,
+        "execution_state": "insufficient_data",
+        "recommended_actions": [
+          "maintain_current_execution_controls"
+        ]
+      },
+      "paths": {
+        "registry": "memory/capability_registry/self_suggestion_registry.json",
+        "governor": "memory/capability_registry/self_suggestion_governor.json",
+        "history": "memory/capability_registry/self_suggestion_governor_history.json"
+      }
     }
   ]
 }

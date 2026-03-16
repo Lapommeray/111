@@ -1,0 +1,74 @@
+{
+  "configuration_evaluations": [
+    {
+      "config_id": "cfg_balanced",
+      "detector_set": "default+negative_space",
+      "feature_set": "core+synthetic",
+      "risk_behavior": "adaptive",
+      "performance_stability": 0.7,
+      "discovery_potential": 0.64,
+      "regime_adaptability": 0.6,
+      "learning_efficiency": 0.65,
+      "long_term_improvement_score": 0.655,
+      "validation": {
+        "scope": "evaluation_replay",
+        "sandbox_only": true
+      }
+    },
+    {
+      "config_id": "cfg_survival",
+      "detector_set": "survival_priority",
+      "feature_set": "core+pain_geometry",
+      "risk_behavior": "defensive",
+      "performance_stability": 0.66,
+      "discovery_potential": 0.58,
+      "regime_adaptability": 0.6,
+      "learning_efficiency": 0.65,
+      "long_term_improvement_score": 0.626,
+      "validation": {
+        "scope": "evaluation_replay",
+        "sandbox_only": true
+      }
+    },
+    {
+      "config_id": "cfg_discovery",
+      "detector_set": "expanded",
+      "feature_set": "core+synthetic+counterfactual",
+      "risk_behavior": "exploratory",
+      "performance_stability": 0.62,
+      "discovery_potential": 0.52,
+      "regime_adaptability": 0.6,
+      "learning_efficiency": 0.65,
+      "long_term_improvement_score": 0.597,
+      "validation": {
+        "scope": "evaluation_replay",
+        "sandbox_only": true
+      }
+    }
+  ],
+  "selected_configuration": {
+    "config_id": "cfg_balanced",
+    "detector_set": "default+negative_space",
+    "feature_set": "core+synthetic",
+    "risk_behavior": "adaptive",
+    "performance_stability": 0.7,
+    "discovery_potential": 0.64,
+    "regime_adaptability": 0.6,
+    "learning_efficiency": 0.65,
+    "long_term_improvement_score": 0.655,
+    "validation": {
+      "scope": "evaluation_replay",
+      "sandbox_only": true
+    }
+  },
+  "governance": {
+    "sandbox_only": true,
+    "direct_live_self_rewrite_allowed": false,
+    "promotion_requires_governance": true
+  },
+  "execution_microstructure_assessment": {
+    "execution_quality_score": 1.0,
+    "execution_penalty": 0.0,
+    "failure_cluster_risk": 0.0
+  }
+}
