@@ -13,6 +13,7 @@ from src.macro.adapters import (
     EconomicCalendarAdapter,
     FREDAdapter,
     GoldEtfFlowsAdapter,
+    MT5DXYProxyAdapter,
     GoldOptionMagnetAdapter,
     GoldPhysicalPremiumAdapter,
     TreasuryYieldsAdapter,
@@ -151,6 +152,21 @@ def _feed_disabled_state(name: str, reason: str) -> dict[str, Any]:
         "reason_codes": [reason],
         "metrics": {},
         "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+    }
+
+
+def _feed_registry_entry(*, feed_name: str, state: dict[str, Any], fallback_state: str) -> dict[str, Any]:
+    available = bool(state.get("available", False))
+    status = str(state.get("status", "available" if available else "unavailable"))
+    health_status = str(state.get("health_status", "healthy" if available else "degraded"))
+    return {
+        "feed_name": feed_name,
+        "status": status,
+        "health_status": health_status,
+        "last_update_timestamp": str(state.get("last_update_timestamp") or state.get("timestamp") or datetime.now(tz=timezone.utc).isoformat()),
+        "symbol_scope": "XAUUSD",
+        "data_confidence": float(state.get("data_confidence", 0.8 if available else 0.35)),
+        "fallback_state": fallback_state,
     }
 
 
@@ -731,6 +747,7 @@ def collect_xauusd_macro_state(
     config: MacroFeedConfig,
 ) -> dict[str, Any]:
     if config.enabled:
+        dxy_proxy_state = MT5DXYProxyAdapter().fetch_state(memory_root=memory_root)
         alpha_state = AlphaVantageAdapter(config.alpha_vantage_api_key).fetch_dxy_proxy()
         fred_state = FREDAdapter(config.fred_api_key).fetch_core_macro()
         treasury_state = TreasuryYieldsAdapter(config.treasury_endpoint).fetch_yields()
@@ -741,6 +758,7 @@ def collect_xauusd_macro_state(
         physical_premium_state = GoldPhysicalPremiumAdapter(config.physical_premium_discount_endpoint).fetch_state()
         central_bank_reserve_state = CentralBankReserveAdapter(config.central_bank_reserve_endpoint).fetch_state()
     else:
+        dxy_proxy_state = _feed_disabled_state("dxy_proxy", "external_fetch_disabled")
         alpha_state = _feed_disabled_state("alpha_vantage", "external_fetch_disabled")
         fred_state = {
             "DGS10": {"available": False, "stale": True, "value": None, "change": None, "reason_codes": ["external_fetch_disabled"]},
@@ -759,8 +777,9 @@ def collect_xauusd_macro_state(
     price_change = _price_change(bars)
     last_price = float(bars[-1].get("close", 0.0)) if bars else 0.0
 
-    dxy_change = float(alpha_state.get("metrics", {}).get("usd_proxy_change", 0.0) or 0.0)
-    dxy_state = str(alpha_state.get("state", "unavailable"))
+    primary_dxy_state = dxy_proxy_state if bool(dxy_proxy_state.get("available", False)) else alpha_state
+    dxy_change = float(primary_dxy_state.get("metrics", {}).get("usd_proxy_change", 0.0) or 0.0)
+    dxy_state = str(primary_dxy_state.get("state", "unavailable"))
     yield_change = float(fred_state.get("DGS10", {}).get("change") or 0.0)
     inflation_change = float(fred_state.get("T10YIE", {}).get("change") or 0.0)
     real_rate = fred_state.get("REAL_RATE_PROXY", {}).get("value")
@@ -829,6 +848,20 @@ def collect_xauusd_macro_state(
     nfp_state = _nfp_front_run_layer(bars=bars, bar_dt=bar_dt)
     archaeology_state = _price_archaeologist_layer(bars=bars, macro_root=macro_root, last_price=last_price)
     gamma_proxy_state = _dealer_gamma_flip_proxy(bars=bars, last_price=last_price)
+    gld_flow = etf_flow_state.get("metrics", {}).get("gld_flow")
+    gld_flow_state = "unavailable"
+    gld_confidence_adjustment = 0.0
+    if isinstance(gld_flow, (int, float)):
+        if gld_flow > 0:
+            gld_flow_state = "gld_inflow"
+            gld_confidence_adjustment = -0.01
+        elif gld_flow < 0:
+            gld_flow_state = "gld_outflow"
+            gld_confidence_adjustment = 0.01
+        else:
+            gld_flow_state = "gld_neutral"
+    elif bool(etf_flow_state.get("available", False)):
+        gld_flow_state = "degraded"
 
     size_multiplier = 1.0
     confidence_penalty = 0.0
@@ -925,8 +958,14 @@ def collect_xauusd_macro_state(
     elif gamma_proxy_state.get("state") == "long_gamma_cap_proxy":
         size_multiplier *= 0.9
         risk_reasons.append("dealer_gamma_proxy_long_gamma_cap")
+    confidence_penalty += gld_confidence_adjustment
+    if not bool(dxy_proxy_state.get("available", False)):
+        confidence_penalty += 0.03
+        risk_reasons.append("dxy_proxy_degraded_fallback_alpha")
 
     feed_unavailable = []
+    if not bool(dxy_proxy_state.get("available", False)):
+        feed_unavailable.append("dxy_proxy")
     if not bool(alpha_state.get("available", False)):
         feed_unavailable.append("alpha_vantage")
     if not bool(fred_state.get("DGS10", {}).get("available", False)):
@@ -942,7 +981,7 @@ def collect_xauusd_macro_state(
     if not bool(comex_oi_state.get("available", False)):
         feed_unavailable.append("comex_open_interest")
     if not bool(etf_flow_state.get("available", False)):
-        feed_unavailable.append("gold_etf_flows")
+        risk_reasons.append("gld_flow_optional_unavailable")
     if not bool(option_magnet_state.get("available", False)):
         feed_unavailable.append("gold_option_magnet_levels")
     if not bool(physical_premium_state.get("available", False)):
@@ -974,7 +1013,17 @@ def collect_xauusd_macro_state(
         "yield_state": _derive_yield_state(yield_pressure=yield_pressure, curve_10y_2y=curve_10y_2y),
         "inflation_real_rate_state": real_rate_state if real_rate_state != "unknown" else ("inflation_rising" if inflation_change > 0.03 else "inflation_stable"),
         "event_news_state": event_state,
+        "gld_flow_state": gld_flow_state,
     }
+    feed_registry = {
+        "dxy_proxy": _feed_registry_entry(feed_name="dxy_proxy", state=dxy_proxy_state, fallback_state="alpha_vantage_dxy_proxy"),
+        "gld_flow": _feed_registry_entry(feed_name="gld_flow", state=etf_flow_state, fallback_state="optional_no_hard_dependency"),
+    }
+    feed_health_status = "healthy"
+    if any(entry["health_status"] == "degraded" for entry in feed_registry.values()):
+        feed_health_status = "degraded"
+    if all(entry["status"] == "unavailable" for entry in feed_registry.values()):
+        feed_health_status = "unavailable"
     detectors = {
         "dxy_divergence_detector": {
             "state": dxy_divergence,
@@ -1043,6 +1092,9 @@ def collect_xauusd_macro_state(
         "session_policy": session_policy_state,
         "correlation_confirmation": str(correlation_regime.get("confirmation", "dual_stable")),
         "surgical_layer_triggers": active_surgical_layers,
+        "dxy_proxy_state": str(dxy_proxy_state.get("state", "unavailable")),
+        "gld_flow_state": gld_flow_state,
+        "macro_feed_health": feed_health_status,
     }
     risk_behavior = {
         "size_multiplier": round(clamp(size_multiplier, 0.1, 1.0), 4),
@@ -1054,6 +1106,7 @@ def collect_xauusd_macro_state(
 
     macro_state = {
         "feed_states": {
+            "dxy_proxy": dxy_proxy_state,
             "alpha_vantage": alpha_state,
             "fred": fred_state,
             "treasury": treasury_state,
@@ -1064,6 +1117,7 @@ def collect_xauusd_macro_state(
             "gold_physical_premium_discount": physical_premium_state,
             "central_bank_gold_reserves": central_bank_reserve_state,
         },
+        "feed_registry": feed_registry,
         "macro_states": macro_states,
         "detectors": detectors,
         "risk_behavior": risk_behavior,
@@ -1109,6 +1163,7 @@ def collect_xauusd_macro_state(
             "risk_behavior": macro_state["risk_behavior"],
             "trade_tags": macro_state["trade_tags"],
             "feed_availability": {
+                "dxy_proxy": bool(dxy_proxy_state.get("available", False)),
                 "alpha_vantage": bool(alpha_state.get("available", False)),
                 "fred_dgs10": bool(fred_state.get("DGS10", {}).get("available", False)),
                 "fred_dgs2": bool(fred_state.get("DGS2", {}).get("available", False)),
@@ -1121,10 +1176,29 @@ def collect_xauusd_macro_state(
                 "gold_physical_premium_discount": bool(physical_premium_state.get("available", False)),
                 "central_bank_gold_reserves": bool(central_bank_reserve_state.get("available", False)),
             },
+            "feed_registry_health": feed_health_status,
             "surgical_layer_triggers": active_surgical_layers,
         }
     )
     write_json_atomic(history_path, history[-300:])
+
+    feed_health_latest_path = root / "feed_health_latest.json"
+    feed_health_history_path = root / "feed_health_history.json"
+    feed_health_payload = {
+        "logged_at": macro_state["logged_at"],
+        "feed_registry": feed_registry,
+        "trade_tags_subset": {
+            "dxy_proxy_state": trade_tags["dxy_proxy_state"],
+            "gld_flow_state": trade_tags["gld_flow_state"],
+            "macro_feed_health": trade_tags["macro_feed_health"],
+        },
+    }
+    write_json_atomic(feed_health_latest_path, feed_health_payload)
+    feed_health_history = read_json_safe(feed_health_history_path, default=[])
+    if not isinstance(feed_health_history, list):
+        feed_health_history = []
+    feed_health_history.append(feed_health_payload)
+    write_json_atomic(feed_health_history_path, feed_health_history[-500:])
 
     surgical_latest_path = root / "surgical_layers_latest.json"
     surgical_history_path = root / "surgical_layers_history.json"
@@ -1167,6 +1241,8 @@ def collect_xauusd_macro_state(
         "history": str(history_path),
         "surgical_latest": str(surgical_latest_path),
         "surgical_history": str(surgical_history_path),
+        "feed_health_latest": str(feed_health_latest_path),
+        "feed_health_history": str(feed_health_history_path),
     }
     return macro_state
 

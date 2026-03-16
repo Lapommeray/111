@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Callable
 import json
 from urllib.parse import urlencode
 from urllib.parse import urlparse
 from urllib.request import urlopen
+
+from src.utils import read_json_safe, write_json_atomic
 
 JsonFetcher = Callable[[str], Any]
 MILLISECOND_TIMESTAMP_THRESHOLD = 10_000_000_000
@@ -56,6 +59,171 @@ def _default_unavailable_feed_state(feed_name: str, reason_code: str = "feed_una
         "metrics": {},
         "timestamp": _now_iso(),
     }
+
+
+def _safe_tick_rate(tick: Any) -> float | None:
+    if tick is None:
+        return None
+    if isinstance(tick, dict):
+        for key in ("bid", "ask", "last"):
+            value = _safe_float(tick.get(key))
+            if value is not None and value > 0:
+                return value
+        return None
+    for key in ("bid", "ask", "last"):
+        value = _safe_float(getattr(tick, key, None))
+        if value is not None and value > 0:
+            return value
+    return None
+
+
+@dataclass(frozen=True)
+class MT5DXYProxyAdapter:
+    history_filename: str = "dxy_proxy_history.json"
+    retention_records: int = 1000
+    tick_fetcher: Callable[[list[str]], dict[str, Any]] | None = None
+
+    def fetch_state(self, *, memory_root: str) -> dict[str, Any]:
+        symbols = ["EURUSD", "USDJPY", "GBPUSD", "USDCAD", "USDSEK", "USDCHF"]
+        # DXY-style exponents (proxy only, not official benchmark).
+        exponents = {
+            "EURUSD": -0.576,
+            "USDJPY": 0.136,
+            "GBPUSD": -0.119,
+            "USDCAD": 0.091,
+            "USDSEK": 0.042,
+            "USDCHF": 0.036,
+        }
+        history_path = Path(memory_root) / "macro_state" / self.history_filename
+        history = read_json_safe(history_path, default=[])
+        if not isinstance(history, list):
+            history = []
+
+        try:
+            rates = self._fetch_rates(symbols)
+            missing = [symbol for symbol in symbols if symbol not in rates or rates[symbol] <= 0]
+            if missing:
+                return self._unavailable_state(
+                    reason=f"missing_tick:{','.join(missing)}",
+                    history=history,
+                    history_path=history_path,
+                    fallback_state="alpha_vantage_dxy_proxy",
+                    status="degraded",
+                    health_status="degraded",
+                    confidence=0.35,
+                )
+
+            dxy_proxy_value = 50.14348112
+            for symbol in symbols:
+                dxy_proxy_value *= rates[symbol] ** exponents[symbol]
+            dxy_proxy_value = round(dxy_proxy_value, 6)
+            previous = history[-1]["proxy_value"] if history and isinstance(history[-1], dict) else None
+            proxy_change = None
+            if isinstance(previous, (int, float)) and previous != 0:
+                proxy_change = round((dxy_proxy_value - float(previous)) / float(previous), 6)
+            history.append({"timestamp": _now_iso(), "proxy_value": dxy_proxy_value})
+            history = history[-max(1, int(self.retention_records)) :]
+            write_json_atomic(history_path, history)
+            state = "neutral_usd"
+            if isinstance(proxy_change, (int, float)):
+                if proxy_change >= 0.0015:
+                    state = "strong_usd"
+                elif proxy_change <= -0.0015:
+                    state = "weak_usd"
+            return {
+                "feed": "dxy_proxy",
+                "feed_name": "dxy_proxy",
+                "available": True,
+                "stale": False,
+                "state": state,
+                "status": "available",
+                "health_status": "healthy",
+                "last_update_timestamp": _now_iso(),
+                "symbol_scope": "XAUUSD",
+                "data_confidence": 0.85,
+                "fallback_state": "none",
+                "reason_codes": [],
+                "benchmark_label": "not_official_benchmark_dxy",
+                "metrics": {
+                    "proxy_value": dxy_proxy_value,
+                    "usd_proxy_change": proxy_change,
+                    "pair_rates": {symbol: round(rates[symbol], 6) for symbol in symbols},
+                    "recent_history": history[-20:],
+                },
+                "history_path": str(history_path),
+                "timestamp": _now_iso(),
+            }
+        except Exception as exc:
+            return self._unavailable_state(
+                reason=f"request_failed:{type(exc).__name__}",
+                history=history,
+                history_path=history_path,
+                fallback_state="alpha_vantage_dxy_proxy",
+                status="degraded",
+                health_status="degraded",
+                confidence=0.3,
+            )
+
+    def _fetch_rates(self, symbols: list[str]) -> dict[str, float]:
+        rates: dict[str, float] = {}
+        if self.tick_fetcher is not None:
+            payload = self.tick_fetcher(symbols)
+            payload = payload if isinstance(payload, dict) else {}
+            for symbol in symbols:
+                rate = _safe_tick_rate(payload.get(symbol))
+                if rate is not None and rate > 0:
+                    rates[symbol] = rate
+            return rates
+
+        try:
+            import MetaTrader5 as mt5  # type: ignore
+        except Exception:
+            return rates
+        if not mt5.initialize():
+            return rates
+        try:
+            for symbol in symbols:
+                tick = mt5.symbol_info_tick(symbol)
+                rate = _safe_tick_rate(tick)
+                if rate is not None and rate > 0:
+                    rates[symbol] = rate
+        finally:
+            mt5.shutdown()
+        return rates
+
+    def _unavailable_state(
+        self,
+        *,
+        reason: str,
+        history: list[Any],
+        history_path: Path,
+        fallback_state: str,
+        status: str,
+        health_status: str,
+        confidence: float,
+    ) -> dict[str, Any]:
+        write_json_atomic(history_path, history[-max(1, int(self.retention_records)) :])
+        return {
+            "feed": "dxy_proxy",
+            "feed_name": "dxy_proxy",
+            "available": False,
+            "stale": True,
+            "state": "unavailable",
+            "status": status,
+            "health_status": health_status,
+            "last_update_timestamp": _now_iso(),
+            "symbol_scope": "XAUUSD",
+            "data_confidence": confidence,
+            "fallback_state": fallback_state,
+            "reason_codes": [reason],
+            "benchmark_label": "not_official_benchmark_dxy",
+            "metrics": {
+                "usd_proxy_change": None,
+                "recent_history": history[-20:],
+            },
+            "history_path": str(history_path),
+            "timestamp": _now_iso(),
+        }
 
 
 @dataclass(frozen=True)

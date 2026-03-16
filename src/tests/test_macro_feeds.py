@@ -11,6 +11,7 @@ from src.macro.adapters import (
     EconomicCalendarAdapter,
     FREDAdapter,
     GoldEtfFlowsAdapter,
+    MT5DXYProxyAdapter,
     GoldOptionMagnetAdapter,
     GoldPhysicalPremiumAdapter,
     TreasuryYieldsAdapter,
@@ -127,6 +128,57 @@ def test_alpha_vantage_adapter_parses_usd_proxy_state() -> None:
     assert state["metrics"]["usd_proxy_change"] > 0
 
 
+def test_mt5_dxy_proxy_calculation_and_labels(tmp_path: Path) -> None:
+    def _ticks(_symbols: list[str]) -> dict[str, object]:
+        return {
+            "EURUSD": {"bid": 1.08},
+            "USDJPY": {"bid": 149.2},
+            "GBPUSD": {"bid": 1.27},
+            "USDCAD": {"bid": 1.35},
+            "USDSEK": {"bid": 10.21},
+            "USDCHF": {"bid": 0.88},
+        }
+
+    state = MT5DXYProxyAdapter(tick_fetcher=_ticks, retention_records=50).fetch_state(memory_root=str(tmp_path / "memory"))
+    assert state["feed"] == "dxy_proxy"
+    assert state["available"] is True
+    assert state["benchmark_label"] == "not_official_benchmark_dxy"
+    assert isinstance(state["metrics"]["proxy_value"], float)
+    assert Path(state["history_path"]).exists()
+
+
+def test_mt5_dxy_proxy_history_pruning(tmp_path: Path) -> None:
+    counter = {"i": 0}
+
+    def _ticks(_symbols: list[str]) -> dict[str, object]:
+        counter["i"] += 1
+        base = 1.08 + (counter["i"] * 0.0001)
+        return {
+            "EURUSD": {"bid": base},
+            "USDJPY": {"bid": 149.2},
+            "GBPUSD": {"bid": 1.27},
+            "USDCAD": {"bid": 1.35},
+            "USDSEK": {"bid": 10.21},
+            "USDCHF": {"bid": 0.88},
+        }
+
+    adapter = MT5DXYProxyAdapter(tick_fetcher=_ticks, retention_records=5)
+    for _ in range(12):
+        adapter.fetch_state(memory_root=str(tmp_path / "memory_prune"))
+    history_path = tmp_path / "memory_prune" / "macro_state" / "dxy_proxy_history.json"
+    payload = json.loads(history_path.read_text(encoding="utf-8"))
+    assert len(payload) == 5
+
+
+def test_mt5_dxy_proxy_degraded_when_ticks_missing(tmp_path: Path) -> None:
+    state = MT5DXYProxyAdapter(tick_fetcher=lambda _symbols: {"EURUSD": {"bid": 1.08}}).fetch_state(
+        memory_root=str(tmp_path / "memory_missing")
+    )
+    assert state["available"] is False
+    assert state["status"] == "degraded"
+    assert state["fallback_state"] == "alpha_vantage_dxy_proxy"
+
+
 def test_fred_adapter_and_treasury_calendar_adapters_parse_payloads() -> None:
     def _fred_fetcher(url: str) -> dict[str, object]:
         if "DGS10" in url:
@@ -227,6 +279,57 @@ def test_external_gold_feed_stubs_mark_unavailable_when_endpoint_missing() -> No
     assert GoldOptionMagnetAdapter().fetch_state()["available"] is False
     assert GoldPhysicalPremiumAdapter().fetch_state()["available"] is False
     assert CentralBankReserveAdapter().fetch_state()["available"] is False
+
+
+def test_gld_optional_feed_behavior_marks_unavailable_without_blocking(tmp_path: Path, monkeypatch) -> None:
+    _patch_available_macro_feeds(monkeypatch, dxy_change=0.01)
+    monkeypatch.setattr(
+        "src.macro.gold_macro.GoldEtfFlowsAdapter.fetch_state",
+        lambda _self: {
+            "feed": "gold_etf_flows",
+            "available": False,
+            "stale": True,
+            "state": "unavailable",
+            "reason_codes": ["endpoint_not_configured"],
+            "metrics": {},
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        },
+    )
+    monkeypatch.setattr(
+        "src.macro.gold_macro.MT5DXYProxyAdapter.fetch_state",
+        lambda _self, memory_root: {
+            "feed": "dxy_proxy",
+            "available": True,
+            "stale": False,
+            "state": "strong_usd",
+            "status": "available",
+            "health_status": "healthy",
+            "last_update_timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "symbol_scope": "XAUUSD",
+            "data_confidence": 0.9,
+            "fallback_state": "none",
+            "reason_codes": [],
+            "metrics": {"usd_proxy_change": 0.01, "proxy_value": 101.0, "recent_history": []},
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        },
+    )
+    bars = [{"time": 4_300_000_000 - 60, "close": 2000.0}, {"time": 4_300_000_000, "close": 1999.0}]
+    macro = collect_xauusd_macro_state(
+        memory_root=str(tmp_path / "memory_gld_optional"),
+        bars=bars,
+        session_state="new_york",
+        volatility_regime="balanced",
+        config=MacroFeedConfig(
+            alpha_vantage_api_key="k",
+            fred_api_key="k",
+            treasury_endpoint="https://example.com/treasury",
+            economic_calendar_endpoint="https://example.com/calendar",
+            enabled=True,
+        ),
+    )
+    assert macro["trade_tags"]["gld_flow_state"] == "unavailable"
+    assert "gld_flow_optional_unavailable" in macro["risk_behavior"]["reasons"]
+    assert macro["risk_behavior"]["pause_trading"] is False
 
 
 def test_friday_policy_and_major_round_number_risk_are_enforced(tmp_path: Path) -> None:
@@ -538,3 +641,48 @@ def test_blowoff_archaeologist_gamma_proxy_and_memory_persistence(tmp_path: Path
     assert macro["detectors"]["dealer_gamma_flip_proxy"]["partial"] is True
     assert Path(macro["paths"]["surgical_latest"]).exists()
     assert Path(macro["paths"]["surgical_history"]).exists()
+
+
+def test_dxy_proxy_primary_context_and_feed_health_tagging(tmp_path: Path, monkeypatch) -> None:
+    _patch_available_macro_feeds(monkeypatch, dxy_change=-0.002)
+    monkeypatch.setattr(
+        "src.macro.gold_macro.MT5DXYProxyAdapter.fetch_state",
+        lambda _self, memory_root: {
+            "feed": "dxy_proxy",
+            "feed_name": "dxy_proxy",
+            "available": False,
+            "stale": True,
+            "state": "unavailable",
+            "status": "degraded",
+            "health_status": "degraded",
+            "last_update_timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "symbol_scope": "XAUUSD",
+            "data_confidence": 0.3,
+            "fallback_state": "alpha_vantage_dxy_proxy",
+            "reason_codes": ["missing_tick:USDSEK"],
+            "benchmark_label": "not_official_benchmark_dxy",
+            "metrics": {"usd_proxy_change": None, "recent_history": []},
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        },
+    )
+    bars = [{"time": 4_400_000_000 - 60, "close": 2000.0}, {"time": 4_400_000_000, "close": 2000.5}]
+    macro = collect_xauusd_macro_state(
+        memory_root=str(tmp_path / "memory_feed_registry"),
+        bars=bars,
+        session_state="london",
+        volatility_regime="expansion",
+        config=MacroFeedConfig(
+            alpha_vantage_api_key="k",
+            fred_api_key="k",
+            treasury_endpoint="https://example.com/treasury",
+            economic_calendar_endpoint="https://example.com/calendar",
+            enabled=True,
+        ),
+    )
+    assert macro["trade_tags"]["dxy_proxy_state"] == "unavailable"
+    assert macro["trade_tags"]["macro_feed_health"] in {"degraded", "unavailable", "healthy"}
+    assert "dxy_proxy_degraded_fallback_alpha" in macro["risk_behavior"]["reasons"]
+    assert macro["feed_registry"]["dxy_proxy"]["feed_name"] == "dxy_proxy"
+    assert macro["feed_registry"]["gld_flow"]["feed_name"] == "gld_flow"
+    assert Path(macro["paths"]["feed_health_latest"]).exists()
+    assert Path(macro["paths"]["feed_health_history"]).exists()
