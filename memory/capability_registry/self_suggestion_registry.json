@@ -1,5 +1,5 @@
 {
-  "cycle_index": 2,
+  "cycle_index": 1,
   "proposed_improvements": [
     {
       "cycle_index": 1,
@@ -200,18 +200,6 @@
         "core_module_deletion_allowed": false,
         "quarantine_supported": true
       }
-    },
-    {
-      "cycle_index": 2,
-      "signature": "new_execution_refinement::confidence_calibration_guard",
-      "gap_type": "confidence_miscalibration_drift",
-      "reason": "vague_suggestion_rejected"
-    },
-    {
-      "cycle_index": 2,
-      "signature": "new_survival_rule::miscalibration_pause_rule",
-      "gap_type": "confidence_miscalibration_drift",
-      "reason": "vague_suggestion_rejected"
     }
   ],
   "promoted_improvements": [
