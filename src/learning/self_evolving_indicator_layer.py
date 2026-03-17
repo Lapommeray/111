@@ -10290,12 +10290,6 @@ def run_self_evolving_indicator_layer(
     )
     decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
     unified_market_intelligence_field["decision_refinements"] = decision_refinements
-    previous_rollback_orchestration = read_json_safe(
-        memory_root / "rollback_orchestration" / "rollback_orchestration_latest.json",
-        default={},
-    )
-    if not isinstance(previous_rollback_orchestration, dict):
-        previous_rollback_orchestration = {}
     self_suggestion_governor = _self_suggestion_governor(
         memory_root=memory_root,
         closed=closed,
@@ -10322,7 +10316,6 @@ def run_self_evolving_indicator_layer(
         hierarchical_decision_policy_layer=hierarchical_decision_policy_engine,
         portfolio_multi_context_capital_allocation_layer=portfolio_multi_context_capital_allocation_engine,
         temporal_execution_sequencing_layer=temporal_execution_sequencing_engine,
-        rollback_orchestration_and_safe_reversion_layer=previous_rollback_orchestration,
     )
     governed_capability_invention_engine = _governed_capability_invention_layer(
         memory_root=memory_root,
@@ -10458,7 +10451,6 @@ def run_self_evolving_indicator_layer(
         temporal_execution_sequencing_layer=temporal_execution_sequencing_engine,
         governed_capability_invention_layer=governed_capability_invention_engine,
         autonomous_capability_expansion_layer=autonomous_capability_expansion_engine,
-        rollback_orchestration_and_safe_reversion_layer=previous_rollback_orchestration,
         replay_scope=replay_scope,
     )
     components = unified_market_intelligence_field.get("components", {})
@@ -10668,17 +10660,17 @@ def run_self_evolving_indicator_layer(
         pause_reasons = []
     rollback_urgency = float(rollback_orchestration_engine.get("rollback_urgency", 0.0) or 0.0)
     rollback_mode = str(rollback_orchestration_engine.get("rollback_mode", "monitor_only"))
-    if rollback_urgency >= 0.55 and "rollback_orchestration_pause_guard" not in pause_reasons:
+    if rollback_urgency >= 0.45 and "rollback_orchestration_pause_guard" not in pause_reasons:
         pause_reasons.append("rollback_orchestration_pause_guard")
-    if rollback_urgency >= 0.75 and "rollback_orchestration_refusal_guard" not in refusal_reasons:
+    if rollback_urgency >= 0.65 and "rollback_orchestration_refusal_guard" not in refusal_reasons:
         refusal_reasons.append("rollback_orchestration_refusal_guard")
     refusal_pause_behavior["refusal_reasons"] = refusal_reasons
     refusal_pause_behavior["pause_reasons"] = pause_reasons
-    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
-        rollback_urgency >= 0.55 or rollback_mode in {"selective_revert", "freeze_only", "freeze_and_revert"}
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or (
+        rollback_urgency >= 0.45 or rollback_mode in {"selective_revert", "freeze_only", "freeze_and_revert"}
     )
-    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
-        rollback_urgency >= 0.75 or rollback_mode == "freeze_and_revert"
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or (
+        rollback_urgency >= 0.65 or rollback_mode == "freeze_and_revert"
     )
     decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
     unified_market_intelligence_field["decision_refinements"] = decision_refinements

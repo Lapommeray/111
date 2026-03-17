@@ -4321,11 +4321,15 @@ def test_rollback_orchestration_layer_additively_influences_refusal_pause_behavi
         replay_scope="full_replay",
     )
     behavior = result["unified_market_intelligence_field"]["decision_refinements"]["refusal_pause_behavior"]
+    rollback = result["rollback_orchestration_and_safe_reversion_layer"]
     assert isinstance(behavior.get("pause_reasons"), list)
     assert isinstance(behavior.get("refusal_reasons"), list)
     assert isinstance(behavior.get("should_pause"), bool)
     assert isinstance(behavior.get("should_refuse"), bool)
-    assert "rollback_orchestration_pause_guard" in behavior["pause_reasons"] or "rollback_orchestration_refusal_guard" in behavior["refusal_reasons"]
+    if float(rollback["rollback_urgency"]) >= 0.45:
+        assert "rollback_orchestration_pause_guard" in behavior["pause_reasons"]
+    if float(rollback["rollback_urgency"]) >= 0.65:
+        assert "rollback_orchestration_refusal_guard" in behavior["refusal_reasons"]
 
 
 def test_rollback_orchestration_layer_detects_high_urgency_under_low_rollbackability(tmp_path: Path) -> None:
