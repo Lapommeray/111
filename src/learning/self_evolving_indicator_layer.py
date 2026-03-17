@@ -7460,10 +7460,14 @@ def _governed_capability_invention_layer(
             "dominant_invention_axis": dominant_invention_axis,
         },
     )
+    updated_known_signatures = list(known_signatures)
+    for signature in signature_counts.keys():
+        if signature not in known_signature_set:
+            updated_known_signatures.append(signature)
     write_json_atomic(
         novelty_registry_path,
         {
-            "known_signatures": sorted(known_signature_set | set(signature_counts.keys()))[-1000:],
+            "known_signatures": updated_known_signatures[-1000:],
             "novel_signatures": novel_signatures,
             "novelty_score": novelty_score,
         },
