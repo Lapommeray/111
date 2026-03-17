@@ -1341,16 +1341,7 @@ def _capability_evolution_governance_ladder(
         evidence_strength = float(gap.get("evidence_strength", 0.0) or 0.0)
         prototype_plane = str(best_plane.get("synthetic_plane_name", "none"))
         prototype_predictive = float(best_plane.get("predictive_value", 0.0) or 0.0)
-        replay_score = round(
-            min(
-                1.0,
-                (evidence_strength * 0.5)
-                + (prototype_predictive * 0.3)
-                + (unified_confidence * 0.2)
-                + ((calibration_reliability - 0.5) * 0.08),
-            ),
-            4,
-        )
+        replay_score = round(min(1.0, (evidence_strength * 0.5) + (prototype_predictive * 0.3) + (unified_confidence * 0.2)), 4)
         comparative_advantage = round(min(1.0, (replay_score * 0.55) + (prototype_predictive * 0.45)), 4)
         conflict_with_unified = round(min(1.0, max(0.0, replay_score - unified_score + 0.2)), 4)
         if replay_score < 0.42:
@@ -1902,20 +1893,22 @@ def _calibration_and_uncertainty_governance_layer(
     )
     execution_state = str(execution_microstructure_engine.get("execution_state", "insufficient_data"))
     regime_key = f"{replay_scope}|{regime}|{execution_state}"
-    input_signature = {
+    cycle_signature = {
         "replay_scope": replay_scope,
+        "regime_key": regime_key,
         "raw_confidence": raw_confidence,
         "observed_accuracy": observed_accuracy,
         "execution_penalty": execution_penalty,
         "execution_confidence": execution_confidence,
         "failure_cluster_risk": failure_cluster_risk,
-        "regime_key": regime_key,
         "settled_count": len(outcome_proxy),
     }
     previous_latest = read_json_safe(latest_path, default={})
-    if isinstance(previous_latest, dict) and previous_latest.get("input_signature") == input_signature:
+    if isinstance(previous_latest, dict) and previous_latest.get("_signature") == cycle_signature:
+        returned = dict(previous_latest)
+        returned.pop("_signature", None)
         return {
-            **previous_latest,
+            **returned,
             "paths": {
                 "latest": str(latest_path),
                 "history": str(history_path),
@@ -2059,12 +2052,11 @@ def _calibration_and_uncertainty_governance_layer(
         "no_blind_live_self_rewrites": True,
     }
     payload = {
-        "input_signature": input_signature,
         "calibration_state": calibration_state,
         "confidence_adjustments": confidence_adjustments,
         "governance": governance,
     }
-    write_json_atomic(latest_path, payload)
+    write_json_atomic(latest_path, {**payload, "_signature": cycle_signature})
     history = read_json_safe(history_path, default={"snapshots": []})
     if not isinstance(history, dict):
         history = {"snapshots": []}
@@ -2120,8 +2112,7 @@ def _contradiction_arbitration_and_belief_resolution_layer(
     composite_confidence = _bounded(float(confidence_structure.get("composite_confidence", 0.0) or 0.0))
     calibrated_confidence = confidence_structure.get("calibrated_confidence")
     if isinstance(calibrated_confidence, (int, float)):
-        blended_confidence = _bounded((composite_confidence * 0.75) + (float(calibrated_confidence) * 0.25))
-        unified_confidence = _bounded(max(composite_confidence, blended_confidence))
+        unified_confidence = _bounded(max(composite_confidence, float(calibrated_confidence)))
     else:
         unified_confidence = composite_confidence
     detector_reliability = _bounded(
@@ -2798,8 +2789,8 @@ def _detect_improvement_gaps(
                 {
                     "gap_type": "confidence_miscalibration_drift",
                     "detail": "confidence_calibration_drift",
-                    "frequency": max(1, int(round((calibration_drift + historical_error + execution_adjusted_uncertainty) * 4))),
-                    "severity": round(min(1.0, max(calibration_drift, historical_error, execution_adjusted_uncertainty)), 4),
+                    "frequency": max(1, int(round(max(calibration_drift, historical_error, execution_adjusted_uncertainty) * 4))),
+                    "severity": round(max(calibration_drift, historical_error, execution_adjusted_uncertainty), 4),
                 }
             )
         if regime_observations >= 2 and regime_score < 0.48:
@@ -2816,11 +2807,8 @@ def _detect_improvement_gaps(
                 {
                     "gap_type": "chronic_overconfidence_under_execution_hostility",
                     "detail": "overconfidence_execution_hostility",
-                    "frequency": max(1, int(round((raw_confidence - calibrated_confidence) * 8))),
-                    "severity": round(
-                        min(1.0, ((raw_confidence - calibrated_confidence) * 0.65) + (execution_penalty * 0.35)),
-                        4,
-                    ),
+                    "frequency": max(1, int(round((raw_confidence - calibrated_confidence) * 6))),
+                    "severity": round(min(1.0, max(raw_confidence - calibrated_confidence, execution_penalty)), 4),
                 }
             )
     return gaps
