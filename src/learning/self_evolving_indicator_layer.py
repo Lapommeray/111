@@ -9508,6 +9508,56 @@ def run_self_evolving_indicator_layer(
     )
     decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
     unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    learning_stability_guard_engine = _learning_stability_and_catastrophic_drift_guard_layer(
+        memory_root=memory_root,
+        replay_scope=replay_scope,
+        unified_market_intelligence_field=unified_market_intelligence_field,
+        calibration_uncertainty_engine=calibration_uncertainty_engine,
+        contradiction_arbitration_engine=contradiction_arbitration_engine,
+        system_coherence_and_drift_integrity_layer=system_coherence_drift_integrity_engine,
+        cross_regime_transfer_robustness_layer=cross_regime_transfer_robustness_engine,
+        causal_intervention_counterfactual_robustness_layer=causal_intervention_robustness_engine,
+        self_expansion_quality_layer=self_expansion_quality_engine,
+        structural_memory_graph_engine=structural_memory_graph_engine,
+        latent_transition_hazard_engine=latent_transition_hazard_engine,
+    )
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["learning_stability_state"] = {
+        "state": str(learning_stability_guard_engine.get("learning_stability_state", "unknown")),
+        "learning_stability_score": round(
+            float(learning_stability_guard_engine.get("learning_stability_score", 0.0) or 0.0), 4
+        ),
+        "catastrophic_drift_risk": round(
+            float(learning_stability_guard_engine.get("catastrophic_drift_risk", 0.0) or 0.0), 4
+        ),
+    }
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["learning_stability_score"] = round(
+        max(0.0, min(1.0, float(learning_stability_guard_engine.get("learning_stability_score", 0.0) or 0.0))),
+        4,
+    )
+    confidence_structure["catastrophic_drift_risk"] = round(
+        max(0.0, min(1.0, float(learning_stability_guard_engine.get("catastrophic_drift_risk", 0.0) or 0.0))),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["learning_stability"] = {
+        "learning_stability_state": learning_stability_guard_engine.get("learning_stability_state", "unknown"),
+        "learning_stability_score": round(float(learning_stability_guard_engine.get("learning_stability_score", 0.0) or 0.0), 4),
+        "catastrophic_drift_risk": round(float(learning_stability_guard_engine.get("catastrophic_drift_risk", 0.0) or 0.0), 4),
+        "capability_expansion_pressure": round(float(learning_stability_guard_engine.get("capability_expansion_pressure", 0.0) or 0.0), 4),
+        "regime_overfit_risk": round(float(learning_stability_guard_engine.get("regime_overfit_risk", 0.0) or 0.0), 4),
+        "learning_fragmentation_risk": round(float(learning_stability_guard_engine.get("learning_fragmentation_risk", 0.0) or 0.0), 4),
+    }
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
     survival_intelligence = {
         "capital_survival_engine": autonomous_behavior.get("capital_survival_engine", {}),
         "pain_memory_survival_layer": pain_memory_survival,
@@ -9535,6 +9585,7 @@ def run_self_evolving_indicator_layer(
         "unified_market_intelligence_field": unified_market_intelligence_field,
         "self_expansion_quality_layer": self_expansion_quality_engine,
         "system_coherence_and_drift_integrity_layer": system_coherence_drift_integrity_engine,
+        "learning_stability_and_catastrophic_drift_guard_layer": learning_stability_guard_engine,
     }
     meta_learning_loop = _meta_learning_loop(
         memory_root=memory_root,
@@ -9575,5 +9626,6 @@ def run_self_evolving_indicator_layer(
         "unified_market_intelligence_field": unified_market_intelligence_field,
         "self_expansion_quality_layer": self_expansion_quality_engine,
         "system_coherence_and_drift_integrity_layer": system_coherence_drift_integrity_engine,
+        "learning_stability_and_catastrophic_drift_guard_layer": learning_stability_guard_engine,
         "meta_learning_loop": meta_learning_loop,
     }

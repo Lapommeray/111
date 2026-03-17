@@ -427,6 +427,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "capital_allocation_state",
         "self_expansion_quality_state",
         "system_coherence_state",
+        "learning_stability_state",
     }
     assert 0.0 <= unified["unified_field_score"] <= 1.0
     assert 0.0 <= unified["confidence_structure"]["composite_confidence"] <= 1.0
@@ -738,6 +739,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "capital_allocation_state",
         "self_expansion_quality_state",
         "system_coherence_state",
+        "learning_stability_state",
     }
 
 
@@ -3605,3 +3607,229 @@ def test_system_coherence_and_drift_integrity_layer_nonbreaking_with_missing_inp
     assert coherence["governance_flags"]["sandbox_only"] is True
     assert coherence["governance_flags"]["replay_validation_required"] is True
     assert coherence["governance_flags"]["live_deployment_allowed"] is False
+
+
+def test_learning_stability_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {
+                "trade_id": "lsg1",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -1.1,
+                "failure_cause": "execution_failure",
+                "signal_time": 10,
+                "first_fill_time": 95,
+                "intended_entry_price": 2010.0,
+                "average_fill_price": 2018.0,
+                "mae_after_fill": 4.2,
+                "mfe_after_fill": 0.2,
+            },
+            {"trade_id": "lsg2", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 3.0, "slippage_ratio": 2.8},
+        replay_scope="full_replay",
+    )
+    layer = result["learning_stability_and_catastrophic_drift_guard_layer"]
+    assert Path(layer["paths"]["latest"]).exists()
+    assert Path(layer["paths"]["history"]).exists()
+    assert Path(layer["paths"]["catastrophic_drift_registry"]).exists()
+    assert Path(layer["paths"]["expansion_pressure_registry"]).exists()
+    assert Path(layer["paths"]["stability_transition_trace"]).exists()
+    assert Path(layer["paths"]["learning_stability_governance_state"]).exists()
+
+
+def test_learning_stability_layer_returns_expected_schema(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "lss1", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "execution_failure"},
+            {"trade_id": "lss2", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.2, "slippage_ratio": 2.0},
+        replay_scope="focused_replay",
+    )
+    layer = result["learning_stability_and_catastrophic_drift_guard_layer"]
+    expected_keys = {
+        "learning_stability_state",
+        "learning_stability_score",
+        "catastrophic_drift_risk",
+        "capability_expansion_pressure",
+        "regime_overfit_risk",
+        "learning_fragmentation_risk",
+        "stability_reliability",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(layer))
+    for key in (
+        "learning_stability_score",
+        "catastrophic_drift_risk",
+        "capability_expansion_pressure",
+        "regime_overfit_risk",
+        "learning_fragmentation_risk",
+        "stability_reliability",
+    ):
+        assert 0.0 <= float(layer[key]) <= 1.0
+    assert layer["learning_stability_state"] in {"stable", "strained", "drifting", "catastrophic_drift_risk"}
+
+
+def test_learning_stability_layer_adds_unified_field_components_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "lsu1", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "execution_failure"},
+            {"trade_id": "lsu2", "status": "closed", "result": "win", "pnl_points": 0.6, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.4, "slippage_ratio": 2.1},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "unified_field_score" in unified
+    assert "composite_confidence" in unified["confidence_structure"]
+    assert "learning_stability_state" in unified["components"]
+    assert "learning_stability_score" in unified["confidence_structure"]
+    assert "catastrophic_drift_risk" in unified["confidence_structure"]
+    assert "learning_stability" in unified["decision_refinements"]
+    assert "strategy_selection" in unified["decision_refinements"]
+    assert "risk_sizing" in unified["decision_refinements"]
+
+
+def test_learning_stability_layer_additively_influences_governance_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {
+                "trade_id": "lsgov1",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -1.3,
+                "failure_cause": "execution_failure",
+                "signal_time": 10,
+                "first_fill_time": 110,
+                "intended_entry_price": 2010.0,
+                "average_fill_price": 2020.0,
+                "mae_after_fill": 5.0,
+                "mfe_after_fill": 0.2,
+            },
+            {"trade_id": "lsgov2", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.3, "spread_ratio": 3.4, "slippage_ratio": 3.3},
+        replay_scope="full_replay",
+    )
+    layer = result["learning_stability_and_catastrophic_drift_guard_layer"]
+    flags = layer["governance_flags"]
+    assert isinstance(flags, dict)
+    assert flags["sandbox_only"] is True
+    assert flags["replay_validation_required"] is True
+    assert flags["live_deployment_allowed"] is False
+    assert flags["no_blind_live_self_rewrites"] is True
+    assert isinstance(flags["catastrophic_drift_guard"], bool)
+    assert isinstance(flags["expansion_pressure_guard"], bool)
+    assert isinstance(flags["regime_overfit_guard"], bool)
+    assert isinstance(flags["learning_fragmentation_guard"], bool)
+
+
+def test_learning_stability_layer_detects_catastrophic_drift_risk(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {
+                "trade_id": "lsd1",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -2.1,
+                "failure_cause": "execution_failure",
+                "signal_time": 10,
+                "first_fill_time": 120,
+                "intended_entry_price": 2010.0,
+                "average_fill_price": 2025.0,
+                "mae_after_fill": 6.0,
+                "mfe_after_fill": 0.1,
+            },
+            {
+                "trade_id": "lsd2",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -1.8,
+                "failure_cause": "execution_failure",
+                "signal_time": 10,
+                "first_fill_time": 100,
+                "intended_entry_price": 2010.0,
+                "average_fill_price": 2022.0,
+                "mae_after_fill": 5.5,
+                "mfe_after_fill": 0.1,
+            },
+            {"trade_id": "lsd3", "status": "closed", "result": "loss", "pnl_points": -1.5, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.5, "spread_ratio": 3.8, "slippage_ratio": 3.5},
+        replay_scope="full_replay",
+    )
+    layer = result["learning_stability_and_catastrophic_drift_guard_layer"]
+    assert 0.0 <= float(layer["catastrophic_drift_risk"]) <= 1.0
+    assert layer["learning_stability_state"] in {"stable", "strained", "drifting", "catastrophic_drift_risk"}
+
+
+def test_learning_stability_layer_handles_missing_inputs_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "lsn1", "status": "closed", "result": "loss", "pnl_points": -0.2},
+            {"trade_id": "lsn2", "status": "closed", "result": "flat", "pnl_points": 0.0},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    layer = result["learning_stability_and_catastrophic_drift_guard_layer"]
+    assert layer["learning_stability_state"] in {"stable", "strained", "drifting", "catastrophic_drift_risk"}
+    assert 0.0 <= float(layer["learning_stability_score"]) <= 1.0
+    assert 0.0 <= float(layer["catastrophic_drift_risk"]) <= 1.0
+    assert 0.0 <= float(layer["capability_expansion_pressure"]) <= 1.0
+    assert 0.0 <= float(layer["regime_overfit_risk"]) <= 1.0
+    assert 0.0 <= float(layer["learning_fragmentation_risk"]) <= 1.0
+    assert isinstance(layer["governance_flags"], dict)
+    assert layer["governance_flags"]["sandbox_only"] is True
+    assert layer["governance_flags"]["replay_validation_required"] is True
+    assert layer["governance_flags"]["live_deployment_allowed"] is False
+
+
+def test_learning_stability_layer_history_rolls_correctly(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    for i in range(3):
+        run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"lsh{i}", "status": "closed", "result": "loss", "pnl_points": -0.5},
+            ],
+            market_state={"structure_state": "range"},
+            replay_scope="full_replay",
+        )
+    governance = json.loads((memory_root / "learning_stability" / "learning_stability_governance_state.json").read_text(encoding="utf-8"))
+    assert governance.get("sandbox_only") is True
+    assert governance.get("replay_validation_required") is True
+    assert governance.get("live_deployment_allowed") is False
+    history = json.loads((memory_root / "learning_stability" / "learning_stability_history.json").read_text(encoding="utf-8"))
+    snapshots = history.get("snapshots", [])
+    assert len(snapshots) == 3
+
+
+def test_learning_stability_layer_governance_flags_enforced(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "lsf1", "status": "closed", "result": "loss", "pnl_points": -0.7, "failure_cause": "execution_failure"},
+            {"trade_id": "lsf2", "status": "closed", "result": "win", "pnl_points": 0.4, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 2.0, "slippage_ratio": 1.8},
+        replay_scope="full_replay",
+    )
+    layer = result["learning_stability_and_catastrophic_drift_guard_layer"]
+    survival = result["survival_intelligence_layer"]
+    assert "learning_stability_and_catastrophic_drift_guard_layer" in survival
+    assert survival["learning_stability_and_catastrophic_drift_guard_layer"] is layer
+    flags = layer["governance_flags"]
+    assert flags["sandbox_only"] is True
+    assert flags["no_blind_live_self_rewrites"] is True
+    assert flags["replay_validation_required"] is True
+    assert flags["live_deployment_allowed"] is False
