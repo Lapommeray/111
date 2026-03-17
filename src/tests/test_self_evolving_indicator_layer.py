@@ -417,6 +417,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "liquidity_decay_state",
         "execution_microstructure_state",
         "adversarial_execution_state",
+        "deception_inference_state",
         "structural_memory_state",
         "latent_transition_hazard_state",
         "self_expansion_quality_state",
@@ -721,6 +722,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "liquidity_decay_state",
         "execution_microstructure_state",
         "adversarial_execution_state",
+        "deception_inference_state",
         "structural_memory_state",
         "latent_transition_hazard_state",
         "self_expansion_quality_state",
@@ -1377,6 +1379,294 @@ def test_capability_evolution_ladder_reads_prior_adversarial_hostility_context_n
         context = candidates[0].get("adversarial_execution_context", {})
         assert "prior_cycle_hostility" in context
         assert 0.0 <= float(context["prior_cycle_hostility"]) <= 1.0
+
+
+def test_dynamic_market_maker_deception_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "dm1", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "execution_failure"},
+            {"trade_id": "dm2", "status": "closed", "result": "win", "pnl_points": 0.6, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.3, "spread_ratio": 2.2, "slippage_ratio": 2.0},
+        replay_scope="focused_replay",
+    )
+    deception = result["dynamic_market_maker_deception_inference_layer"]
+    assert Path(deception["paths"]["latest"]).exists()
+    assert Path(deception["paths"]["history"]).exists()
+    assert Path(deception["paths"]["deception_event_registry"]).exists()
+    assert Path(deception["paths"]["deception_context_registry"]).exists()
+    assert Path(deception["paths"]["deception_reliability_registry"]).exists()
+    assert Path(deception["paths"]["deception_governance_state"]).exists()
+
+
+def test_dynamic_market_maker_deception_layer_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "dmn1", "status": "closed", "result": "loss", "pnl_points": -0.5},
+            {"trade_id": "dmn2", "status": "closed", "result": "win", "pnl_points": 0.4},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    deception_state = result["dynamic_market_maker_deception_inference_layer"]["deception_state"]
+    assert deception_state["deception_state"] in {"normal", "elevated", "hostile", "insufficient_data"}
+    assert 0.0 <= deception_state["deception_score"] <= 1.0
+    assert 0.0 <= deception_state["deception_reliability"] <= 1.0
+    governance = result["dynamic_market_maker_deception_inference_layer"]["governance"]
+    assert governance["sandbox_only"] is True
+    assert governance["replay_validation_required"] is True
+    assert governance["live_deployment_allowed"] is False
+
+
+def test_dynamic_market_maker_deception_layer_detects_engineered_move_under_sweep_quotefade_partialfill_stress(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {
+                "trade_id": "dms1",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -0.2,
+                "failure_cause": "execution_failure",
+                "intended_entry_price": 2010.0,
+                "average_fill_price": 2017.5,
+                "signal_time": 10,
+                "first_fill_time": 90,
+                "requested_size": 1.0,
+                "filled_size": 0.3,
+                "mae_after_fill": 4.2,
+                "mfe_after_fill": 0.1,
+            },
+            {
+                "trade_id": "dms2",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -0.2,
+                "failure_cause": "partial_fill",
+                "intended_entry_price": 2012.0,
+                "average_fill_price": 2018.2,
+                "signal_time": 20,
+                "first_fill_time": 100,
+                "requested_size": 1.0,
+                "filled_size": 0.35,
+                "mae_after_fill": 4.8,
+                "mfe_after_fill": 0.2,
+            },
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 3.1, "slippage_ratio": 3.0},
+        replay_scope="full_replay",
+    )
+    state = result["dynamic_market_maker_deception_inference_layer"]["deception_state"]
+    assert state["deception_score"] >= 0.55
+    assert state["engineered_move_probability"] >= 0.5
+    assert state["liquidity_bait_risk"] >= 0.5
+    assert state["inventory_defense_proxy"] >= 0.45
+
+
+def test_dynamic_market_maker_deception_layer_adds_unified_field_components_without_overwriting_existing_fields(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "dmu1", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "execution_failure"},
+            {"trade_id": "dmu2", "status": "closed", "result": "win", "pnl_points": 0.7, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.4, "spread_ratio": 2.1, "slippage_ratio": 1.9},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "unified_field_score" in unified
+    assert "composite_confidence" in unified["confidence_structure"]
+    assert "deception_inference_state" in unified["components"]
+
+
+def test_dynamic_market_maker_deception_layer_additively_updates_unified_confidence_and_risk_sizing(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "dmc1", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "execution_failure"},
+            {"trade_id": "dmc2", "status": "closed", "result": "loss", "pnl_points": -0.4, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 2.9, "slippage_ratio": 2.8},
+        replay_scope="focused_replay",
+    )
+    confidence = result["unified_market_intelligence_field"]["confidence_structure"]
+    risk_sizing = result["unified_market_intelligence_field"]["decision_refinements"]["risk_sizing"]
+    assert "deception_adjusted_confidence" in confidence
+    assert confidence["deception_adjusted_confidence"] <= confidence["composite_confidence"]
+    assert "deception_multiplier" in risk_sizing
+    assert 0.25 <= float(risk_sizing["deception_multiplier"]) <= 1.0
+
+
+def test_dynamic_market_maker_deception_layer_additively_updates_refusal_pause_behavior(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "dmr1", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "execution_failure"},
+            {"trade_id": "dmr2", "status": "closed", "result": "loss", "pnl_points": -0.7, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 3.2, "slippage_ratio": 3.1},
+        replay_scope="full_replay",
+    )
+    behavior = result["unified_market_intelligence_field"]["decision_refinements"]["refusal_pause_behavior"]
+    all_reasons = set(behavior["pause_reasons"]) | set(behavior["refusal_reasons"])
+    assert any(reason.startswith("deception_") for reason in all_reasons)
+
+
+def test_dynamic_market_maker_deception_layer_feeds_contradiction_arbitration_with_deception_belief(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "dmd1", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "execution_failure"},
+            {"trade_id": "dmd2", "status": "closed", "result": "loss", "pnl_points": -0.7, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 2.8, "slippage_ratio": 2.6},
+        replay_scope="full_replay",
+    )
+    contradiction = result["contradiction_arbitration_and_belief_resolution_layer"]
+    assert any(item.get("source_layer") == "dynamic_market_maker_deception_inference_layer" for item in contradiction["beliefs"])
+    contradiction_types = {item.get("contradiction_type") for item in contradiction["contradictions"]}
+    assert "continuation_vs_engineered_move" in contradiction_types or contradiction["arbitration"]["conflict_state"] in {"active", "clear"}
+
+
+def test_dynamic_market_maker_deception_layer_feeds_calibration_uncertainty_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "dmcal1", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "execution_failure"},
+            {"trade_id": "dmcal2", "status": "closed", "result": "loss", "pnl_points": -0.4, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 2.7, "slippage_ratio": 2.6},
+        replay_scope="focused_replay",
+    )
+    calibration_state = result["calibration_and_uncertainty_governance_layer"]["calibration_state"]
+    assert "deception_context" in calibration_state
+    assert 0.0 <= calibration_state["deception_context"]["deception_score"] <= 1.0
+    assert 0.0 <= calibration_state["execution_adjusted_uncertainty"] <= 1.0
+
+
+def test_dynamic_market_maker_deception_layer_feeds_self_suggestion_governor_gap_detection(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    trade_outcomes = [
+        {
+            "trade_id": "dmg1",
+            "status": "closed",
+            "result": "loss",
+            "pnl_points": -0.3,
+            "failure_cause": "execution_failure",
+            "intended_entry_price": 2010.0,
+            "average_fill_price": 2016.5,
+            "signal_time": 10,
+            "first_fill_time": 80,
+            "requested_size": 1.0,
+            "filled_size": 0.35,
+            "mae_after_fill": 4.0,
+            "mfe_after_fill": 0.2,
+        },
+        {
+            "trade_id": "dmg2",
+            "status": "closed",
+            "result": "loss",
+            "pnl_points": -0.3,
+            "failure_cause": "partial_fill",
+            "intended_entry_price": 2011.0,
+            "average_fill_price": 2017.0,
+            "signal_time": 20,
+            "first_fill_time": 85,
+            "requested_size": 1.0,
+            "filled_size": 0.3,
+            "mae_after_fill": 4.3,
+            "mfe_after_fill": 0.1,
+        },
+    ]
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 3.2, "slippage_ratio": 3.1},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 3.2, "slippage_ratio": 3.1},
+        replay_scope="focused_replay",
+    )
+    gap_types = {item.get("gap_type") for item in second["self_suggestion_governor"]["detected_gaps"]}
+    expected = {
+        "persistent_engineered_move_deception_cluster",
+        "liquidity_bait_recurrence_gap",
+        "sweep_trap_deception_under_modeled",
+        "deception_reliability_decay",
+    }
+    assert gap_types.intersection(expected)
+
+
+def test_capability_evolution_ladder_reads_prior_deception_context_nonbreaking(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "dml1", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "execution_failure"},
+            {"trade_id": "dml2", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.4, "spread_ratio": 2.6, "slippage_ratio": 2.5},
+        replay_scope="full_replay",
+    )
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "dml3", "status": "closed", "result": "loss", "pnl_points": -0.7, "failure_cause": "execution_failure"},
+            {"trade_id": "dml4", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 2.4, "slippage_ratio": 2.3},
+        replay_scope="focused_replay",
+    )
+    candidates_path = memory_root / "capability_evolution" / "capability_candidates.json"
+    payload = json.loads(candidates_path.read_text(encoding="utf-8"))
+    candidates = payload.get("capability_candidates", [])
+    if candidates:
+        context = candidates[0].get("deception_inference_context", {})
+        assert "prior_cycle_deception_score" in context
+        assert "prior_cycle_deception_reliability" in context
+        assert 0.0 <= float(context["prior_cycle_deception_score"]) <= 1.0
+        assert 0.0 <= float(context["prior_cycle_deception_reliability"]) <= 1.0
+
+
+def test_dynamic_market_maker_deception_layer_governance_is_sandbox_and_replay_only(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "dmgov1", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "execution_failure"},
+            {"trade_id": "dmgov2", "status": "closed", "result": "win", "pnl_points": 0.7, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.2, "spread_ratio": 1.8, "slippage_ratio": 1.6},
+        replay_scope="focused_replay",
+    )
+    governance = result["dynamic_market_maker_deception_inference_layer"]["governance"]
+    assert governance["sandbox_only"] is True
+    assert governance["replay_validation_required"] is True
+    assert governance["live_deployment_allowed"] is False
+    assert governance["no_blind_live_self_rewrites"] is True
+
+
+def test_dynamic_market_maker_deception_layer_history_rolls_and_is_nonbreaking(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    for index in range(3):
+        run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"dmh{index}a", "status": "closed", "result": "loss", "pnl_points": -0.8},
+                {"trade_id": f"dmh{index}b", "status": "closed", "result": "win", "pnl_points": 0.6},
+            ],
+            market_state={"structure_state": "range"},
+            replay_scope="focused_replay",
+        )
+    history_path = memory_root / "deception_inference" / "deception_inference_history.json"
+    assert history_path.exists()
+    payload = json.loads(history_path.read_text(encoding="utf-8"))
+    assert payload["snapshots"]
+    assert len(payload["snapshots"]) <= 200
 
 
 def test_structural_memory_graph_layer_persists_required_artifacts(tmp_path: Path) -> None:
