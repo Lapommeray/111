@@ -1,9 +1,0 @@
-{
-  "contexts": {
-    "evaluation_replay|range|insufficient_data|normal": {
-      "deception_reliability": 0.8974,
-      "observations": 1,
-      "rolling_deception_score": 0.1026
-    }
-  }
-}

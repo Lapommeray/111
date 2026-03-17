@@ -422,6 +422,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "latent_transition_hazard_state",
         "transfer_robustness_state",
         "causal_intervention_robustness_state",
+        "decision_policy_state",
         "self_expansion_quality_state",
     }
     assert 0.0 <= unified["unified_field_score"] <= 1.0
@@ -729,6 +730,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "latent_transition_hazard_state",
         "transfer_robustness_state",
         "causal_intervention_robustness_state",
+        "decision_policy_state",
         "self_expansion_quality_state",
     }
 
@@ -2736,3 +2738,209 @@ def test_capability_evolution_ladder_reads_prior_causal_intervention_context_non
         assert "prior_cycle_counterfactual_robustness_score" in context
         assert "prior_cycle_intervention_reliability" in context
         assert "prior_cycle_false_improvement_risk" in context
+
+
+def test_hierarchical_decision_policy_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "hdp1", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia"},
+            {"trade_id": "hdp2", "status": "closed", "result": "win", "pnl_points": 0.6, "session": "london"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 1.9, "slippage_ratio": 1.8},
+        replay_scope="full_replay",
+    )
+    policy = result["hierarchical_decision_policy_layer"]
+    assert Path(policy["paths"]["latest"]).exists()
+    assert Path(policy["paths"]["history"]).exists()
+    assert Path(policy["paths"]["policy_reason_registry"]).exists()
+    assert Path(policy["paths"]["policy_conflict_registry"]).exists()
+    assert Path(policy["paths"]["policy_transition_trace"]).exists()
+    assert Path(policy["paths"]["decision_policy_governance_state"]).exists()
+
+
+def test_hierarchical_decision_policy_layer_returns_expected_schema(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "hds1", "status": "closed", "result": "loss", "pnl_points": -0.9},
+            {"trade_id": "hds2", "status": "closed", "result": "loss", "pnl_points": -0.7},
+            {"trade_id": "hds3", "status": "closed", "result": "win", "pnl_points": 0.5},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.3, "slippage_ratio": 2.1},
+        replay_scope="full_replay",
+    )
+    policy = result["hierarchical_decision_policy_layer"]
+    expected_keys = {
+        "decision_policy_state",
+        "dominant_policy_mode",
+        "recommended_policy_posture",
+        "survival_priority_score",
+        "opportunity_priority_score",
+        "refusal_priority_score",
+        "deferral_priority_score",
+        "dominant_reason_cluster",
+        "policy_conflict_score",
+        "policy_reliability",
+        "policy_risk_multiplier",
+        "policy_confidence_adjustment",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(policy))
+
+
+def test_hierarchical_decision_policy_layer_adds_unified_field_components_without_overwriting_existing_fields(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "hdu1", "status": "closed", "result": "loss", "pnl_points": -0.7},
+            {"trade_id": "hdu2", "status": "closed", "result": "win", "pnl_points": 0.5},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.4, "spread_ratio": 1.8, "slippage_ratio": 1.7},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "unified_field_score" in unified
+    assert "composite_confidence" in unified["confidence_structure"]
+    assert "decision_policy_state" in unified["components"]
+    assert "decision_policy" in unified["decision_refinements"]
+    assert "policy_reliability" in unified["confidence_structure"]
+
+
+def test_hierarchical_decision_policy_layer_additively_influences_risk_sizing_and_refusal_pause_behavior(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "hdb1", "status": "closed", "result": "loss", "pnl_points": -1.1, "session": "asia"},
+            {"trade_id": "hdb2", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia"},
+            {"trade_id": "hdb3", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.1, "spread_ratio": 3.3, "slippage_ratio": 3.0},
+        replay_scope="full_replay",
+    )
+    refinements = result["unified_market_intelligence_field"]["decision_refinements"]
+    assert "decision_policy_multiplier" in refinements["risk_sizing"]
+    assert 0.25 <= float(refinements["risk_sizing"]["decision_policy_multiplier"]) <= 1.0
+    behavior = refinements["refusal_pause_behavior"]
+    all_reasons = set(behavior.get("refusal_reasons", [])) | set(behavior.get("pause_reasons", []))
+    assert any(reason.startswith("decision_policy_") for reason in all_reasons)
+
+
+def test_hierarchical_decision_policy_layer_dominates_survival_when_contradiction_and_calibration_fragility_are_high(
+    tmp_path: Path,
+) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "hdc1", "status": "closed", "result": "loss", "pnl_points": -1.2, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "hdc2", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "hdc3", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "hdc4", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia", "failure_cause": "execution_failure"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.2, "spread_ratio": 3.4, "slippage_ratio": 3.3},
+        replay_scope="full_replay",
+    )
+    policy = result["hierarchical_decision_policy_layer"]
+    assert policy["survival_priority_score"] >= policy["opportunity_priority_score"]
+    assert policy["dominant_policy_mode"] in {"survival_first", "refusal_first", "deferral_first"}
+
+
+def test_hierarchical_decision_policy_layer_allows_opportunity_bias_only_when_policy_reliability_is_high(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "hdo1", "status": "closed", "result": "win", "pnl_points": 0.8, "session": "london"},
+            {"trade_id": "hdo2", "status": "closed", "result": "win", "pnl_points": 0.7, "session": "new_york"},
+            {"trade_id": "hdo3", "status": "closed", "result": "win", "pnl_points": 0.6, "session": "asia"},
+        ],
+        market_state={"structure_state": "trend", "volatility_ratio": 1.0, "spread_ratio": 1.0, "slippage_ratio": 1.0},
+        replay_scope="focused_replay",
+    )
+    policy = result["hierarchical_decision_policy_layer"]
+    if policy["dominant_policy_mode"] == "opportunity_first":
+        assert policy["policy_reliability"] >= 0.6
+    else:
+        assert policy["opportunity_priority_score"] <= max(
+            policy["survival_priority_score"],
+            policy["refusal_priority_score"],
+            policy["deferral_priority_score"],
+        )
+
+
+def test_hierarchical_decision_policy_layer_feeds_self_suggestion_governor_discipline_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "hdg1", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia"},
+            {"trade_id": "hdg2", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia"},
+            {"trade_id": "hdg3", "status": "closed", "result": "loss", "pnl_points": -0.7, "session": "asia"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 3.0, "slippage_ratio": 2.8},
+        replay_scope="full_replay",
+    )
+    governor = result["self_suggestion_governor"]
+    assert "hierarchical_decision_policy_layer" in governor
+    assert "anti_noise_controls" in governor
+    assert "priority_threshold" in governor["anti_noise_controls"]
+
+
+def test_hierarchical_decision_policy_layer_feeds_self_expansion_quality_components_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "hde1", "status": "closed", "result": "loss", "pnl_points": -0.9},
+            {"trade_id": "hde2", "status": "closed", "result": "win", "pnl_points": 0.6},
+            {"trade_id": "hde3", "status": "closed", "result": "loss", "pnl_points": -0.4},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.2, "slippage_ratio": 2.0},
+        replay_scope="full_replay",
+    )
+    quality = result["self_expansion_quality_layer"]
+    components = quality["quality_components"]
+    assert "decision_policy_state_context" in components
+    assert "decision_policy_mode_context" in components
+    assert "decision_policy_conflict_pressure" in components
+    assert "decision_policy_refusal_deferral_pressure" in components
+
+
+def test_hierarchical_decision_policy_layer_history_rolls_and_governance_is_sandbox_replay_only(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    for index in range(3):
+        result = run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"hdh{index}a", "status": "closed", "result": "loss", "pnl_points": -0.8},
+                {"trade_id": f"hdh{index}b", "status": "closed", "result": "win", "pnl_points": 0.5},
+            ],
+            market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 2.1, "slippage_ratio": 2.0},
+            replay_scope="focused_replay",
+        )
+    policy = result["hierarchical_decision_policy_layer"]
+    flags = policy["governance_flags"]
+    assert flags["sandbox_only"] is True
+    assert flags["replay_validation_required"] is True
+    assert flags["live_deployment_allowed"] is False
+    history_payload = json.loads((memory_root / "decision_policy" / "decision_policy_history.json").read_text(encoding="utf-8"))
+    assert history_payload["snapshots"]
+    assert len(history_payload["snapshots"]) <= 200
+
+
+def test_hierarchical_decision_policy_layer_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "hdn1", "status": "closed", "result": "loss", "pnl_points": -0.2},
+            {"trade_id": "hdn2", "status": "closed", "result": "flat", "pnl_points": 0.0},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    policy = result["hierarchical_decision_policy_layer"]
+    assert 0.0 <= policy["survival_priority_score"] <= 1.0
+    assert 0.0 <= policy["opportunity_priority_score"] <= 1.0
+    assert 0.0 <= policy["policy_conflict_score"] <= 1.0
+    assert 0.0 <= policy["policy_reliability"] <= 1.0
+    assert policy["governance_flags"]["sandbox_only"] is True
+    assert policy["governance_flags"]["replay_validation_required"] is True
+    assert policy["governance_flags"]["live_deployment_allowed"] is False

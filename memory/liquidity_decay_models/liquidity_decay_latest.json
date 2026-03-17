@@ -1,7 +1,0 @@
-{
-  "liquidity_decay_models": [],
-  "governance": {
-    "sandbox_only": true,
-    "validation_required": true
-  }
-}
