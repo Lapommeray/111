@@ -1,0 +1,11 @@
+{
+  "entries": [
+    {
+      "replay_scope": "evaluation_replay",
+      "dominant_reason_cluster": "fragility_cluster",
+      "dominant_policy_mode": "deferral_first",
+      "recommended_policy_posture": "governed_deferral",
+      "mean_priority": 0.2884
+    }
+  ]
+}

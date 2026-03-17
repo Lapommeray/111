@@ -1,0 +1,52 @@
+{
+  "feature_performance": [
+    {
+      "feature_name": "macro_conflict_score",
+      "predictive_usefulness": 0.0,
+      "signal_quality_delta": -0.25,
+      "validation": {
+        "scope": "evaluation_replay",
+        "historical_sample_size": 0,
+        "sandbox_only": true,
+        "explainable": true,
+        "testable": true
+      }
+    },
+    {
+      "feature_name": "liquidity_pressure_index",
+      "predictive_usefulness": 0.0925,
+      "signal_quality_delta": -0.1575,
+      "validation": {
+        "scope": "evaluation_replay",
+        "historical_sample_size": 0,
+        "sandbox_only": true,
+        "explainable": true,
+        "testable": true
+      }
+    },
+    {
+      "feature_name": "session_fragility_score",
+      "predictive_usefulness": 0.05,
+      "signal_quality_delta": -0.2,
+      "validation": {
+        "scope": "evaluation_replay",
+        "historical_sample_size": 0,
+        "sandbox_only": true,
+        "explainable": true,
+        "testable": true
+      }
+    },
+    {
+      "feature_name": "trap_probability_factor",
+      "predictive_usefulness": 0.08,
+      "signal_quality_delta": -0.17,
+      "validation": {
+        "scope": "evaluation_replay",
+        "historical_sample_size": 0,
+        "sandbox_only": true,
+        "explainable": true,
+        "testable": true
+      }
+    }
+  ]
+}

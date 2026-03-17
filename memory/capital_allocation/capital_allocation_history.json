@@ -1,0 +1,25 @@
+{
+  "snapshots": [
+    {
+      "capital_allocation_state": "balanced_guarded",
+      "allocation_priority_score": 0.3853,
+      "survival_exposure_bias": 0.2633,
+      "opportunity_allocation_bias": 0.3385,
+      "exposure_compression_score": 0.4047,
+      "context_competition_score": 0.5814,
+      "allocation_reliability": 0.3111,
+      "recommended_capital_fraction": 0.2489,
+      "allocation_reason_cluster": "opportunity_alignment_cluster",
+      "temporal_pacing_pressure": 0.274,
+      "staged_deployment_bias": 0.3355,
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true,
+        "survival_priority_guard": false,
+        "allocation_compression_guard": false
+      }
+    }
+  ]
+}

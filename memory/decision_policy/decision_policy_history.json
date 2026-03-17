@@ -1,0 +1,27 @@
+{
+  "snapshots": [
+    {
+      "decision_policy_state": "fragile",
+      "dominant_policy_mode": "deferral_first",
+      "recommended_policy_posture": "governed_deferral",
+      "survival_priority_score": 0.184,
+      "opportunity_priority_score": 0.2504,
+      "refusal_priority_score": 0.3112,
+      "deferral_priority_score": 0.4082,
+      "dominant_reason_cluster": "fragility_cluster",
+      "policy_conflict_score": 0.2955,
+      "policy_reliability": 0.2517,
+      "policy_risk_multiplier": 0.8709,
+      "policy_confidence_adjustment": 0.7898,
+      "temporal_sequencing_pressure": 0.274,
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true,
+        "policy_refusal_guard": false,
+        "policy_deferral_guard": false
+      }
+    }
+  ]
+}
