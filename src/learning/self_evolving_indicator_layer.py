@@ -29,6 +29,9 @@ _PRICE_LEVEL_BUCKET_SIZE = 5.0
 _DEFAULT_RETEST_INTERVAL_PADDING = 1.0
 _PAIN_GEOMETRY_MAX_DISTANCE_SQ = 60.0
 _LIQUIDITY_REGEN_SCALE = 5.0
+_RETIREMENT_UNRESOLVED_PRESSURE_NORMALIZER = 4.0
+_RETIREMENT_CANDIDATE_STALENESS_NORMALIZER = 20.0
+_RETIREMENT_HISTORY_LIMIT = 200
 
 
 def _closed_outcomes(trade_outcomes: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -4900,6 +4903,7 @@ def _detect_improvement_gaps(
     rollback_orchestration_and_safe_reversion_layer: dict[str, Any] | None = None,
     hypothesis_falsification_and_experiment_design_layer: dict[str, Any] | None = None,
     capability_lineage_and_genealogy_intelligence_layer: dict[str, Any] | None = None,
+    knowledge_retirement_and_pruning_governance_layer: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
     repeated = autonomous_behavior.get("trade_review_engine", {}).get("repeated_failure_patterns", [])
@@ -5613,6 +5617,60 @@ def _detect_improvement_gaps(
                 ),
                 "frequency": max(1, int(round(lineage_failure_recurrence * 4))),
                 "severity": round(min(1.0, lineage_failure_recurrence), 4),
+            }
+        )
+    knowledge_retirement_and_pruning_governance_layer = (
+        knowledge_retirement_and_pruning_governance_layer
+        if isinstance(knowledge_retirement_and_pruning_governance_layer, dict)
+        else {}
+    )
+    retirement_pressure_score = float(
+        knowledge_retirement_and_pruning_governance_layer.get("retirement_pressure_score", 0.0) or 0.0
+    )
+    deprecation_readiness_score = float(
+        knowledge_retirement_and_pruning_governance_layer.get("deprecation_readiness_score", 1.0) or 1.0
+    )
+    pruning_reliability = float(knowledge_retirement_and_pruning_governance_layer.get("pruning_reliability", 1.0) or 1.0)
+    if retirement_pressure_score >= 0.5:
+        gaps.append(
+            {
+                "gap_type": "retirement_governance_deficit",
+                "detail": str(
+                    knowledge_retirement_and_pruning_governance_layer.get(
+                        "retirement_reason_cluster",
+                        "retirement_governance_deficit",
+                    )
+                ),
+                "frequency": max(1, int(round(retirement_pressure_score * 4))),
+                "severity": round(min(1.0, retirement_pressure_score), 4),
+            }
+        )
+    if deprecation_readiness_score <= 0.45:
+        gaps.append(
+            {
+                "gap_type": "deprecation_readiness_stall",
+                "detail": str(
+                    knowledge_retirement_and_pruning_governance_layer.get(
+                        "retirement_reason_cluster",
+                        "deprecation_readiness_stall",
+                    )
+                ),
+                "frequency": max(1, int(round((1.0 - deprecation_readiness_score) * 4))),
+                "severity": round(min(1.0, 1.0 - deprecation_readiness_score), 4),
+            }
+        )
+    if pruning_reliability <= 0.45:
+        gaps.append(
+            {
+                "gap_type": "pruning_reliability_decay",
+                "detail": str(
+                    knowledge_retirement_and_pruning_governance_layer.get(
+                        "retirement_reason_cluster",
+                        "pruning_reliability_decay",
+                    )
+                ),
+                "frequency": max(1, int(round((1.0 - pruning_reliability) * 4))),
+                "severity": round(min(1.0, 1.0 - pruning_reliability), 4),
             }
         )
     return gaps
@@ -6851,6 +6909,7 @@ def _self_suggestion_governor(
     rollback_orchestration_and_safe_reversion_layer: dict[str, Any] | None = None,
     hypothesis_falsification_and_experiment_design_layer: dict[str, Any] | None = None,
     capability_lineage_and_genealogy_intelligence_layer: dict[str, Any] | None = None,
+    knowledge_retirement_and_pruning_governance_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     registry_dir = memory_root / "capability_registry"
     registry_dir.mkdir(parents=True, exist_ok=True)
@@ -6906,6 +6965,7 @@ def _self_suggestion_governor(
         rollback_orchestration_and_safe_reversion_layer=rollback_orchestration_and_safe_reversion_layer,
         hypothesis_falsification_and_experiment_design_layer=hypothesis_falsification_and_experiment_design_layer,
         capability_lineage_and_genealogy_intelligence_layer=capability_lineage_and_genealogy_intelligence_layer,
+        knowledge_retirement_and_pruning_governance_layer=knowledge_retirement_and_pruning_governance_layer,
     )
     calibration_uncertainty_engine = (
         calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
@@ -7993,6 +8053,7 @@ def _self_expansion_quality_layer(
     rollback_orchestration_and_safe_reversion_layer: dict[str, Any] | None = None,
     hypothesis_falsification_and_experiment_design_layer: dict[str, Any] | None = None,
     capability_lineage_and_genealogy_intelligence_layer: dict[str, Any] | None = None,
+    knowledge_retirement_and_pruning_governance_layer: dict[str, Any] | None = None,
     replay_scope: str,
 ) -> dict[str, Any]:
     quality_dir = memory_root / "self_expansion_quality"
@@ -8054,6 +8115,11 @@ def _self_expansion_quality_layer(
     capability_lineage_and_genealogy_intelligence_layer = (
         capability_lineage_and_genealogy_intelligence_layer
         if isinstance(capability_lineage_and_genealogy_intelligence_layer, dict)
+        else {}
+    )
+    knowledge_retirement_and_pruning_governance_layer = (
+        knowledge_retirement_and_pruning_governance_layer
+        if isinstance(knowledge_retirement_and_pruning_governance_layer, dict)
         else {}
     )
 
@@ -8576,6 +8642,56 @@ def _self_expansion_quality_layer(
             ),
             4,
         ),
+        "retirement_pressure_context": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    float(knowledge_retirement_and_pruning_governance_layer.get("retirement_pressure_score", 0.0) or 0.0),
+                ),
+            ),
+            4,
+        ),
+        "deprecation_readiness_context": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    float(knowledge_retirement_and_pruning_governance_layer.get("deprecation_readiness_score", 0.0) or 0.0),
+                ),
+            ),
+            4,
+        ),
+        "pruning_reliability_context": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    float(knowledge_retirement_and_pruning_governance_layer.get("pruning_reliability", 0.0) or 0.0),
+                ),
+            ),
+            4,
+        ),
+        "retirement_safety_context": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    float(knowledge_retirement_and_pruning_governance_layer.get("retirement_safety_score", 0.0) or 0.0),
+                ),
+            ),
+            4,
+        ),
+        "rollback_dependency_risk_context": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    float(knowledge_retirement_and_pruning_governance_layer.get("rollback_dependency_risk", 0.0) or 0.0),
+                ),
+            ),
+            4,
+        ),
         "promotion_confidence_multiplier": promotion_confidence_multiplier,
         "quarantine_pressure_delta": quarantine_pressure_delta,
         "expansion_rate_limit": expansion_rate_limit,
@@ -9032,6 +9148,7 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
     self_expansion_quality_layer: dict[str, Any] | None = None,
     structural_memory_graph_engine: dict[str, Any] | None = None,
     latent_transition_hazard_engine: dict[str, Any] | None = None,
+    knowledge_retirement_and_pruning_governance_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     stability_dir = memory_root / "learning_stability"
     stability_dir.mkdir(parents=True, exist_ok=True)
@@ -9064,6 +9181,11 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
     self_expansion_quality_layer = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
     structural_memory_graph_engine = structural_memory_graph_engine if isinstance(structural_memory_graph_engine, dict) else {}
     latent_transition_hazard_engine = latent_transition_hazard_engine if isinstance(latent_transition_hazard_engine, dict) else {}
+    knowledge_retirement_and_pruning_governance_layer = (
+        knowledge_retirement_and_pruning_governance_layer
+        if isinstance(knowledge_retirement_and_pruning_governance_layer, dict)
+        else {}
+    )
 
     confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
     if not isinstance(confidence_structure, dict):
@@ -9136,6 +9258,13 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
             else 0.0
         )
     )
+    has_retirement_context = bool(knowledge_retirement_and_pruning_governance_layer)
+    retirement_pressure = _bounded(
+        float(knowledge_retirement_and_pruning_governance_layer.get("retirement_pressure_score", 0.0) or 0.0)
+    )
+    retirement_safety = _bounded(
+        float(knowledge_retirement_and_pruning_governance_layer.get("retirement_safety_score", 1.0) or 1.0)
+    )
 
     regime_memory_alignment = _bounded(
         float(structural_state.get("regime_memory_alignment", 0.5) or 0.5)
@@ -9201,6 +9330,8 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
         + (false_improvement_risk * 0.15)
         + (overfit_risk * 0.2)
     )
+    if has_retirement_context:
+        catastrophic_drift_risk = _bounded(catastrophic_drift_risk + ((1.0 - retirement_safety) * 0.03))
 
     # --- Metric 3: capability_expansion_pressure ---
     capability_expansion_pressure = _bounded(
@@ -9209,6 +9340,8 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
         + (feature_invention_rate * 0.25)
         + (capability_ladder_pressure * 0.25)
     )
+    if has_retirement_context:
+        capability_expansion_pressure = _bounded(capability_expansion_pressure + (retirement_pressure * 0.05))
 
     # --- Metric 4: regime_overfit_risk ---
     regime_overfit_risk = _bounded(
@@ -9919,6 +10052,7 @@ def _capability_lineage_and_genealogy_intelligence_layer(
     learning_stability_and_catastrophic_drift_guard_layer: dict[str, Any] | None = None,
     capability_evolution_ladder: dict[str, Any] | None = None,
     self_suggestion_governor: dict[str, Any] | None = None,
+    knowledge_retirement_and_pruning_governance_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     lineage_dir = memory_root / "capability_lineage"
     lineage_dir.mkdir(parents=True, exist_ok=True)
@@ -9962,6 +10096,11 @@ def _capability_lineage_and_genealogy_intelligence_layer(
     )
     capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
     self_suggestion_governor = self_suggestion_governor if isinstance(self_suggestion_governor, dict) else {}
+    knowledge_retirement_and_pruning_governance_layer = (
+        knowledge_retirement_and_pruning_governance_layer
+        if isinstance(knowledge_retirement_and_pruning_governance_layer, dict)
+        else {}
+    )
 
     invention_reliability = _bounded(float(governed_capability_invention_layer.get("invention_reliability", 0.5) or 0.5))
     invention_redundancy = _bounded(float(governed_capability_invention_layer.get("redundancy_risk", 0.0) or 0.0))
@@ -9989,6 +10128,9 @@ def _capability_lineage_and_genealogy_intelligence_layer(
     )
     catastrophic_drift_risk = _bounded(
         float(learning_stability_and_catastrophic_drift_guard_layer.get("catastrophic_drift_risk", 0.0) or 0.0)
+    )
+    retirement_pressure = _bounded(
+        float(knowledge_retirement_and_pruning_governance_layer.get("retirement_pressure_score", 0.0) or 0.0)
     )
 
     repeated_unresolved = self_suggestion_governor.get("repeated_unresolved_gaps", [])
@@ -10026,6 +10168,7 @@ def _capability_lineage_and_genealogy_intelligence_layer(
         + (unresolved_pressure * 0.2)
         + (lineage_redundancy_pressure * 0.15)
         + (rollback_urgency * 0.1)
+        + (retirement_pressure * 0.1)
     )
     lineage_failure_recurrence = _bounded(
         (unresolved_pressure * 0.45)
@@ -10176,6 +10319,242 @@ def _capability_lineage_and_genealogy_intelligence_layer(
                     "genealogy_reason_cluster": genealogy_reason_cluster,
                 }
             ]
+        },
+    )
+    write_json_atomic(governance_state_path, {**governance_flags, "replay_scope": replay_scope})
+    return payload
+
+
+def _knowledge_retirement_and_pruning_governance_layer(
+    *,
+    memory_root: Path,
+    replay_scope: str,
+    governed_capability_invention_layer: dict[str, Any],
+    autonomous_capability_expansion_layer: dict[str, Any],
+    self_expansion_quality_layer: dict[str, Any],
+    rollback_orchestration_and_safe_reversion_layer: dict[str, Any] | None = None,
+    hypothesis_falsification_and_experiment_design_layer: dict[str, Any] | None = None,
+    capability_lineage_and_genealogy_intelligence_layer: dict[str, Any] | None = None,
+    learning_stability_and_catastrophic_drift_guard_layer: dict[str, Any] | None = None,
+    system_coherence_and_drift_integrity_layer: dict[str, Any] | None = None,
+    capability_evolution_ladder: dict[str, Any] | None = None,
+    self_suggestion_governor: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    retirement_dir = memory_root / "knowledge_retirement"
+    retirement_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = retirement_dir / "knowledge_retirement_latest.json"
+    history_path = retirement_dir / "knowledge_retirement_history.json"
+    candidate_registry_path = retirement_dir / "retirement_candidate_registry.json"
+    deprecation_registry_path = retirement_dir / "deprecation_readiness_registry.json"
+    pruning_registry_path = retirement_dir / "pruning_reliability_registry.json"
+    dependency_watchlist_path = retirement_dir / "retirement_dependency_watchlist.json"
+    reason_cluster_registry_path = retirement_dir / "retirement_reason_cluster_registry.json"
+    governance_state_path = retirement_dir / "knowledge_retirement_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    governed_capability_invention_layer = (
+        governed_capability_invention_layer if isinstance(governed_capability_invention_layer, dict) else {}
+    )
+    autonomous_capability_expansion_layer = (
+        autonomous_capability_expansion_layer if isinstance(autonomous_capability_expansion_layer, dict) else {}
+    )
+    self_expansion_quality_layer = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+    rollback_orchestration_and_safe_reversion_layer = (
+        rollback_orchestration_and_safe_reversion_layer
+        if isinstance(rollback_orchestration_and_safe_reversion_layer, dict)
+        else {}
+    )
+    hypothesis_falsification_and_experiment_design_layer = (
+        hypothesis_falsification_and_experiment_design_layer
+        if isinstance(hypothesis_falsification_and_experiment_design_layer, dict)
+        else {}
+    )
+    capability_lineage_and_genealogy_intelligence_layer = (
+        capability_lineage_and_genealogy_intelligence_layer
+        if isinstance(capability_lineage_and_genealogy_intelligence_layer, dict)
+        else {}
+    )
+    learning_stability_and_catastrophic_drift_guard_layer = (
+        learning_stability_and_catastrophic_drift_guard_layer
+        if isinstance(learning_stability_and_catastrophic_drift_guard_layer, dict)
+        else {}
+    )
+    system_coherence_and_drift_integrity_layer = (
+        system_coherence_and_drift_integrity_layer if isinstance(system_coherence_and_drift_integrity_layer, dict) else {}
+    )
+    capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
+    self_suggestion_governor = self_suggestion_governor if isinstance(self_suggestion_governor, dict) else {}
+
+    invention_redundancy = _bounded(float(governed_capability_invention_layer.get("redundancy_risk", 0.0) or 0.0))
+    expansion_pressure = _bounded(float(autonomous_capability_expansion_layer.get("expansion_pressure_score", 0.0) or 0.0))
+    expansion_readiness = _bounded(float(autonomous_capability_expansion_layer.get("expansion_readiness_score", 0.5) or 0.5))
+    rollbackability_score = _bounded(float(autonomous_capability_expansion_layer.get("rollbackability_score", 0.5) or 0.5))
+    quality_redundancy = _bounded(float(self_expansion_quality_layer.get("redundancy_risk", 0.0) or 0.0))
+    quality_reliability = _bounded(float(self_expansion_quality_layer.get("durability_score", 0.5) or 0.5))
+    rollback_urgency = _bounded(float(rollback_orchestration_and_safe_reversion_layer.get("rollback_urgency", 0.0) or 0.0))
+    rollback_reliability = _bounded(
+        float(rollback_orchestration_and_safe_reversion_layer.get("rollback_reversion_reliability", 0.5) or 0.5)
+    )
+    falsification_readiness = _bounded(
+        float(hypothesis_falsification_and_experiment_design_layer.get("experiment_readiness_score", 0.5) or 0.5)
+    )
+    lineage_redundancy = _bounded(
+        float(capability_lineage_and_genealogy_intelligence_layer.get("lineage_redundancy_pressure", 0.0) or 0.0)
+    )
+    lineage_failure_recurrence = _bounded(
+        float(capability_lineage_and_genealogy_intelligence_layer.get("lineage_failure_recurrence", 0.0) or 0.0)
+    )
+    lineage_reliability = _bounded(float(capability_lineage_and_genealogy_intelligence_layer.get("lineage_reliability", 0.5) or 0.5))
+    catastrophic_drift_risk = _bounded(
+        float(learning_stability_and_catastrophic_drift_guard_layer.get("catastrophic_drift_risk", 0.0) or 0.0)
+    )
+    coherence_risk = _bounded(float(system_coherence_and_drift_integrity_layer.get("fragmentation_risk", 0.0) or 0.0))
+    capability_candidates = capability_evolution_ladder.get("capability_candidates", [])
+    if not isinstance(capability_candidates, list):
+        capability_candidates = []
+    repeated_unresolved = self_suggestion_governor.get("repeated_unresolved_gaps", [])
+    if not isinstance(repeated_unresolved, list):
+        repeated_unresolved = []
+
+    redundancy_retirement_overlap = _bounded(
+        (invention_redundancy * 0.4) + (quality_redundancy * 0.35) + (lineage_redundancy * 0.25)
+    )
+    unresolved_pressure = min(1.0, len(repeated_unresolved) / max(1.0, _RETIREMENT_UNRESOLVED_PRESSURE_NORMALIZER))
+    candidate_staleness_pressure = min(
+        1.0,
+        len([item for item in capability_candidates if isinstance(item, dict)])
+        / max(1.0, _RETIREMENT_CANDIDATE_STALENESS_NORMALIZER),
+    )
+    stale_capability_pressure = _bounded(
+        (lineage_failure_recurrence * 0.3)
+        + ((1.0 - falsification_readiness) * 0.2)
+        + (unresolved_pressure * 0.35)
+        + (candidate_staleness_pressure * 0.15)
+    )
+    rollback_dependency_risk = _bounded((rollback_urgency * 0.55) + ((1.0 - rollback_reliability) * 0.45))
+    retirement_pressure_score = _bounded(
+        (redundancy_retirement_overlap * 0.25)
+        + (stale_capability_pressure * 0.55)
+        + (expansion_pressure * 0.1)
+        + (coherence_risk * 0.1)
+    )
+    deprecation_readiness_score = _bounded(
+        (expansion_readiness * 0.35)
+        + (rollbackability_score * 0.25)
+        + (falsification_readiness * 0.15)
+        + ((1.0 - stale_capability_pressure) * 0.1)
+        + ((1.0 - rollback_dependency_risk) * 0.15)
+    )
+    pruning_reliability = _bounded(
+        (quality_reliability * 0.35)
+        + (lineage_reliability * 0.25)
+        + (rollback_reliability * 0.2)
+        + (falsification_readiness * 0.1)
+        + ((1.0 - catastrophic_drift_risk) * 0.1)
+    )
+    retirement_safety_score = _bounded(
+        (deprecation_readiness_score * 0.4)
+        + (pruning_reliability * 0.35)
+        + ((1.0 - rollback_dependency_risk) * 0.25)
+    )
+    promotion_freeze_recommended = bool(
+        retirement_pressure_score >= 0.62 or retirement_safety_score <= 0.42 or rollback_dependency_risk >= 0.65
+    )
+    if retirement_safety_score <= 0.4:
+        retirement_reason_cluster = "retirement_safety_deficit"
+    elif rollback_dependency_risk >= 0.62:
+        retirement_reason_cluster = "rollback_dependency_constraint"
+    elif stale_capability_pressure >= 0.55:
+        retirement_reason_cluster = "stale_capability_accumulation"
+    elif redundancy_retirement_overlap >= 0.5:
+        retirement_reason_cluster = "redundancy_pruning_pressure"
+    else:
+        retirement_reason_cluster = "balanced_retirement_governance"
+
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "retirement_pause_guard": retirement_pressure_score >= 0.5,
+        "retirement_refusal_guard": retirement_safety_score <= 0.4 or rollback_dependency_risk >= 0.65,
+    }
+    payload = {
+        "retirement_pressure_score": retirement_pressure_score,
+        "deprecation_readiness_score": deprecation_readiness_score,
+        "pruning_reliability": pruning_reliability,
+        "retirement_safety_score": retirement_safety_score,
+        "redundancy_retirement_overlap": redundancy_retirement_overlap,
+        "stale_capability_pressure": stale_capability_pressure,
+        "rollback_dependency_risk": rollback_dependency_risk,
+        "retirement_reason_cluster": retirement_reason_cluster,
+        "promotion_freeze_recommended": promotion_freeze_recommended,
+        "governance_flags": governance_flags,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "retirement_candidate_registry": str(candidate_registry_path),
+            "deprecation_readiness_registry": str(deprecation_registry_path),
+            "pruning_reliability_registry": str(pruning_registry_path),
+            "retirement_dependency_watchlist": str(dependency_watchlist_path),
+            "retirement_reason_cluster_registry": str(reason_cluster_registry_path),
+            "knowledge_retirement_governance_state": str(governance_state_path),
+        },
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-_RETIREMENT_HISTORY_LIMIT:]})
+    write_json_atomic(
+        candidate_registry_path,
+        {
+            "candidate_count": len([item for item in capability_candidates if isinstance(item, dict)]),
+            "stale_capability_pressure": stale_capability_pressure,
+            "redundancy_retirement_overlap": redundancy_retirement_overlap,
+            "retirement_reason_cluster": retirement_reason_cluster,
+        },
+    )
+    write_json_atomic(
+        deprecation_registry_path,
+        {
+            "deprecation_readiness_score": deprecation_readiness_score,
+            "rollbackability_score": rollbackability_score,
+            "falsification_readiness": falsification_readiness,
+            "promotion_freeze_recommended": promotion_freeze_recommended,
+        },
+    )
+    write_json_atomic(
+        pruning_registry_path,
+        {
+            "pruning_reliability": pruning_reliability,
+            "quality_reliability": quality_reliability,
+            "lineage_reliability": lineage_reliability,
+            "rollback_reliability": rollback_reliability,
+        },
+    )
+    write_json_atomic(
+        dependency_watchlist_path,
+        {
+            "rollback_dependency_risk": rollback_dependency_risk,
+            "rollback_urgency": rollback_urgency,
+            "rollback_reliability": rollback_reliability,
+            "catastrophic_drift_risk": catastrophic_drift_risk,
+        },
+    )
+    write_json_atomic(
+        reason_cluster_registry_path,
+        {
+            "retirement_reason_cluster": retirement_reason_cluster,
+            "retirement_pressure_score": retirement_pressure_score,
+            "retirement_safety_score": retirement_safety_score,
+            "replay_scope": replay_scope,
         },
     )
     write_json_atomic(governance_state_path, {**governance_flags, "replay_scope": replay_scope})
@@ -11711,6 +12090,144 @@ def run_self_evolving_indicator_layer(
     )
     decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
     unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    knowledge_retirement_and_pruning_governance_engine = _knowledge_retirement_and_pruning_governance_layer(
+        memory_root=memory_root,
+        replay_scope=replay_scope,
+        governed_capability_invention_layer=governed_capability_invention_engine,
+        autonomous_capability_expansion_layer=autonomous_capability_expansion_engine,
+        self_expansion_quality_layer=self_expansion_quality_engine,
+        rollback_orchestration_and_safe_reversion_layer=rollback_orchestration_engine,
+        hypothesis_falsification_and_experiment_design_layer=hypothesis_falsification_engine,
+        capability_lineage_and_genealogy_intelligence_layer=capability_lineage_engine,
+        learning_stability_and_catastrophic_drift_guard_layer=learning_stability_guard_engine,
+        system_coherence_and_drift_integrity_layer=system_coherence_drift_integrity_engine,
+        capability_evolution_ladder=capability_evolution_ladder,
+        self_suggestion_governor=self_suggestion_governor,
+    )
+    self_suggestion_governor["knowledge_retirement_and_pruning_governance_layer"] = {
+        "retirement_pressure_score": knowledge_retirement_and_pruning_governance_engine.get("retirement_pressure_score", 0.0),
+        "deprecation_readiness_score": knowledge_retirement_and_pruning_governance_engine.get(
+            "deprecation_readiness_score",
+            0.0,
+        ),
+        "pruning_reliability": knowledge_retirement_and_pruning_governance_engine.get("pruning_reliability", 0.0),
+        "retirement_safety_score": knowledge_retirement_and_pruning_governance_engine.get("retirement_safety_score", 0.0),
+        "promotion_freeze_recommended": knowledge_retirement_and_pruning_governance_engine.get(
+            "promotion_freeze_recommended",
+            False,
+        ),
+    }
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["knowledge_retirement_state"] = {
+        "state": str(
+            knowledge_retirement_and_pruning_governance_engine.get(
+                "retirement_reason_cluster",
+                "balanced_retirement_governance",
+            )
+        ),
+        "retirement_reason_cluster": str(
+            knowledge_retirement_and_pruning_governance_engine.get(
+                "retirement_reason_cluster",
+                "balanced_retirement_governance",
+            )
+        ),
+        "promotion_freeze_recommended": bool(
+            knowledge_retirement_and_pruning_governance_engine.get("promotion_freeze_recommended", False)
+        ),
+    }
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["retirement_safety_score"] = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                float(knowledge_retirement_and_pruning_governance_engine.get("retirement_safety_score", 0.0) or 0.0),
+            ),
+        ),
+        4,
+    )
+    confidence_structure["pruning_reliability"] = round(
+        max(
+            0.0,
+            min(1.0, float(knowledge_retirement_and_pruning_governance_engine.get("pruning_reliability", 0.0) or 0.0)),
+        ),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["knowledge_retirement"] = {
+        "retirement_pressure_score": round(
+            float(knowledge_retirement_and_pruning_governance_engine.get("retirement_pressure_score", 0.0) or 0.0),
+            4,
+        ),
+        "deprecation_readiness_score": round(
+            float(knowledge_retirement_and_pruning_governance_engine.get("deprecation_readiness_score", 0.0) or 0.0),
+            4,
+        ),
+        "pruning_reliability": round(
+            float(knowledge_retirement_and_pruning_governance_engine.get("pruning_reliability", 0.0) or 0.0),
+            4,
+        ),
+        "retirement_safety_score": round(
+            float(knowledge_retirement_and_pruning_governance_engine.get("retirement_safety_score", 0.0) or 0.0),
+            4,
+        ),
+        "redundancy_retirement_overlap": round(
+            float(knowledge_retirement_and_pruning_governance_engine.get("redundancy_retirement_overlap", 0.0) or 0.0),
+            4,
+        ),
+        "stale_capability_pressure": round(
+            float(knowledge_retirement_and_pruning_governance_engine.get("stale_capability_pressure", 0.0) or 0.0),
+            4,
+        ),
+        "rollback_dependency_risk": round(
+            float(knowledge_retirement_and_pruning_governance_engine.get("rollback_dependency_risk", 0.0) or 0.0),
+            4,
+        ),
+        "retirement_reason_cluster": knowledge_retirement_and_pruning_governance_engine.get(
+            "retirement_reason_cluster",
+            "balanced_retirement_governance",
+        ),
+        "promotion_freeze_recommended": bool(
+            knowledge_retirement_and_pruning_governance_engine.get("promotion_freeze_recommended", False)
+        ),
+    }
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    if (
+        float(knowledge_retirement_and_pruning_governance_engine.get("retirement_pressure_score", 0.0) or 0.0) >= 0.5
+        and "knowledge_retirement_pause_guard" not in pause_reasons
+    ):
+        pause_reasons.append("knowledge_retirement_pause_guard")
+    if (
+        float(knowledge_retirement_and_pruning_governance_engine.get("retirement_safety_score", 1.0) or 1.0) <= 0.4
+        or float(knowledge_retirement_and_pruning_governance_engine.get("rollback_dependency_risk", 0.0) or 0.0) >= 0.65
+    ) and "knowledge_retirement_refusal_guard" not in refusal_reasons:
+        refusal_reasons.append("knowledge_retirement_refusal_guard")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        "knowledge_retirement_pause_guard" in pause_reasons
+    )
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        "knowledge_retirement_refusal_guard" in refusal_reasons
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
     survival_intelligence = {
         "capital_survival_engine": autonomous_behavior.get("capital_survival_engine", {}),
         "pain_memory_survival_layer": pain_memory_survival,
@@ -11744,6 +12261,7 @@ def run_self_evolving_indicator_layer(
         "rollback_orchestration_and_safe_reversion_layer": rollback_orchestration_engine,
         "hypothesis_falsification_and_experiment_design_layer": hypothesis_falsification_engine,
         "capability_lineage_and_genealogy_intelligence_layer": capability_lineage_engine,
+        "knowledge_retirement_and_pruning_governance_layer": knowledge_retirement_and_pruning_governance_engine,
     }
     meta_learning_loop = _meta_learning_loop(
         memory_root=memory_root,
@@ -11790,5 +12308,6 @@ def run_self_evolving_indicator_layer(
         "rollback_orchestration_and_safe_reversion_layer": rollback_orchestration_engine,
         "hypothesis_falsification_and_experiment_design_layer": hypothesis_falsification_engine,
         "capability_lineage_and_genealogy_intelligence_layer": capability_lineage_engine,
+        "knowledge_retirement_and_pruning_governance_layer": knowledge_retirement_and_pruning_governance_engine,
         "meta_learning_loop": meta_learning_loop,
     }
