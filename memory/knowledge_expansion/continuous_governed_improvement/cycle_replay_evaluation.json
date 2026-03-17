@@ -2955,7 +2955,12 @@
             "allocation_reason_cluster": "opportunity_alignment_cluster",
             "recommended_capital_fraction": 0.2489
           },
-          "self_expansion_quality_state": "critical"
+          "self_expansion_quality_state": "critical",
+          "system_coherence_state": {
+            "state": "coherent",
+            "coherence_score": 0.6635,
+            "fragmentation_risk": 0.3171
+          }
         },
         "unified_field_score": 0.458,
         "confidence_structure": {
@@ -2990,7 +2995,10 @@
           "policy_confidence_adjustment": 0.7898,
           "allocation_reliability": 0.3111,
           "context_competition_score": 0.5814,
-          "expansion_quality_adjusted_confidence": 0.3527
+          "expansion_quality_adjusted_confidence": 0.3527,
+          "coherence_score": 0.6635,
+          "drift_integrity_score": 0.6454,
+          "coherence_reliability": 0.5231
         },
         "decision_refinements": {
           "signal_confidence": {
@@ -3060,6 +3068,13 @@
             "allocation_priority_score": 0.3853,
             "allocation_reliability": 0.3111,
             "recommended_capital_fraction": 0.2489
+          },
+          "system_coherence": {
+            "system_coherence_state": "coherent",
+            "coherence_score": 0.6635,
+            "drift_integrity_score": 0.6454,
+            "disagreement_load": 0.3328,
+            "fragmentation_risk": 0.3171
           }
         },
         "governance": {
@@ -3150,6 +3165,31 @@
           "promotion_maturity_registry": "memory/self_expansion_quality/promotion_maturity_registry.json",
           "expansion_regression_watchlist": "memory/self_expansion_quality/expansion_regression_watchlist.json",
           "governance_state": "memory/self_expansion_quality/self_expansion_quality_governance_state.json"
+        }
+      },
+      "system_coherence_and_drift_integrity_layer": {
+        "system_coherence_state": "coherent",
+        "coherence_score": 0.6635,
+        "drift_integrity_score": 0.6454,
+        "disagreement_load": 0.3328,
+        "policy_alignment_score": 0.7659,
+        "confidence_alignment_score": 0.6994,
+        "expansion_stability_score": 0.4863,
+        "fragmentation_risk": 0.3171,
+        "coherence_reliability": 0.5231,
+        "governance_flags": {
+          "sandbox_only": true,
+          "replay_validation_required": true,
+          "live_deployment_allowed": false,
+          "no_blind_live_self_rewrites": true
+        },
+        "paths": {
+          "latest": "memory/system_coherence/system_coherence_latest.json",
+          "history": "memory/system_coherence/system_coherence_history.json",
+          "drift_integrity_registry": "memory/system_coherence/drift_integrity_registry.json",
+          "disagreement_trace": "memory/system_coherence/disagreement_trace.json",
+          "fragmentation_watchlist": "memory/system_coherence/fragmentation_watchlist.json",
+          "system_coherence_governance_state": "memory/system_coherence/system_coherence_governance_state.json"
         }
       }
     },
@@ -5057,7 +5097,12 @@
           "allocation_reason_cluster": "opportunity_alignment_cluster",
           "recommended_capital_fraction": 0.2489
         },
-        "self_expansion_quality_state": "critical"
+        "self_expansion_quality_state": "critical",
+        "system_coherence_state": {
+          "state": "coherent",
+          "coherence_score": 0.6635,
+          "fragmentation_risk": 0.3171
+        }
       },
       "unified_field_score": 0.458,
       "confidence_structure": {
@@ -5092,7 +5137,10 @@
         "policy_confidence_adjustment": 0.7898,
         "allocation_reliability": 0.3111,
         "context_competition_score": 0.5814,
-        "expansion_quality_adjusted_confidence": 0.3527
+        "expansion_quality_adjusted_confidence": 0.3527,
+        "coherence_score": 0.6635,
+        "drift_integrity_score": 0.6454,
+        "coherence_reliability": 0.5231
       },
       "decision_refinements": {
         "signal_confidence": {
@@ -5162,6 +5210,13 @@
           "allocation_priority_score": 0.3853,
           "allocation_reliability": 0.3111,
           "recommended_capital_fraction": 0.2489
+        },
+        "system_coherence": {
+          "system_coherence_state": "coherent",
+          "coherence_score": 0.6635,
+          "drift_integrity_score": 0.6454,
+          "disagreement_load": 0.3328,
+          "fragmentation_risk": 0.3171
         }
       },
       "governance": {
@@ -5252,6 +5307,31 @@
         "promotion_maturity_registry": "memory/self_expansion_quality/promotion_maturity_registry.json",
         "expansion_regression_watchlist": "memory/self_expansion_quality/expansion_regression_watchlist.json",
         "governance_state": "memory/self_expansion_quality/self_expansion_quality_governance_state.json"
+      }
+    },
+    "system_coherence_and_drift_integrity_layer": {
+      "system_coherence_state": "coherent",
+      "coherence_score": 0.6635,
+      "drift_integrity_score": 0.6454,
+      "disagreement_load": 0.3328,
+      "policy_alignment_score": 0.7659,
+      "confidence_alignment_score": 0.6994,
+      "expansion_stability_score": 0.4863,
+      "fragmentation_risk": 0.3171,
+      "coherence_reliability": 0.5231,
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true
+      },
+      "paths": {
+        "latest": "memory/system_coherence/system_coherence_latest.json",
+        "history": "memory/system_coherence/system_coherence_history.json",
+        "drift_integrity_registry": "memory/system_coherence/drift_integrity_registry.json",
+        "disagreement_trace": "memory/system_coherence/disagreement_trace.json",
+        "fragmentation_watchlist": "memory/system_coherence/fragmentation_watchlist.json",
+        "system_coherence_governance_state": "memory/system_coherence/system_coherence_governance_state.json"
       }
     },
     "meta_learning_loop": {

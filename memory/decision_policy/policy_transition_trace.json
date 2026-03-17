@@ -7,6 +7,14 @@
       "from_mode": "seed",
       "to_mode": "deferral_first",
       "policy_conflict_score": 0.2955
+    },
+    {
+      "replay_scope": "evaluation_replay",
+      "from_state": "fragile",
+      "to_state": "fragile",
+      "from_mode": "deferral_first",
+      "to_mode": "deferral_first",
+      "policy_conflict_score": 0.2955
     }
   ]
 }

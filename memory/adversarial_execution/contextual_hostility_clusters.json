@@ -1,10 +1,10 @@
 {
   "clusters": {
     "evaluation_replay|range|insufficient_data": {
-      "occurrences": 1,
-      "hostility_sum": 0.0663,
+      "occurrences": 2,
+      "hostility_sum": 0.1326,
       "state_counts": {
-        "normal": 1
+        "normal": 2
       },
       "avg_hostility": 0.0663
     }

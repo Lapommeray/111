@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "replay_scope": "evaluation_replay",
+      "calibration_drift": 0.6786,
+      "drift_integrity_score": 0.6454,
+      "transfer_reliability": 0.6758,
+      "overfit_risk": 0.087,
+      "false_improvement_risk": 0.287
+    }
+  ]
+}

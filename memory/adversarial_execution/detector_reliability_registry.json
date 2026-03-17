@@ -2,8 +2,8 @@
   "contexts": {
     "evaluation_replay|range|insufficient_data": {
       "rolling_hostility": 0.0663,
-      "observations": 1,
-      "detector_reliability": 0.9337,
+      "observations": 2,
+      "detector_reliability": 1.0,
       "predatory_liquidity_state": "normal"
     }
   }

@@ -426,6 +426,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "decision_policy_state",
         "capital_allocation_state",
         "self_expansion_quality_state",
+        "system_coherence_state",
     }
     assert 0.0 <= unified["unified_field_score"] <= 1.0
     assert 0.0 <= unified["confidence_structure"]["composite_confidence"] <= 1.0
@@ -736,6 +737,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "decision_policy_state",
         "capital_allocation_state",
         "self_expansion_quality_state",
+        "system_coherence_state",
     }
 
 
@@ -3384,3 +3386,222 @@ def test_temporal_execution_sequencing_layer_nonbreaking_with_missing_inputs(tmp
     assert temporal["governance_flags"]["sandbox_only"] is True
     assert temporal["governance_flags"]["replay_validation_required"] is True
     assert temporal["governance_flags"]["live_deployment_allowed"] is False
+
+
+def test_system_coherence_and_drift_integrity_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {
+                "trade_id": "scdi1",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -1.1,
+                "failure_cause": "execution_failure",
+                "signal_time": 10,
+                "first_fill_time": 95,
+                "intended_entry_price": 2010.0,
+                "average_fill_price": 2018.0,
+                "mae_after_fill": 4.2,
+                "mfe_after_fill": 0.2,
+            },
+            {"trade_id": "scdi2", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 3.0, "slippage_ratio": 2.8},
+        replay_scope="full_replay",
+    )
+    coherence = result["system_coherence_and_drift_integrity_layer"]
+    assert Path(coherence["paths"]["latest"]).exists()
+    assert Path(coherence["paths"]["history"]).exists()
+    assert Path(coherence["paths"]["drift_integrity_registry"]).exists()
+    assert Path(coherence["paths"]["disagreement_trace"]).exists()
+    assert Path(coherence["paths"]["fragmentation_watchlist"]).exists()
+    assert Path(coherence["paths"]["system_coherence_governance_state"]).exists()
+
+
+def test_system_coherence_and_drift_integrity_layer_returns_expected_schema(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "scds1", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "execution_failure"},
+            {"trade_id": "scds2", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.2, "slippage_ratio": 2.0},
+        replay_scope="focused_replay",
+    )
+    coherence = result["system_coherence_and_drift_integrity_layer"]
+    expected_keys = {
+        "system_coherence_state",
+        "coherence_score",
+        "drift_integrity_score",
+        "disagreement_load",
+        "policy_alignment_score",
+        "confidence_alignment_score",
+        "expansion_stability_score",
+        "fragmentation_risk",
+        "coherence_reliability",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(coherence))
+    for key in (
+        "coherence_score",
+        "drift_integrity_score",
+        "disagreement_load",
+        "policy_alignment_score",
+        "confidence_alignment_score",
+        "expansion_stability_score",
+        "fragmentation_risk",
+        "coherence_reliability",
+    ):
+        assert 0.0 <= float(coherence[key]) <= 1.0
+    assert coherence["system_coherence_state"] in {"coherent", "degraded", "fragmented"}
+
+
+def test_system_coherence_and_drift_integrity_layer_adds_unified_field_components_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "scdu1", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "execution_failure"},
+            {"trade_id": "scdu2", "status": "closed", "result": "win", "pnl_points": 0.6, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.4, "slippage_ratio": 2.1},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "unified_field_score" in unified
+    assert "composite_confidence" in unified["confidence_structure"]
+    assert "system_coherence_state" in unified["components"]
+    assert "coherence_score" in unified["confidence_structure"]
+    assert "drift_integrity_score" in unified["confidence_structure"]
+    assert "coherence_reliability" in unified["confidence_structure"]
+    assert "system_coherence" in unified["decision_refinements"]
+    assert "strategy_selection" in unified["decision_refinements"]
+    assert "risk_sizing" in unified["decision_refinements"]
+
+
+def test_system_coherence_and_drift_integrity_layer_additively_influences_refusal_pause_behavior(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {
+                "trade_id": "scdp1",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -1.3,
+                "failure_cause": "execution_failure",
+                "signal_time": 10,
+                "first_fill_time": 110,
+                "intended_entry_price": 2010.0,
+                "average_fill_price": 2020.0,
+                "mae_after_fill": 5.0,
+                "mfe_after_fill": 0.2,
+            },
+            {"trade_id": "scdp2", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.3, "spread_ratio": 3.4, "slippage_ratio": 3.3},
+        replay_scope="full_replay",
+    )
+    behavior = result["unified_market_intelligence_field"]["decision_refinements"]["refusal_pause_behavior"]
+    assert isinstance(behavior.get("pause_reasons"), list)
+    assert isinstance(behavior.get("refusal_reasons"), list)
+    assert isinstance(behavior.get("should_pause"), bool)
+    assert isinstance(behavior.get("should_refuse"), bool)
+
+
+def test_system_coherence_and_drift_integrity_layer_detects_fragmentation_risk_under_stress(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {
+                "trade_id": "scdf1",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -2.1,
+                "failure_cause": "execution_failure",
+                "signal_time": 10,
+                "first_fill_time": 120,
+                "intended_entry_price": 2010.0,
+                "average_fill_price": 2025.0,
+                "mae_after_fill": 6.0,
+                "mfe_after_fill": 0.1,
+            },
+            {
+                "trade_id": "scdf2",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -1.8,
+                "failure_cause": "execution_failure",
+                "signal_time": 10,
+                "first_fill_time": 100,
+                "intended_entry_price": 2010.0,
+                "average_fill_price": 2022.0,
+                "mae_after_fill": 5.5,
+                "mfe_after_fill": 0.1,
+            },
+            {"trade_id": "scdf3", "status": "closed", "result": "loss", "pnl_points": -1.5, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.5, "spread_ratio": 3.8, "slippage_ratio": 3.5},
+        replay_scope="full_replay",
+    )
+    coherence = result["system_coherence_and_drift_integrity_layer"]
+    assert 0.0 <= float(coherence["fragmentation_risk"]) <= 1.0
+    assert coherence["system_coherence_state"] in {"coherent", "degraded", "fragmented"}
+
+
+def test_system_coherence_and_drift_integrity_layer_feeds_self_expansion_quality_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "scde1", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "execution_failure"},
+            {"trade_id": "scde2", "status": "closed", "result": "win", "pnl_points": 0.6, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.9, "spread_ratio": 2.5, "slippage_ratio": 2.2},
+        replay_scope="full_replay",
+    )
+    coherence = result["system_coherence_and_drift_integrity_layer"]
+    assert "expansion_stability_score" in coherence
+    assert 0.0 <= float(coherence["expansion_stability_score"]) <= 1.0
+
+
+def test_system_coherence_and_drift_integrity_layer_history_rolls_and_governance_is_sandbox_replay_only(
+    tmp_path: Path,
+) -> None:
+    memory_root = tmp_path / "memory"
+    for i in range(3):
+        run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"scdh{i}", "status": "closed", "result": "loss", "pnl_points": -0.5},
+            ],
+            market_state={"structure_state": "range"},
+            replay_scope="full_replay",
+        )
+    governance = json.loads((memory_root / "system_coherence" / "system_coherence_governance_state.json").read_text(encoding="utf-8"))
+    assert governance.get("sandbox_only") is True
+    assert governance.get("replay_validation_required") is True
+    assert governance.get("live_deployment_allowed") is False
+    history = json.loads((memory_root / "system_coherence" / "system_coherence_history.json").read_text(encoding="utf-8"))
+    snapshots = history.get("snapshots", [])
+    assert len(snapshots) == 3
+
+
+def test_system_coherence_and_drift_integrity_layer_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "scdn1", "status": "closed", "result": "loss", "pnl_points": -0.2},
+            {"trade_id": "scdn2", "status": "closed", "result": "flat", "pnl_points": 0.0},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    coherence = result["system_coherence_and_drift_integrity_layer"]
+    assert coherence["system_coherence_state"] in {"coherent", "degraded", "fragmented"}
+    assert 0.0 <= float(coherence["coherence_score"]) <= 1.0
+    assert 0.0 <= float(coherence["drift_integrity_score"]) <= 1.0
+    assert 0.0 <= float(coherence["disagreement_load"]) <= 1.0
+    assert isinstance(coherence["governance_flags"], dict)
+    assert coherence["governance_flags"]["sandbox_only"] is True
+    assert coherence["governance_flags"]["replay_validation_required"] is True
+    assert coherence["governance_flags"]["live_deployment_allowed"] is False
