@@ -419,6 +419,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "adversarial_execution_state",
         "structural_memory_state",
         "latent_transition_hazard_state",
+        "self_expansion_quality_state",
     }
     assert 0.0 <= unified["unified_field_score"] <= 1.0
     assert 0.0 <= unified["confidence_structure"]["composite_confidence"] <= 1.0
@@ -685,6 +686,7 @@ def test_capability_evolution_ladder_enforces_sandbox_replay_promotion_flow(tmp_
         "capability_hypothesis_generation",
         "synthetic_prototype_construction",
         "replay_validation",
+        "self_expansion_quality_evaluation",
         "comparative_advantage_test",
         "conflict_check_unified_field",
         "governor_promotion_decision",
@@ -721,6 +723,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "adversarial_execution_state",
         "structural_memory_state",
         "latent_transition_hazard_state",
+        "self_expansion_quality_state",
     }
 
 
@@ -1788,3 +1791,198 @@ def test_latent_transition_hazard_history_rolls_and_governance_is_sandbox_replay
     assert governance["replay_validation_required"] is True
     assert governance["live_deployment_allowed"] is False
     assert governance["no_blind_live_self_rewrites"] is True
+
+
+def test_self_expansion_quality_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "seq1", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "seq2", "status": "closed", "result": "win", "pnl_points": 0.6, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.3, "spread_ratio": 1.6, "slippage_ratio": 1.4},
+        replay_scope="focused_replay",
+    )
+    quality = result["self_expansion_quality_layer"]
+    assert Path(quality["paths"]["latest"]).exists()
+    assert Path(quality["paths"]["history"]).exists()
+    assert Path(quality["paths"]["capability_quality_registry"]).exists()
+    assert Path(quality["paths"]["capability_overlap_registry"]).exists()
+    assert Path(quality["paths"]["promotion_maturity_registry"]).exists()
+    assert Path(quality["paths"]["expansion_regression_watchlist"]).exists()
+    assert Path(quality["paths"]["governance_state"]).exists()
+
+
+def test_self_expansion_quality_layer_returns_expected_quality_schema(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "seqs1", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "seqs2", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia", "failure_cause": "slippage_spike"},
+            {"trade_id": "seqs3", "status": "closed", "result": "win", "pnl_points": 0.7, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.0, "slippage_ratio": 1.9},
+        replay_scope="full_replay",
+    )
+    quality = result["self_expansion_quality_layer"]
+    expected_keys = {
+        "self_expansion_quality_state",
+        "capability_novelty_score",
+        "redundancy_risk",
+        "durability_score",
+        "transferability_score",
+        "regression_risk",
+        "capability_overlap_map",
+        "expansion_quality_score",
+        "promotion_maturity",
+        "governance_flags",
+        "quality_components",
+        "paths",
+    }
+    assert expected_keys.issubset(set(quality))
+    for score_key in (
+        "capability_novelty_score",
+        "redundancy_risk",
+        "durability_score",
+        "transferability_score",
+        "regression_risk",
+        "expansion_quality_score",
+    ):
+        assert 0.0 <= float(quality[score_key]) <= 1.0
+    assert quality["self_expansion_quality_state"] in {"healthy", "watch", "degraded", "critical"}
+    assert quality["promotion_maturity"] in {
+        "seeded",
+        "sandbox_validated",
+        "cross_context_validated",
+        "promotion_ready",
+        "promotion_hardened",
+    }
+
+
+def test_self_expansion_quality_layer_is_sandbox_and_replay_governed(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "seqg1", "status": "closed", "result": "loss", "pnl_points": -0.7, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "seqg2", "status": "closed", "result": "win", "pnl_points": 0.5, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.2, "spread_ratio": 1.4, "slippage_ratio": 1.3},
+        replay_scope="focused_replay",
+    )
+    flags = result["self_expansion_quality_layer"]["governance_flags"]
+    assert flags["sandbox_only"] is True
+    assert flags["replay_validation_required"] is True
+    assert flags["live_deployment_allowed"] is False
+    assert flags["no_blind_live_self_rewrites"] is True
+
+
+def test_self_expansion_quality_layer_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "seqm1", "status": "closed", "result": "loss", "pnl_points": -0.4},
+            {"trade_id": "seqm2", "status": "closed", "result": "win", "pnl_points": 0.3},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    quality = result["self_expansion_quality_layer"]
+    assert quality["paths"]["latest"]
+    assert isinstance(quality["capability_overlap_map"], dict)
+    assert isinstance(quality["quality_components"], dict)
+
+
+def test_self_expansion_quality_feeds_self_suggestion_governor_discipline_nonbreaking(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    quality_dir = memory_root / "self_expansion_quality"
+    quality_dir.mkdir(parents=True, exist_ok=True)
+    (quality_dir / "self_expansion_quality_latest.json").write_text(
+        json.dumps(
+            {
+                "self_expansion_quality_state": "critical",
+                "integration_enabled": True,
+                "expansion_quality_score": 0.2,
+                "redundancy_risk": 0.9,
+                "regression_risk": 0.85,
+                "durability_score": 0.25,
+                "transferability_score": 0.3,
+                "quality_components": {"promotion_confidence_multiplier": 0.8, "quarantine_pressure_delta": 0.15},
+            }
+        ),
+        encoding="utf-8",
+    )
+    result = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "seqd1", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "seqd2", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia", "failure_cause": "slippage_spike"},
+            {"trade_id": "seqd3", "status": "closed", "result": "win", "pnl_points": 0.7, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.0, "slippage_ratio": 1.8},
+        replay_scope="full_replay",
+    )
+    discipline = result["self_suggestion_governor"]["anti_noise_controls"]["self_expansion_quality_discipline"]
+    assert discipline["quality_threshold_delta"] > 0.0
+    assert discipline["expansion_rate_limit"] == 1
+    assert 0.0 <= discipline["expansion_quality_score"] <= 1.0
+
+
+def test_self_expansion_quality_feeds_capability_evolution_ladder_confidence_nonbreaking(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    quality_dir = memory_root / "self_expansion_quality"
+    quality_dir.mkdir(parents=True, exist_ok=True)
+    (quality_dir / "self_expansion_quality_latest.json").write_text(
+        json.dumps(
+            {
+                "self_expansion_quality_state": "degraded",
+                "integration_enabled": True,
+                "expansion_quality_score": 0.35,
+                "redundancy_risk": 0.7,
+                "regression_risk": 0.65,
+                "quality_components": {"promotion_confidence_multiplier": 0.78, "quarantine_pressure_delta": 0.12},
+                "promotion_maturity": "sandbox_validated",
+            }
+        ),
+        encoding="utf-8",
+    )
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "seql1", "status": "closed", "result": "loss", "pnl_points": -1.1, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "seql2", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia", "failure_cause": "spread_spike"},
+            {"trade_id": "seql3", "status": "closed", "result": "win", "pnl_points": 0.8, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.9, "spread_ratio": 2.1, "slippage_ratio": 1.9},
+        replay_scope="full_replay",
+    )
+    payload = json.loads((memory_root / "capability_evolution" / "capability_candidates.json").read_text(encoding="utf-8"))
+    candidates = payload.get("capability_candidates", [])
+    if candidates:
+        candidate = candidates[0]
+        assert "self_expansion_quality_context" in candidate
+        replay = candidate["replay_validation"]
+        assert replay["score"] <= replay["raw_score"]
+        assert candidate["promotion_maturity"] in {
+            "seeded",
+            "sandbox_validated",
+            "cross_context_validated",
+            "promotion_ready",
+            "promotion_hardened",
+        }
+
+
+def test_self_expansion_quality_history_rolls_bounded(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    for index in range(3):
+        run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"seqh{index}a", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia", "failure_cause": "execution_failure"},
+                {"trade_id": f"seqh{index}b", "status": "closed", "result": "win", "pnl_points": 0.6, "session": "london", "failure_cause": "none"},
+            ],
+            market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 1.8, "slippage_ratio": 1.6},
+            replay_scope="focused_replay",
+        )
+    history_payload = json.loads((memory_root / "self_expansion_quality" / "self_expansion_quality_history.json").read_text(encoding="utf-8"))
+    assert history_payload["snapshots"]
+    assert len(history_payload["snapshots"]) <= 200
