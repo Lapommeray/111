@@ -425,6 +425,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "temporal_execution_state",
         "decision_policy_state",
         "capital_allocation_state",
+        "capability_invention_state",
         "self_expansion_quality_state",
         "system_coherence_state",
         "learning_stability_state",
@@ -737,6 +738,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "temporal_execution_state",
         "decision_policy_state",
         "capital_allocation_state",
+        "capability_invention_state",
         "self_expansion_quality_state",
         "system_coherence_state",
         "learning_stability_state",
@@ -2290,6 +2292,203 @@ def test_self_expansion_quality_history_rolls_bounded(tmp_path: Path) -> None:
     history_payload = json.loads((memory_root / "self_expansion_quality" / "self_expansion_quality_history.json").read_text(encoding="utf-8"))
     assert history_payload["snapshots"]
     assert len(history_payload["snapshots"]) <= 200
+
+
+def test_governed_capability_invention_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "gci1", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "gci2", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia", "failure_cause": "slippage_spike"},
+            {"trade_id": "gci3", "status": "closed", "result": "win", "pnl_points": 0.6, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.0, "slippage_ratio": 1.9},
+        replay_scope="focused_replay",
+    )
+    invention = result["governed_capability_invention_layer"]
+    assert Path(invention["paths"]["latest"]).exists()
+    assert Path(invention["paths"]["history"]).exists()
+    assert Path(invention["paths"]["invention_candidate_registry"]).exists()
+    assert Path(invention["paths"]["invention_novelty_registry"]).exists()
+    assert Path(invention["paths"]["invention_redundancy_watchlist"]).exists()
+    assert Path(invention["paths"]["invention_maturity_registry"]).exists()
+    assert Path(invention["paths"]["invention_governance_state"]).exists()
+
+
+def test_governed_capability_invention_layer_returns_expected_schema(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "gcs1", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "gcs2", "status": "closed", "result": "loss", "pnl_points": -0.7, "session": "london", "failure_cause": "spread_spike"},
+            {"trade_id": "gcs3", "status": "closed", "result": "win", "pnl_points": 0.5, "session": "new_york", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 1.9, "slippage_ratio": 1.8},
+        replay_scope="full_replay",
+    )
+    invention = result["governed_capability_invention_layer"]
+    expected_keys = {
+        "capability_invention_state",
+        "invention_pressure_score",
+        "novelty_score",
+        "redundancy_risk",
+        "invention_reliability",
+        "invention_maturity_score",
+        "candidate_invention_count",
+        "dominant_invention_axis",
+        "invention_reason_cluster",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(invention))
+    assert invention["capability_invention_state"] in {"seeded", "active", "constrained", "redundant", "stalled"}
+    assert invention["dominant_invention_axis"] in {"detection", "timing", "risk", "execution", "allocation", "policy", "coherence"}
+    for key in (
+        "invention_pressure_score",
+        "novelty_score",
+        "redundancy_risk",
+        "invention_reliability",
+        "invention_maturity_score",
+    ):
+        assert 0.0 <= float(invention[key]) <= 1.0
+    assert int(invention["candidate_invention_count"]) >= 0
+
+
+def test_governed_capability_invention_layer_adds_unified_field_components_without_overwriting_existing_fields(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "gcu1", "status": "closed", "result": "loss", "pnl_points": -0.6, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "gcu2", "status": "closed", "result": "win", "pnl_points": 0.4, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.3, "spread_ratio": 1.5, "slippage_ratio": 1.4},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "unified_field_score" in unified
+    assert "composite_confidence" in unified["confidence_structure"]
+    assert "capability_invention_state" in unified["components"]
+    assert "invention_reliability" in unified["confidence_structure"]
+    assert "capability_invention" in unified["decision_refinements"]
+
+
+def test_governed_capability_invention_layer_feeds_self_expansion_quality_components_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "gcq1", "status": "closed", "result": "loss", "pnl_points": -1.1, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "gcq2", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "london", "failure_cause": "slippage_spike"},
+            {"trade_id": "gcq3", "status": "closed", "result": "win", "pnl_points": 0.7, "session": "new_york", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.1, "slippage_ratio": 1.9},
+        replay_scope="full_replay",
+    )
+    quality_components = result["self_expansion_quality_layer"]["quality_components"]
+    for key in (
+        "invention_pressure_context",
+        "invention_novelty_context",
+        "invention_redundancy_context",
+        "invention_maturity_context",
+        "invention_reliability_context",
+    ):
+        assert key in quality_components
+        assert 0.0 <= float(quality_components[key]) <= 1.0
+
+
+def test_governed_capability_invention_layer_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "gcm1", "status": "closed", "result": "loss", "pnl_points": -0.2},
+            {"trade_id": "gcm2", "status": "closed", "result": "flat", "pnl_points": 0.0},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    invention = result["governed_capability_invention_layer"]
+    assert invention["paths"]["latest"]
+    assert isinstance(invention["invention_reason_cluster"], str)
+    assert int(invention["candidate_invention_count"]) >= 0
+
+
+def test_governed_capability_invention_layer_history_rolls_and_governance_is_sandbox_replay_only(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    for index in range(3):
+        run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"gch{index}a", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia", "failure_cause": "execution_failure"},
+                {"trade_id": f"gch{index}b", "status": "closed", "result": "win", "pnl_points": 0.5, "session": "london", "failure_cause": "none"},
+            ],
+            market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 1.8, "slippage_ratio": 1.7},
+            replay_scope="focused_replay",
+        )
+    history_payload = json.loads((memory_root / "capability_invention" / "capability_invention_history.json").read_text(encoding="utf-8"))
+    assert history_payload["snapshots"]
+    assert len(history_payload["snapshots"]) <= 200
+    latest = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "gchla", "status": "closed", "result": "loss", "pnl_points": -0.6, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "gchlb", "status": "closed", "result": "win", "pnl_points": 0.4, "session": "new_york", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.4, "spread_ratio": 1.6, "slippage_ratio": 1.5},
+        replay_scope="focused_replay",
+    )
+    flags = latest["governed_capability_invention_layer"]["governance_flags"]
+    assert flags["sandbox_only"] is True
+    assert flags["replay_validation_required"] is True
+    assert flags["live_deployment_allowed"] is False
+    assert flags["no_blind_live_self_rewrites"] is True
+
+
+def test_governed_capability_invention_layer_detects_redundancy_under_repeated_equivalent_pressure(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    trade_outcomes = [
+        {"trade_id": "gcr1", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia", "failure_cause": "execution_failure"},
+        {"trade_id": "gcr2", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia", "failure_cause": "execution_failure"},
+        {"trade_id": "gcr3", "status": "closed", "result": "win", "pnl_points": 0.5, "session": "london", "failure_cause": "none"},
+    ]
+    first = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 1.9, "slippage_ratio": 1.8},
+        replay_scope="full_replay",
+    )["governed_capability_invention_layer"]
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 1.9, "slippage_ratio": 1.8},
+        replay_scope="full_replay",
+    )["governed_capability_invention_layer"]
+    assert second["redundancy_risk"] >= first["redundancy_risk"]
+    assert second["novelty_score"] <= first["novelty_score"]
+
+
+def test_governed_capability_invention_layer_detects_novelty_under_diverse_gap_pressure(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "gcnb1", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "gcnb2", "status": "closed", "result": "loss", "pnl_points": -0.7, "session": "asia", "failure_cause": "execution_failure"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.4, "spread_ratio": 1.8, "slippage_ratio": 1.7},
+        replay_scope="focused_replay",
+    )
+    novelty_run = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "gcn1", "status": "closed", "result": "loss", "pnl_points": -1.2, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "gcn2", "status": "closed", "result": "loss", "pnl_points": -1.1, "session": "new_york", "failure_cause": "liquidity_trap"},
+            {"trade_id": "gcn3", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "london", "failure_cause": "spread_spike"},
+            {"trade_id": "gcn4", "status": "closed", "result": "win", "pnl_points": 0.6, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "expansion", "volatility_ratio": 2.0, "spread_ratio": 2.3, "slippage_ratio": 2.1},
+        replay_scope="full_replay",
+    )["governed_capability_invention_layer"]
+    assert novelty_run["novelty_score"] > 0.0
+    assert novelty_run["candidate_invention_count"] >= 1
 
 
 def test_cross_regime_transfer_robustness_layer_persists_required_artifacts(tmp_path: Path) -> None:
