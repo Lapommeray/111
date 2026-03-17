@@ -1616,6 +1616,23 @@ def _capability_evolution_governance_ladder(
     if not isinstance(structural_context_items, dict):
         structural_context_items = {}
     structural_context_coverage = min(1.0, len(structural_context_items) / 25.0)
+    latent_transition_registry = read_json_safe(
+        memory_root / "latent_transition_hazard" / "transition_hazard_registry.json",
+        default={"contexts": {}},
+    )
+    if not isinstance(latent_transition_registry, dict):
+        latent_transition_registry = {"contexts": {}}
+    latent_transition_items = latent_transition_registry.get("contexts", {})
+    if not isinstance(latent_transition_items, dict):
+        latent_transition_items = {}
+    latent_transition_scores = [
+        float(item.get("transition_hazard_score", 0.0) or 0.0) for item in latent_transition_items.values() if isinstance(item, dict)
+    ]
+    prior_transition_hazard_score = round(
+        max(0.0, min(1.0, sum(latent_transition_scores) / max(1, len(latent_transition_scores)))),
+        4,
+    )
+    latent_transition_context_coverage = round(min(1.0, len(latent_transition_items) / 25.0), 4)
 
     candidates: list[dict[str, Any]] = []
     validation_records: list[dict[str, Any]] = []
@@ -1675,6 +1692,11 @@ def _capability_evolution_governance_ladder(
                 "prior_alignment_score": prior_structural_alignment,
                 "context_coverage": round(float(structural_context_coverage), 4),
                 "source": "memory/structural_memory_graph/regime_memory_alignment_registry.json",
+            },
+            "latent_transition_context": {
+                "prior_cycle_transition_hazard_score": prior_transition_hazard_score,
+                "context_coverage": latent_transition_context_coverage,
+                "source": "memory/latent_transition_hazard/transition_hazard_registry.json",
             },
             "governance": {
                 "sandbox_only": True,
@@ -2495,6 +2517,345 @@ def _structural_memory_graph_layer(
     }
 
 
+def _latent_transition_hazard_layer(
+    *,
+    memory_root: Path,
+    closed: list[dict[str, Any]],
+    market_state: dict[str, Any],
+    unified_market_intelligence_field: dict[str, Any],
+    structural_memory_graph_engine: dict[str, Any],
+    execution_microstructure_engine: dict[str, Any],
+    adversarial_execution_engine: dict[str, Any] | None = None,
+    calibration_uncertainty_engine: dict[str, Any] | None = None,
+    contradiction_arbitration_engine: dict[str, Any] | None = None,
+    negative_space_engine: dict[str, Any] | None = None,
+    invariant_break_engine: dict[str, Any] | None = None,
+    replay_scope: str,
+) -> dict[str, Any]:
+    hazard_dir = memory_root / "latent_transition_hazard"
+    hazard_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = hazard_dir / "latent_transition_hazard_latest.json"
+    history_path = hazard_dir / "latent_transition_hazard_history.json"
+    registry_path = hazard_dir / "transition_hazard_registry.json"
+    precursor_events_path = hazard_dir / "precursor_instability_events.json"
+    historical_match_registry_path = hazard_dir / "historical_transition_match_registry.json"
+    governance_path = hazard_dir / "latent_transition_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    settled = [
+        item
+        for item in closed[-120:]
+        if isinstance(item, dict) and str(item.get("result", "")).lower() in {"win", "loss", "flat"}
+    ]
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    composite_confidence = _bounded(float(confidence_structure.get("composite_confidence", 0.0) or 0.0))
+
+    structural_memory_graph_engine = structural_memory_graph_engine if isinstance(structural_memory_graph_engine, dict) else {}
+    structural_state = structural_memory_graph_engine.get("structural_memory_state", {})
+    if not isinstance(structural_state, dict):
+        structural_state = {}
+    long_horizon_context_match = _bounded(float(structural_state.get("long_horizon_context_match", 0.0) or 0.0))
+    structural_reversal_bias = _bounded(float(structural_state.get("structural_reversal_bias", 0.0) or 0.0))
+    structural_acceleration_bias = _bounded(float(structural_state.get("structural_acceleration_bias", 0.0) or 0.0))
+    structural_memory_reliability = _bounded(float(structural_state.get("memory_reliability", 0.0) or 0.0))
+    regime_memory_alignment = _bounded(float(structural_state.get("regime_memory_alignment", 0.0) or 0.0))
+
+    execution_penalty = _bounded(float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0))
+    execution_cluster_risk = _bounded(float(execution_microstructure_engine.get("failure_cluster_risk", 0.0) or 0.0))
+    execution_timing_drag = _bounded(float(execution_microstructure_engine.get("entry_timing_degradation", 0.0) or 0.0))
+    execution_state = str(execution_microstructure_engine.get("execution_state", "insufficient_data"))
+
+    adversarial_execution_engine = adversarial_execution_engine if isinstance(adversarial_execution_engine, dict) else {}
+    adversarial_state = adversarial_execution_engine.get("adversarial_execution_state", {})
+    if not isinstance(adversarial_state, dict):
+        adversarial_state = {}
+    hostile_execution_score = _bounded(float(adversarial_state.get("hostile_execution_score", 0.0) or 0.0))
+    historical_execution_hostility = _bounded(float(adversarial_state.get("historical_execution_hostility", 0.0) or 0.0))
+
+    contradiction_arbitration_engine = (
+        contradiction_arbitration_engine if isinstance(contradiction_arbitration_engine, dict) else {}
+    )
+    contradiction_severity = _bounded(
+        float(contradiction_arbitration_engine.get("arbitration", {}).get("max_contradiction_severity", 0.0) or 0.0)
+    )
+    calibration_uncertainty_engine = (
+        calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
+    )
+    calibration_state = calibration_uncertainty_engine.get("calibration_state", {})
+    if not isinstance(calibration_state, dict):
+        calibration_state = {}
+    calibration_drift = _bounded(float(calibration_state.get("calibration_drift", 0.0) or 0.0))
+
+    negative_space_engine = negative_space_engine if isinstance(negative_space_engine, dict) else {}
+    negative_deviation_score = _bounded(float(negative_space_engine.get("signal", {}).get("deviation_score", 0.0) or 0.0))
+    invariant_break_engine = invariant_break_engine if isinstance(invariant_break_engine, dict) else {}
+    invariant_break_count = sum(
+        1
+        for event in invariant_break_engine.get("invariant_break_events", [])
+        if isinstance(event, dict) and bool(event.get("invariant_break", False))
+    )
+    invariant_break_risk = _bounded(min(1.0, invariant_break_count * 0.35))
+
+    regime_state = str(unified_market_intelligence_field.get("components", {}).get("regime_state", "unknown"))
+    structure_state = str(market_state.get("structure_state", "unknown"))
+    context_key = f"{replay_scope}|{structure_state}|{regime_state}|{execution_state}"
+    market_stress = _bounded(
+        (
+            max(0.0, float(market_state.get("volatility_ratio", 1.0) or 1.0) - 1.0) * 0.4
+            + max(0.0, float(market_state.get("spread_ratio", 1.0) or 1.0) - 1.0) * 0.3
+            + max(0.0, float(market_state.get("slippage_ratio", 1.0) or 1.0) - 1.0) * 0.3
+        )
+        / 2.5
+    )
+
+    loss_ratio = _bounded(
+        sum(1 for item in settled if str(item.get("result", "")).lower() == "loss") / max(1, len(settled))
+    )
+    cycle_signature = {
+        "context_key": context_key,
+        "settled_count": len(settled),
+        "market_stress": market_stress,
+        "loss_ratio": loss_ratio,
+        "execution_penalty": execution_penalty,
+        "execution_cluster_risk": execution_cluster_risk,
+        "hostile_execution_score": hostile_execution_score,
+        "structural_reversal_bias": structural_reversal_bias,
+        "structural_acceleration_bias": structural_acceleration_bias,
+    }
+    previous_latest = read_json_safe(latest_path, default={})
+    if isinstance(previous_latest, dict) and previous_latest.get("input_signature") == cycle_signature:
+        returned = dict(previous_latest)
+        returned.pop("input_signature", None)
+        return {
+            **returned,
+            "paths": {
+                "latest": str(latest_path),
+                "history": str(history_path),
+                "transition_hazard_registry": str(registry_path),
+                "precursor_instability_events": str(precursor_events_path),
+                "historical_transition_match_registry": str(historical_match_registry_path),
+                "latent_transition_governance_state": str(governance_path),
+            },
+        }
+
+    precursor_instability_score = _bounded(
+        (market_stress * 0.24)
+        + (execution_penalty * 0.18)
+        + (execution_cluster_risk * 0.14)
+        + (execution_timing_drag * 0.08)
+        + (hostile_execution_score * 0.12)
+        + (negative_deviation_score * 0.1)
+        + (invariant_break_risk * 0.06)
+        + (calibration_drift * 0.08)
+    )
+    regime_deformation_score = _bounded(
+        (structural_reversal_bias * 0.3)
+        + (structural_acceleration_bias * 0.22)
+        + ((1.0 - regime_memory_alignment) * 0.2)
+        + ((1.0 - structural_memory_reliability) * 0.14)
+        + (loss_ratio * 0.14)
+    )
+
+    registry = read_json_safe(registry_path, default={"contexts": {}})
+    if not isinstance(registry, dict):
+        registry = {"contexts": {}}
+    contexts = registry.get("contexts", {})
+    if not isinstance(contexts, dict):
+        contexts = {}
+    prior_context = contexts.get(context_key, {})
+    if not isinstance(prior_context, dict):
+        prior_context = {}
+    prior_occurrences = int(prior_context.get("occurrences", 0) or 0)
+    prior_score = _bounded(float(prior_context.get("transition_hazard_score", 0.0) or 0.0))
+    historical_transition_match = _bounded(
+        (min(1.0, prior_occurrences / 6.0) * 0.62) + ((1.0 - abs(prior_score - regime_deformation_score)) * 0.38)
+    )
+    hazard_reliability = _bounded(
+        (historical_transition_match * 0.44)
+        + (structural_memory_reliability * 0.24)
+        + (long_horizon_context_match * 0.16)
+        + ((1.0 - historical_execution_hostility) * 0.08)
+        + (min(1.0, len(settled) / 20.0) * 0.08)
+    )
+    transition_hazard_score = _bounded(
+        (precursor_instability_score * 0.44)
+        + (regime_deformation_score * 0.34)
+        + (historical_transition_match * 0.12)
+        + ((1.0 - structural_memory_reliability) * 0.06)
+        + (contradiction_severity * 0.04)
+    )
+    if transition_hazard_score >= 0.8:
+        transition_hazard_state = "critical"
+    elif transition_hazard_score >= 0.62:
+        transition_hazard_state = "elevated"
+    elif transition_hazard_score >= 0.42:
+        transition_hazard_state = "watch"
+    else:
+        transition_hazard_state = "stable"
+    if transition_hazard_score >= 0.66 or regime_deformation_score >= 0.62:
+        transition_directional_bias = "risk_off"
+    elif hazard_reliability >= 0.62 and transition_hazard_score <= 0.36:
+        transition_directional_bias = "continuation"
+    else:
+        transition_directional_bias = "neutral"
+
+    transition_confidence_suppression = _bounded(
+        max(
+            0.0,
+            (transition_hazard_score * 0.4)
+            + (precursor_instability_score * 0.25)
+            + (regime_deformation_score * 0.2)
+            - (hazard_reliability * 0.18),
+        ),
+        high=0.65,
+    )
+    hazard_adjusted_confidence = _bounded(composite_confidence - transition_confidence_suppression)
+    anticipatory_risk_bias = _bounded(
+        (transition_hazard_score * 0.46)
+        + (precursor_instability_score * 0.28)
+        + (regime_deformation_score * 0.2)
+        + (max(0.0, 0.5 - hazard_reliability) * 0.06)
+    )
+    transition_hazard_multiplier = _bounded(
+        1.0 - (transition_confidence_suppression * 0.45) - (anticipatory_risk_bias * 0.4),
+        low=0.25,
+        high=1.0,
+    )
+    should_pause = bool(
+        transition_hazard_score >= 0.58
+        or precursor_instability_score >= 0.64
+        or regime_deformation_score >= 0.66
+        or market_stress >= 0.55
+    )
+    should_refuse = bool(transition_hazard_score >= 0.78 and hazard_reliability >= 0.45 and regime_deformation_score >= 0.62)
+    pause_reasons: list[str] = []
+    refusal_reasons: list[str] = []
+    if precursor_instability_score >= 0.64:
+        pause_reasons.append("latent_precursor_instability_pause")
+    elif transition_hazard_score >= 0.55:
+        pause_reasons.append("latent_precursor_instability_pause")
+    if regime_deformation_score >= 0.66:
+        pause_reasons.append("latent_regime_deformation_pause")
+    if should_pause and "latent_precursor_instability_pause" not in pause_reasons:
+        pause_reasons.append("latent_precursor_instability_pause")
+    if should_refuse:
+        refusal_reasons.append("latent_transition_hazard_refuse_guard")
+
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "pause_guard_triggered": should_pause,
+        "refuse_guard_triggered": should_refuse,
+    }
+    latent_transition_hazard_state = {
+        "transition_hazard_state": transition_hazard_state,
+        "transition_hazard_score": transition_hazard_score,
+        "precursor_instability_score": precursor_instability_score,
+        "regime_deformation_score": regime_deformation_score,
+        "transition_directional_bias": transition_directional_bias,
+        "transition_confidence_suppression": transition_confidence_suppression,
+        "historical_transition_match": historical_transition_match,
+        "hazard_reliability": hazard_reliability,
+        "anticipatory_risk_bias": anticipatory_risk_bias,
+        "governance_flags": governance_flags,
+    }
+    confidence_adjustments = {
+        "transition_hazard_score": transition_hazard_score,
+        "transition_confidence_suppression": transition_confidence_suppression,
+        "hazard_adjusted_confidence": hazard_adjusted_confidence,
+    }
+    risk_adjustments = {
+        "transition_hazard_multiplier": transition_hazard_multiplier,
+        "should_pause": should_pause,
+        "should_refuse": should_refuse,
+        "pause_reasons": pause_reasons,
+        "refusal_reasons": refusal_reasons,
+    }
+    governance = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+    }
+    payload = {
+        "input_signature": cycle_signature,
+        "latent_transition_hazard_state": latent_transition_hazard_state,
+        "confidence_adjustments": confidence_adjustments,
+        "risk_adjustments": risk_adjustments,
+        "governance": governance,
+    }
+
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+    contexts[context_key] = {
+        "occurrences": prior_occurrences + 1,
+        "transition_hazard_score": transition_hazard_score,
+        "precursor_instability_score": precursor_instability_score,
+        "regime_deformation_score": regime_deformation_score,
+        "hazard_reliability": hazard_reliability,
+    }
+    write_json_atomic(registry_path, {"contexts": contexts})
+    precursor_payload = read_json_safe(precursor_events_path, default={"events": []})
+    if not isinstance(precursor_payload, dict):
+        precursor_payload = {"events": []}
+    precursor_events = precursor_payload.get("events", [])
+    if not isinstance(precursor_events, list):
+        precursor_events = []
+    if precursor_instability_score >= 0.55 or transition_hazard_score >= 0.58:
+        precursor_events.append(
+            {
+                "context_key": context_key,
+                "precursor_instability_score": precursor_instability_score,
+                "transition_hazard_score": transition_hazard_score,
+                "transition_hazard_state": transition_hazard_state,
+                "transition_directional_bias": transition_directional_bias,
+            }
+        )
+    write_json_atomic(precursor_events_path, {"events": precursor_events[-400:]})
+    historical_match_payload = read_json_safe(historical_match_registry_path, default={"matches": []})
+    if not isinstance(historical_match_payload, dict):
+        historical_match_payload = {"matches": []}
+    historical_matches = historical_match_payload.get("matches", [])
+    if not isinstance(historical_matches, list):
+        historical_matches = []
+    historical_matches.append(
+        {
+            "context_key": context_key,
+            "historical_transition_match": historical_transition_match,
+            "hazard_reliability": hazard_reliability,
+            "transition_hazard_score": transition_hazard_score,
+        }
+    )
+    write_json_atomic(historical_match_registry_path, {"matches": historical_matches[-400:]})
+    write_json_atomic(governance_path, governance_flags)
+    returned_payload = dict(payload)
+    returned_payload.pop("input_signature", None)
+    return {
+        **returned_payload,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "transition_hazard_registry": str(registry_path),
+            "precursor_instability_events": str(precursor_events_path),
+            "historical_transition_match_registry": str(historical_match_registry_path),
+            "latent_transition_governance_state": str(governance_path),
+        },
+    }
+
+
 def _calibration_and_uncertainty_governance_layer(
     *,
     memory_root: Path,
@@ -2504,6 +2865,7 @@ def _calibration_and_uncertainty_governance_layer(
     execution_microstructure_engine: dict[str, Any],
     adversarial_execution_engine: dict[str, Any] | None = None,
     contradiction_arbitration_engine: dict[str, Any] | None = None,
+    latent_transition_hazard_engine: dict[str, Any] | None = None,
     replay_scope: str,
 ) -> dict[str, Any]:
     calibration_dir = memory_root / "calibration_uncertainty"
@@ -2538,6 +2900,14 @@ def _calibration_and_uncertainty_governance_layer(
         adversarial_state = {}
     hostile_execution_score = _bounded(float(adversarial_state.get("hostile_execution_score", 0.0) or 0.0))
     historical_execution_hostility = _bounded(float(adversarial_state.get("historical_execution_hostility", 0.0) or 0.0))
+    latent_transition_hazard_engine = latent_transition_hazard_engine if isinstance(latent_transition_hazard_engine, dict) else {}
+    latent_transition_state = latent_transition_hazard_engine.get("latent_transition_hazard_state", {})
+    if not isinstance(latent_transition_state, dict):
+        latent_transition_state = {}
+    transition_hazard_score = _bounded(float(latent_transition_state.get("transition_hazard_score", 0.0) or 0.0))
+    transition_confidence_suppression = _bounded(
+        float(latent_transition_state.get("transition_confidence_suppression", 0.0) or 0.0)
+    )
 
     settled = [
         item
@@ -2567,6 +2937,7 @@ def _calibration_and_uncertainty_governance_layer(
         "execution_penalty": execution_penalty,
         "execution_confidence": execution_confidence,
         "failure_cluster_risk": failure_cluster_risk,
+        "transition_hazard_score": transition_hazard_score,
         "settled_count": len(outcome_proxy),
     }
     previous_latest = read_json_safe(latest_path, default={})
@@ -2639,6 +3010,7 @@ def _calibration_and_uncertainty_governance_layer(
         + ((1.0 - execution_confidence) * 0.15)
         + (hostile_execution_score * 0.08)
         + (historical_execution_hostility * 0.04)
+        + (transition_hazard_score * 0.06)
     )
 
     reliability_signal = _bounded(
@@ -2658,6 +3030,7 @@ def _calibration_and_uncertainty_governance_layer(
         - (historical_confidence_error * 0.45)
         - (execution_adjusted_uncertainty * 0.25)
         - (contradiction_penalty * 0.2)
+        - (transition_confidence_suppression * 0.08)
         + ((observed_accuracy - 0.5) * 0.08)
     )
     confidence_delta = _bounded(raw_confidence - calibrated_confidence)
@@ -2705,6 +3078,11 @@ def _calibration_and_uncertainty_governance_layer(
         "historical_confidence_error": historical_confidence_error,
         "regime_specific_reliability": regime_specific_reliability,
         "execution_adjusted_uncertainty": execution_adjusted_uncertainty,
+        "latent_transition_context": {
+            "transition_hazard_score": transition_hazard_score,
+            "transition_confidence_suppression": transition_confidence_suppression,
+            "transition_hazard_state": str(latent_transition_state.get("transition_hazard_state", "stable")),
+        },
         "governance_flags": governance_flags,
     }
     confidence_adjustments = {
@@ -2764,6 +3142,7 @@ def _contradiction_arbitration_and_belief_resolution_layer(
     replay_scope: str,
     adversarial_execution_engine: dict[str, Any] | None = None,
     structural_memory_graph_engine: dict[str, Any] | None = None,
+    latent_transition_hazard_engine: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     arbitration_dir = memory_root / "contradiction_arbitration"
     arbitration_dir.mkdir(parents=True, exist_ok=True)
@@ -2806,6 +3185,13 @@ def _contradiction_arbitration_and_belief_resolution_layer(
     long_horizon_context_match = _bounded(float(structural_memory_state.get("long_horizon_context_match", 0.0) or 0.0))
     structural_reversal_bias = _bounded(float(structural_memory_state.get("structural_reversal_bias", 0.0) or 0.0))
     structural_memory_reliability = _bounded(float(structural_memory_state.get("memory_reliability", 0.0) or 0.0))
+    latent_transition_hazard_engine = latent_transition_hazard_engine if isinstance(latent_transition_hazard_engine, dict) else {}
+    latent_transition_state = latent_transition_hazard_engine.get("latent_transition_hazard_state", {})
+    if not isinstance(latent_transition_state, dict):
+        latent_transition_state = {}
+    transition_hazard_score = _bounded(float(latent_transition_state.get("transition_hazard_score", 0.0) or 0.0))
+    transition_hazard_reliability = _bounded(float(latent_transition_state.get("hazard_reliability", 0.0) or 0.0))
+    transition_directional_bias = str(latent_transition_state.get("transition_directional_bias", "neutral"))
     pain_risk = _bounded(float(pain_geometry_engine.get("pain_risk_surface", {}).get("current_state_risk", 0.0) or 0.0))
     negative_score = _bounded(float(negative_space_engine.get("signal", {}).get("deviation_score", 0.0) or 0.0))
     counterfactual_items = counterfactual_engine.get("counterfactual_evaluations", [])
@@ -3005,6 +3391,15 @@ def _contradiction_arbitration_and_belief_resolution_layer(
         historical_reliability=long_horizon_context_match,
         execution_adjusted_trust=_bounded(structural_memory_reliability * (1.0 - (execution_penalty * 0.15))),
     )
+    transition_direction = "risk_off" if transition_directional_bias == "risk_off" else "wait" if transition_hazard_score >= 0.45 else "continuation"
+    _belief(
+        source_layer="latent_transition_hazard_layer",
+        belief_direction=transition_direction,
+        belief_confidence=transition_hazard_score,
+        belief_intent="precursor_transition_hazard",
+        historical_reliability=transition_hazard_reliability,
+        execution_adjusted_trust=_bounded(transition_hazard_score * (1.0 - (execution_penalty * 0.2))),
+    )
 
     contradictions: list[dict[str, Any]] = []
 
@@ -3143,6 +3538,17 @@ def _contradiction_arbitration_and_belief_resolution_layer(
             historical_recurrence=_historical_recurrence("risk_enable_vs_risk_disable"),
             historical_outcome_bias=_historical_bias("risk_enable_vs_risk_disable"),
         )
+    if beliefs[0]["belief_direction"] == "continuation" and transition_direction == "risk_off" and transition_hazard_score >= 0.55:
+        _push_contradiction(
+            contradiction_type="continuation_vs_hazard_buildup",
+            contradiction_severity=_bounded((beliefs[0]["belief_confidence"] * 0.45) + (transition_hazard_score * 0.55)),
+            partners=[beliefs[0], beliefs[-1]],
+            dominance_candidate="latent_transition_hazard_layer",
+            arbitration_outcome="pause" if transition_hazard_score < 0.78 else "refuse",
+            resolution_rationale=["continuation_signal_conflicts_with_latent_hazard_buildup"],
+            historical_recurrence=_historical_recurrence("continuation_vs_hazard_buildup"),
+            historical_outcome_bias=_historical_bias("continuation_vs_hazard_buildup"),
+        )
 
     type_counts: dict[str, int] = {}
     for item in contradictions:
@@ -3165,7 +3571,11 @@ def _contradiction_arbitration_and_belief_resolution_layer(
         arbitration_outcome = "refuse"
         dominant_source = "execution_microstructure_intelligence_layer"
     elif any(
-        str(item.get("contradiction_type", "")) in {"continuation_vs_trap", "risk_enable_vs_risk_disable"}
+        str(item.get("contradiction_type", "")) in {
+            "continuation_vs_trap",
+            "risk_enable_vs_risk_disable",
+            "continuation_vs_hazard_buildup",
+        }
         and float(item.get("contradiction_severity", 0.0) or 0.0) >= 0.58
         for item in contradictions
     ):
@@ -3312,6 +3722,7 @@ def _detect_improvement_gaps(
     calibration_uncertainty_engine: dict[str, Any] | None = None,
     adversarial_execution_engine: dict[str, Any] | None = None,
     structural_memory_graph_engine: dict[str, Any] | None = None,
+    latent_transition_hazard_engine: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
     repeated = autonomous_behavior.get("trade_review_engine", {}).get("repeated_failure_patterns", [])
@@ -3616,6 +4027,51 @@ def _detect_improvement_gaps(
                 "severity": round(min(1.0, max(structural_magnet_score, long_horizon_context_match)), 4),
             }
         )
+    latent_transition_hazard_engine = latent_transition_hazard_engine if isinstance(latent_transition_hazard_engine, dict) else {}
+    latent_transition_state = latent_transition_hazard_engine.get("latent_transition_hazard_state", {})
+    if not isinstance(latent_transition_state, dict):
+        latent_transition_state = {}
+    transition_hazard_score = float(latent_transition_state.get("transition_hazard_score", 0.0) or 0.0)
+    precursor_instability_score = float(latent_transition_state.get("precursor_instability_score", 0.0) or 0.0)
+    regime_deformation_score = float(latent_transition_state.get("regime_deformation_score", 0.0) or 0.0)
+    hazard_reliability = float(latent_transition_state.get("hazard_reliability", 0.0) or 0.0)
+    transition_directional_bias = str(latent_transition_state.get("transition_directional_bias", "neutral"))
+    if transition_hazard_score >= 0.6 and hazard_reliability >= 0.4:
+        gaps.append(
+            {
+                "gap_type": "latent_transition_hazard_under_modeled",
+                "detail": "latent_transition_hazard_score_elevated",
+                "frequency": max(1, int(round((transition_hazard_score + hazard_reliability) * 3))),
+                "severity": round(min(1.0, transition_hazard_score), 4),
+            }
+        )
+    if transition_directional_bias == "risk_off" and precursor_instability_score >= 0.58:
+        gaps.append(
+            {
+                "gap_type": "hazard_directional_bias_mismatch",
+                "detail": "continuation_vs_hazard_risk_off_bias",
+                "frequency": max(1, int(round((precursor_instability_score + regime_deformation_score) * 2))),
+                "severity": round(min(1.0, max(precursor_instability_score, regime_deformation_score)), 4),
+            }
+        )
+    if hazard_reliability > 0.0 and hazard_reliability < 0.45:
+        gaps.append(
+            {
+                "gap_type": "hazard_reliability_decay",
+                "detail": "latent_transition_hazard_reliability_decay",
+                "frequency": 1,
+                "severity": round(min(1.0, 1.0 - hazard_reliability), 4),
+            }
+        )
+    if precursor_instability_score >= 0.62:
+        gaps.append(
+            {
+                "gap_type": "precursor_instability_not_captured",
+                "detail": "precursor_instability_persistent",
+                "frequency": max(1, int(round(precursor_instability_score * 4))),
+                "severity": round(min(1.0, precursor_instability_score), 4),
+            }
+        )
     return gaps
 
 
@@ -3704,6 +4160,19 @@ def _suggestion_templates(gap_type: str) -> list[dict[str, str]]:
         "persistent_structural_magnet_behavior_unmodeled": [
             {"suggestion_type": "new_feature_combination", "target": "structural_magnet_memory_features"},
         ],
+        "latent_transition_hazard_under_modeled": [
+            {"suggestion_type": "new_detector_idea", "target": "latent_transition_hazard_detector"},
+            {"suggestion_type": "new_survival_rule", "target": "latent_transition_hazard_pause_guard"},
+        ],
+        "hazard_directional_bias_mismatch": [
+            {"suggestion_type": "new_strategy_mutation", "target": "hazard_bias_directional_alignment"},
+        ],
+        "hazard_reliability_decay": [
+            {"suggestion_type": "new_detector_idea", "target": "hazard_reliability_recovery_detector"},
+        ],
+        "precursor_instability_not_captured": [
+            {"suggestion_type": "new_execution_refinement", "target": "precursor_instability_capture_guard"},
+        ],
         "autonomous_capability_proposal": [
             {"suggestion_type": "new_capability_hypothesis", "target": "autonomous_capability_discovery"},
         ],
@@ -3789,6 +4258,10 @@ def _component_for_gap(gap_type: str) -> str:
         "recurrent_structural_reversal_not_captured": "structural_memory_graph_layer",
         "regime_memory_misalignment": "structural_memory_graph_layer",
         "persistent_structural_magnet_behavior_unmodeled": "structural_memory_graph_layer",
+        "latent_transition_hazard_under_modeled": "latent_transition_hazard_layer",
+        "hazard_directional_bias_mismatch": "latent_transition_hazard_layer",
+        "hazard_reliability_decay": "latent_transition_hazard_layer",
+        "precursor_instability_not_captured": "latent_transition_hazard_layer",
         "autonomous_capability_proposal": "capability_evolution_governance_ladder",
     }
     return mapping.get(gap_type, "self_evolving_indicator_layer")
@@ -3848,6 +4321,7 @@ def _self_suggestion_governor(
     replay_scope: str,
     adversarial_execution_engine: dict[str, Any] | None = None,
     structural_memory_graph_engine: dict[str, Any] | None = None,
+    latent_transition_hazard_engine: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     registry_dir = memory_root / "capability_registry"
     registry_dir.mkdir(parents=True, exist_ok=True)
@@ -3892,6 +4366,7 @@ def _self_suggestion_governor(
         calibration_uncertainty_engine=calibration_uncertainty_engine,
         adversarial_execution_engine=adversarial_execution_engine,
         structural_memory_graph_engine=structural_memory_graph_engine,
+        latent_transition_hazard_engine=latent_transition_hazard_engine,
     )
     calibration_uncertainty_engine = (
         calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
@@ -3907,6 +4382,10 @@ def _self_suggestion_governor(
     structural_memory_state = structural_memory_graph_engine.get("structural_memory_state", {})
     if not isinstance(structural_memory_state, dict):
         structural_memory_state = {}
+    latent_transition_hazard_engine = latent_transition_hazard_engine if isinstance(latent_transition_hazard_engine, dict) else {}
+    latent_transition_state = latent_transition_hazard_engine.get("latent_transition_hazard_state", {})
+    if not isinstance(latent_transition_state, dict):
+        latent_transition_state = {}
     capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
     capability_candidates = capability_evolution_ladder.get("capability_candidates", [])
     if isinstance(capability_candidates, list):
@@ -3955,6 +4434,9 @@ def _self_suggestion_governor(
         "structural_memory_reliability": round(float(structural_memory_state.get("memory_reliability", 0.0) or 0.0), 4),
         "structural_reversal_bias": round(float(structural_memory_state.get("structural_reversal_bias", 0.0) or 0.0), 4),
         "long_horizon_context_match": round(float(structural_memory_state.get("long_horizon_context_match", 0.0) or 0.0), 4),
+        "transition_hazard_score": round(float(latent_transition_state.get("transition_hazard_score", 0.0) or 0.0), 4),
+        "precursor_instability_score": round(float(latent_transition_state.get("precursor_instability_score", 0.0) or 0.0), 4),
+        "transition_directional_bias": str(latent_transition_state.get("transition_directional_bias", "neutral")),
     }
     if previous_governor.get("input_signature") == input_signature:
         return previous_governor
@@ -4201,6 +4683,11 @@ def _self_suggestion_governor(
             "calibration_state": calibration_state,
             "confidence_adjustments": calibration_uncertainty_engine.get("confidence_adjustments", {}),
             "governance": calibration_uncertainty_engine.get("governance", {}),
+        },
+        "latent_transition_hazard_layer": {
+            "latent_transition_hazard_state": latent_transition_state,
+            "confidence_adjustments": latent_transition_hazard_engine.get("confidence_adjustments", {}),
+            "risk_adjustments": latent_transition_hazard_engine.get("risk_adjustments", {}),
         },
         "paths": {
             "registry": str(registry_path),
@@ -4512,6 +4999,90 @@ def run_self_evolving_indicator_layer(
     )
     decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
     unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    latent_transition_hazard_engine = _latent_transition_hazard_layer(
+        memory_root=memory_root,
+        closed=closed,
+        market_state=market_state,
+        unified_market_intelligence_field=unified_market_intelligence_field,
+        structural_memory_graph_engine=structural_memory_graph_engine,
+        execution_microstructure_engine=execution_microstructure_engine,
+        adversarial_execution_engine=adversarial_execution_engine,
+        replay_scope=replay_scope,
+        negative_space_engine=negative_space_engine,
+        invariant_break_engine=invariant_break_engine,
+    )
+    latent_transition_state = latent_transition_hazard_engine.get("latent_transition_hazard_state", {})
+    if not isinstance(latent_transition_state, dict):
+        latent_transition_state = {}
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["latent_transition_hazard_state"] = latent_transition_state
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["transition_hazard_score"] = round(
+        max(0.0, min(1.0, float(latent_transition_state.get("transition_hazard_score", 0.0) or 0.0))),
+        4,
+    )
+    confidence_structure["hazard_adjusted_confidence"] = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                float(latent_transition_hazard_engine.get("confidence_adjustments", {}).get("hazard_adjusted_confidence", 0.0) or 0.0),
+            ),
+        ),
+        4,
+    )
+    confidence_structure["transition_confidence_suppression"] = round(
+        max(0.0, min(1.0, float(latent_transition_state.get("transition_confidence_suppression", 0.0) or 0.0))),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    risk_sizing = decision_refinements.get("risk_sizing", {})
+    if not isinstance(risk_sizing, dict):
+        risk_sizing = {}
+    risk_sizing["transition_hazard_multiplier"] = round(
+        max(
+            0.25,
+            min(
+                1.0,
+                float(latent_transition_hazard_engine.get("risk_adjustments", {}).get("transition_hazard_multiplier", 1.0) or 1.0),
+            ),
+        ),
+        4,
+    )
+    decision_refinements["risk_sizing"] = risk_sizing
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    for reason in latent_transition_hazard_engine.get("risk_adjustments", {}).get("refusal_reasons", []):
+        if reason not in refusal_reasons:
+            refusal_reasons.append(str(reason))
+    for reason in latent_transition_hazard_engine.get("risk_adjustments", {}).get("pause_reasons", []):
+        if reason not in pause_reasons:
+            pause_reasons.append(str(reason))
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        latent_transition_hazard_engine.get("risk_adjustments", {}).get("should_refuse", False)
+    )
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        latent_transition_hazard_engine.get("risk_adjustments", {}).get("should_pause", False)
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
     calibration_uncertainty_engine = _calibration_and_uncertainty_governance_layer(
         memory_root=memory_root,
         closed=closed,
@@ -4519,6 +5090,7 @@ def run_self_evolving_indicator_layer(
         unified_market_intelligence_field=unified_market_intelligence_field,
         execution_microstructure_engine=execution_microstructure_engine,
         adversarial_execution_engine=adversarial_execution_engine,
+        latent_transition_hazard_engine=latent_transition_hazard_engine,
         replay_scope=replay_scope,
     )
     calibration_state = calibration_uncertainty_engine.get("calibration_state", {})
@@ -4593,6 +5165,7 @@ def run_self_evolving_indicator_layer(
         detector_generator=detector_generator,
         replay_scope=replay_scope,
         structural_memory_graph_engine=structural_memory_graph_engine,
+        latent_transition_hazard_engine=latent_transition_hazard_engine,
     )
     contradiction_confidence = float(
         contradiction_arbitration_engine.get("confidence_adjustments", {}).get("contradiction_adjusted_confidence", 0.0) or 0.0
@@ -4655,6 +5228,7 @@ def run_self_evolving_indicator_layer(
         capability_evolution_ladder=capability_evolution_ladder,
         replay_scope=replay_scope,
         structural_memory_graph_engine=structural_memory_graph_engine,
+        latent_transition_hazard_engine=latent_transition_hazard_engine,
     )
     survival_intelligence = {
         "capital_survival_engine": autonomous_behavior.get("capital_survival_engine", {}),
@@ -4669,6 +5243,7 @@ def run_self_evolving_indicator_layer(
         "execution_microstructure_intelligence_layer": execution_microstructure_engine,
         "adversarial_execution_intelligence_layer": adversarial_execution_engine,
         "structural_memory_graph_layer": structural_memory_graph_engine,
+        "latent_transition_hazard_layer": latent_transition_hazard_engine,
         "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
         "contradiction_arbitration_and_belief_resolution_layer": contradiction_arbitration_engine,
         "recursive_self_modeling": recursive_self_modeling,
@@ -4700,6 +5275,7 @@ def run_self_evolving_indicator_layer(
         "execution_microstructure_intelligence_layer": execution_microstructure_engine,
         "adversarial_execution_intelligence_layer": adversarial_execution_engine,
         "structural_memory_graph_layer": structural_memory_graph_engine,
+        "latent_transition_hazard_layer": latent_transition_hazard_engine,
         "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
         "contradiction_arbitration_and_belief_resolution_layer": contradiction_arbitration_engine,
         "recursive_self_modeling": recursive_self_modeling,
