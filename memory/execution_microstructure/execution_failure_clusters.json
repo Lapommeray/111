@@ -1,0 +1,9 @@
+{
+  "clusters": [],
+  "strongest_cluster": {
+    "failure_cause": "none",
+    "count": 0
+  },
+  "failure_cluster_risk": 0.0,
+  "sample_size": 0
+}
