@@ -1,0 +1,11 @@
+{
+  "contexts": {
+    "evaluation_replay|range|insufficient_data|normal": {
+      "rolling_deception_score": 0.1026,
+      "observations": 1,
+      "deception_state": "insufficient_data",
+      "engineered_move_probability": 0.0363,
+      "liquidity_bait_risk": 0.084
+    }
+  }
+}
