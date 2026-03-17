@@ -13,6 +13,8 @@ memory/calibration_uncertainty/
 memory/capability_evolution/
 memory/capability_invention/*.json
 !memory/capability_invention/.gitkeep
+memory/capability_expansion/*.json
+!memory/capability_expansion/.gitkeep
 memory/capital_allocation/
 memory/causal_intervention_robustness/
 memory/contradiction_arbitration/

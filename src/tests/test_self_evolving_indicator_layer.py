@@ -426,6 +426,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "decision_policy_state",
         "capital_allocation_state",
         "capability_invention_state",
+        "capability_expansion_state",
         "self_expansion_quality_state",
         "system_coherence_state",
         "learning_stability_state",
@@ -739,6 +740,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "decision_policy_state",
         "capital_allocation_state",
         "capability_invention_state",
+        "capability_expansion_state",
         "self_expansion_quality_state",
         "system_coherence_state",
         "learning_stability_state",
@@ -2489,6 +2491,202 @@ def test_governed_capability_invention_layer_detects_novelty_under_diverse_gap_p
     )["governed_capability_invention_layer"]
     assert novelty_run["novelty_score"] > 0.0
     assert novelty_run["candidate_invention_count"] >= 1
+
+
+def test_autonomous_capability_expansion_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "acep1", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "acep2", "status": "closed", "result": "win", "pnl_points": 0.6, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 2.0, "slippage_ratio": 1.8},
+        replay_scope="full_replay",
+    )
+    expansion = result["autonomous_capability_expansion_layer"]
+    assert Path(expansion["paths"]["latest"]).exists()
+    assert Path(expansion["paths"]["history"]).exists()
+    assert Path(expansion["paths"]["expansion_candidate_registry"]).exists()
+    assert Path(expansion["paths"]["expansion_readiness_registry"]).exists()
+    assert Path(expansion["paths"]["expansion_rollback_watchlist"]).exists()
+    assert Path(expansion["paths"]["expansion_maturity_registry"]).exists()
+    assert Path(expansion["paths"]["expansion_governance_state"]).exists()
+
+
+def test_autonomous_capability_expansion_layer_returns_expected_schema(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "aces1", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "aces2", "status": "closed", "result": "loss", "pnl_points": -0.6, "session": "london", "failure_cause": "slippage_spike"},
+            {"trade_id": "aces3", "status": "closed", "result": "win", "pnl_points": 0.7, "session": "new_york", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "expansion", "volatility_ratio": 1.9, "spread_ratio": 2.1, "slippage_ratio": 1.9},
+        replay_scope="full_replay",
+    )
+    expansion = result["autonomous_capability_expansion_layer"]
+    expected_keys = {
+        "capability_expansion_state",
+        "expansion_readiness_score",
+        "expansion_reliability",
+        "rollbackability_score",
+        "expansion_maturity_score",
+        "expansion_pressure_score",
+        "candidate_expansion_count",
+        "dominant_expansion_axis",
+        "expansion_reason_cluster",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(expansion))
+    assert expansion["capability_expansion_state"] in {"seeded", "sandbox_ready", "staged", "constrained", "stalled"}
+    assert expansion["dominant_expansion_axis"] in {"detection", "timing", "risk", "execution", "allocation", "policy", "coherence"}
+    for key in (
+        "expansion_readiness_score",
+        "expansion_reliability",
+        "rollbackability_score",
+        "expansion_maturity_score",
+        "expansion_pressure_score",
+    ):
+        assert 0.0 <= float(expansion[key]) <= 1.0
+    assert int(expansion["candidate_expansion_count"]) >= 0
+
+
+def test_autonomous_capability_expansion_layer_adds_unified_field_components_without_overwriting_existing_fields(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "aceu1", "status": "closed", "result": "loss", "pnl_points": -0.7, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "aceu2", "status": "closed", "result": "win", "pnl_points": 0.5, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.4, "spread_ratio": 1.7, "slippage_ratio": 1.5},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "unified_field_score" in unified
+    assert "composite_confidence" in unified["confidence_structure"]
+    assert "capability_invention_state" in unified["components"]
+    assert "capability_expansion_state" in unified["components"]
+    assert "expansion_reliability" in unified["confidence_structure"]
+    assert "capability_expansion" in unified["decision_refinements"]
+
+
+def test_autonomous_capability_expansion_layer_feeds_self_expansion_quality_components_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "aceq1", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "aceq2", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "london", "failure_cause": "slippage_spike"},
+            {"trade_id": "aceq3", "status": "closed", "result": "win", "pnl_points": 0.8, "session": "new_york", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.2, "slippage_ratio": 2.0},
+        replay_scope="full_replay",
+    )
+    quality_components = result["self_expansion_quality_layer"]["quality_components"]
+    for key in (
+        "expansion_pressure_context",
+        "expansion_readiness_context",
+        "expansion_rollbackability_context",
+        "expansion_maturity_context",
+        "expansion_reliability_context",
+    ):
+        assert key in quality_components
+        assert 0.0 <= float(quality_components[key]) <= 1.0
+
+
+def test_autonomous_capability_expansion_layer_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "acem1", "status": "closed", "result": "loss", "pnl_points": -0.2},
+            {"trade_id": "acem2", "status": "closed", "result": "flat", "pnl_points": 0.0},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    expansion = result["autonomous_capability_expansion_layer"]
+    assert expansion["paths"]["latest"]
+    assert isinstance(expansion["expansion_reason_cluster"], str)
+    assert int(expansion["candidate_expansion_count"]) >= 0
+
+
+def test_autonomous_capability_expansion_layer_history_rolls_and_governance_is_sandbox_replay_only(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    for index in range(3):
+        run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"aceh{index}a", "status": "closed", "result": "loss", "pnl_points": -0.7, "session": "asia", "failure_cause": "execution_failure"},
+                {"trade_id": f"aceh{index}b", "status": "closed", "result": "win", "pnl_points": 0.4, "session": "london", "failure_cause": "none"},
+            ],
+            market_state={"structure_state": "range", "volatility_ratio": 1.4, "spread_ratio": 1.7, "slippage_ratio": 1.6},
+            replay_scope="focused_replay",
+        )
+    history_payload = json.loads((memory_root / "capability_expansion" / "capability_expansion_history.json").read_text(encoding="utf-8"))
+    assert history_payload["snapshots"]
+    assert len(history_payload["snapshots"]) <= 200
+    latest = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "acehla", "status": "closed", "result": "loss", "pnl_points": -0.6, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "acehlb", "status": "closed", "result": "win", "pnl_points": 0.5, "session": "new_york", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.4, "spread_ratio": 1.6, "slippage_ratio": 1.5},
+        replay_scope="focused_replay",
+    )
+    flags = latest["autonomous_capability_expansion_layer"]["governance_flags"]
+    assert flags["sandbox_only"] is True
+    assert flags["replay_validation_required"] is True
+    assert flags["live_deployment_allowed"] is False
+    assert flags["no_blind_live_self_rewrites"] is True
+
+
+def test_autonomous_capability_expansion_layer_detects_readiness_under_diverse_invention_pressure(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    diverse = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "acerd1", "status": "closed", "result": "loss", "pnl_points": -1.1, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "acerd2", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "london", "failure_cause": "slippage_spike"},
+            {"trade_id": "acerd3", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "new_york", "failure_cause": "liquidity_trap"},
+            {"trade_id": "acerd4", "status": "closed", "result": "win", "pnl_points": 0.7, "session": "new_york", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "expansion", "volatility_ratio": 2.1, "spread_ratio": 2.4, "slippage_ratio": 2.2},
+        replay_scope="full_replay",
+    )["autonomous_capability_expansion_layer"]
+    assert 0.0 <= float(diverse["expansion_readiness_score"]) <= 1.0
+    assert float(diverse["expansion_pressure_score"]) >= 0.1
+    assert diverse["candidate_expansion_count"] >= 1
+
+
+def test_autonomous_capability_expansion_layer_detects_rollback_risk_under_fragile_expansion_pressure(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    trade_outcomes = [
+        {"trade_id": "acerk1", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia", "failure_cause": "execution_failure"},
+        {"trade_id": "acerk2", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia", "failure_cause": "execution_failure"},
+        {"trade_id": "acerk3", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia", "failure_cause": "execution_failure"},
+    ]
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 1.9, "spread_ratio": 3.0, "slippage_ratio": 2.9},
+        replay_scope="full_replay",
+    )
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 1.9, "spread_ratio": 3.0, "slippage_ratio": 2.9},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 1.9, "spread_ratio": 3.0, "slippage_ratio": 2.9},
+        replay_scope="focused_replay",
+    )
+    expansion = second["autonomous_capability_expansion_layer"]
+    assert expansion["rollbackability_score"] <= 0.7
+    assert expansion["capability_expansion_state"] in {"constrained", "stalled", "staged", "sandbox_ready", "seeded"}
 
 
 def test_cross_regime_transfer_robustness_layer_persists_required_artifacts(tmp_path: Path) -> None:
