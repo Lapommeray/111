@@ -1930,6 +1930,7 @@ def _capability_evolution_governance_ladder(
     adversarial_execution_engine: dict[str, Any] | None = None,
     self_expansion_quality_layer: dict[str, Any] | None = None,
     cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
+    causal_intervention_counterfactual_robustness_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     evolution_dir = memory_root / "capability_evolution"
     evolution_dir.mkdir(parents=True, exist_ok=True)
@@ -2095,6 +2096,37 @@ def _capability_evolution_governance_ladder(
     )
     incoming_transfer_penalty = round(float(incoming_transfer.get("promotion_transfer_penalty", 0.0) or 0.0), 4)
     transfer_penalty = round(min(0.35, prior_transfer_penalty + min(0.1, incoming_transfer_penalty)), 4)
+    prior_causal_intervention = read_json_safe(
+        memory_root / "causal_intervention_robustness" / "causal_intervention_robustness_latest.json",
+        default={},
+    )
+    if not isinstance(prior_causal_intervention, dict):
+        prior_causal_intervention = {}
+    incoming_causal_intervention = (
+        causal_intervention_counterfactual_robustness_layer
+        if isinstance(causal_intervention_counterfactual_robustness_layer, dict)
+        else {}
+    )
+    causal_context = incoming_causal_intervention if incoming_causal_intervention else prior_causal_intervention
+    prior_false_improvement_risk = round(float(causal_context.get("false_improvement_risk", 0.0) or 0.0), 4)
+    prior_counterfactual_robustness = round(
+        float(causal_context.get("counterfactual_robustness_score", 0.5) or 0.5),
+        4,
+    )
+    prior_intervention_reliability = round(float(causal_context.get("intervention_reliability", 0.5) or 0.5), 4)
+    prior_primary_intervention_axis = str(causal_context.get("primary_intervention_axis", "unknown"))
+    causal_promotion_penalty = round(
+        max(
+            0.0,
+            min(
+                0.08,
+                (prior_false_improvement_risk * 0.05)
+                + ((1.0 - prior_counterfactual_robustness) * 0.02)
+                + ((1.0 - prior_intervention_reliability) * 0.01),
+            ),
+        ),
+        4,
+    )
 
     candidates: list[dict[str, Any]] = []
     validation_records: list[dict[str, Any]] = []
@@ -2119,7 +2151,8 @@ def _capability_evolution_governance_ladder(
                     1.0,
                     (replay_score * promotion_confidence_multiplier)
                     - deception_penalty
-                    - min(0.12, transfer_penalty * 0.4),
+                    - min(0.12, transfer_penalty * 0.4)
+                    - causal_promotion_penalty,
                 ),
             ),
             4,
@@ -2198,6 +2231,14 @@ def _capability_evolution_governance_ladder(
                 "prior_cycle_overfit_risk": prior_overfit_risk,
                 "prior_cycle_transfer_state": str(transfer_state.get("state", "unknown")),
                 "source": "memory/transfer_robustness/transfer_robustness_latest.json",
+            },
+            "intervention_robustness_context": {
+                "prior_cycle_counterfactual_robustness_score": prior_counterfactual_robustness,
+                "prior_cycle_intervention_reliability": prior_intervention_reliability,
+                "prior_cycle_false_improvement_risk": prior_false_improvement_risk,
+                "primary_intervention_axis": prior_primary_intervention_axis,
+                "promotion_penalty": causal_promotion_penalty,
+                "source": "memory/causal_intervention_robustness/causal_intervention_robustness_latest.json",
             },
             "governance": {
                 "sandbox_only": True,
@@ -4545,6 +4586,288 @@ def _cross_regime_transfer_robustness_layer(
     }
 
 
+def _causal_intervention_counterfactual_robustness_layer(
+    *,
+    memory_root: Path,
+    closed: list[dict[str, Any]],
+    market_state: dict[str, Any],
+    replay_scope: str,
+    counterfactual_engine: dict[str, Any],
+    execution_microstructure_engine: dict[str, Any],
+    cross_regime_transfer_robustness_layer: dict[str, Any],
+    unified_market_intelligence_field: dict[str, Any] | None = None,
+    self_expansion_quality_layer: dict[str, Any] | None = None,
+    capability_evolution_ladder: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    causal_dir = memory_root / "causal_intervention_robustness"
+    causal_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = causal_dir / "causal_intervention_robustness_latest.json"
+    history_path = causal_dir / "causal_intervention_robustness_history.json"
+    context_registry_path = causal_dir / "intervention_context_registry.json"
+    axis_registry_path = causal_dir / "intervention_axis_reliability_registry.json"
+    watchlist_path = causal_dir / "false_improvement_watchlist.json"
+    priority_trace_path = causal_dir / "intervention_priority_trace.json"
+    governance_path = causal_dir / "causal_intervention_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    settled = [item for item in closed[-80:] if isinstance(item, dict)]
+    counterfactual_engine = counterfactual_engine if isinstance(counterfactual_engine, dict) else {}
+    evaluations = counterfactual_engine.get("counterfactual_evaluations", [])
+    if not isinstance(evaluations, list):
+        evaluations = []
+    execution_microstructure_engine = (
+        execution_microstructure_engine if isinstance(execution_microstructure_engine, dict) else {}
+    )
+    cross_regime_transfer_robustness_layer = (
+        cross_regime_transfer_robustness_layer
+        if isinstance(cross_regime_transfer_robustness_layer, dict)
+        else {}
+    )
+    unified_market_intelligence_field = (
+        unified_market_intelligence_field if isinstance(unified_market_intelligence_field, dict) else {}
+    )
+    self_expansion_quality_layer = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+    capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
+
+    axis_counts: dict[str, int] = {}
+    axis_opportunity: dict[str, float] = {}
+    context_axis_counts: dict[str, dict[str, int]] = {}
+    context_deltas: dict[str, list[float]] = {}
+    improvements = 0
+    for evaluation in evaluations:
+        if not isinstance(evaluation, dict):
+            continue
+        axis = str(evaluation.get("best_alternative_action", "no_trade_taken")).strip() or "no_trade_taken"
+        axis_counts[axis] = axis_counts.get(axis, 0) + 1
+        delta = abs(float(evaluation.get("outcome_delta_vs_best", 0.0) or 0.0))
+        axis_opportunity[axis] = axis_opportunity.get(axis, 0.0) + delta
+        if not bool(evaluation.get("strategy_improved_outcome", False)):
+            improvements += 1
+        trade_id = str(evaluation.get("trade_id", ""))
+        trade_context = next(
+            (
+                item
+                for item in settled
+                if str(item.get("trade_id", "")) == trade_id
+            ),
+            {},
+        )
+        session = str(trade_context.get("session", "unknown")).strip() or "unknown"
+        volatility_ratio = float(
+            trade_context.get("volatility_ratio", market_state.get("volatility_ratio", 1.0)) or 1.0
+        )
+        volatility_bucket = "high" if volatility_ratio >= 1.45 else "mid" if volatility_ratio >= 1.1 else "low"
+        structure_state = str(trade_context.get("structure_state", market_state.get("structure_state", "unknown"))).strip() or "unknown"
+        context_key = f"{session}|{volatility_bucket}|{structure_state}"
+        context_axis = context_axis_counts.setdefault(context_key, {})
+        context_axis[axis] = context_axis.get(axis, 0) + 1
+        context_deltas.setdefault(context_key, []).append(delta)
+
+    sample_size = len([item for item in evaluations if isinstance(item, dict)])
+    primary_intervention_axis, primary_axis_count = sorted(
+        axis_counts.items(),
+        key=lambda item: (item[1], item[0]),
+        reverse=True,
+    )[0] if axis_counts else ("no_trade_taken", 0)
+    intervention_consistency = _bounded(primary_axis_count / max(1, sample_size))
+    average_opportunity = _bounded(sum(axis_opportunity.values()) / max(1, sample_size), high=2.0)
+    opportunity_score = _bounded(average_opportunity / 2.0)
+    context_concentration = _bounded(max([sum(axes.values()) for axes in context_axis_counts.values()], default=0) / max(1, sample_size))
+    context_diversity = _bounded(min(1.0, len(context_axis_counts) / 8.0))
+    counterfactual_improvement_rate = _bounded(improvements / max(1, sample_size))
+    transfer_score = _bounded(float(cross_regime_transfer_robustness_layer.get("cross_regime_transfer_score", 0.5) or 0.5))
+    execution_penalty = _bounded(float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0))
+    false_improvement_risk = _bounded(
+        (context_concentration * 0.45)
+        + ((1.0 - context_diversity) * 0.2)
+        + ((1.0 - transfer_score) * 0.15)
+        + (counterfactual_improvement_rate * 0.15)
+        + (execution_penalty * 0.05)
+    )
+    counterfactual_robustness_score = _bounded(
+        (counterfactual_improvement_rate * 0.4)
+        + ((1.0 - context_concentration) * 0.2)
+        + (context_diversity * 0.2)
+        + (transfer_score * 0.2)
+    )
+    intervention_reliability = _bounded(
+        1.0
+        - (
+            (false_improvement_risk * 0.55)
+            + ((1.0 - intervention_consistency) * 0.2)
+            + ((1.0 - counterfactual_robustness_score) * 0.25)
+        )
+    )
+    intervention_priority_score = _bounded(
+        (opportunity_score * 0.5)
+        + (counterfactual_improvement_rate * 0.25)
+        + ((1.0 - intervention_reliability) * 0.2)
+        + (float(cross_regime_transfer_robustness_layer.get("overfit_risk", 0.0) or 0.0) * 0.05)
+    )
+    causal_confidence_proxy = _bounded(
+        (counterfactual_robustness_score * 0.45)
+        + (intervention_reliability * 0.35)
+        + (min(1.0, sample_size / 20.0) * 0.15)
+        + (float(unified_market_intelligence_field.get("confidence_structure", {}).get("composite_confidence", 0.5) or 0.5) * 0.05)
+    )
+    if counterfactual_robustness_score >= 0.72 and false_improvement_risk < 0.42:
+        intervention_quality_state = "robust"
+    elif counterfactual_robustness_score >= 0.54 and false_improvement_risk < 0.58:
+        intervention_quality_state = "watch"
+    elif counterfactual_robustness_score >= 0.38:
+        intervention_quality_state = "fragile"
+    else:
+        intervention_quality_state = "breakdown"
+    context_sensitive_intervention_map = {
+        key: {
+            "dominant_axis": sorted(axes.items(), key=lambda item: (item[1], item[0]), reverse=True)[0][0],
+            "axis_agreement": _bounded(
+                sorted(axes.values(), reverse=True)[0] / max(1, sum(axes.values()))
+            ),
+            "sample_size": int(sum(axes.values())),
+            "average_outcome_delta_vs_best": _bounded(
+                sum(context_deltas.get(key, [])) / max(1, len(context_deltas.get(key, []))),
+                high=2.0,
+            ),
+        }
+        for key, axes in sorted(context_axis_counts.items())
+        if axes
+    }
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "causal_false_improvement_guard": false_improvement_risk >= 0.62,
+        "causal_intervention_reliability_guard": intervention_reliability <= 0.42,
+    }
+    payload = {
+        "intervention_quality_state": intervention_quality_state,
+        "intervention_priority_score": intervention_priority_score,
+        "counterfactual_robustness_score": counterfactual_robustness_score,
+        "primary_intervention_axis": primary_intervention_axis,
+        "intervention_consistency": intervention_consistency,
+        "intervention_reliability": intervention_reliability,
+        "context_sensitive_intervention_map": context_sensitive_intervention_map,
+        "false_improvement_risk": false_improvement_risk,
+        "causal_confidence_proxy": causal_confidence_proxy,
+        "governance_flags": governance_flags,
+    }
+
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+    context_registry = read_json_safe(context_registry_path, default={"contexts": {}})
+    if not isinstance(context_registry, dict):
+        context_registry = {"contexts": {}}
+    contexts = context_registry.get("contexts", {})
+    if not isinstance(contexts, dict):
+        contexts = {}
+    for key, context in context_sensitive_intervention_map.items():
+        prior = contexts.get(key, {})
+        if not isinstance(prior, dict):
+            prior = {}
+        prior_seen = int(prior.get("seen_count", 0) or 0)
+        seen = prior_seen + int(context.get("sample_size", 0) or 0)
+        prior_confidence = float(prior.get("rolling_causal_confidence_proxy", 0.5) or 0.5)
+        contexts[key] = {
+            "seen_count": seen,
+            "dominant_axis": str(context.get("dominant_axis", "no_trade_taken")),
+            "rolling_causal_confidence_proxy": _bounded(
+                ((prior_confidence * prior_seen) + (causal_confidence_proxy * int(context.get("sample_size", 0) or 0)))
+                / max(1, seen)
+            ),
+        }
+    write_json_atomic(context_registry_path, {"contexts": contexts})
+    axis_registry = read_json_safe(axis_registry_path, default={"axes": {}})
+    if not isinstance(axis_registry, dict):
+        axis_registry = {"axes": {}}
+    axes = axis_registry.get("axes", {})
+    if not isinstance(axes, dict):
+        axes = {}
+    for axis, count in axis_counts.items():
+        prior = axes.get(axis, {})
+        if not isinstance(prior, dict):
+            prior = {}
+        prior_count = int(prior.get("count", 0) or 0)
+        total_count = prior_count + int(count)
+        prior_reliability = float(prior.get("reliability", 0.5) or 0.5)
+        axes[axis] = {
+            "count": total_count,
+            "reliability": _bounded(((prior_reliability * prior_count) + (intervention_reliability * count)) / max(1, total_count)),
+            "avg_opportunity": _bounded(axis_opportunity.get(axis, 0.0) / max(1, count), high=2.0),
+        }
+    write_json_atomic(axis_registry_path, {"axes": axes})
+    watchlist = read_json_safe(watchlist_path, default={"watchlist": []})
+    if not isinstance(watchlist, dict):
+        watchlist = {"watchlist": []}
+    watch_items = watchlist.get("watchlist", [])
+    if not isinstance(watch_items, list):
+        watch_items = []
+    if false_improvement_risk >= 0.62:
+        watch_items.append(
+            {
+                "replay_scope": replay_scope,
+                "reason": "counterfactual_narrow_context_concentration",
+                "false_improvement_risk": false_improvement_risk,
+                "primary_intervention_axis": primary_intervention_axis,
+                "context_concentration": context_concentration,
+            }
+        )
+    write_json_atomic(watchlist_path, {"watchlist": watch_items[-200:]})
+    priority_trace = read_json_safe(priority_trace_path, default={"entries": []})
+    if not isinstance(priority_trace, dict):
+        priority_trace = {"entries": []}
+    trace_entries = priority_trace.get("entries", [])
+    if not isinstance(trace_entries, list):
+        trace_entries = []
+    trace_entries.append(
+        {
+            "replay_scope": replay_scope,
+            "intervention_priority_score": intervention_priority_score,
+            "counterfactual_robustness_score": counterfactual_robustness_score,
+            "false_improvement_risk": false_improvement_risk,
+            "primary_intervention_axis": primary_intervention_axis,
+        }
+    )
+    write_json_atomic(priority_trace_path, {"entries": trace_entries[-400:]})
+    write_json_atomic(
+        governance_path,
+        {
+            "sandbox_only": True,
+            "replay_validation_required": True,
+            "live_deployment_allowed": False,
+            "no_blind_live_self_rewrites": True,
+            "replay_scope": replay_scope,
+            "capability_candidate_count": len(
+                [item for item in capability_evolution_ladder.get("capability_candidates", []) if isinstance(item, dict)]
+            ),
+            "quality_integration_enabled": bool(self_expansion_quality_layer.get("integration_enabled", False)),
+        },
+    )
+
+    return {
+        **payload,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "intervention_context_registry": str(context_registry_path),
+            "intervention_axis_reliability_registry": str(axis_registry_path),
+            "false_improvement_watchlist": str(watchlist_path),
+            "intervention_priority_trace": str(priority_trace_path),
+            "causal_intervention_governance_state": str(governance_path),
+        },
+    }
+
+
 def _detect_improvement_gaps(
     *,
     closed: list[dict[str, Any]],
@@ -4561,6 +4884,7 @@ def _detect_improvement_gaps(
     structural_memory_graph_engine: dict[str, Any] | None = None,
     latent_transition_hazard_engine: dict[str, Any] | None = None,
     cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
+    causal_intervention_counterfactual_robustness_layer: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
     repeated = autonomous_behavior.get("trade_review_engine", {}).get("repeated_failure_patterns", [])
@@ -5013,6 +5337,62 @@ def _detect_improvement_gaps(
                 "severity": round(min(1.0, overfit_risk), 4),
             }
         )
+    causal_intervention_counterfactual_robustness_layer = (
+        causal_intervention_counterfactual_robustness_layer
+        if isinstance(causal_intervention_counterfactual_robustness_layer, dict)
+        else {}
+    )
+    intervention_state = str(
+        causal_intervention_counterfactual_robustness_layer.get("intervention_quality_state", "watch")
+    )
+    counterfactual_robustness_score = float(
+        causal_intervention_counterfactual_robustness_layer.get("counterfactual_robustness_score", 0.5) or 0.5
+    )
+    intervention_consistency = float(
+        causal_intervention_counterfactual_robustness_layer.get("intervention_consistency", 0.5) or 0.5
+    )
+    intervention_reliability = float(
+        causal_intervention_counterfactual_robustness_layer.get("intervention_reliability", 0.5) or 0.5
+    )
+    false_improvement_risk = float(
+        causal_intervention_counterfactual_robustness_layer.get("false_improvement_risk", 0.0) or 0.0
+    )
+    if intervention_state in {"fragile", "breakdown"} or counterfactual_robustness_score <= 0.42:
+        gaps.append(
+            {
+                "gap_type": "causal_intervention_robustness_breakdown",
+                "detail": intervention_state,
+                "frequency": max(1, int(round((1.0 - counterfactual_robustness_score) * 5))),
+                "severity": round(min(1.0, max(1.0 - counterfactual_robustness_score, 0.55)), 4),
+            }
+        )
+    if false_improvement_risk >= 0.62:
+        gaps.append(
+            {
+                "gap_type": "false_improvement_risk_elevated",
+                "detail": "counterfactual_narrow_context_concentration",
+                "frequency": max(1, int(round(false_improvement_risk * 4))),
+                "severity": round(min(1.0, false_improvement_risk), 4),
+            }
+        )
+    if intervention_consistency <= 0.42:
+        gaps.append(
+            {
+                "gap_type": "intervention_axis_instability",
+                "detail": "primary_axis_instability",
+                "frequency": max(1, int(round((1.0 - intervention_consistency) * 5))),
+                "severity": round(min(1.0, 1.0 - intervention_consistency), 4),
+            }
+        )
+    if intervention_reliability <= 0.45:
+        gaps.append(
+            {
+                "gap_type": "low_intervention_reliability",
+                "detail": "counterfactual_intervention_reliability_decay",
+                "frequency": max(1, int(round((1.0 - intervention_reliability) * 5))),
+                "severity": round(min(1.0, 1.0 - intervention_reliability), 4),
+            }
+        )
     return gaps
 
 
@@ -5305,6 +5685,7 @@ def _self_suggestion_governor(
     latent_transition_hazard_engine: dict[str, Any] | None = None,
     cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
     self_expansion_quality_layer: dict[str, Any] | None = None,
+    causal_intervention_counterfactual_robustness_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     registry_dir = memory_root / "capability_registry"
     registry_dir.mkdir(parents=True, exist_ok=True)
@@ -5352,6 +5733,7 @@ def _self_suggestion_governor(
         structural_memory_graph_engine=structural_memory_graph_engine,
         latent_transition_hazard_engine=latent_transition_hazard_engine,
         cross_regime_transfer_robustness_layer=cross_regime_transfer_robustness_layer,
+        causal_intervention_counterfactual_robustness_layer=causal_intervention_counterfactual_robustness_layer,
     )
     calibration_uncertainty_engine = (
         calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
@@ -5377,6 +5759,11 @@ def _self_suggestion_governor(
         latent_transition_state = {}
     cross_regime_transfer_robustness_layer = (
         cross_regime_transfer_robustness_layer if isinstance(cross_regime_transfer_robustness_layer, dict) else {}
+    )
+    causal_intervention_counterfactual_robustness_layer = (
+        causal_intervention_counterfactual_robustness_layer
+        if isinstance(causal_intervention_counterfactual_robustness_layer, dict)
+        else {}
     )
     capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
     capability_candidates = capability_evolution_ladder.get("capability_candidates", [])
@@ -5436,6 +5823,18 @@ def _self_suggestion_governor(
             float(cross_regime_transfer_robustness_layer.get("cross_regime_transfer_score", 0.0) or 0.0), 4
         ),
         "transfer_overfit_risk": round(float(cross_regime_transfer_robustness_layer.get("overfit_risk", 0.0) or 0.0), 4),
+        "counterfactual_robustness_score": round(
+            float(causal_intervention_counterfactual_robustness_layer.get("counterfactual_robustness_score", 0.0) or 0.0),
+            4,
+        ),
+        "intervention_reliability": round(
+            float(causal_intervention_counterfactual_robustness_layer.get("intervention_reliability", 0.0) or 0.0),
+            4,
+        ),
+        "false_improvement_risk": round(
+            float(causal_intervention_counterfactual_robustness_layer.get("false_improvement_risk", 0.0) or 0.0),
+            4,
+        ),
     }
     if previous_governor.get("input_signature") == input_signature:
         return previous_governor
@@ -5749,6 +6148,7 @@ def _self_expansion_quality_layer(
     structural_memory_graph_engine: dict[str, Any] | None = None,
     latent_transition_hazard_engine: dict[str, Any] | None = None,
     cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
+    causal_intervention_counterfactual_robustness_layer: dict[str, Any] | None = None,
     replay_scope: str,
 ) -> dict[str, Any]:
     quality_dir = memory_root / "self_expansion_quality"
@@ -5774,6 +6174,11 @@ def _self_expansion_quality_layer(
     latent_transition_hazard_engine = latent_transition_hazard_engine if isinstance(latent_transition_hazard_engine, dict) else {}
     cross_regime_transfer_robustness_layer = (
         cross_regime_transfer_robustness_layer if isinstance(cross_regime_transfer_robustness_layer, dict) else {}
+    )
+    causal_intervention_counterfactual_robustness_layer = (
+        causal_intervention_counterfactual_robustness_layer
+        if isinstance(causal_intervention_counterfactual_robustness_layer, dict)
+        else {}
     )
 
     candidates = capability_evolution_ladder.get("capability_candidates", [])
@@ -5891,6 +6296,26 @@ def _self_expansion_quality_layer(
             0.0,
             min(
                 1.0,
+                (transferability_score * 0.9)
+                + (
+                    float(
+                        causal_intervention_counterfactual_robustness_layer.get("counterfactual_robustness_score", 0.5) or 0.5
+                    )
+                    * 0.1
+                )
+                - min(
+                    0.04,
+                    float(causal_intervention_counterfactual_robustness_layer.get("false_improvement_risk", 0.0) or 0.0) * 0.08,
+                ),
+            ),
+        ),
+        4,
+    )
+    transferability_score = round(
+        max(
+            0.0,
+            min(
+                1.0,
                 (transferability_score * 0.75)
                 + (float(cross_regime_transfer_robustness_layer.get("cross_regime_transfer_score", 0.5) or 0.5) * 0.25)
                 - min(0.06, float(cross_regime_transfer_robustness_layer.get("promotion_transfer_penalty", 0.0) or 0.0) * 0.15),
@@ -5912,6 +6337,19 @@ def _self_expansion_quality_layer(
                 + (unresolved_pressure * 0.15)
                 + (hazard_pressure * 0.1)
                 + (float(cross_regime_transfer_robustness_layer.get("overfit_risk", 0.0) or 0.0) * 0.08)
+                + (
+                    float(causal_intervention_counterfactual_robustness_layer.get("false_improvement_risk", 0.0) or 0.0)
+                    * 0.06
+                )
+                + (
+                    (
+                        1.0
+                        - float(
+                            causal_intervention_counterfactual_robustness_layer.get("intervention_reliability", 0.5) or 0.5
+                        )
+                    )
+                    * 0.04
+                )
                 + contradiction_pressure,
             ),
         ),
@@ -5991,6 +6429,18 @@ def _self_expansion_quality_layer(
         "transfer_overfit_risk_context": round(float(cross_regime_transfer_robustness_layer.get("overfit_risk", 0.0) or 0.0), 4),
         "transfer_penalty_context": round(
             float(cross_regime_transfer_robustness_layer.get("promotion_transfer_penalty", 0.0) or 0.0),
+            4,
+        ),
+        "causal_counterfactual_robustness_context": round(
+            float(causal_intervention_counterfactual_robustness_layer.get("counterfactual_robustness_score", 0.5) or 0.5),
+            4,
+        ),
+        "causal_false_improvement_pressure": round(
+            float(causal_intervention_counterfactual_robustness_layer.get("false_improvement_risk", 0.0) or 0.0),
+            4,
+        ),
+        "causal_intervention_reliability_context": round(
+            float(causal_intervention_counterfactual_robustness_layer.get("intervention_reliability", 0.5) or 0.5),
             4,
         ),
         "promotion_confidence_multiplier": promotion_confidence_multiplier,
@@ -6263,6 +6713,18 @@ def run_self_evolving_indicator_layer(
         deception_inference_engine=deception_inference_engine,
         unified_market_intelligence_field=provisional_unified_market_intelligence,
     )
+    causal_intervention_robustness_engine = _causal_intervention_counterfactual_robustness_layer(
+        memory_root=memory_root,
+        closed=closed,
+        market_state=market_state,
+        replay_scope=replay_scope,
+        counterfactual_engine=counterfactual_engine,
+        execution_microstructure_engine=execution_microstructure_engine,
+        cross_regime_transfer_robustness_layer=cross_regime_transfer_robustness_engine,
+        unified_market_intelligence_field=provisional_unified_market_intelligence,
+        self_expansion_quality_layer=quality_integration_context,
+        capability_evolution_ladder=capability_evolution_ladder,
+    )
     discovery_state_tags = _discovery_state_tags(
         synthetic_feature_engine=synthetic_feature_engine,
         negative_space_engine=negative_space_engine,
@@ -6424,6 +6886,58 @@ def run_self_evolving_indicator_layer(
     if float(cross_regime_transfer_robustness_engine.get("overfit_risk", 0.0) or 0.0) >= 0.72:
         if "transfer_overfit_narrow_regime_guard" not in refusal_reasons:
             refusal_reasons.append("transfer_overfit_narrow_regime_guard")
+    components["causal_intervention_robustness_state"] = {
+        "state": str(causal_intervention_robustness_engine.get("intervention_quality_state", "watch")),
+        "primary_intervention_axis": str(causal_intervention_robustness_engine.get("primary_intervention_axis", "unknown")),
+        "intervention_reliability": round(
+            float(causal_intervention_robustness_engine.get("intervention_reliability", 0.5) or 0.5),
+            4,
+        ),
+    }
+    confidence_structure["counterfactual_robustness_score"] = round(
+        max(
+            0.0,
+            min(1.0, float(causal_intervention_robustness_engine.get("counterfactual_robustness_score", 0.0) or 0.0)),
+        ),
+        4,
+    )
+    confidence_structure["causal_confidence_proxy"] = round(
+        max(0.0, min(1.0, float(causal_intervention_robustness_engine.get("causal_confidence_proxy", 0.0) or 0.0))),
+        4,
+    )
+    risk_sizing["causal_intervention_multiplier"] = round(
+        max(
+            0.25,
+            min(
+                1.0,
+                1.0
+                - min(
+                    0.45,
+                    (float(causal_intervention_robustness_engine.get("false_improvement_risk", 0.0) or 0.0) * 0.35)
+                    + (
+                        (1.0 - float(causal_intervention_robustness_engine.get("intervention_reliability", 0.5) or 0.5))
+                        * 0.2
+                    ),
+                ),
+            ),
+        ),
+        4,
+    )
+    if float(causal_intervention_robustness_engine.get("false_improvement_risk", 0.0) or 0.0) >= 0.62:
+        if "causal_false_improvement_guard" not in refusal_reasons:
+            refusal_reasons.append("causal_false_improvement_guard")
+    if (
+        str(causal_intervention_robustness_engine.get("intervention_quality_state", "watch")) in {"fragile", "breakdown"}
+        or float(causal_intervention_robustness_engine.get("intervention_reliability", 0.5) or 0.5) <= 0.45
+    ):
+        if "causal_intervention_reliability_guard" not in pause_reasons:
+            pause_reasons.append("causal_intervention_reliability_guard")
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or (
+        float(causal_intervention_robustness_engine.get("false_improvement_risk", 0.0) or 0.0) >= 0.72
+    )
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or (
+        str(causal_intervention_robustness_engine.get("intervention_quality_state", "watch")) in {"fragile", "breakdown"}
+    )
     unified_market_intelligence_field["components"] = components
     unified_market_intelligence_field["confidence_structure"] = confidence_structure
     decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
@@ -6727,6 +7241,7 @@ def run_self_evolving_indicator_layer(
         latent_transition_hazard_engine=latent_transition_hazard_engine,
         cross_regime_transfer_robustness_layer=cross_regime_transfer_robustness_engine,
         self_expansion_quality_layer=quality_integration_context,
+        causal_intervention_counterfactual_robustness_layer=causal_intervention_robustness_engine,
     )
     self_expansion_quality_engine = _self_expansion_quality_layer(
         memory_root=memory_root,
@@ -6740,6 +7255,7 @@ def run_self_evolving_indicator_layer(
         structural_memory_graph_engine=structural_memory_graph_engine,
         latent_transition_hazard_engine=latent_transition_hazard_engine,
         cross_regime_transfer_robustness_layer=cross_regime_transfer_robustness_engine,
+        causal_intervention_counterfactual_robustness_layer=causal_intervention_robustness_engine,
         replay_scope=replay_scope,
     )
     components = unified_market_intelligence_field.get("components", {})
@@ -6778,6 +7294,7 @@ def run_self_evolving_indicator_layer(
         "structural_memory_graph_layer": structural_memory_graph_engine,
         "latent_transition_hazard_layer": latent_transition_hazard_engine,
         "cross_regime_transfer_robustness_layer": cross_regime_transfer_robustness_engine,
+        "causal_intervention_counterfactual_robustness_layer": causal_intervention_robustness_engine,
         "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
         "contradiction_arbitration_and_belief_resolution_layer": contradiction_arbitration_engine,
         "recursive_self_modeling": recursive_self_modeling,
@@ -6813,6 +7330,7 @@ def run_self_evolving_indicator_layer(
         "structural_memory_graph_layer": structural_memory_graph_engine,
         "latent_transition_hazard_layer": latent_transition_hazard_engine,
         "cross_regime_transfer_robustness_layer": cross_regime_transfer_robustness_engine,
+        "causal_intervention_counterfactual_robustness_layer": causal_intervention_robustness_engine,
         "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
         "contradiction_arbitration_and_belief_resolution_layer": contradiction_arbitration_engine,
         "recursive_self_modeling": recursive_self_modeling,

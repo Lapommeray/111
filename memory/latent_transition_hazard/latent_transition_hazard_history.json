@@ -1,0 +1,54 @@
+{
+  "snapshots": [
+    {
+      "input_signature": {
+        "context_key": "evaluation_replay|range|range|insufficient_data",
+        "settled_count": 0,
+        "market_stress": 0.0,
+        "loss_ratio": 0.0,
+        "execution_penalty": 0.0,
+        "execution_cluster_risk": 0.0,
+        "hostile_execution_score": 0.0663,
+        "structural_reversal_bias": 0.0,
+        "structural_acceleration_bias": 0.0
+      },
+      "latent_transition_hazard_state": {
+        "transition_hazard_state": "stable",
+        "transition_hazard_score": 0.0989,
+        "precursor_instability_score": 0.008,
+        "regime_deformation_score": 0.0688,
+        "transition_directional_bias": "neutral",
+        "transition_confidence_suppression": 0.0,
+        "historical_transition_match": 0.3539,
+        "hazard_reliability": 0.3871,
+        "anticipatory_risk_bias": 0.0683,
+        "governance_flags": {
+          "sandbox_only": true,
+          "replay_validation_required": true,
+          "live_deployment_allowed": false,
+          "no_blind_live_self_rewrites": true,
+          "pause_guard_triggered": false,
+          "refuse_guard_triggered": false
+        }
+      },
+      "confidence_adjustments": {
+        "transition_hazard_score": 0.0989,
+        "transition_confidence_suppression": 0.0,
+        "hazard_adjusted_confidence": 0.4241
+      },
+      "risk_adjustments": {
+        "transition_hazard_multiplier": 0.9727,
+        "should_pause": false,
+        "should_refuse": false,
+        "pause_reasons": [],
+        "refusal_reasons": []
+      },
+      "governance": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true
+      }
+    }
+  ]
+}

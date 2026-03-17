@@ -1,0 +1,43 @@
+{
+  "snapshots": [
+    {
+      "deception_state": {
+        "deception_state": "insufficient_data",
+        "deception_score": 0.1026,
+        "trap_probability": 0.0,
+        "liquidity_bait_risk": 0.084,
+        "engineered_move_probability": 0.0363,
+        "inventory_defense_proxy": 0.1409,
+        "sweep_trap_bias": 0.0,
+        "continuation_deception_conflict": 0.4393,
+        "deception_reliability": 0.8974,
+        "governance_flags": {
+          "sandbox_only": true,
+          "replay_validation_required": true,
+          "live_deployment_allowed": false,
+          "no_blind_live_self_rewrites": true
+        }
+      },
+      "confidence_adjustments": {
+        "deception_penalty": 0.077,
+        "deception_adjusted_confidence": 0.9165
+      },
+      "risk_adjustments": {
+        "deception_multiplier": 0.9384,
+        "should_reduce_size": false,
+        "should_pause": false,
+        "should_refuse": false,
+        "pause_reasons": [],
+        "refusal_reasons": []
+      },
+      "governance": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true,
+        "pause_guard_triggered": false,
+        "refuse_guard_triggered": false
+      }
+    }
+  ]
+}

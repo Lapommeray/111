@@ -1,0 +1,11 @@
+{
+  "intelligence_gaps": [],
+  "diagnostics": {
+    "closed_trade_count": 0,
+    "loss_count": 0,
+    "counterfactual_superiority_ratio": 0.0,
+    "composite_confidence": 0.95,
+    "pain_risk": 0.0,
+    "execution_state": "insufficient_data"
+  }
+}

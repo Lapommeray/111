@@ -421,6 +421,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "structural_memory_state",
         "latent_transition_hazard_state",
         "transfer_robustness_state",
+        "causal_intervention_robustness_state",
         "self_expansion_quality_state",
     }
     assert 0.0 <= unified["unified_field_score"] <= 1.0
@@ -727,6 +728,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "structural_memory_state",
         "latent_transition_hazard_state",
         "transfer_robustness_state",
+        "causal_intervention_robustness_state",
         "self_expansion_quality_state",
     }
 
@@ -2497,3 +2499,240 @@ def test_cross_regime_transfer_robustness_penalizes_narrow_regime_overfit(tmp_pa
     assert transfer["promotion_transfer_penalty"] > 0.0
     watchlist = json.loads(Path(transfer["paths"]["overfit_watchlist"]).read_text(encoding="utf-8"))
     assert watchlist["watchlist"]
+
+
+def test_causal_intervention_counterfactual_robustness_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cip1", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia"},
+            {"trade_id": "cip2", "status": "closed", "result": "win", "pnl_points": 0.7, "session": "london"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.4, "spread_ratio": 1.8, "slippage_ratio": 1.6},
+        replay_scope="focused_replay",
+    )
+    causal = result["causal_intervention_counterfactual_robustness_layer"]
+    assert Path(causal["paths"]["latest"]).exists()
+    assert Path(causal["paths"]["history"]).exists()
+    assert Path(causal["paths"]["intervention_context_registry"]).exists()
+    assert Path(causal["paths"]["intervention_axis_reliability_registry"]).exists()
+    assert Path(causal["paths"]["false_improvement_watchlist"]).exists()
+    assert Path(causal["paths"]["intervention_priority_trace"]).exists()
+    assert Path(causal["paths"]["causal_intervention_governance_state"]).exists()
+
+
+def test_causal_intervention_counterfactual_robustness_layer_returns_expected_schema(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cis1", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia"},
+            {"trade_id": "cis2", "status": "closed", "result": "loss", "pnl_points": -0.6, "session": "asia"},
+            {"trade_id": "cis3", "status": "closed", "result": "win", "pnl_points": 0.5, "session": "new_york"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.2, "slippage_ratio": 2.1},
+        replay_scope="full_replay",
+    )
+    causal = result["causal_intervention_counterfactual_robustness_layer"]
+    expected_keys = {
+        "intervention_quality_state",
+        "intervention_priority_score",
+        "counterfactual_robustness_score",
+        "primary_intervention_axis",
+        "intervention_consistency",
+        "intervention_reliability",
+        "context_sensitive_intervention_map",
+        "false_improvement_risk",
+        "causal_confidence_proxy",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(causal))
+
+
+def test_causal_intervention_counterfactual_robustness_layer_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cin1", "status": "closed", "result": "loss", "pnl_points": -0.2},
+            {"trade_id": "cin2", "status": "closed", "result": "flat", "pnl_points": 0.0},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    causal = result["causal_intervention_counterfactual_robustness_layer"]
+    assert 0.0 <= causal["intervention_priority_score"] <= 1.0
+    assert 0.0 <= causal["counterfactual_robustness_score"] <= 1.0
+    assert 0.0 <= causal["false_improvement_risk"] <= 1.0
+    assert causal["governance_flags"]["sandbox_only"] is True
+    assert causal["governance_flags"]["replay_validation_required"] is True
+    assert causal["governance_flags"]["live_deployment_allowed"] is False
+
+
+def test_causal_intervention_counterfactual_robustness_layer_derives_primary_intervention_axis_from_counterfactuals(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cia1", "status": "closed", "result": "loss", "pnl_points": -1.1, "session": "asia"},
+            {"trade_id": "cia2", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia"},
+            {"trade_id": "cia3", "status": "closed", "result": "loss", "pnl_points": -0.7, "session": "london"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 2.0, "slippage_ratio": 1.9},
+        replay_scope="full_replay",
+    )
+    causal = result["causal_intervention_counterfactual_robustness_layer"]
+    assert causal["primary_intervention_axis"] == "opposite_trade"
+
+
+def test_causal_intervention_counterfactual_robustness_layer_computes_false_improvement_risk_under_narrow_context_concentration(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cir1", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia"},
+            {"trade_id": "cir2", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia"},
+            {"trade_id": "cir3", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia"},
+            {"trade_id": "cir4", "status": "closed", "result": "loss", "pnl_points": -0.7, "session": "asia"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 3.0, "slippage_ratio": 2.9},
+        replay_scope="full_replay",
+    )
+    causal = result["causal_intervention_counterfactual_robustness_layer"]
+    assert causal["false_improvement_risk"] >= 0.6
+
+
+def test_causal_intervention_counterfactual_robustness_layer_history_rolls_and_governance_is_sandbox_replay_only(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    for index in range(3):
+        result = run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"cih{index}a", "status": "closed", "result": "loss", "pnl_points": -0.7, "session": "asia"},
+                {"trade_id": f"cih{index}b", "status": "closed", "result": "win", "pnl_points": 0.5, "session": "london"},
+            ],
+            market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 2.1, "slippage_ratio": 2.0},
+            replay_scope="focused_replay",
+        )
+    causal = result["causal_intervention_counterfactual_robustness_layer"]
+    flags = causal["governance_flags"]
+    assert flags["sandbox_only"] is True
+    assert flags["replay_validation_required"] is True
+    assert flags["live_deployment_allowed"] is False
+    history_payload = json.loads(
+        (memory_root / "causal_intervention_robustness" / "causal_intervention_robustness_history.json").read_text(encoding="utf-8")
+    )
+    assert history_payload["snapshots"]
+    assert len(history_payload["snapshots"]) <= 200
+
+
+def test_causal_intervention_layer_adds_unified_field_components_without_overwriting_existing_fields(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "ciu1", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia"},
+            {"trade_id": "ciu2", "status": "closed", "result": "win", "pnl_points": 0.7, "session": "london"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 2.1, "slippage_ratio": 1.9},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "unified_field_score" in unified
+    assert "composite_confidence" in unified["confidence_structure"]
+    assert "causal_intervention_robustness_state" in unified["components"]
+    assert "counterfactual_robustness_score" in unified["confidence_structure"]
+    assert "causal_confidence_proxy" in unified["confidence_structure"]
+
+
+def test_causal_intervention_layer_additively_influences_risk_sizing_and_refusal_pause_behavior(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cib1", "status": "closed", "result": "loss", "pnl_points": -1.1, "session": "asia"},
+            {"trade_id": "cib2", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia"},
+            {"trade_id": "cib3", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia"},
+            {"trade_id": "cib4", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.1, "spread_ratio": 3.4, "slippage_ratio": 3.2},
+        replay_scope="full_replay",
+    )
+    refinements = result["unified_market_intelligence_field"]["decision_refinements"]
+    assert "causal_intervention_multiplier" in refinements["risk_sizing"]
+    assert 0.25 <= float(refinements["risk_sizing"]["causal_intervention_multiplier"]) <= 1.0
+    behavior = refinements["refusal_pause_behavior"]
+    all_reasons = set(behavior.get("refusal_reasons", [])) | set(behavior.get("pause_reasons", []))
+    assert any(reason.startswith("causal_") for reason in all_reasons)
+
+
+def test_causal_intervention_layer_feeds_self_suggestion_governor_gap_detection(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    trade_outcomes = [
+        {"trade_id": "cig1", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia"},
+        {"trade_id": "cig2", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia"},
+        {"trade_id": "cig3", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia"},
+        {"trade_id": "cig4", "status": "closed", "result": "loss", "pnl_points": -0.7, "session": "asia"},
+    ]
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 3.0, "slippage_ratio": 2.9},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 3.0, "slippage_ratio": 2.9},
+        replay_scope="focused_replay",
+    )
+    gap_types = {item.get("gap_type") for item in second["self_suggestion_governor"]["detected_gaps"]}
+    expected = {
+        "causal_intervention_robustness_breakdown",
+        "false_improvement_risk_elevated",
+        "intervention_axis_instability",
+        "low_intervention_reliability",
+    }
+    assert gap_types.intersection(expected)
+
+
+def test_causal_intervention_layer_feeds_self_expansion_quality_components_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cie1", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia"},
+            {"trade_id": "cie2", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia"},
+            {"trade_id": "cie3", "status": "closed", "result": "win", "pnl_points": 0.6, "session": "london"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.3, "slippage_ratio": 2.1},
+        replay_scope="full_replay",
+    )
+    quality = result["self_expansion_quality_layer"]
+    components = quality["quality_components"]
+    assert "causal_counterfactual_robustness_context" in components
+    assert "causal_false_improvement_pressure" in components
+    assert "causal_intervention_reliability_context" in components
+
+
+def test_capability_evolution_ladder_reads_prior_causal_intervention_context_nonbreaking(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "cil1", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia"},
+            {"trade_id": "cil2", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.9, "spread_ratio": 2.7, "slippage_ratio": 2.5},
+        replay_scope="full_replay",
+    )
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "cil3", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia"},
+            {"trade_id": "cil4", "status": "closed", "result": "win", "pnl_points": 0.5, "session": "london"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 2.0, "slippage_ratio": 1.8},
+        replay_scope="focused_replay",
+    )
+    payload = json.loads((memory_root / "capability_evolution" / "capability_candidates.json").read_text(encoding="utf-8"))
+    candidates = payload.get("capability_candidates", [])
+    if candidates:
+        context = candidates[0].get("intervention_robustness_context", {})
+        assert "prior_cycle_counterfactual_robustness_score" in context
+        assert "prior_cycle_intervention_reliability" in context
+        assert "prior_cycle_false_improvement_risk" in context
