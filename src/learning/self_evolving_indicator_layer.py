@@ -4885,6 +4885,7 @@ def _detect_improvement_gaps(
     latent_transition_hazard_engine: dict[str, Any] | None = None,
     cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
     causal_intervention_counterfactual_robustness_layer: dict[str, Any] | None = None,
+    governed_capability_invention_layer: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
     repeated = autonomous_behavior.get("trade_review_engine", {}).get("repeated_failure_patterns", [])
@@ -5391,6 +5392,39 @@ def _detect_improvement_gaps(
                 "detail": "counterfactual_intervention_reliability_decay",
                 "frequency": max(1, int(round((1.0 - intervention_reliability) * 5))),
                 "severity": round(min(1.0, 1.0 - intervention_reliability), 4),
+            }
+        )
+    governed_capability_invention_layer = (
+        governed_capability_invention_layer if isinstance(governed_capability_invention_layer, dict) else {}
+    )
+    invention_redundancy_risk = float(governed_capability_invention_layer.get("redundancy_risk", 0.0) or 0.0)
+    invention_maturity_score = float(governed_capability_invention_layer.get("invention_maturity_score", 0.0) or 0.0)
+    invention_reliability = float(governed_capability_invention_layer.get("invention_reliability", 0.0) or 0.0)
+    if invention_redundancy_risk >= 0.65:
+        gaps.append(
+            {
+                "gap_type": "invention_redundancy_pressure",
+                "detail": str(governed_capability_invention_layer.get("invention_reason_cluster", "redundancy_pressure")),
+                "frequency": max(1, int(round(invention_redundancy_risk * 4))),
+                "severity": round(min(1.0, invention_redundancy_risk), 4),
+            }
+        )
+    if invention_maturity_score <= 0.35:
+        gaps.append(
+            {
+                "gap_type": "invention_maturity_stall",
+                "detail": str(governed_capability_invention_layer.get("dominant_invention_axis", "unknown")),
+                "frequency": max(1, int(round((1.0 - invention_maturity_score) * 4))),
+                "severity": round(min(1.0, 1.0 - invention_maturity_score), 4),
+            }
+        )
+    if invention_reliability <= 0.4:
+        gaps.append(
+            {
+                "gap_type": "invention_reliability_decay",
+                "detail": str(governed_capability_invention_layer.get("capability_invention_state", "unknown")),
+                "frequency": max(1, int(round((1.0 - invention_reliability) * 4))),
+                "severity": round(min(1.0, 1.0 - invention_reliability), 4),
             }
         )
     return gaps
@@ -6624,6 +6658,7 @@ def _self_suggestion_governor(
     hierarchical_decision_policy_layer: dict[str, Any] | None = None,
     portfolio_multi_context_capital_allocation_layer: dict[str, Any] | None = None,
     temporal_execution_sequencing_layer: dict[str, Any] | None = None,
+    governed_capability_invention_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     registry_dir = memory_root / "capability_registry"
     registry_dir.mkdir(parents=True, exist_ok=True)
@@ -6672,6 +6707,7 @@ def _self_suggestion_governor(
         latent_transition_hazard_engine=latent_transition_hazard_engine,
         cross_regime_transfer_robustness_layer=cross_regime_transfer_robustness_layer,
         causal_intervention_counterfactual_robustness_layer=causal_intervention_counterfactual_robustness_layer,
+        governed_capability_invention_layer=governed_capability_invention_layer,
     )
     calibration_uncertainty_engine = (
         calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
@@ -7218,6 +7254,247 @@ def _self_suggestion_governor(
     return cycle_payload
 
 
+def _governed_capability_invention_layer(
+    *,
+    memory_root: Path,
+    self_suggestion_governor: dict[str, Any],
+    intelligence_gap_engine: dict[str, Any],
+    capability_evolution_ladder: dict[str, Any],
+    replay_scope: str,
+) -> dict[str, Any]:
+    invention_dir = memory_root / "capability_invention"
+    invention_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = invention_dir / "capability_invention_latest.json"
+    history_path = invention_dir / "capability_invention_history.json"
+    candidate_registry_path = invention_dir / "invention_candidate_registry.json"
+    novelty_registry_path = invention_dir / "invention_novelty_registry.json"
+    redundancy_watchlist_path = invention_dir / "invention_redundancy_watchlist.json"
+    maturity_registry_path = invention_dir / "invention_maturity_registry.json"
+    governance_state_path = invention_dir / "invention_governance_state.json"
+
+    self_suggestion_governor = self_suggestion_governor if isinstance(self_suggestion_governor, dict) else {}
+    intelligence_gap_engine = intelligence_gap_engine if isinstance(intelligence_gap_engine, dict) else {}
+    capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    def _axis_for_gap(gap_type: str) -> str:
+        normalized = gap_type.lower()
+        if "timing" in normalized or "temporal" in normalized:
+            return "timing"
+        if "execution" in normalized:
+            return "execution"
+        if "risk" in normalized or "hazard" in normalized or "drift" in normalized:
+            return "risk"
+        if "capital" in normalized or "allocation" in normalized:
+            return "allocation"
+        if "policy" in normalized or "contradiction" in normalized:
+            return "policy"
+        if "coherence" in normalized or "transfer" in normalized:
+            return "coherence"
+        return "detection"
+
+    detected_gaps = self_suggestion_governor.get("detected_gaps", [])
+    if not isinstance(detected_gaps, list):
+        detected_gaps = []
+    proposed_improvements = self_suggestion_governor.get("proposed_improvements", [])
+    if not isinstance(proposed_improvements, list):
+        proposed_improvements = []
+    implemented_improvements = self_suggestion_governor.get("implemented_improvements", [])
+    if not isinstance(implemented_improvements, list):
+        implemented_improvements = []
+    repeated_unresolved = self_suggestion_governor.get("repeated_unresolved_gaps", [])
+    if not isinstance(repeated_unresolved, list):
+        repeated_unresolved = []
+    intelligence_gaps = intelligence_gap_engine.get("intelligence_gaps", [])
+    if not isinstance(intelligence_gaps, list):
+        intelligence_gaps = []
+    capability_candidates = capability_evolution_ladder.get("capability_candidates", [])
+    if not isinstance(capability_candidates, list):
+        capability_candidates = []
+
+    candidate_inventions: list[dict[str, Any]] = []
+    axis_counts: dict[str, int] = {}
+    reason_counts: dict[str, int] = {}
+    signature_counts: dict[str, int] = {}
+    for index, gap in enumerate(detected_gaps[:40]):
+        if not isinstance(gap, dict):
+            continue
+        gap_type = str(gap.get("gap_type", "unknown"))
+        detail = str(gap.get("detail", "unknown"))
+        axis = _axis_for_gap(gap_type)
+        reason = f"{gap_type}:{detail}"[:120]
+        signature = f"{axis}|{gap_type}|{detail}".lower()
+        severity = _bounded(float(gap.get("severity", 0.5) or 0.5))
+        frequency = max(1, int(gap.get("frequency", 1) or 1))
+        candidate_inventions.append(
+            {
+                "candidate_id": f"invention_candidate_{index + 1}",
+                "source_gap_type": gap_type,
+                "source_detail": detail,
+                "invention_axis": axis,
+                "reason_cluster": reason,
+                "frequency": frequency,
+                "severity": severity,
+                "signature": signature,
+                "sandbox_proposal": {
+                    "sandbox_only": True,
+                    "replay_validation_required": True,
+                    "live_deployment_allowed": False,
+                },
+            }
+        )
+        axis_counts[axis] = axis_counts.get(axis, 0) + 1
+        reason_counts[reason] = reason_counts.get(reason, 0) + 1
+        signature_counts[signature] = signature_counts.get(signature, 0) + 1
+
+    candidate_invention_count = len(candidate_inventions)
+    dominant_invention_axis = (
+        sorted(axis_counts.items(), key=lambda item: (-item[1], item[0]))[0][0] if axis_counts else "coherence"
+    )
+    invention_reason_cluster = (
+        sorted(reason_counts.items(), key=lambda item: (-item[1], item[0]))[0][0]
+        if reason_counts
+        else "insufficient_invention_signal"
+    )
+    replay_scores = [
+        float(item.get("replay_test", {}).get("score", 0.0) or 0.0)
+        for item in implemented_improvements
+        if isinstance(item, dict)
+    ]
+    replay_score_context = _bounded(sum(replay_scores) / max(1, len(replay_scores)))
+    unresolved_pressure = _bounded(len(repeated_unresolved) / 10.0)
+    opportunity_pressure = _bounded((len(proposed_improvements) + len(intelligence_gaps) + len(capability_candidates)) / 30.0)
+    invention_pressure_score = _bounded(
+        (min(1.0, candidate_invention_count / 8.0) * 0.5)
+        + (unresolved_pressure * 0.3)
+        + (opportunity_pressure * 0.2)
+    )
+    input_signature = {
+        "replay_scope": replay_scope,
+        "gap_signatures": sorted(str(item.get("signature", "")) for item in candidate_inventions),
+        "candidate_invention_count": candidate_invention_count,
+        "unresolved_count": len(repeated_unresolved),
+        "proposed_count": len(proposed_improvements),
+    }
+    previous_payload = read_json_safe(latest_path, default={})
+    if isinstance(previous_payload, dict) and previous_payload.get("input_signature") == input_signature:
+        return previous_payload
+
+    novelty_registry = read_json_safe(novelty_registry_path, default={"known_signatures": []})
+    if not isinstance(novelty_registry, dict):
+        novelty_registry = {"known_signatures": []}
+    known_signatures = novelty_registry.get("known_signatures", [])
+    if not isinstance(known_signatures, list):
+        known_signatures = []
+    known_signature_set = {str(item) for item in known_signatures}
+    novel_signatures = sorted(
+        signature for signature in signature_counts if signature_counts.get(signature, 0) > 0 and signature not in known_signature_set
+    )
+    novelty_score = _bounded(len(novel_signatures) / max(1, len(signature_counts)))
+    repetition_pressure = _bounded(
+        sum(max(0, count - 1) for count in signature_counts.values()) / max(1, len(signature_counts))
+    )
+    redundancy_risk = _bounded((1.0 - novelty_score) * 0.7 + (repetition_pressure * 0.3))
+    invention_reliability = _bounded((replay_score_context * 0.5) + (novelty_score * 0.35) + ((1.0 - redundancy_risk) * 0.15))
+    invention_maturity_score = _bounded(
+        (invention_reliability * 0.45)
+        + (invention_pressure_score * 0.35)
+        + (min(1.0, candidate_invention_count / 6.0) * 0.2)
+    )
+
+    if candidate_invention_count == 0 and invention_pressure_score <= 0.1:
+        capability_invention_state = "seeded"
+    elif redundancy_risk >= 0.7:
+        capability_invention_state = "redundant"
+    elif invention_reliability <= 0.42:
+        capability_invention_state = "constrained"
+    elif invention_maturity_score <= 0.3 and invention_pressure_score >= 0.45:
+        capability_invention_state = "stalled"
+    else:
+        capability_invention_state = "active"
+
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+    }
+    payload = {
+        "input_signature": input_signature,
+        "capability_invention_state": capability_invention_state,
+        "invention_pressure_score": invention_pressure_score,
+        "novelty_score": novelty_score,
+        "redundancy_risk": redundancy_risk,
+        "invention_reliability": invention_reliability,
+        "invention_maturity_score": invention_maturity_score,
+        "candidate_invention_count": candidate_invention_count,
+        "dominant_invention_axis": dominant_invention_axis,
+        "invention_reason_cluster": invention_reason_cluster,
+        "governance_flags": governance_flags,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "invention_candidate_registry": str(candidate_registry_path),
+            "invention_novelty_registry": str(novelty_registry_path),
+            "invention_redundancy_watchlist": str(redundancy_watchlist_path),
+            "invention_maturity_registry": str(maturity_registry_path),
+            "invention_governance_state": str(governance_state_path),
+        },
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+    write_json_atomic(
+        candidate_registry_path,
+        {
+            "candidate_invention_count": candidate_invention_count,
+            "candidate_inventions": candidate_inventions,
+            "dominant_invention_axis": dominant_invention_axis,
+        },
+    )
+    write_json_atomic(
+        novelty_registry_path,
+        {
+            "known_signatures": sorted(known_signature_set | set(signature_counts.keys()))[-1000:],
+            "novel_signatures": novel_signatures,
+            "novelty_score": novelty_score,
+        },
+    )
+    write_json_atomic(
+        redundancy_watchlist_path,
+        {
+            "redundancy_risk": redundancy_risk,
+            "watchlist": sorted(
+                [
+                    {"signature": signature, "repeat_count": count}
+                    for signature, count in signature_counts.items()
+                    if count >= 2
+                ],
+                key=lambda item: (-item["repeat_count"], item["signature"]),
+            ),
+        },
+    )
+    write_json_atomic(
+        maturity_registry_path,
+        {
+            "capability_invention_state": capability_invention_state,
+            "invention_maturity_score": invention_maturity_score,
+            "invention_reliability": invention_reliability,
+            "candidate_invention_count": candidate_invention_count,
+        },
+    )
+    write_json_atomic(governance_state_path, {**governance_flags, "replay_scope": replay_scope})
+    return payload
+
+
 def _self_expansion_quality_layer(
     *,
     memory_root: Path,
@@ -7235,6 +7512,7 @@ def _self_expansion_quality_layer(
     hierarchical_decision_policy_layer: dict[str, Any] | None = None,
     portfolio_multi_context_capital_allocation_layer: dict[str, Any] | None = None,
     temporal_execution_sequencing_layer: dict[str, Any] | None = None,
+    governed_capability_invention_layer: dict[str, Any] | None = None,
     replay_scope: str,
 ) -> dict[str, Any]:
     quality_dir = memory_root / "self_expansion_quality"
@@ -7276,6 +7554,9 @@ def _self_expansion_quality_layer(
     )
     temporal_execution_sequencing_layer = (
         temporal_execution_sequencing_layer if isinstance(temporal_execution_sequencing_layer, dict) else {}
+    )
+    governed_capability_invention_layer = (
+        governed_capability_invention_layer if isinstance(governed_capability_invention_layer, dict) else {}
     )
 
     candidates = capability_evolution_ladder.get("capability_candidates", [])
@@ -7614,6 +7895,26 @@ def _self_expansion_quality_layer(
         "temporal_execution_window_quality_context": round(temporal_execution_window_quality, 4),
         "temporal_timing_priority_context": round(temporal_timing_priority, 4),
         "temporal_sequencing_pressure_context": round(temporal_sequencing_pressure, 4),
+        "invention_pressure_context": round(
+            max(0.0, min(1.0, float(governed_capability_invention_layer.get("invention_pressure_score", 0.0) or 0.0))),
+            4,
+        ),
+        "invention_novelty_context": round(
+            max(0.0, min(1.0, float(governed_capability_invention_layer.get("novelty_score", 0.0) or 0.0))),
+            4,
+        ),
+        "invention_redundancy_context": round(
+            max(0.0, min(1.0, float(governed_capability_invention_layer.get("redundancy_risk", 0.0) or 0.0))),
+            4,
+        ),
+        "invention_maturity_context": round(
+            max(0.0, min(1.0, float(governed_capability_invention_layer.get("invention_maturity_score", 0.0) or 0.0))),
+            4,
+        ),
+        "invention_reliability_context": round(
+            max(0.0, min(1.0, float(governed_capability_invention_layer.get("invention_reliability", 0.0) or 0.0))),
+            4,
+        ),
         "promotion_confidence_multiplier": promotion_confidence_multiplier,
         "quarantine_pressure_delta": quarantine_pressure_delta,
         "expansion_rate_limit": expansion_rate_limit,
@@ -9383,6 +9684,57 @@ def run_self_evolving_indicator_layer(
         portfolio_multi_context_capital_allocation_layer=portfolio_multi_context_capital_allocation_engine,
         temporal_execution_sequencing_layer=temporal_execution_sequencing_engine,
     )
+    governed_capability_invention_engine = _governed_capability_invention_layer(
+        memory_root=memory_root,
+        self_suggestion_governor=self_suggestion_governor,
+        intelligence_gap_engine=intelligence_gap_engine,
+        capability_evolution_ladder=capability_evolution_ladder,
+        replay_scope=replay_scope,
+    )
+    self_suggestion_governor["governed_capability_invention_layer"] = {
+        "capability_invention_state": governed_capability_invention_engine.get("capability_invention_state", "seeded"),
+        "invention_pressure_score": governed_capability_invention_engine.get("invention_pressure_score", 0.0),
+        "novelty_score": governed_capability_invention_engine.get("novelty_score", 0.0),
+        "redundancy_risk": governed_capability_invention_engine.get("redundancy_risk", 0.0),
+        "invention_reliability": governed_capability_invention_engine.get("invention_reliability", 0.0),
+        "invention_maturity_score": governed_capability_invention_engine.get("invention_maturity_score", 0.0),
+        "candidate_invention_count": governed_capability_invention_engine.get("candidate_invention_count", 0),
+        "dominant_invention_axis": governed_capability_invention_engine.get("dominant_invention_axis", "coherence"),
+    }
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["capability_invention_state"] = {
+        "state": str(governed_capability_invention_engine.get("capability_invention_state", "seeded")),
+        "dominant_invention_axis": str(governed_capability_invention_engine.get("dominant_invention_axis", "coherence")),
+        "invention_reason_cluster": str(governed_capability_invention_engine.get("invention_reason_cluster", "unknown")),
+    }
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["invention_reliability"] = round(
+        max(0.0, min(1.0, float(governed_capability_invention_engine.get("invention_reliability", 0.0) or 0.0))),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["capability_invention"] = {
+        "capability_invention_state": governed_capability_invention_engine.get("capability_invention_state", "seeded"),
+        "invention_pressure_score": round(float(governed_capability_invention_engine.get("invention_pressure_score", 0.0) or 0.0), 4),
+        "novelty_score": round(float(governed_capability_invention_engine.get("novelty_score", 0.0) or 0.0), 4),
+        "redundancy_risk": round(float(governed_capability_invention_engine.get("redundancy_risk", 0.0) or 0.0), 4),
+        "invention_maturity_score": round(
+            float(governed_capability_invention_engine.get("invention_maturity_score", 0.0) or 0.0),
+            4,
+        ),
+        "invention_reliability": round(float(governed_capability_invention_engine.get("invention_reliability", 0.0) or 0.0), 4),
+        "candidate_invention_count": int(governed_capability_invention_engine.get("candidate_invention_count", 0) or 0),
+        "dominant_invention_axis": governed_capability_invention_engine.get("dominant_invention_axis", "coherence"),
+    }
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
     self_expansion_quality_engine = _self_expansion_quality_layer(
         memory_root=memory_root,
         capability_evolution_ladder=capability_evolution_ladder,
@@ -9399,6 +9751,7 @@ def run_self_evolving_indicator_layer(
         hierarchical_decision_policy_layer=hierarchical_decision_policy_engine,
         portfolio_multi_context_capital_allocation_layer=portfolio_multi_context_capital_allocation_engine,
         temporal_execution_sequencing_layer=temporal_execution_sequencing_engine,
+        governed_capability_invention_layer=governed_capability_invention_engine,
         replay_scope=replay_scope,
     )
     components = unified_market_intelligence_field.get("components", {})
@@ -9583,6 +9936,7 @@ def run_self_evolving_indicator_layer(
         "recursive_self_modeling": recursive_self_modeling,
         "discovery_state_tags": discovery_state_tags,
         "unified_market_intelligence_field": unified_market_intelligence_field,
+        "governed_capability_invention_layer": governed_capability_invention_engine,
         "self_expansion_quality_layer": self_expansion_quality_engine,
         "system_coherence_and_drift_integrity_layer": system_coherence_drift_integrity_engine,
         "learning_stability_and_catastrophic_drift_guard_layer": learning_stability_guard_engine,
@@ -9624,6 +9978,7 @@ def run_self_evolving_indicator_layer(
         "recursive_self_modeling": recursive_self_modeling,
         "discovery_state_tags": discovery_state_tags,
         "unified_market_intelligence_field": unified_market_intelligence_field,
+        "governed_capability_invention_layer": governed_capability_invention_engine,
         "self_expansion_quality_layer": self_expansion_quality_engine,
         "system_coherence_and_drift_integrity_layer": system_coherence_drift_integrity_engine,
         "learning_stability_and_catastrophic_drift_guard_layer": learning_stability_guard_engine,
