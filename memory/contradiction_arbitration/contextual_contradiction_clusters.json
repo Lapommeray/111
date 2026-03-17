@@ -3,7 +3,7 @@
     "evaluation_replay|range|range|insufficient_data": {
       "occurrences": 1,
       "type_counts": {
-        "directional_opposition": 5
+        "directional_opposition": 6
       }
     }
   }

@@ -1066,6 +1066,260 @@ def _execution_microstructure_intelligence_layer(
     }
 
 
+def _adversarial_execution_intelligence_layer(
+    *,
+    memory_root: Path,
+    closed: list[dict[str, Any]],
+    market_state: dict[str, Any],
+    execution_microstructure_engine: dict[str, Any],
+    liquidity_decay_engine: dict[str, Any],
+    negative_space_engine: dict[str, Any],
+    counterfactual_engine: dict[str, Any],
+    replay_scope: str,
+) -> dict[str, Any]:
+    adversarial_dir = memory_root / "adversarial_execution"
+    adversarial_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = adversarial_dir / "adversarial_execution_latest.json"
+    history_path = adversarial_dir / "adversarial_execution_history.json"
+    event_registry_path = adversarial_dir / "hostility_event_registry.json"
+    contextual_clusters_path = adversarial_dir / "contextual_hostility_clusters.json"
+    governance_path = adversarial_dir / "hostility_governance_state.json"
+    detector_registry_path = adversarial_dir / "detector_reliability_registry.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    def _state_score(state: str, *, elevated: str, severe: str) -> float:
+        if state == severe:
+            return 1.0
+        if state == elevated:
+            return 0.6
+        return 0.2 if state == "normal" else 0.4
+
+    execution_state = str(execution_microstructure_engine.get("execution_state", "insufficient_data"))
+    execution_penalty = _bounded(float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0))
+    failure_cluster_risk = _bounded(float(execution_microstructure_engine.get("failure_cluster_risk", 0.0) or 0.0))
+    entry_timing_degradation = _bounded(float(execution_microstructure_engine.get("entry_timing_degradation", 0.0) or 0.0))
+
+    spread_state = str(execution_microstructure_engine.get("spread_state", "normal"))
+    slippage_state = str(execution_microstructure_engine.get("slippage_state", "normal"))
+    fill_delay_state = str(execution_microstructure_engine.get("fill_delay_state", "normal"))
+    partial_fill_state = str(execution_microstructure_engine.get("partial_fill_state", "normal"))
+
+    spread_stress = _bounded(max(0.0, float(market_state.get("spread_ratio", 1.0) or 1.0) - 1.0))
+    slippage_stress = _bounded(max(0.0, float(market_state.get("slippage_ratio", 1.0) or 1.0) - 1.0))
+    volatility_stress = _bounded(max(0.0, abs(float(market_state.get("volatility_ratio", 1.0) or 1.0) - 1.0)))
+
+    liquidity_models = liquidity_decay_engine.get("liquidity_decay_models", [])
+    if not isinstance(liquidity_models, list):
+        liquidity_models = []
+    liquidity_vulnerability = _bounded(
+        sum(
+            float(item.get("liquidity_decay_function", {}).get("vulnerability_score", 0.0) or 0.0)
+            for item in liquidity_models
+            if isinstance(item, dict)
+        )
+        / max(1, len(liquidity_models))
+    )
+    negative_deviation = _bounded(float(negative_space_engine.get("signal", {}).get("deviation_score", 0.0) or 0.0))
+    negative_anomaly = bool(negative_space_engine.get("signal", {}).get("negative_space_signal", False))
+
+    counterfactual_items = counterfactual_engine.get("counterfactual_evaluations", [])
+    if not isinstance(counterfactual_items, list):
+        counterfactual_items = []
+    counterfactual_disadvantage = _bounded(
+        sum(1 for item in counterfactual_items if isinstance(item, dict) and not bool(item.get("strategy_improved_outcome", False)))
+        / max(1, len(counterfactual_items))
+    )
+
+    spread_proxy = _state_score(spread_state, elevated="elevated", severe="shock")
+    slippage_proxy = _state_score(slippage_state, elevated="elevated", severe="high_damage")
+    delay_proxy = _state_score(fill_delay_state, elevated="elevated", severe="degraded")
+    partial_proxy = _state_score(partial_fill_state, elevated="elevated", severe="degraded")
+
+    quote_fade_proxy = _bounded((spread_proxy * 0.45) + (delay_proxy * 0.3) + (partial_proxy * 0.15) + (spread_stress * 0.1))
+    sweep_aftermath_risk = _bounded((spread_stress * 0.35) + (slippage_stress * 0.25) + (liquidity_vulnerability * 0.2) + (failure_cluster_risk * 0.2))
+    fill_collapse_risk = _bounded((partial_proxy * 0.45) + (delay_proxy * 0.25) + (failure_cluster_risk * 0.2) + (execution_penalty * 0.1))
+    adverse_selection_risk = _bounded((entry_timing_degradation * 0.4) + (slippage_proxy * 0.25) + (counterfactual_disadvantage * 0.2) + (negative_deviation * 0.15))
+    toxicity_proxy = _bounded(
+        (execution_penalty * 0.25)
+        + (failure_cluster_risk * 0.2)
+        + (liquidity_vulnerability * 0.2)
+        + (quote_fade_proxy * 0.2)
+        + (sweep_aftermath_risk * 0.15)
+    )
+    hostile_execution_score = _bounded(
+        (toxicity_proxy * 0.3)
+        + (quote_fade_proxy * 0.15)
+        + (sweep_aftermath_risk * 0.2)
+        + (fill_collapse_risk * 0.15)
+        + (adverse_selection_risk * 0.15)
+        + (volatility_stress * 0.05)
+    )
+
+    if hostile_execution_score >= 0.72:
+        predatory_liquidity_state = "hostile"
+    elif hostile_execution_score >= 0.45:
+        predatory_liquidity_state = "elevated"
+    else:
+        predatory_liquidity_state = "normal"
+
+    context_signature = {
+        "replay_scope": replay_scope,
+        "structure_state": str(market_state.get("structure_state", "unknown")),
+        "execution_state": execution_state,
+    }
+    context_key = f"{context_signature['replay_scope']}|{context_signature['structure_state']}|{context_signature['execution_state']}"
+    detector_registry = read_json_safe(detector_registry_path, default={"contexts": {}})
+    if not isinstance(detector_registry, dict):
+        detector_registry = {"contexts": {}}
+    contexts = detector_registry.get("contexts", {})
+    if not isinstance(contexts, dict):
+        contexts = {}
+    prior_context = contexts.get(context_key, {})
+    if not isinstance(prior_context, dict):
+        prior_context = {}
+    prior_hostility = _bounded(float(prior_context.get("rolling_hostility", 0.0) or 0.0))
+    prior_observations = int(prior_context.get("observations", 0) or 0)
+    observations = prior_observations + 1
+    historical_execution_hostility = _bounded(((prior_hostility * prior_observations) + hostile_execution_score) / max(1, observations))
+    contexts[context_key] = {
+        "rolling_hostility": historical_execution_hostility,
+        "observations": observations,
+        "detector_reliability": _bounded(1.0 - abs(hostile_execution_score - prior_hostility)),
+        "predatory_liquidity_state": predatory_liquidity_state,
+    }
+    write_json_atomic(detector_registry_path, {"contexts": contexts})
+
+    should_reduce_size = hostile_execution_score >= 0.45 or fill_collapse_risk >= 0.5 or adverse_selection_risk >= 0.55
+    should_pause = hostile_execution_score >= 0.6 or sweep_aftermath_risk >= 0.62 or quote_fade_proxy >= 0.65
+    should_refuse = hostile_execution_score >= 0.78 or (fill_collapse_risk >= 0.75 and sweep_aftermath_risk >= 0.65)
+    execution_survival_bias = _bounded(
+        (hostile_execution_score * 0.45)
+        + (0.2 if should_reduce_size else 0.0)
+        + (0.2 if should_pause else 0.0)
+        + (0.15 if should_refuse else 0.0)
+    )
+
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+    }
+    adversarial_execution_state = {
+        "hostile_execution_score": hostile_execution_score,
+        "toxicity_proxy": toxicity_proxy,
+        "quote_fade_proxy": quote_fade_proxy,
+        "sweep_aftermath_risk": sweep_aftermath_risk,
+        "fill_collapse_risk": fill_collapse_risk,
+        "adverse_selection_risk": adverse_selection_risk,
+        "predatory_liquidity_state": predatory_liquidity_state,
+        "historical_execution_hostility": historical_execution_hostility,
+        "execution_survival_bias": execution_survival_bias,
+        "governance_flags": governance_flags,
+    }
+    confidence_adjustments = {
+        "hostility_penalty": _bounded((hostile_execution_score * 0.5) + (adverse_selection_risk * 0.2) + (quote_fade_proxy * 0.3)),
+        "hostility_adjusted_confidence": _bounded(1.0 - ((hostile_execution_score * 0.65) + (toxicity_proxy * 0.25))),
+    }
+    pause_reasons = []
+    refusal_reasons = []
+    if quote_fade_proxy >= 0.55:
+        pause_reasons.append("adversarial_quote_fade_risk")
+    if sweep_aftermath_risk >= 0.55:
+        pause_reasons.append("adversarial_sweep_aftermath_risk")
+    if adverse_selection_risk >= 0.55:
+        pause_reasons.append("adversarial_adverse_selection_risk")
+    if should_refuse:
+        refusal_reasons.append("adversarial_execution_refuse_guard")
+    risk_adjustments = {
+        "adversarial_execution_multiplier": _bounded(1.0 - (hostile_execution_score * 0.65), low=0.25, high=1.0),
+        "should_reduce_size": should_reduce_size,
+        "should_pause": should_pause,
+        "should_refuse": should_refuse,
+        "pause_reasons": pause_reasons,
+        "refusal_reasons": refusal_reasons,
+    }
+    governance = {
+        **governance_flags,
+        "pause_guard_triggered": should_pause,
+        "refuse_guard_triggered": should_refuse,
+    }
+    event_payload = read_json_safe(event_registry_path, default={"events": []})
+    if not isinstance(event_payload, dict):
+        event_payload = {"events": []}
+    events = event_payload.get("events", [])
+    if not isinstance(events, list):
+        events = []
+    cycle_events: list[dict[str, Any]] = []
+    for event_type, severity in (
+        ("quote_fade_proxy", quote_fade_proxy),
+        ("sweep_aftermath_risk", sweep_aftermath_risk),
+        ("fill_collapse_risk", fill_collapse_risk),
+        ("adverse_selection_risk", adverse_selection_risk),
+    ):
+        if severity >= 0.55:
+            cycle_events.append(
+                {
+                    "event_type": event_type,
+                    "severity": severity,
+                    "context_signature": context_signature,
+                    "predatory_liquidity_state": predatory_liquidity_state,
+                }
+            )
+    events.extend(cycle_events)
+    write_json_atomic(event_registry_path, {"events": events[-600:]})
+
+    clusters_payload = read_json_safe(contextual_clusters_path, default={"clusters": {}})
+    if not isinstance(clusters_payload, dict):
+        clusters_payload = {"clusters": {}}
+    clusters = clusters_payload.get("clusters", {})
+    if not isinstance(clusters, dict):
+        clusters = {}
+    cluster_state = clusters.get(context_key, {"occurrences": 0, "hostility_sum": 0.0, "state_counts": {}})
+    if not isinstance(cluster_state, dict):
+        cluster_state = {"occurrences": 0, "hostility_sum": 0.0, "state_counts": {}}
+    state_counts = cluster_state.get("state_counts", {})
+    if not isinstance(state_counts, dict):
+        state_counts = {}
+    state_counts[predatory_liquidity_state] = int(state_counts.get(predatory_liquidity_state, 0) or 0) + 1
+    cluster_state["occurrences"] = int(cluster_state.get("occurrences", 0) or 0) + 1
+    cluster_state["hostility_sum"] = round(float(cluster_state.get("hostility_sum", 0.0) or 0.0) + hostile_execution_score, 4)
+    cluster_state["avg_hostility"] = _bounded(cluster_state["hostility_sum"] / max(1, cluster_state["occurrences"]))
+    cluster_state["state_counts"] = state_counts
+    clusters[context_key] = cluster_state
+    write_json_atomic(contextual_clusters_path, {"clusters": clusters})
+
+    payload = {
+        "adversarial_execution_state": adversarial_execution_state,
+        "confidence_adjustments": confidence_adjustments,
+        "risk_adjustments": risk_adjustments,
+        "governance": governance,
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+    write_json_atomic(governance_path, governance)
+    return {
+        **payload,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "hostility_event_registry": str(event_registry_path),
+            "contextual_hostility_clusters": str(contextual_clusters_path),
+            "hostility_governance_state": str(governance_path),
+            "detector_reliability_registry": str(detector_registry_path),
+        },
+    }
+
+
 def _intelligence_gap_discovery_engine(
     *,
     memory_root: Path,
@@ -1289,6 +1543,7 @@ def _capability_evolution_governance_ladder(
     synthetic_data_plane_engine: dict[str, Any],
     unified_market_intelligence_field: dict[str, Any],
     replay_scope: str,
+    adversarial_execution_engine: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     evolution_dir = memory_root / "capability_evolution"
     evolution_dir.mkdir(parents=True, exist_ok=True)
@@ -1311,6 +1566,12 @@ def _capability_evolution_governance_ladder(
     unified_confidence = float(
         unified_market_intelligence_field.get("confidence_structure", {}).get("composite_confidence", 0.0) or 0.0
     )
+    adversarial_execution_engine = adversarial_execution_engine if isinstance(adversarial_execution_engine, dict) else {}
+    adversarial_state = adversarial_execution_engine.get("adversarial_execution_state", {})
+    if not isinstance(adversarial_state, dict):
+        adversarial_state = {}
+    prior_cycle_hostility = round(float(adversarial_state.get("historical_execution_hostility", 0.0) or 0.0), 4)
+    predatory_liquidity_state = str(adversarial_state.get("predatory_liquidity_state", "normal"))
     reliability_registry = read_json_safe(
         memory_root / "calibration_uncertainty" / "regime_reliability_registry.json",
         default={"regimes": {}},
@@ -1376,6 +1637,11 @@ def _capability_evolution_governance_ladder(
             "calibration_reliability_context": {
                 "prior_cycle_reliability": calibration_reliability,
                 "source": "memory/calibration_uncertainty/regime_reliability_registry.json",
+            },
+            "adversarial_execution_context": {
+                "prior_cycle_hostility": prior_cycle_hostility,
+                "predatory_liquidity_state": predatory_liquidity_state,
+                "source": "memory/adversarial_execution/detector_reliability_registry.json",
             },
             "governance": {
                 "sandbox_only": True,
@@ -1843,6 +2109,7 @@ def _calibration_and_uncertainty_governance_layer(
     market_state: dict[str, Any],
     unified_market_intelligence_field: dict[str, Any],
     execution_microstructure_engine: dict[str, Any],
+    adversarial_execution_engine: dict[str, Any] | None = None,
     contradiction_arbitration_engine: dict[str, Any] | None = None,
     replay_scope: str,
 ) -> dict[str, Any]:
@@ -1872,6 +2139,12 @@ def _calibration_and_uncertainty_governance_layer(
     contradiction_penalty = _bounded(
         float(contradiction_arbitration_engine.get("confidence_adjustments", {}).get("contradiction_penalty", 0.0) or 0.0)
     )
+    adversarial_execution_engine = adversarial_execution_engine if isinstance(adversarial_execution_engine, dict) else {}
+    adversarial_state = adversarial_execution_engine.get("adversarial_execution_state", {})
+    if not isinstance(adversarial_state, dict):
+        adversarial_state = {}
+    hostile_execution_score = _bounded(float(adversarial_state.get("hostile_execution_score", 0.0) or 0.0))
+    historical_execution_hostility = _bounded(float(adversarial_state.get("historical_execution_hostility", 0.0) or 0.0))
 
     settled = [
         item
@@ -1968,7 +2241,11 @@ def _calibration_and_uncertainty_governance_layer(
     aleatoric_proxy = _bounded((execution_penalty * 0.5) + (failure_cluster_risk * 0.35) + ((spread_stress + slippage_stress) * 0.075))
     epistemic_uncertainty = _bounded((1.0 - detector_confidence) * 0.6 + min(1.0, 1.0 / max(1, len(outcome_proxy))) * 0.4)
     execution_adjusted_uncertainty = _bounded(
-        (epistemic_uncertainty * 0.4) + (aleatoric_proxy * 0.45) + ((1.0 - execution_confidence) * 0.15)
+        (epistemic_uncertainty * 0.36)
+        + (aleatoric_proxy * 0.4)
+        + ((1.0 - execution_confidence) * 0.12)
+        + (hostile_execution_score * 0.08)
+        + (historical_execution_hostility * 0.04)
     )
 
     reliability_signal = _bounded(
@@ -2092,6 +2369,7 @@ def _contradiction_arbitration_and_belief_resolution_layer(
     strategy_evolution: dict[str, Any],
     detector_generator: dict[str, Any],
     replay_scope: str,
+    adversarial_execution_engine: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     arbitration_dir = memory_root / "contradiction_arbitration"
     arbitration_dir.mkdir(parents=True, exist_ok=True)
@@ -2121,6 +2399,12 @@ def _contradiction_arbitration_and_belief_resolution_layer(
     execution_confidence = _bounded(float(execution_microstructure_engine.get("execution_confidence", 0.0) or 0.0))
     execution_penalty = _bounded(float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0))
     execution_quality = _bounded(float(execution_microstructure_engine.get("execution_quality_score", 0.0) or 0.0))
+    adversarial_execution_engine = adversarial_execution_engine if isinstance(adversarial_execution_engine, dict) else {}
+    adversarial_state = adversarial_execution_engine.get("adversarial_execution_state", {})
+    if not isinstance(adversarial_state, dict):
+        adversarial_state = {}
+    hostile_execution_score = _bounded(float(adversarial_state.get("hostile_execution_score", 0.0) or 0.0))
+    historical_execution_hostility = _bounded(float(adversarial_state.get("historical_execution_hostility", 0.0) or 0.0))
     pain_risk = _bounded(float(pain_geometry_engine.get("pain_risk_surface", {}).get("current_state_risk", 0.0) or 0.0))
     negative_score = _bounded(float(negative_space_engine.get("signal", {}).get("deviation_score", 0.0) or 0.0))
     counterfactual_items = counterfactual_engine.get("counterfactual_evaluations", [])
@@ -2295,6 +2579,15 @@ def _contradiction_arbitration_and_belief_resolution_layer(
         historical_reliability=_bounded(1.0 - min(1.0, liquidity_vulnerability)),
         execution_adjusted_trust=_bounded(liquidity_vulnerability * (1.0 - (execution_penalty * 0.2))),
     )
+    adversarial_direction = "risk_off" if hostile_execution_score >= 0.65 else "wait" if hostile_execution_score >= 0.45 else "continuation"
+    _belief(
+        source_layer="adversarial_execution_intelligence_layer",
+        belief_direction=adversarial_direction,
+        belief_confidence=hostile_execution_score,
+        belief_intent="predatory_execution_safety",
+        historical_reliability=_bounded(1.0 - historical_execution_hostility),
+        execution_adjusted_trust=_bounded(hostile_execution_score * (1.0 - (execution_penalty * 0.3))),
+    )
 
     contradictions: list[dict[str, Any]] = []
 
@@ -2388,7 +2681,7 @@ def _contradiction_arbitration_and_belief_resolution_layer(
                     historical_outcome_bias=_historical_bias("directional_opposition"),
                 )
 
-    confidence_execution_severity = _bounded((unified_confidence * 0.55) + (execution_penalty * 0.45))
+    confidence_execution_severity = _bounded((unified_confidence * 0.5) + (execution_penalty * 0.38) + (hostile_execution_score * 0.12))
     if unified_confidence >= 0.12 and execution_penalty >= 0.35:
         _push_contradiction(
             contradiction_type="confidence_execution_conflict",
@@ -2419,7 +2712,7 @@ def _contradiction_arbitration_and_belief_resolution_layer(
     risk_enable_signal = _bounded(
         float(unified_market_intelligence_field.get("decision_refinements", {}).get("risk_sizing", {}).get("refined", 0.0) or 0.0)
     )
-    risk_disable_signal = _bounded(max(pain_risk, execution_penalty, liquidity_vulnerability))
+    risk_disable_signal = _bounded(max(pain_risk, execution_penalty, liquidity_vulnerability, hostile_execution_score))
     if risk_enable_signal >= 0.55 and (should_reduce or should_refuse_execution or pain_risk >= 0.6 or liquidity_vulnerability >= 0.6):
         _push_contradiction(
             contradiction_type="risk_enable_vs_risk_disable",
@@ -2598,6 +2891,7 @@ def _detect_improvement_gaps(
     mutation_candidates: list[dict[str, Any]],
     contradiction_arbitration_engine: dict[str, Any] | None = None,
     calibration_uncertainty_engine: dict[str, Any] | None = None,
+    adversarial_execution_engine: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
     repeated = autonomous_behavior.get("trade_review_engine", {}).get("repeated_failure_patterns", [])
@@ -2691,6 +2985,52 @@ def _detect_improvement_gaps(
                 "detail": "entry_timing_degradation",
                 "frequency": 1,
                 "severity": round(min(1.0, max(0.45, entry_timing_degradation)), 4),
+            }
+        )
+    adversarial_execution_engine = adversarial_execution_engine if isinstance(adversarial_execution_engine, dict) else {}
+    adversarial_state = adversarial_execution_engine.get("adversarial_execution_state", {})
+    if not isinstance(adversarial_state, dict):
+        adversarial_state = {}
+    hostile_execution_score = float(adversarial_state.get("hostile_execution_score", 0.0) or 0.0)
+    quote_fade_proxy = float(adversarial_state.get("quote_fade_proxy", 0.0) or 0.0)
+    sweep_aftermath_risk = float(adversarial_state.get("sweep_aftermath_risk", 0.0) or 0.0)
+    fill_collapse_risk = float(adversarial_state.get("fill_collapse_risk", 0.0) or 0.0)
+    adverse_selection_risk = float(adversarial_state.get("adverse_selection_risk", 0.0) or 0.0)
+    historical_execution_hostility = float(adversarial_state.get("historical_execution_hostility", 0.0) or 0.0)
+    if hostile_execution_score >= 0.62 and historical_execution_hostility >= 0.55:
+        gaps.append(
+            {
+                "gap_type": "persistent_hostile_execution_cluster",
+                "detail": "adversarial_execution_hostility_cluster",
+                "frequency": max(1, int(round((hostile_execution_score + historical_execution_hostility) * 4))),
+                "severity": round(min(1.0, max(hostile_execution_score, historical_execution_hostility)), 4),
+            }
+        )
+    if adverse_selection_risk >= 0.55:
+        gaps.append(
+            {
+                "gap_type": "chronic_adverse_selection_risk",
+                "detail": "adverse_selection_execution_drag",
+                "frequency": max(1, int(round(adverse_selection_risk * 4))),
+                "severity": round(min(1.0, adverse_selection_risk), 4),
+            }
+        )
+    if quote_fade_proxy >= 0.55 and execution_state in {"degraded", "fragile"}:
+        gaps.append(
+            {
+                "gap_type": "quote_fade_execution_fragility",
+                "detail": "quote_fade_fragility_pattern",
+                "frequency": max(1, int(round(quote_fade_proxy * 4))),
+                "severity": round(min(1.0, max(quote_fade_proxy, hostile_execution_score)), 4),
+            }
+        )
+    if sweep_aftermath_risk >= 0.55 and fill_collapse_risk >= 0.5:
+        gaps.append(
+            {
+                "gap_type": "sweep_aftermath_fill_collapse_pattern",
+                "detail": "sweep_aftermath_fill_collapse",
+                "frequency": max(1, int(round((sweep_aftermath_risk + fill_collapse_risk) * 3))),
+                "severity": round(min(1.0, max(sweep_aftermath_risk, fill_collapse_risk)), 4),
             }
         )
 
@@ -2873,6 +3213,19 @@ def _suggestion_templates(gap_type: str) -> list[dict[str, str]]:
         "chronic_overconfidence_under_execution_hostility": [
             {"suggestion_type": "new_execution_refinement", "target": "overconfidence_execution_hostility_guard"},
         ],
+        "persistent_hostile_execution_cluster": [
+            {"suggestion_type": "new_execution_refinement", "target": "persistent_hostile_execution_guard"},
+            {"suggestion_type": "new_detector_idea", "target": "hostile_execution_cluster_detector"},
+        ],
+        "chronic_adverse_selection_risk": [
+            {"suggestion_type": "new_execution_refinement", "target": "adverse_selection_entry_filter"},
+        ],
+        "quote_fade_execution_fragility": [
+            {"suggestion_type": "new_execution_refinement", "target": "quote_fade_fragility_guard"},
+        ],
+        "sweep_aftermath_fill_collapse_pattern": [
+            {"suggestion_type": "new_execution_refinement", "target": "sweep_aftermath_fill_collapse_guard"},
+        ],
         "autonomous_capability_proposal": [
             {"suggestion_type": "new_capability_hypothesis", "target": "autonomous_capability_discovery"},
         ],
@@ -2950,6 +3303,10 @@ def _component_for_gap(gap_type: str) -> str:
         "confidence_miscalibration_drift": "calibration_and_uncertainty_governance_layer",
         "regime_reliability_decay": "calibration_and_uncertainty_governance_layer",
         "chronic_overconfidence_under_execution_hostility": "calibration_and_uncertainty_governance_layer",
+        "persistent_hostile_execution_cluster": "adversarial_execution_intelligence_layer",
+        "chronic_adverse_selection_risk": "adversarial_execution_intelligence_layer",
+        "quote_fade_execution_fragility": "adversarial_execution_intelligence_layer",
+        "sweep_aftermath_fill_collapse_pattern": "adversarial_execution_intelligence_layer",
         "autonomous_capability_proposal": "capability_evolution_governance_ladder",
     }
     return mapping.get(gap_type, "self_evolving_indicator_layer")
@@ -3007,6 +3364,7 @@ def _self_suggestion_governor(
     mutation_candidates: list[dict[str, Any]],
     capability_evolution_ladder: dict[str, Any] | None = None,
     replay_scope: str,
+    adversarial_execution_engine: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     registry_dir = memory_root / "capability_registry"
     registry_dir.mkdir(parents=True, exist_ok=True)
@@ -3049,6 +3407,7 @@ def _self_suggestion_governor(
         mutation_candidates=mutation_candidates,
         contradiction_arbitration_engine=contradiction_arbitration_engine,
         calibration_uncertainty_engine=calibration_uncertainty_engine,
+        adversarial_execution_engine=adversarial_execution_engine,
     )
     calibration_uncertainty_engine = (
         calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
@@ -3056,6 +3415,10 @@ def _self_suggestion_governor(
     calibration_state = calibration_uncertainty_engine.get("calibration_state", {})
     if not isinstance(calibration_state, dict):
         calibration_state = {}
+    adversarial_execution_engine = adversarial_execution_engine if isinstance(adversarial_execution_engine, dict) else {}
+    adversarial_state = adversarial_execution_engine.get("adversarial_execution_state", {})
+    if not isinstance(adversarial_state, dict):
+        adversarial_state = {}
     capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
     capability_candidates = capability_evolution_ladder.get("capability_candidates", [])
     if isinstance(capability_candidates, list):
@@ -3099,6 +3462,8 @@ def _self_suggestion_governor(
             float(calibration_state.get("execution_adjusted_uncertainty", 0.0) or 0.0),
             4,
         ),
+        "hostile_execution_score": round(float(adversarial_state.get("hostile_execution_score", 0.0) or 0.0), 4),
+        "predatory_liquidity_state": str(adversarial_state.get("predatory_liquidity_state", "normal")),
     }
     if previous_governor.get("input_signature") == input_signature:
         return previous_governor
@@ -3331,6 +3696,11 @@ def _self_suggestion_governor(
             "execution_state": execution_microstructure_engine.get("execution_state", "insufficient_data"),
             "recommended_actions": execution_microstructure_engine.get("recommended_actions", []),
         },
+        "adversarial_execution_intelligence_layer": {
+            "adversarial_execution_state": adversarial_state,
+            "confidence_adjustments": adversarial_execution_engine.get("confidence_adjustments", {}),
+            "risk_adjustments": adversarial_execution_engine.get("risk_adjustments", {}),
+        },
         "contradiction_arbitration_and_belief_resolution_layer": {
             "arbitration": contradiction_arbitration_engine.get("arbitration", {}),
             "confidence_adjustments": contradiction_arbitration_engine.get("confidence_adjustments", {}),
@@ -3433,6 +3803,16 @@ def run_self_evolving_indicator_layer(
         market_state=market_state,
         replay_scope=replay_scope,
     )
+    adversarial_execution_engine = _adversarial_execution_intelligence_layer(
+        memory_root=memory_root,
+        closed=closed,
+        market_state=market_state,
+        execution_microstructure_engine=execution_microstructure_engine,
+        liquidity_decay_engine=liquidity_decay_engine,
+        negative_space_engine=negative_space_engine,
+        counterfactual_engine=counterfactual_engine,
+        replay_scope=replay_scope,
+    )
     provisional_unified_market_intelligence = {
         "unified_field_score": round(
             float(_detector_reliability_state(detector_generator).get("reliability_score", 0.0) or 0.0),
@@ -3452,6 +3832,9 @@ def run_self_evolving_indicator_layer(
                 "should_pause": float(pain_geometry_engine.get("pain_risk_surface", {}).get("current_state_risk", 0.0) or 0.0)
                 >= 0.75,
             }
+        },
+        "components": {
+            "adversarial_execution_state": adversarial_execution_engine.get("adversarial_execution_state", {}),
         },
     }
     intelligence_gap_engine = _intelligence_gap_discovery_engine(
@@ -3475,6 +3858,7 @@ def run_self_evolving_indicator_layer(
         intelligence_gap_engine=intelligence_gap_engine,
         synthetic_data_plane_engine=synthetic_data_plane_engine,
         unified_market_intelligence_field=provisional_unified_market_intelligence,
+        adversarial_execution_engine=adversarial_execution_engine,
         replay_scope=replay_scope,
     )
     discovery_state_tags = _discovery_state_tags(
@@ -3512,12 +3896,75 @@ def run_self_evolving_indicator_layer(
         liquidity_decay_engine=liquidity_decay_engine,
         execution_microstructure_engine=execution_microstructure_engine,
     )
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["adversarial_execution_state"] = adversarial_execution_engine.get("adversarial_execution_state", {})
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["hostility_adjusted_confidence"] = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                float(confidence_structure.get("composite_confidence", 0.0) or 0.0)
+                * float(adversarial_execution_engine.get("confidence_adjustments", {}).get("hostility_adjusted_confidence", 1.0) or 1.0),
+            ),
+        ),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    risk_sizing = decision_refinements.get("risk_sizing", {})
+    if not isinstance(risk_sizing, dict):
+        risk_sizing = {}
+    risk_sizing["adversarial_execution_multiplier"] = round(
+        max(
+            0.25,
+            min(
+                1.0,
+                float(adversarial_execution_engine.get("risk_adjustments", {}).get("adversarial_execution_multiplier", 1.0) or 1.0),
+            ),
+        ),
+        4,
+    )
+    decision_refinements["risk_sizing"] = risk_sizing
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    for reason in adversarial_execution_engine.get("risk_adjustments", {}).get("refusal_reasons", []):
+        if reason not in refusal_reasons:
+            refusal_reasons.append(str(reason))
+    for reason in adversarial_execution_engine.get("risk_adjustments", {}).get("pause_reasons", []):
+        if reason not in pause_reasons:
+            pause_reasons.append(str(reason))
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        adversarial_execution_engine.get("risk_adjustments", {}).get("should_refuse", False)
+    )
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        adversarial_execution_engine.get("risk_adjustments", {}).get("should_pause", False)
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
     calibration_uncertainty_engine = _calibration_and_uncertainty_governance_layer(
         memory_root=memory_root,
         closed=closed,
         market_state=market_state,
         unified_market_intelligence_field=unified_market_intelligence_field,
         execution_microstructure_engine=execution_microstructure_engine,
+        adversarial_execution_engine=adversarial_execution_engine,
         replay_scope=replay_scope,
     )
     calibration_state = calibration_uncertainty_engine.get("calibration_state", {})
@@ -3587,6 +4034,7 @@ def run_self_evolving_indicator_layer(
         counterfactual_engine=counterfactual_engine,
         liquidity_decay_engine=liquidity_decay_engine,
         execution_microstructure_engine=execution_microstructure_engine,
+        adversarial_execution_engine=adversarial_execution_engine,
         strategy_evolution=strategy_evolution,
         detector_generator=detector_generator,
         replay_scope=replay_scope,
@@ -3645,6 +4093,7 @@ def run_self_evolving_indicator_layer(
         discovery_state_tags=discovery_state_tags,
         unified_market_intelligence_field=unified_market_intelligence_field,
         execution_microstructure_engine=execution_microstructure_engine,
+        adversarial_execution_engine=adversarial_execution_engine,
         contradiction_arbitration_engine=contradiction_arbitration_engine,
         calibration_uncertainty_engine=calibration_uncertainty_engine,
         mutation_candidates=mutation_candidates,
@@ -3662,6 +4111,7 @@ def run_self_evolving_indicator_layer(
         "counterfactual_trade_engine": counterfactual_engine,
         "fractal_liquidity_decay_functions": liquidity_decay_engine,
         "execution_microstructure_intelligence_layer": execution_microstructure_engine,
+        "adversarial_execution_intelligence_layer": adversarial_execution_engine,
         "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
         "contradiction_arbitration_and_belief_resolution_layer": contradiction_arbitration_engine,
         "recursive_self_modeling": recursive_self_modeling,
@@ -3691,6 +4141,7 @@ def run_self_evolving_indicator_layer(
         "counterfactual_trade_engine": counterfactual_engine,
         "fractal_liquidity_decay_functions": liquidity_decay_engine,
         "execution_microstructure_intelligence_layer": execution_microstructure_engine,
+        "adversarial_execution_intelligence_layer": adversarial_execution_engine,
         "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
         "contradiction_arbitration_and_belief_resolution_layer": contradiction_arbitration_engine,
         "recursive_self_modeling": recursive_self_modeling,

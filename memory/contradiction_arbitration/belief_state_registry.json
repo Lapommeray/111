@@ -176,6 +176,30 @@
         "live_deployment_allowed": false,
         "no_blind_live_rewrites": true
       }
+    },
+    {
+      "belief_id": "belief_8_adversarial_execution_intelligence_layer",
+      "source_layer": "adversarial_execution_intelligence_layer",
+      "belief_direction": "continuation",
+      "belief_confidence": 0.0663,
+      "belief_intent": "predatory_execution_safety",
+      "historical_reliability": 0.9337,
+      "execution_adjusted_trust": 0.0663,
+      "context_signature": {
+        "replay_scope": "evaluation_replay",
+        "structure_state": "range",
+        "volatility_ratio": 1.0,
+        "spread_ratio": 1.0,
+        "slippage_ratio": 1.0,
+        "regime_state": "range",
+        "execution_state": "insufficient_data"
+      },
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_rewrites": true
+      }
     }
   ],
   "strategy_branch": "mutated_strategy_a",

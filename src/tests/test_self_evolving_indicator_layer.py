@@ -416,6 +416,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "counterfactual_evaluation",
         "liquidity_decay_state",
         "execution_microstructure_state",
+        "adversarial_execution_state",
     }
     assert 0.0 <= unified["unified_field_score"] <= 1.0
     assert 0.0 <= unified["confidence_structure"]["composite_confidence"] <= 1.0
@@ -715,6 +716,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "counterfactual_evaluation",
         "liquidity_decay_state",
         "execution_microstructure_state",
+        "adversarial_execution_state",
     }
 
 
@@ -1135,3 +1137,236 @@ def test_calibration_uncertainty_governance_is_sandbox_and_replay_only(tmp_path:
     assert governance["replay_validation_required"] is True
     assert governance["live_deployment_allowed"] is False
     assert governance["no_blind_live_self_rewrites"] is True
+
+
+def test_adversarial_execution_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {
+                "trade_id": "ae1",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -1.1,
+                "failure_cause": "execution_failure",
+                "intended_entry_price": 2010.0,
+                "average_fill_price": 2015.0,
+                "signal_time": 10,
+                "first_fill_time": 70,
+                "requested_size": 1.0,
+                "filled_size": 0.5,
+            },
+            {"trade_id": "ae2", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.3, "spread_ratio": 2.5, "slippage_ratio": 2.2},
+        replay_scope="focused_replay",
+    )
+    adversarial = result["adversarial_execution_intelligence_layer"]
+    assert Path(adversarial["paths"]["latest"]).exists()
+    assert Path(adversarial["paths"]["history"]).exists()
+    assert Path(adversarial["paths"]["hostility_event_registry"]).exists()
+    assert Path(adversarial["paths"]["contextual_hostility_clusters"]).exists()
+    assert Path(adversarial["paths"]["hostility_governance_state"]).exists()
+    assert Path(adversarial["paths"]["detector_reliability_registry"]).exists()
+
+
+def test_adversarial_execution_layer_nonbreaking_with_missing_microstructure_fields(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "aen1", "status": "closed", "result": "loss", "pnl_points": -0.6},
+            {"trade_id": "aen2", "status": "closed", "result": "win", "pnl_points": 0.4},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    adversarial = result["adversarial_execution_intelligence_layer"]
+    state = adversarial["adversarial_execution_state"]
+    assert 0.0 <= state["hostile_execution_score"] <= 1.0
+    assert 0.0 <= state["toxicity_proxy"] <= 1.0
+    assert 0.0 <= state["historical_execution_hostility"] <= 1.0
+    assert adversarial["governance"]["sandbox_only"] is True
+    assert adversarial["governance"]["replay_validation_required"] is True
+    assert adversarial["governance"]["live_deployment_allowed"] is False
+
+
+def test_adversarial_execution_layer_detects_hostile_execution_state_under_spread_slippage_delay_partial_stress(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {
+                "trade_id": "aes1",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -0.2,
+                "failure_cause": "execution_failure",
+                "intended_entry_price": 2010.0,
+                "average_fill_price": 2017.0,
+                "signal_time": 10,
+                "first_fill_time": 90,
+                "requested_size": 1.0,
+                "filled_size": 0.35,
+                "mae_after_fill": 4.5,
+                "mfe_after_fill": 0.1,
+            },
+            {
+                "trade_id": "aes2",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -0.2,
+                "failure_cause": "partial_fill",
+                "intended_entry_price": 2012.0,
+                "average_fill_price": 2018.0,
+                "signal_time": 20,
+                "first_fill_time": 100,
+                "requested_size": 1.0,
+                "filled_size": 0.4,
+                "mae_after_fill": 5.0,
+                "mfe_after_fill": 0.2,
+            },
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 3.0, "slippage_ratio": 3.0},
+        replay_scope="full_replay",
+    )
+    state = result["adversarial_execution_intelligence_layer"]["adversarial_execution_state"]
+    assert state["hostile_execution_score"] >= 0.55
+    assert state["predatory_liquidity_state"] in {"elevated", "hostile"}
+    assert state["quote_fade_proxy"] >= 0.45
+    assert state["fill_collapse_risk"] >= 0.45
+
+
+def test_adversarial_execution_layer_adds_unified_field_components_without_overwriting_existing_fields(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "aeu1", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "execution_failure"},
+            {"trade_id": "aeu2", "status": "closed", "result": "win", "pnl_points": 0.7, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.4, "spread_ratio": 2.1, "slippage_ratio": 1.9},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "unified_field_score" in unified
+    assert "composite_confidence" in unified["confidence_structure"]
+    assert "adversarial_execution_state" in unified["components"]
+    assert "hostility_adjusted_confidence" in unified["confidence_structure"]
+    assert "adversarial_execution_multiplier" in unified["decision_refinements"]["risk_sizing"]
+
+
+def test_adversarial_execution_layer_additively_influences_calibration_uncertainty_path(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "aec1", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "execution_failure"},
+            {"trade_id": "aec2", "status": "closed", "result": "loss", "pnl_points": -0.4, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 2.8, "slippage_ratio": 2.7},
+        replay_scope="focused_replay",
+    )
+    confidence = result["unified_market_intelligence_field"]["confidence_structure"]
+    calibration_state = result["calibration_and_uncertainty_governance_layer"]["calibration_state"]
+    assert "hostility_adjusted_confidence" in confidence
+    assert confidence["hostility_adjusted_confidence"] <= confidence["composite_confidence"]
+    assert "execution_adjusted_uncertainty" in calibration_state
+    assert 0.0 <= calibration_state["execution_adjusted_uncertainty"] <= 1.0
+
+
+def test_adversarial_execution_layer_additively_feeds_contradiction_confidence_execution_path(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "aed1", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "execution_failure"},
+            {"trade_id": "aed2", "status": "closed", "result": "loss", "pnl_points": -0.7, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.3, "spread_ratio": 2.7, "slippage_ratio": 2.6},
+        replay_scope="full_replay",
+    )
+    contradiction = result["contradiction_arbitration_and_belief_resolution_layer"]
+    assert any(item.get("source_layer") == "adversarial_execution_intelligence_layer" for item in contradiction["beliefs"])
+    assert contradiction["arbitration"]["conflict_state"] in {"active", "clear"}
+
+
+def test_adversarial_execution_layer_feeds_self_suggestion_governor_gap_detection(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    trade_outcomes = [
+        {
+            "trade_id": "aeg1",
+            "status": "closed",
+            "result": "loss",
+            "pnl_points": -0.3,
+            "failure_cause": "execution_failure",
+            "intended_entry_price": 2010.0,
+            "average_fill_price": 2016.0,
+            "signal_time": 10,
+            "first_fill_time": 80,
+            "requested_size": 1.0,
+            "filled_size": 0.4,
+            "mae_after_fill": 4.0,
+            "mfe_after_fill": 0.2,
+        },
+        {
+            "trade_id": "aeg2",
+            "status": "closed",
+            "result": "loss",
+            "pnl_points": -0.3,
+            "failure_cause": "partial_fill",
+            "intended_entry_price": 2011.0,
+            "average_fill_price": 2017.0,
+            "signal_time": 20,
+            "first_fill_time": 85,
+            "requested_size": 1.0,
+            "filled_size": 0.35,
+            "mae_after_fill": 4.2,
+            "mfe_after_fill": 0.1,
+        },
+    ]
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 1.4, "spread_ratio": 3.0, "slippage_ratio": 3.0},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 1.4, "spread_ratio": 3.0, "slippage_ratio": 3.0},
+        replay_scope="focused_replay",
+    )
+    gap_types = {item.get("gap_type") for item in second["self_suggestion_governor"]["detected_gaps"]}
+    expected = {
+        "persistent_hostile_execution_cluster",
+        "chronic_adverse_selection_risk",
+        "quote_fade_execution_fragility",
+        "sweep_aftermath_fill_collapse_pattern",
+    }
+    assert gap_types.intersection(expected)
+
+
+def test_capability_evolution_ladder_reads_prior_adversarial_hostility_context_nonbreaking(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "ael1", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "execution_failure"},
+            {"trade_id": "ael2", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.3, "spread_ratio": 2.5, "slippage_ratio": 2.4},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "ael3", "status": "closed", "result": "loss", "pnl_points": -0.7, "failure_cause": "execution_failure"},
+            {"trade_id": "ael4", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.4, "spread_ratio": 2.0, "slippage_ratio": 2.1},
+        replay_scope="focused_replay",
+    )
+    assert second["adversarial_execution_intelligence_layer"]["adversarial_execution_state"]
+    candidates_path = memory_root / "capability_evolution" / "capability_candidates.json"
+    payload = json.loads(candidates_path.read_text(encoding="utf-8"))
+    candidates = payload.get("capability_candidates", [])
+    if candidates:
+        context = candidates[0].get("adversarial_execution_context", {})
+        assert "prior_cycle_hostility" in context
+        assert 0.0 <= float(context["prior_cycle_hostility"]) <= 1.0

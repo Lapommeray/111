@@ -1086,7 +1086,9 @@
           "contradiction_severity": 0.437,
           "calibration_drift": 0.6786,
           "confidence_reliability_band": "low",
-          "execution_adjusted_uncertainty": 0.4975
+          "execution_adjusted_uncertainty": 0.446,
+          "hostile_execution_score": 0.0663,
+          "predatory_liquidity_state": "normal"
         },
         "detected_gaps": [
           {
@@ -1172,6 +1174,37 @@
             "maintain_current_execution_controls"
           ]
         },
+        "adversarial_execution_intelligence_layer": {
+          "adversarial_execution_state": {
+            "hostile_execution_score": 0.0663,
+            "toxicity_proxy": 0.036,
+            "quote_fade_proxy": 0.18,
+            "sweep_aftermath_risk": 0.0,
+            "fill_collapse_risk": 0.14,
+            "adverse_selection_risk": 0.05,
+            "predatory_liquidity_state": "normal",
+            "historical_execution_hostility": 0.0663,
+            "execution_survival_bias": 0.0298,
+            "governance_flags": {
+              "sandbox_only": true,
+              "replay_validation_required": true,
+              "live_deployment_allowed": false,
+              "no_blind_live_self_rewrites": true
+            }
+          },
+          "confidence_adjustments": {
+            "hostility_penalty": 0.0972,
+            "hostility_adjusted_confidence": 0.9479
+          },
+          "risk_adjustments": {
+            "adversarial_execution_multiplier": 0.9569,
+            "should_reduce_size": false,
+            "should_pause": false,
+            "should_refuse": false,
+            "pause_reasons": [],
+            "refusal_reasons": []
+          }
+        },
         "contradiction_arbitration_and_belief_resolution_layer": {
           "arbitration": {
             "outcome": "reduce_size",
@@ -1179,6 +1212,7 @@
             "max_contradiction_severity": 0.437,
             "conflict_state": "active",
             "reasons": [
+              "directional_opposition",
               "directional_opposition",
               "directional_opposition",
               "directional_opposition",
@@ -1202,7 +1236,7 @@
         "calibration_and_uncertainty_governance_layer": {
           "calibration_state": {
             "raw_confidence": 0.4241,
-            "calibrated_confidence": 0.0689,
+            "calibrated_confidence": 0.0818,
             "calibration_drift": 0.6786,
             "confidence_reliability_band": "low",
             "epistemic_uncertainty": 1.0,
@@ -1213,7 +1247,7 @@
               "reliability_score": 0.5759,
               "observations": 1
             },
-            "execution_adjusted_uncertainty": 0.4975,
+            "execution_adjusted_uncertainty": 0.446,
             "governance_flags": {
               "sandbox_only": true,
               "replay_validation_required": true,
@@ -1224,8 +1258,8 @@
             }
           },
           "confidence_adjustments": {
-            "confidence_delta": 0.3552,
-            "risk_multiplier": 0.5303,
+            "confidence_delta": 0.3423,
+            "risk_multiplier": 0.5541,
             "should_pause": true,
             "should_refuse": false,
             "pause_reasons": [
@@ -1506,10 +1540,57 @@
           "entry_timing_degradation": "memory/execution_microstructure/entry_timing_degradation.json"
         }
       },
+      "adversarial_execution_intelligence_layer": {
+        "adversarial_execution_state": {
+          "hostile_execution_score": 0.0663,
+          "toxicity_proxy": 0.036,
+          "quote_fade_proxy": 0.18,
+          "sweep_aftermath_risk": 0.0,
+          "fill_collapse_risk": 0.14,
+          "adverse_selection_risk": 0.05,
+          "predatory_liquidity_state": "normal",
+          "historical_execution_hostility": 0.0663,
+          "execution_survival_bias": 0.0298,
+          "governance_flags": {
+            "sandbox_only": true,
+            "replay_validation_required": true,
+            "live_deployment_allowed": false,
+            "no_blind_live_self_rewrites": true
+          }
+        },
+        "confidence_adjustments": {
+          "hostility_penalty": 0.0972,
+          "hostility_adjusted_confidence": 0.9479
+        },
+        "risk_adjustments": {
+          "adversarial_execution_multiplier": 0.9569,
+          "should_reduce_size": false,
+          "should_pause": false,
+          "should_refuse": false,
+          "pause_reasons": [],
+          "refusal_reasons": []
+        },
+        "governance": {
+          "sandbox_only": true,
+          "replay_validation_required": true,
+          "live_deployment_allowed": false,
+          "no_blind_live_self_rewrites": true,
+          "pause_guard_triggered": false,
+          "refuse_guard_triggered": false
+        },
+        "paths": {
+          "latest": "memory/adversarial_execution/adversarial_execution_latest.json",
+          "history": "memory/adversarial_execution/adversarial_execution_history.json",
+          "hostility_event_registry": "memory/adversarial_execution/hostility_event_registry.json",
+          "contextual_hostility_clusters": "memory/adversarial_execution/contextual_hostility_clusters.json",
+          "hostility_governance_state": "memory/adversarial_execution/hostility_governance_state.json",
+          "detector_reliability_registry": "memory/adversarial_execution/detector_reliability_registry.json"
+        }
+      },
       "calibration_and_uncertainty_governance_layer": {
         "calibration_state": {
           "raw_confidence": 0.4241,
-          "calibrated_confidence": 0.0689,
+          "calibrated_confidence": 0.0818,
           "calibration_drift": 0.6786,
           "confidence_reliability_band": "low",
           "epistemic_uncertainty": 1.0,
@@ -1520,7 +1601,7 @@
             "reliability_score": 0.5759,
             "observations": 1
           },
-          "execution_adjusted_uncertainty": 0.4975,
+          "execution_adjusted_uncertainty": 0.446,
           "governance_flags": {
             "sandbox_only": true,
             "replay_validation_required": true,
@@ -1531,8 +1612,8 @@
           }
         },
         "confidence_adjustments": {
-          "confidence_delta": 0.3552,
-          "risk_multiplier": 0.5303,
+          "confidence_delta": 0.3423,
+          "risk_multiplier": 0.5541,
           "should_pause": true,
           "should_refuse": false,
           "pause_reasons": [
@@ -1745,6 +1826,30 @@
               "live_deployment_allowed": false,
               "no_blind_live_rewrites": true
             }
+          },
+          {
+            "belief_id": "belief_8_adversarial_execution_intelligence_layer",
+            "source_layer": "adversarial_execution_intelligence_layer",
+            "belief_direction": "continuation",
+            "belief_confidence": 0.0663,
+            "belief_intent": "predatory_execution_safety",
+            "historical_reliability": 0.9337,
+            "execution_adjusted_trust": 0.0663,
+            "context_signature": {
+              "replay_scope": "evaluation_replay",
+              "structure_state": "range",
+              "volatility_ratio": 1.0,
+              "spread_ratio": 1.0,
+              "slippage_ratio": 1.0,
+              "regime_state": "range",
+              "execution_state": "insufficient_data"
+            },
+            "governance_flags": {
+              "sandbox_only": true,
+              "replay_validation_required": true,
+              "live_deployment_allowed": false,
+              "no_blind_live_rewrites": true
+            }
           }
         ],
         "contradictions": [
@@ -1877,6 +1982,32 @@
               "live_deployment_allowed": false,
               "no_blind_live_rewrites": true
             }
+          },
+          {
+            "contradiction_id": "contradiction_6_directional_opposition",
+            "belief_sources": [
+              "unified_market_intelligence_field",
+              "adversarial_execution_intelligence_layer"
+            ],
+            "contradiction_type": "directional_opposition",
+            "contradiction_severity": 0.2452,
+            "contradiction_partners": [
+              "belief_1_unified_market_intelligence_field",
+              "belief_8_adversarial_execution_intelligence_layer"
+            ],
+            "dominance_candidate": "unified_market_intelligence_field",
+            "historical_recurrence": 0,
+            "historical_outcome_bias": "refuse",
+            "arbitration_outcome": "reduce_size",
+            "resolution_rationale": [
+              "opposed_directional_beliefs_detected"
+            ],
+            "governance_flags": {
+              "sandbox_only": true,
+              "replay_validation_required": true,
+              "live_deployment_allowed": false,
+              "no_blind_live_rewrites": true
+            }
           }
         ],
         "arbitration": {
@@ -1885,6 +2016,7 @@
           "max_contradiction_severity": 0.437,
           "conflict_state": "active",
           "reasons": [
+            "directional_opposition",
             "directional_opposition",
             "directional_opposition",
             "directional_opposition",
@@ -1915,7 +2047,7 @@
             "execution_state": "insufficient_data"
           },
           "type_counts": {
-            "directional_opposition": 5
+            "directional_opposition": 6
           },
           "total_recurrence": 0,
           "recurrence_ratio": 0.0
@@ -2067,6 +2199,23 @@
             "execution_quality_score": 1.0,
             "execution_penalty": 0.0,
             "failure_cluster_risk": 0.0
+          },
+          "adversarial_execution_state": {
+            "hostile_execution_score": 0.0663,
+            "toxicity_proxy": 0.036,
+            "quote_fade_proxy": 0.18,
+            "sweep_aftermath_risk": 0.0,
+            "fill_collapse_risk": 0.14,
+            "adverse_selection_risk": 0.05,
+            "predatory_liquidity_state": "normal",
+            "historical_execution_hostility": 0.0663,
+            "execution_survival_bias": 0.0298,
+            "governance_flags": {
+              "sandbox_only": true,
+              "replay_validation_required": true,
+              "live_deployment_allowed": false,
+              "no_blind_live_self_rewrites": true
+            }
           }
         },
         "unified_field_score": 0.458,
@@ -2076,11 +2225,12 @@
           "counterfactual_confidence": 0.0,
           "composite_confidence": 0.4241,
           "confidence_band": "low",
-          "calibrated_confidence": 0.0689,
+          "hostility_adjusted_confidence": 0.402,
+          "calibrated_confidence": 0.0818,
           "calibration_drift": 0.6786,
           "confidence_reliability_band": "low",
           "historical_confidence_error": 0.4241,
-          "execution_adjusted_uncertainty": 0.4975,
+          "execution_adjusted_uncertainty": 0.446,
           "contradiction_adjusted_confidence": 0.2711
         },
         "decision_refinements": {
@@ -2093,8 +2243,9 @@
             "base": 0.85,
             "refined": 0.8588,
             "multiplier": 1.0103,
-            "calibration_multiplier": 0.5303,
-            "calibration_adjusted_refined": 0.4554,
+            "adversarial_execution_multiplier": 0.9569,
+            "calibration_multiplier": 0.5541,
+            "calibration_adjusted_refined": 0.4759,
             "contradiction_multiplier": 0.7596
           },
           "refusal_pause_behavior": {
@@ -2129,6 +2280,7 @@
           "max_contradiction_severity": 0.437,
           "conflict_state": "active",
           "reasons": [
+            "directional_opposition",
             "directional_opposition",
             "directional_opposition",
             "directional_opposition",
@@ -2173,7 +2325,9 @@
         "contradiction_severity": 0.437,
         "calibration_drift": 0.6786,
         "confidence_reliability_band": "low",
-        "execution_adjusted_uncertainty": 0.4975
+        "execution_adjusted_uncertainty": 0.446,
+        "hostile_execution_score": 0.0663,
+        "predatory_liquidity_state": "normal"
       },
       "detected_gaps": [
         {
@@ -2259,6 +2413,37 @@
           "maintain_current_execution_controls"
         ]
       },
+      "adversarial_execution_intelligence_layer": {
+        "adversarial_execution_state": {
+          "hostile_execution_score": 0.0663,
+          "toxicity_proxy": 0.036,
+          "quote_fade_proxy": 0.18,
+          "sweep_aftermath_risk": 0.0,
+          "fill_collapse_risk": 0.14,
+          "adverse_selection_risk": 0.05,
+          "predatory_liquidity_state": "normal",
+          "historical_execution_hostility": 0.0663,
+          "execution_survival_bias": 0.0298,
+          "governance_flags": {
+            "sandbox_only": true,
+            "replay_validation_required": true,
+            "live_deployment_allowed": false,
+            "no_blind_live_self_rewrites": true
+          }
+        },
+        "confidence_adjustments": {
+          "hostility_penalty": 0.0972,
+          "hostility_adjusted_confidence": 0.9479
+        },
+        "risk_adjustments": {
+          "adversarial_execution_multiplier": 0.9569,
+          "should_reduce_size": false,
+          "should_pause": false,
+          "should_refuse": false,
+          "pause_reasons": [],
+          "refusal_reasons": []
+        }
+      },
       "contradiction_arbitration_and_belief_resolution_layer": {
         "arbitration": {
           "outcome": "reduce_size",
@@ -2266,6 +2451,7 @@
           "max_contradiction_severity": 0.437,
           "conflict_state": "active",
           "reasons": [
+            "directional_opposition",
             "directional_opposition",
             "directional_opposition",
             "directional_opposition",
@@ -2289,7 +2475,7 @@
       "calibration_and_uncertainty_governance_layer": {
         "calibration_state": {
           "raw_confidence": 0.4241,
-          "calibrated_confidence": 0.0689,
+          "calibrated_confidence": 0.0818,
           "calibration_drift": 0.6786,
           "confidence_reliability_band": "low",
           "epistemic_uncertainty": 1.0,
@@ -2300,7 +2486,7 @@
             "reliability_score": 0.5759,
             "observations": 1
           },
-          "execution_adjusted_uncertainty": 0.4975,
+          "execution_adjusted_uncertainty": 0.446,
           "governance_flags": {
             "sandbox_only": true,
             "replay_validation_required": true,
@@ -2311,8 +2497,8 @@
           }
         },
         "confidence_adjustments": {
-          "confidence_delta": 0.3552,
-          "risk_multiplier": 0.5303,
+          "confidence_delta": 0.3423,
+          "risk_multiplier": 0.5541,
           "should_pause": true,
           "should_refuse": false,
           "pause_reasons": [
@@ -2593,10 +2779,57 @@
         "entry_timing_degradation": "memory/execution_microstructure/entry_timing_degradation.json"
       }
     },
+    "adversarial_execution_intelligence_layer": {
+      "adversarial_execution_state": {
+        "hostile_execution_score": 0.0663,
+        "toxicity_proxy": 0.036,
+        "quote_fade_proxy": 0.18,
+        "sweep_aftermath_risk": 0.0,
+        "fill_collapse_risk": 0.14,
+        "adverse_selection_risk": 0.05,
+        "predatory_liquidity_state": "normal",
+        "historical_execution_hostility": 0.0663,
+        "execution_survival_bias": 0.0298,
+        "governance_flags": {
+          "sandbox_only": true,
+          "replay_validation_required": true,
+          "live_deployment_allowed": false,
+          "no_blind_live_self_rewrites": true
+        }
+      },
+      "confidence_adjustments": {
+        "hostility_penalty": 0.0972,
+        "hostility_adjusted_confidence": 0.9479
+      },
+      "risk_adjustments": {
+        "adversarial_execution_multiplier": 0.9569,
+        "should_reduce_size": false,
+        "should_pause": false,
+        "should_refuse": false,
+        "pause_reasons": [],
+        "refusal_reasons": []
+      },
+      "governance": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true,
+        "pause_guard_triggered": false,
+        "refuse_guard_triggered": false
+      },
+      "paths": {
+        "latest": "memory/adversarial_execution/adversarial_execution_latest.json",
+        "history": "memory/adversarial_execution/adversarial_execution_history.json",
+        "hostility_event_registry": "memory/adversarial_execution/hostility_event_registry.json",
+        "contextual_hostility_clusters": "memory/adversarial_execution/contextual_hostility_clusters.json",
+        "hostility_governance_state": "memory/adversarial_execution/hostility_governance_state.json",
+        "detector_reliability_registry": "memory/adversarial_execution/detector_reliability_registry.json"
+      }
+    },
     "calibration_and_uncertainty_governance_layer": {
       "calibration_state": {
         "raw_confidence": 0.4241,
-        "calibrated_confidence": 0.0689,
+        "calibrated_confidence": 0.0818,
         "calibration_drift": 0.6786,
         "confidence_reliability_band": "low",
         "epistemic_uncertainty": 1.0,
@@ -2607,7 +2840,7 @@
           "reliability_score": 0.5759,
           "observations": 1
         },
-        "execution_adjusted_uncertainty": 0.4975,
+        "execution_adjusted_uncertainty": 0.446,
         "governance_flags": {
           "sandbox_only": true,
           "replay_validation_required": true,
@@ -2618,8 +2851,8 @@
         }
       },
       "confidence_adjustments": {
-        "confidence_delta": 0.3552,
-        "risk_multiplier": 0.5303,
+        "confidence_delta": 0.3423,
+        "risk_multiplier": 0.5541,
         "should_pause": true,
         "should_refuse": false,
         "pause_reasons": [
@@ -2832,6 +3065,30 @@
             "live_deployment_allowed": false,
             "no_blind_live_rewrites": true
           }
+        },
+        {
+          "belief_id": "belief_8_adversarial_execution_intelligence_layer",
+          "source_layer": "adversarial_execution_intelligence_layer",
+          "belief_direction": "continuation",
+          "belief_confidence": 0.0663,
+          "belief_intent": "predatory_execution_safety",
+          "historical_reliability": 0.9337,
+          "execution_adjusted_trust": 0.0663,
+          "context_signature": {
+            "replay_scope": "evaluation_replay",
+            "structure_state": "range",
+            "volatility_ratio": 1.0,
+            "spread_ratio": 1.0,
+            "slippage_ratio": 1.0,
+            "regime_state": "range",
+            "execution_state": "insufficient_data"
+          },
+          "governance_flags": {
+            "sandbox_only": true,
+            "replay_validation_required": true,
+            "live_deployment_allowed": false,
+            "no_blind_live_rewrites": true
+          }
         }
       ],
       "contradictions": [
@@ -2964,6 +3221,32 @@
             "live_deployment_allowed": false,
             "no_blind_live_rewrites": true
           }
+        },
+        {
+          "contradiction_id": "contradiction_6_directional_opposition",
+          "belief_sources": [
+            "unified_market_intelligence_field",
+            "adversarial_execution_intelligence_layer"
+          ],
+          "contradiction_type": "directional_opposition",
+          "contradiction_severity": 0.2452,
+          "contradiction_partners": [
+            "belief_1_unified_market_intelligence_field",
+            "belief_8_adversarial_execution_intelligence_layer"
+          ],
+          "dominance_candidate": "unified_market_intelligence_field",
+          "historical_recurrence": 0,
+          "historical_outcome_bias": "refuse",
+          "arbitration_outcome": "reduce_size",
+          "resolution_rationale": [
+            "opposed_directional_beliefs_detected"
+          ],
+          "governance_flags": {
+            "sandbox_only": true,
+            "replay_validation_required": true,
+            "live_deployment_allowed": false,
+            "no_blind_live_rewrites": true
+          }
         }
       ],
       "arbitration": {
@@ -2972,6 +3255,7 @@
         "max_contradiction_severity": 0.437,
         "conflict_state": "active",
         "reasons": [
+          "directional_opposition",
           "directional_opposition",
           "directional_opposition",
           "directional_opposition",
@@ -3002,7 +3286,7 @@
           "execution_state": "insufficient_data"
         },
         "type_counts": {
-          "directional_opposition": 5
+          "directional_opposition": 6
         },
         "total_recurrence": 0,
         "recurrence_ratio": 0.0
@@ -3154,6 +3438,23 @@
           "execution_quality_score": 1.0,
           "execution_penalty": 0.0,
           "failure_cluster_risk": 0.0
+        },
+        "adversarial_execution_state": {
+          "hostile_execution_score": 0.0663,
+          "toxicity_proxy": 0.036,
+          "quote_fade_proxy": 0.18,
+          "sweep_aftermath_risk": 0.0,
+          "fill_collapse_risk": 0.14,
+          "adverse_selection_risk": 0.05,
+          "predatory_liquidity_state": "normal",
+          "historical_execution_hostility": 0.0663,
+          "execution_survival_bias": 0.0298,
+          "governance_flags": {
+            "sandbox_only": true,
+            "replay_validation_required": true,
+            "live_deployment_allowed": false,
+            "no_blind_live_self_rewrites": true
+          }
         }
       },
       "unified_field_score": 0.458,
@@ -3163,11 +3464,12 @@
         "counterfactual_confidence": 0.0,
         "composite_confidence": 0.4241,
         "confidence_band": "low",
-        "calibrated_confidence": 0.0689,
+        "hostility_adjusted_confidence": 0.402,
+        "calibrated_confidence": 0.0818,
         "calibration_drift": 0.6786,
         "confidence_reliability_band": "low",
         "historical_confidence_error": 0.4241,
-        "execution_adjusted_uncertainty": 0.4975,
+        "execution_adjusted_uncertainty": 0.446,
         "contradiction_adjusted_confidence": 0.2711
       },
       "decision_refinements": {
@@ -3180,8 +3482,9 @@
           "base": 0.85,
           "refined": 0.8588,
           "multiplier": 1.0103,
-          "calibration_multiplier": 0.5303,
-          "calibration_adjusted_refined": 0.4554,
+          "adversarial_execution_multiplier": 0.9569,
+          "calibration_multiplier": 0.5541,
+          "calibration_adjusted_refined": 0.4759,
           "contradiction_multiplier": 0.7596
         },
         "refusal_pause_behavior": {
@@ -3216,6 +3519,7 @@
         "max_contradiction_severity": 0.437,
         "conflict_state": "active",
         "reasons": [
+          "directional_opposition",
           "directional_opposition",
           "directional_opposition",
           "directional_opposition",

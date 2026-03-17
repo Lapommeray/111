@@ -188,6 +188,30 @@
         "live_deployment_allowed": false,
         "no_blind_live_rewrites": true
       }
+    },
+    {
+      "belief_id": "belief_8_adversarial_execution_intelligence_layer",
+      "source_layer": "adversarial_execution_intelligence_layer",
+      "belief_direction": "continuation",
+      "belief_confidence": 0.0663,
+      "belief_intent": "predatory_execution_safety",
+      "historical_reliability": 0.9337,
+      "execution_adjusted_trust": 0.0663,
+      "context_signature": {
+        "replay_scope": "evaluation_replay",
+        "structure_state": "range",
+        "volatility_ratio": 1.0,
+        "spread_ratio": 1.0,
+        "slippage_ratio": 1.0,
+        "regime_state": "range",
+        "execution_state": "insufficient_data"
+      },
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_rewrites": true
+      }
     }
   ],
   "contradictions": [
@@ -320,6 +344,32 @@
         "live_deployment_allowed": false,
         "no_blind_live_rewrites": true
       }
+    },
+    {
+      "contradiction_id": "contradiction_6_directional_opposition",
+      "belief_sources": [
+        "unified_market_intelligence_field",
+        "adversarial_execution_intelligence_layer"
+      ],
+      "contradiction_type": "directional_opposition",
+      "contradiction_severity": 0.2452,
+      "contradiction_partners": [
+        "belief_1_unified_market_intelligence_field",
+        "belief_8_adversarial_execution_intelligence_layer"
+      ],
+      "dominance_candidate": "unified_market_intelligence_field",
+      "historical_recurrence": 0,
+      "historical_outcome_bias": "refuse",
+      "arbitration_outcome": "reduce_size",
+      "resolution_rationale": [
+        "opposed_directional_beliefs_detected"
+      ],
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_rewrites": true
+      }
     }
   ],
   "arbitration": {
@@ -328,6 +378,7 @@
     "max_contradiction_severity": 0.437,
     "conflict_state": "active",
     "reasons": [
+      "directional_opposition",
       "directional_opposition",
       "directional_opposition",
       "directional_opposition",
@@ -358,7 +409,7 @@
       "execution_state": "insufficient_data"
     },
     "type_counts": {
-      "directional_opposition": 5
+      "directional_opposition": 6
     },
     "total_recurrence": 0,
     "recurrence_ratio": 0.0
