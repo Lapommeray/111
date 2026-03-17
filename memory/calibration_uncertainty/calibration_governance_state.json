@@ -1,8 +1,0 @@
-{
-  "sandbox_only": true,
-  "replay_validation_required": true,
-  "live_deployment_allowed": false,
-  "no_blind_live_self_rewrites": true,
-  "pause_guard_triggered": true,
-  "refuse_guard_triggered": false
-}
