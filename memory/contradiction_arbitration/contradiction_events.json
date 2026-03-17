@@ -1,0 +1,212 @@
+{
+  "events": [
+    {
+      "contradiction_id": "contradiction_1_directional_opposition",
+      "belief_sources": [
+        "unified_market_intelligence_field",
+        "execution_microstructure_intelligence_layer"
+      ],
+      "contradiction_type": "directional_opposition",
+      "contradiction_severity": 0.3871,
+      "contradiction_partners": [
+        "belief_1_unified_market_intelligence_field",
+        "belief_2_execution_microstructure_intelligence_layer"
+      ],
+      "dominance_candidate": "unified_market_intelligence_field",
+      "historical_recurrence": 0,
+      "historical_outcome_bias": "refuse",
+      "arbitration_outcome": "reduce_size",
+      "resolution_rationale": [
+        "opposed_directional_beliefs_detected"
+      ],
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_rewrites": true
+      }
+    },
+    {
+      "contradiction_id": "contradiction_2_directional_opposition",
+      "belief_sources": [
+        "unified_market_intelligence_field",
+        "negative_space_pattern_recognition"
+      ],
+      "contradiction_type": "directional_opposition",
+      "contradiction_severity": 0.212,
+      "contradiction_partners": [
+        "belief_1_unified_market_intelligence_field",
+        "belief_3_negative_space_pattern_recognition"
+      ],
+      "dominance_candidate": "unified_market_intelligence_field",
+      "historical_recurrence": 0,
+      "historical_outcome_bias": "refuse",
+      "arbitration_outcome": "reduce_size",
+      "resolution_rationale": [
+        "opposed_directional_beliefs_detected"
+      ],
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_rewrites": true
+      }
+    },
+    {
+      "contradiction_id": "contradiction_3_directional_opposition",
+      "belief_sources": [
+        "unified_market_intelligence_field",
+        "temporal_invariance_break_detection"
+      ],
+      "contradiction_type": "directional_opposition",
+      "contradiction_severity": 0.437,
+      "contradiction_partners": [
+        "belief_1_unified_market_intelligence_field",
+        "belief_4_temporal_invariance_break_detection"
+      ],
+      "dominance_candidate": "unified_market_intelligence_field",
+      "historical_recurrence": 0,
+      "historical_outcome_bias": "refuse",
+      "arbitration_outcome": "reduce_size",
+      "resolution_rationale": [
+        "opposed_directional_beliefs_detected"
+      ],
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_rewrites": true
+      }
+    },
+    {
+      "contradiction_id": "contradiction_4_directional_opposition",
+      "belief_sources": [
+        "unified_market_intelligence_field",
+        "pain_geometry_fields"
+      ],
+      "contradiction_type": "directional_opposition",
+      "contradiction_severity": 0.212,
+      "contradiction_partners": [
+        "belief_1_unified_market_intelligence_field",
+        "belief_5_pain_geometry_fields"
+      ],
+      "dominance_candidate": "unified_market_intelligence_field",
+      "historical_recurrence": 0,
+      "historical_outcome_bias": "refuse",
+      "arbitration_outcome": "reduce_size",
+      "resolution_rationale": [
+        "opposed_directional_beliefs_detected"
+      ],
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_rewrites": true
+      }
+    },
+    {
+      "contradiction_id": "contradiction_5_directional_opposition",
+      "belief_sources": [
+        "unified_market_intelligence_field",
+        "fractal_liquidity_decay_functions"
+      ],
+      "contradiction_type": "directional_opposition",
+      "contradiction_severity": 0.212,
+      "contradiction_partners": [
+        "belief_1_unified_market_intelligence_field",
+        "belief_7_fractal_liquidity_decay_functions"
+      ],
+      "dominance_candidate": "unified_market_intelligence_field",
+      "historical_recurrence": 0,
+      "historical_outcome_bias": "refuse",
+      "arbitration_outcome": "reduce_size",
+      "resolution_rationale": [
+        "opposed_directional_beliefs_detected"
+      ],
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_rewrites": true
+      }
+    },
+    {
+      "contradiction_id": "contradiction_6_directional_opposition",
+      "belief_sources": [
+        "unified_market_intelligence_field",
+        "adversarial_execution_intelligence_layer"
+      ],
+      "contradiction_type": "directional_opposition",
+      "contradiction_severity": 0.2452,
+      "contradiction_partners": [
+        "belief_1_unified_market_intelligence_field",
+        "belief_8_adversarial_execution_intelligence_layer"
+      ],
+      "dominance_candidate": "unified_market_intelligence_field",
+      "historical_recurrence": 0,
+      "historical_outcome_bias": "refuse",
+      "arbitration_outcome": "reduce_size",
+      "resolution_rationale": [
+        "opposed_directional_beliefs_detected"
+      ],
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_rewrites": true
+      }
+    },
+    {
+      "contradiction_id": "contradiction_7_directional_opposition",
+      "belief_sources": [
+        "unified_market_intelligence_field",
+        "latent_transition_hazard_layer"
+      ],
+      "contradiction_type": "directional_opposition",
+      "contradiction_severity": 0.2615,
+      "contradiction_partners": [
+        "belief_1_unified_market_intelligence_field",
+        "belief_10_latent_transition_hazard_layer"
+      ],
+      "dominance_candidate": "unified_market_intelligence_field",
+      "historical_recurrence": 0,
+      "historical_outcome_bias": "refuse",
+      "arbitration_outcome": "reduce_size",
+      "resolution_rationale": [
+        "opposed_directional_beliefs_detected"
+      ],
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_rewrites": true
+      }
+    },
+    {
+      "contradiction_id": "contradiction_8_directional_opposition",
+      "belief_sources": [
+        "unified_market_intelligence_field",
+        "dynamic_market_maker_deception_inference_layer"
+      ],
+      "contradiction_type": "directional_opposition",
+      "contradiction_severity": 0.2633,
+      "contradiction_partners": [
+        "belief_1_unified_market_intelligence_field",
+        "belief_11_dynamic_market_maker_deception_inference_layer"
+      ],
+      "dominance_candidate": "unified_market_intelligence_field",
+      "historical_recurrence": 0,
+      "historical_outcome_bias": "refuse",
+      "arbitration_outcome": "reduce_size",
+      "resolution_rationale": [
+        "opposed_directional_beliefs_detected"
+      ],
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_rewrites": true
+      }
+    }
+  ]
+}

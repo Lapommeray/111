@@ -1,0 +1,10 @@
+{
+  "contexts": {
+    "evaluation_replay|range|range|insufficient_data": {
+      "occurrences": 1,
+      "historical_recurrence_score": 0.3333,
+      "loss_ratio": 0.0,
+      "memory_reliability": 0.5083
+    }
+  }
+}
