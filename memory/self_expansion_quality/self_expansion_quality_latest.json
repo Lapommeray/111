@@ -1,0 +1,44 @@
+{
+  "self_expansion_quality_state": "critical",
+  "integration_enabled": false,
+  "capability_novelty_score": 1.0,
+  "redundancy_risk": 0.0,
+  "durability_score": 0.1593,
+  "transferability_score": 0.3933,
+  "regression_risk": 0.0099,
+  "capability_overlap_map": {},
+  "expansion_quality_score": 0.2949,
+  "promotion_maturity": "seeded",
+  "governance_flags": {
+    "sandbox_only": true,
+    "replay_validation_required": true,
+    "live_deployment_allowed": false,
+    "promotion_confidence_reduced": true,
+    "quarantine_pressure_increased": false,
+    "expansion_rate_limited": true,
+    "no_blind_live_self_rewrites": true
+  },
+  "quality_components": {
+    "replay_quality": 0.0,
+    "comparative_quality": 0.0,
+    "conflict_penalty": 0.0,
+    "duplicate_pressure": 0.5,
+    "low_value_pressure": 0.0,
+    "unresolved_gap_pressure": 0.0,
+    "calibration_reliability_context": 0.5759,
+    "structural_alignment_context": 1.0,
+    "transition_hazard_context": 0.0989,
+    "promotion_confidence_multiplier": 0.8711,
+    "quarantine_pressure_delta": 0.0012,
+    "expansion_rate_limit": 1
+  },
+  "paths": {
+    "latest": "memory/self_expansion_quality/self_expansion_quality_latest.json",
+    "history": "memory/self_expansion_quality/self_expansion_quality_history.json",
+    "capability_quality_registry": "memory/self_expansion_quality/capability_quality_registry.json",
+    "capability_overlap_registry": "memory/self_expansion_quality/capability_overlap_registry.json",
+    "promotion_maturity_registry": "memory/self_expansion_quality/promotion_maturity_registry.json",
+    "expansion_regression_watchlist": "memory/self_expansion_quality/expansion_regression_watchlist.json",
+    "governance_state": "memory/self_expansion_quality/self_expansion_quality_governance_state.json"
+  }
+}

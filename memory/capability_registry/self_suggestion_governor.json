@@ -1,13 +1,35 @@
 {
-  "cycle_index": 1,
+  "cycle_index": 2,
   "input_signature": {
     "replay_scope": "evaluation_replay",
     "gap_signatures": [
+      "confidence_miscalibration_drift::confidence_calibration_drift",
+      "hazard_reliability_decay::latent_transition_hazard_reliability_decay",
       "low_value_noisy_mutations::mutation_noise_cluster",
       "weak_detector_reliability::detector_sandbox_failures"
     ],
     "strongest_branch": "mutated_strategy_a",
-    "closed_count": 0
+    "closed_count": 0,
+    "unified_field_score": 0.458,
+    "unified_confidence": 0.4241,
+    "execution_quality_score": 1.0,
+    "execution_penalty": 0.0,
+    "contradiction_outcome": "reduce_size",
+    "contradiction_severity": 0.437,
+    "calibration_drift": 0.6786,
+    "confidence_reliability_band": "low",
+    "execution_adjusted_uncertainty": 0.5196,
+    "hostile_execution_score": 0.0663,
+    "predatory_liquidity_state": "normal",
+    "deception_score": 0.1026,
+    "engineered_move_probability": 0.0363,
+    "deception_reliability": 0.8974,
+    "structural_memory_reliability": 0.5083,
+    "structural_reversal_bias": 0.0,
+    "long_horizon_context_match": 0.2166,
+    "transition_hazard_score": 0.0989,
+    "precursor_instability_score": 0.008,
+    "transition_directional_bias": "neutral"
   },
   "detected_gaps": [
     {
@@ -21,259 +43,58 @@
       "detail": "mutation_noise_cluster",
       "frequency": 1,
       "severity": 0.5
+    },
+    {
+      "gap_type": "confidence_miscalibration_drift",
+      "detail": "confidence_calibration_drift",
+      "frequency": 3,
+      "severity": 0.6786
+    },
+    {
+      "gap_type": "hazard_reliability_decay",
+      "detail": "latent_transition_hazard_reliability_decay",
+      "frequency": 1,
+      "severity": 0.6129
     }
   ],
-  "proposed_improvements": [
-    {
-      "cycle_index": 1,
-      "suggestion_type": "new_feature_combination",
-      "target": "detector_ensemble_features",
-      "gap_type": "weak_detector_reliability",
-      "gap_detail": "detector_sandbox_failures",
-      "expected_usefulness": 0.95,
-      "pain_failure_frequency": 5,
-      "regime_sensitivity": 0.5,
-      "execution_impact": 0.45,
-      "survival_impact": 0.5,
-      "priority_score": 0.75,
-      "governance": {
-        "sandbox_only": true,
-        "live_deployment_allowed": false,
-        "blind_live_rewrite_blocked": true
-      },
-      "signature": "new_feature_combination::detector_ensemble_features"
-    },
-    {
-      "cycle_index": 1,
-      "suggestion_type": "new_strategy_mutation",
-      "target": "detector_threshold_mutation",
-      "gap_type": "weak_detector_reliability",
-      "gap_detail": "detector_sandbox_failures",
-      "expected_usefulness": 0.95,
-      "pain_failure_frequency": 5,
-      "regime_sensitivity": 0.5,
-      "execution_impact": 0.45,
-      "survival_impact": 0.5,
-      "priority_score": 0.75,
-      "governance": {
-        "sandbox_only": true,
-        "live_deployment_allowed": false,
-        "blind_live_rewrite_blocked": true
-      },
-      "signature": "new_strategy_mutation::detector_threshold_mutation"
-    },
-    {
-      "cycle_index": 1,
-      "suggestion_type": "new_survival_rule",
-      "target": "mutation_noise_filter",
-      "gap_type": "low_value_noisy_mutations",
-      "gap_detail": "mutation_noise_cluster",
-      "expected_usefulness": 0.7,
-      "pain_failure_frequency": 1,
-      "regime_sensitivity": 0.5,
-      "execution_impact": 0.45,
-      "survival_impact": 0.5,
-      "priority_score": 0.5025,
-      "governance": {
-        "sandbox_only": true,
-        "live_deployment_allowed": false,
-        "blind_live_rewrite_blocked": true
-      },
-      "signature": "new_survival_rule::mutation_noise_filter"
-    },
-    {
-      "cycle_index": 1,
-      "suggestion_type": "new_strategy_mutation",
-      "target": "quality_gated_mutation_generator",
-      "gap_type": "low_value_noisy_mutations",
-      "gap_detail": "mutation_noise_cluster",
-      "expected_usefulness": 0.7,
-      "pain_failure_frequency": 1,
-      "regime_sensitivity": 0.5,
-      "execution_impact": 0.45,
-      "survival_impact": 0.5,
-      "priority_score": 0.5025,
-      "governance": {
-        "sandbox_only": true,
-        "live_deployment_allowed": false,
-        "blind_live_rewrite_blocked": true
-      },
-      "signature": "new_strategy_mutation::quality_gated_mutation_generator"
-    }
-  ],
-  "implemented_improvements": [
-    {
-      "suggestion_signature": "new_feature_combination::detector_ensemble_features",
-      "implementation_id": "sandbox_impl_1_1",
-      "sandbox_module_name": "sandbox_detector_ensemble_features",
-      "suggestion_type": "new_feature_combination",
-      "target": "detector_ensemble_features",
-      "replay_test": {
-        "scope": "evaluation_replay",
-        "baseline": "mutated_strategy_a",
-        "comparison": "sandbox_vs_baseline",
-        "score": 0.7575
-      },
-      "governance_decision": "promote",
-      "governance": {
-        "sandbox_only": true,
-        "live_activation_allowed": false,
-        "core_module_deletion_allowed": false,
-        "quarantine_supported": true
-      }
-    },
-    {
-      "suggestion_signature": "new_strategy_mutation::detector_threshold_mutation",
-      "implementation_id": "sandbox_impl_1_2",
-      "sandbox_module_name": "sandbox_detector_threshold_mutation",
-      "suggestion_type": "new_strategy_mutation",
-      "target": "detector_threshold_mutation",
-      "replay_test": {
-        "scope": "evaluation_replay",
-        "baseline": "mutated_strategy_a",
-        "comparison": "sandbox_vs_baseline",
-        "score": 0.7375
-      },
-      "governance_decision": "promote",
-      "governance": {
-        "sandbox_only": true,
-        "live_activation_allowed": false,
-        "core_module_deletion_allowed": false,
-        "quarantine_supported": true
-      }
-    },
-    {
-      "suggestion_signature": "new_survival_rule::mutation_noise_filter",
-      "implementation_id": "sandbox_impl_1_3",
-      "sandbox_module_name": "sandbox_mutation_noise_filter",
-      "suggestion_type": "new_survival_rule",
-      "target": "mutation_noise_filter",
-      "replay_test": {
-        "scope": "evaluation_replay",
-        "baseline": "mutated_strategy_a",
-        "comparison": "sandbox_vs_baseline",
-        "score": 0.47
-      },
-      "governance_decision": "quarantine",
-      "governance": {
-        "sandbox_only": true,
-        "live_activation_allowed": false,
-        "core_module_deletion_allowed": false,
-        "quarantine_supported": true
-      }
-    },
-    {
-      "suggestion_signature": "new_strategy_mutation::quality_gated_mutation_generator",
-      "implementation_id": "sandbox_impl_1_4",
-      "sandbox_module_name": "sandbox_quality_gated_mutation_generator",
-      "suggestion_type": "new_strategy_mutation",
-      "target": "quality_gated_mutation_generator",
-      "replay_test": {
-        "scope": "evaluation_replay",
-        "baseline": "mutated_strategy_a",
-        "comparison": "sandbox_vs_baseline",
-        "score": 0.45
-      },
-      "governance_decision": "quarantine",
-      "governance": {
-        "sandbox_only": true,
-        "live_activation_allowed": false,
-        "core_module_deletion_allowed": false,
-        "quarantine_supported": true
-      }
-    }
-  ],
-  "promoted_improvements": [
-    {
-      "suggestion_signature": "new_feature_combination::detector_ensemble_features",
-      "implementation_id": "sandbox_impl_1_1",
-      "sandbox_module_name": "sandbox_detector_ensemble_features",
-      "suggestion_type": "new_feature_combination",
-      "target": "detector_ensemble_features",
-      "replay_test": {
-        "scope": "evaluation_replay",
-        "baseline": "mutated_strategy_a",
-        "comparison": "sandbox_vs_baseline",
-        "score": 0.7575
-      },
-      "governance_decision": "promote",
-      "governance": {
-        "sandbox_only": true,
-        "live_activation_allowed": false,
-        "core_module_deletion_allowed": false,
-        "quarantine_supported": true
-      }
-    },
-    {
-      "suggestion_signature": "new_strategy_mutation::detector_threshold_mutation",
-      "implementation_id": "sandbox_impl_1_2",
-      "sandbox_module_name": "sandbox_detector_threshold_mutation",
-      "suggestion_type": "new_strategy_mutation",
-      "target": "detector_threshold_mutation",
-      "replay_test": {
-        "scope": "evaluation_replay",
-        "baseline": "mutated_strategy_a",
-        "comparison": "sandbox_vs_baseline",
-        "score": 0.7375
-      },
-      "governance_decision": "promote",
-      "governance": {
-        "sandbox_only": true,
-        "live_activation_allowed": false,
-        "core_module_deletion_allowed": false,
-        "quarantine_supported": true
-      }
-    }
-  ],
+  "proposed_improvements": [],
+  "implemented_improvements": [],
+  "promoted_improvements": [],
   "rejected_improvements": [
     {
-      "suggestion_signature": "new_survival_rule::mutation_noise_filter",
-      "implementation_id": "sandbox_impl_1_3",
-      "sandbox_module_name": "sandbox_mutation_noise_filter",
-      "suggestion_type": "new_survival_rule",
-      "target": "mutation_noise_filter",
-      "replay_test": {
-        "scope": "evaluation_replay",
-        "baseline": "mutated_strategy_a",
-        "comparison": "sandbox_vs_baseline",
-        "score": 0.47
-      },
-      "governance_decision": "quarantine",
-      "governance": {
-        "sandbox_only": true,
-        "live_activation_allowed": false,
-        "core_module_deletion_allowed": false,
-        "quarantine_supported": true
-      }
+      "cycle_index": 2,
+      "signature": "new_execution_refinement::confidence_calibration_guard",
+      "gap_type": "confidence_miscalibration_drift",
+      "reason": "vague_suggestion_rejected"
     },
     {
-      "suggestion_signature": "new_strategy_mutation::quality_gated_mutation_generator",
-      "implementation_id": "sandbox_impl_1_4",
-      "sandbox_module_name": "sandbox_quality_gated_mutation_generator",
-      "suggestion_type": "new_strategy_mutation",
-      "target": "quality_gated_mutation_generator",
-      "replay_test": {
-        "scope": "evaluation_replay",
-        "baseline": "mutated_strategy_a",
-        "comparison": "sandbox_vs_baseline",
-        "score": 0.45
-      },
-      "governance_decision": "quarantine",
-      "governance": {
-        "sandbox_only": true,
-        "live_activation_allowed": false,
-        "core_module_deletion_allowed": false,
-        "quarantine_supported": true
-      }
+      "cycle_index": 2,
+      "signature": "new_survival_rule::miscalibration_pause_rule",
+      "gap_type": "confidence_miscalibration_drift",
+      "reason": "vague_suggestion_rejected"
+    },
+    {
+      "cycle_index": 2,
+      "signature": "new_detector_idea::hazard_reliability_recovery_detector",
+      "gap_type": "hazard_reliability_decay",
+      "reason": "vague_suggestion_rejected"
     }
   ],
   "anti_noise_controls": {
-    "duplicate_suppression": 0,
+    "duplicate_suppression": 4,
     "low_value_pruned": 0,
     "cooldown_suppressed": 0,
-    "max_suggestions_per_cycle": 6,
-    "stricter_thresholds_active": false,
-    "priority_threshold": 0.35
+    "vague_rejected": 3,
+    "max_suggestions_per_cycle": 3,
+    "stricter_thresholds_active": true,
+    "priority_threshold": 0.43,
+    "self_expansion_quality_discipline": {
+      "quality_threshold_delta": 0.0,
+      "expansion_rate_limit": 0,
+      "expansion_quality_score": 1.0,
+      "redundancy_risk": 0.0,
+      "regression_risk": 0.0
+    }
   },
   "repeated_unresolved_gaps": [],
   "safety_controls": {
@@ -281,6 +102,183 @@
     "direct_live_deployment_blocked": true,
     "no_blind_live_self_rewrites": true,
     "stable_core_module_deletion_blocked": true
+  },
+  "discovery_state_tags": {
+    "synthetic_feature_state": "active",
+    "negative_space_state": "normal",
+    "invariant_break_state": "stable",
+    "pain_geometry_risk": 0.0,
+    "counterfactual_evaluation": "none",
+    "liquidity_decay_state": "insufficient_data"
+  },
+  "unified_market_intelligence_field": {
+    "unified_field_score": 0.458,
+    "composite_confidence": 0.4241,
+    "refusal_pause_behavior": {
+      "should_refuse": true,
+      "should_pause": true,
+      "refusal_reasons": [
+        "weak_detector_reliability"
+      ],
+      "pause_reasons": [
+        "calibration_drift_elevated",
+        "confidence_reliability_band_degraded"
+      ]
+    }
+  },
+  "execution_microstructure_intelligence_layer": {
+    "execution_quality_score": 1.0,
+    "execution_penalty": 0.0,
+    "execution_state": "insufficient_data",
+    "recommended_actions": [
+      "maintain_current_execution_controls"
+    ]
+  },
+  "adversarial_execution_intelligence_layer": {
+    "adversarial_execution_state": {
+      "hostile_execution_score": 0.0663,
+      "toxicity_proxy": 0.036,
+      "quote_fade_proxy": 0.18,
+      "sweep_aftermath_risk": 0.0,
+      "fill_collapse_risk": 0.14,
+      "adverse_selection_risk": 0.05,
+      "predatory_liquidity_state": "normal",
+      "historical_execution_hostility": 0.0663,
+      "execution_survival_bias": 0.0298,
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true
+      }
+    },
+    "confidence_adjustments": {
+      "hostility_penalty": 0.0972,
+      "hostility_adjusted_confidence": 0.9479
+    },
+    "risk_adjustments": {
+      "adversarial_execution_multiplier": 0.9569,
+      "should_reduce_size": false,
+      "should_pause": false,
+      "should_refuse": false,
+      "pause_reasons": [],
+      "refusal_reasons": []
+    }
+  },
+  "contradiction_arbitration_and_belief_resolution_layer": {
+    "arbitration": {
+      "outcome": "reduce_size",
+      "dominant_source": "unified_market_intelligence_field",
+      "max_contradiction_severity": 0.437,
+      "conflict_state": "active",
+      "reasons": [
+        "directional_opposition",
+        "directional_opposition",
+        "directional_opposition",
+        "directional_opposition",
+        "directional_opposition",
+        "directional_opposition",
+        "directional_opposition",
+        "directional_opposition"
+      ]
+    },
+    "confidence_adjustments": {
+      "base_composite_confidence": 0.4241,
+      "contradiction_penalty": 0.153,
+      "contradiction_adjusted_confidence": 0.2711
+    },
+    "risk_adjustments": {
+      "contradiction_multiplier": 0.7596,
+      "recommended_action": "reduce_size",
+      "should_reduce_size": true,
+      "should_pause": false,
+      "should_refuse": false
+    }
+  },
+  "calibration_and_uncertainty_governance_layer": {
+    "calibration_state": {
+      "raw_confidence": 0.4241,
+      "calibrated_confidence": 0.0634,
+      "calibration_drift": 0.6786,
+      "confidence_reliability_band": "low",
+      "epistemic_uncertainty": 1.0,
+      "aleatoric_proxy": 0.0,
+      "historical_confidence_error": 0.4241,
+      "regime_specific_reliability": {
+        "context_key": "evaluation_replay|range|insufficient_data",
+        "reliability_score": 0.5759,
+        "observations": 1
+      },
+      "execution_adjusted_uncertainty": 0.5196,
+      "latent_transition_context": {
+        "transition_hazard_score": 0.0989,
+        "transition_confidence_suppression": 0.0,
+        "transition_hazard_state": "stable"
+      },
+      "deception_context": {
+        "deception_score": 0.1026,
+        "deception_reliability": 0.8974,
+        "deception_state": "insufficient_data"
+      },
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true,
+        "pause_guard_triggered": true,
+        "refuse_guard_triggered": false
+      }
+    },
+    "confidence_adjustments": {
+      "confidence_delta": 0.3607,
+      "risk_multiplier": 0.5201,
+      "should_pause": true,
+      "should_refuse": false,
+      "pause_reasons": [
+        "calibration_drift_elevated",
+        "confidence_reliability_band_degraded"
+      ],
+      "refusal_reasons": []
+    },
+    "governance": {
+      "sandbox_only": true,
+      "replay_validation_required": true,
+      "live_deployment_allowed": false,
+      "no_blind_live_self_rewrites": true
+    }
+  },
+  "latent_transition_hazard_layer": {
+    "latent_transition_hazard_state": {
+      "transition_hazard_state": "stable",
+      "transition_hazard_score": 0.0989,
+      "precursor_instability_score": 0.008,
+      "regime_deformation_score": 0.0688,
+      "transition_directional_bias": "neutral",
+      "transition_confidence_suppression": 0.0,
+      "historical_transition_match": 0.3539,
+      "hazard_reliability": 0.3871,
+      "anticipatory_risk_bias": 0.0683,
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true,
+        "pause_guard_triggered": false,
+        "refuse_guard_triggered": false
+      }
+    },
+    "confidence_adjustments": {
+      "transition_hazard_score": 0.0989,
+      "transition_confidence_suppression": 0.0,
+      "hazard_adjusted_confidence": 0.4241
+    },
+    "risk_adjustments": {
+      "transition_hazard_multiplier": 0.9727,
+      "should_pause": false,
+      "should_refuse": false,
+      "pause_reasons": [],
+      "refusal_reasons": []
+    }
   },
   "paths": {
     "registry": "memory/capability_registry/self_suggestion_registry.json",
