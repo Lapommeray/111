@@ -4899,6 +4899,7 @@ def _detect_improvement_gaps(
     autonomous_capability_expansion_layer: dict[str, Any] | None = None,
     rollback_orchestration_and_safe_reversion_layer: dict[str, Any] | None = None,
     hypothesis_falsification_and_experiment_design_layer: dict[str, Any] | None = None,
+    capability_lineage_and_genealogy_intelligence_layer: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
     repeated = autonomous_behavior.get("trade_review_engine", {}).get("repeated_failure_patterns", [])
@@ -5560,6 +5561,58 @@ def _detect_improvement_gaps(
                 "detail": dominant_experiment_axis,
                 "frequency": max(1, int(round((1.0 - experiment_readiness_score) * 4))),
                 "severity": round(min(1.0, 1.0 - experiment_readiness_score), 4),
+            }
+        )
+    capability_lineage_and_genealogy_intelligence_layer = (
+        capability_lineage_and_genealogy_intelligence_layer
+        if isinstance(capability_lineage_and_genealogy_intelligence_layer, dict)
+        else {}
+    )
+    ancestry_clarity_score = float(
+        capability_lineage_and_genealogy_intelligence_layer.get("ancestry_clarity_score", 1.0) or 1.0
+    )
+    lineage_fragmentation_risk = float(
+        capability_lineage_and_genealogy_intelligence_layer.get("lineage_fragmentation_risk", 0.0) or 0.0
+    )
+    lineage_failure_recurrence = float(
+        capability_lineage_and_genealogy_intelligence_layer.get("lineage_failure_recurrence", 0.0) or 0.0
+    )
+    dominant_lineage_axis = str(
+        capability_lineage_and_genealogy_intelligence_layer.get(
+            "dominant_lineage_axis",
+            "unresolved_branching",
+        )
+    )
+    if lineage_fragmentation_risk >= 0.45:
+        gaps.append(
+            {
+                "gap_type": "lineage_fragmentation_pressure",
+                "detail": dominant_lineage_axis,
+                "frequency": max(1, int(round(lineage_fragmentation_risk * 4))),
+                "severity": round(min(1.0, lineage_fragmentation_risk), 4),
+            }
+        )
+    if ancestry_clarity_score <= 0.45:
+        gaps.append(
+            {
+                "gap_type": "ancestry_clarity_deficit",
+                "detail": dominant_lineage_axis,
+                "frequency": max(1, int(round((1.0 - ancestry_clarity_score) * 4))),
+                "severity": round(min(1.0, 1.0 - ancestry_clarity_score), 4),
+            }
+        )
+    if lineage_failure_recurrence >= 0.5:
+        gaps.append(
+            {
+                "gap_type": "genealogy_failure_recurrence",
+                "detail": str(
+                    capability_lineage_and_genealogy_intelligence_layer.get(
+                        "genealogy_reason_cluster",
+                        "lineage_failure_recurrence",
+                    )
+                ),
+                "frequency": max(1, int(round(lineage_failure_recurrence * 4))),
+                "severity": round(min(1.0, lineage_failure_recurrence), 4),
             }
         )
     return gaps
@@ -6797,6 +6850,7 @@ def _self_suggestion_governor(
     autonomous_capability_expansion_layer: dict[str, Any] | None = None,
     rollback_orchestration_and_safe_reversion_layer: dict[str, Any] | None = None,
     hypothesis_falsification_and_experiment_design_layer: dict[str, Any] | None = None,
+    capability_lineage_and_genealogy_intelligence_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     registry_dir = memory_root / "capability_registry"
     registry_dir.mkdir(parents=True, exist_ok=True)
@@ -6851,6 +6905,7 @@ def _self_suggestion_governor(
         autonomous_capability_expansion_layer=autonomous_capability_expansion_layer,
         rollback_orchestration_and_safe_reversion_layer=rollback_orchestration_and_safe_reversion_layer,
         hypothesis_falsification_and_experiment_design_layer=hypothesis_falsification_and_experiment_design_layer,
+        capability_lineage_and_genealogy_intelligence_layer=capability_lineage_and_genealogy_intelligence_layer,
     )
     calibration_uncertainty_engine = (
         calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
@@ -6877,6 +6932,11 @@ def _self_suggestion_governor(
     hypothesis_falsification_and_experiment_design_layer = (
         hypothesis_falsification_and_experiment_design_layer
         if isinstance(hypothesis_falsification_and_experiment_design_layer, dict)
+        else {}
+    )
+    capability_lineage_and_genealogy_intelligence_layer = (
+        capability_lineage_and_genealogy_intelligence_layer
+        if isinstance(capability_lineage_and_genealogy_intelligence_layer, dict)
         else {}
     )
     cross_regime_transfer_robustness_layer = (
@@ -7412,6 +7472,27 @@ def _self_suggestion_governor(
                 4,
             ),
         },
+        "capability_lineage_and_genealogy_intelligence_layer": {
+            "capability_lineage_state": str(
+                capability_lineage_and_genealogy_intelligence_layer.get("capability_lineage_state", "coherent")
+            ),
+            "genealogy_integrity_score": round(
+                float(capability_lineage_and_genealogy_intelligence_layer.get("genealogy_integrity_score", 0.0) or 0.0),
+                4,
+            ),
+            "ancestry_clarity_score": round(
+                float(capability_lineage_and_genealogy_intelligence_layer.get("ancestry_clarity_score", 0.0) or 0.0),
+                4,
+            ),
+            "lineage_fragmentation_risk": round(
+                float(capability_lineage_and_genealogy_intelligence_layer.get("lineage_fragmentation_risk", 0.0) or 0.0),
+                4,
+            ),
+            "lineage_reliability": round(
+                float(capability_lineage_and_genealogy_intelligence_layer.get("lineage_reliability", 0.0) or 0.0),
+                4,
+            ),
+        },
         "paths": {
             "registry": str(registry_path),
             "governor": str(governor_path),
@@ -7911,6 +7992,7 @@ def _self_expansion_quality_layer(
     autonomous_capability_expansion_layer: dict[str, Any] | None = None,
     rollback_orchestration_and_safe_reversion_layer: dict[str, Any] | None = None,
     hypothesis_falsification_and_experiment_design_layer: dict[str, Any] | None = None,
+    capability_lineage_and_genealogy_intelligence_layer: dict[str, Any] | None = None,
     replay_scope: str,
 ) -> dict[str, Any]:
     quality_dir = memory_root / "self_expansion_quality"
@@ -7967,6 +8049,11 @@ def _self_expansion_quality_layer(
     hypothesis_falsification_and_experiment_design_layer = (
         hypothesis_falsification_and_experiment_design_layer
         if isinstance(hypothesis_falsification_and_experiment_design_layer, dict)
+        else {}
+    )
+    capability_lineage_and_genealogy_intelligence_layer = (
+        capability_lineage_and_genealogy_intelligence_layer
+        if isinstance(capability_lineage_and_genealogy_intelligence_layer, dict)
         else {}
     )
 
@@ -8427,6 +8514,64 @@ def _self_expansion_quality_layer(
                     float(
                         hypothesis_falsification_and_experiment_design_layer.get("falsification_reliability", 0.0) or 0.0
                     ),
+                ),
+            ),
+            4,
+        ),
+        "lineage_integrity_context": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    float(
+                        capability_lineage_and_genealogy_intelligence_layer.get("genealogy_integrity_score", 0.0)
+                        or 0.0
+                    ),
+                ),
+            ),
+            4,
+        ),
+        "ancestry_clarity_context": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    float(capability_lineage_and_genealogy_intelligence_layer.get("ancestry_clarity_score", 0.0) or 0.0),
+                ),
+            ),
+            4,
+        ),
+        "lineage_fragmentation_pressure_context": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    float(
+                        capability_lineage_and_genealogy_intelligence_layer.get("lineage_fragmentation_risk", 0.0) or 0.0
+                    ),
+                ),
+            ),
+            4,
+        ),
+        "lineage_redundancy_context": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    float(
+                        capability_lineage_and_genealogy_intelligence_layer.get("lineage_redundancy_pressure", 0.0)
+                        or 0.0
+                    ),
+                ),
+            ),
+            4,
+        ),
+        "lineage_reliability_context": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    float(capability_lineage_and_genealogy_intelligence_layer.get("lineage_reliability", 0.0) or 0.0),
                 ),
             ),
             4,
@@ -9753,6 +9898,282 @@ def _hypothesis_falsification_and_experiment_design_layer(
                     "experiment_priority_score": experiment_priority_score,
                     "dominant_experiment_axis": dominant_experiment_axis,
                     "experiment_reason_cluster": experiment_reason_cluster,
+                }
+            ]
+        },
+    )
+    write_json_atomic(governance_state_path, {**governance_flags, "replay_scope": replay_scope})
+    return payload
+
+
+def _capability_lineage_and_genealogy_intelligence_layer(
+    *,
+    memory_root: Path,
+    replay_scope: str,
+    governed_capability_invention_layer: dict[str, Any],
+    autonomous_capability_expansion_layer: dict[str, Any],
+    self_expansion_quality_layer: dict[str, Any],
+    hypothesis_falsification_and_experiment_design_layer: dict[str, Any] | None = None,
+    rollback_orchestration_and_safe_reversion_layer: dict[str, Any] | None = None,
+    system_coherence_and_drift_integrity_layer: dict[str, Any] | None = None,
+    learning_stability_and_catastrophic_drift_guard_layer: dict[str, Any] | None = None,
+    capability_evolution_ladder: dict[str, Any] | None = None,
+    self_suggestion_governor: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    lineage_dir = memory_root / "capability_lineage"
+    lineage_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = lineage_dir / "capability_lineage_latest.json"
+    history_path = lineage_dir / "capability_lineage_history.json"
+    candidate_registry_path = lineage_dir / "lineage_candidate_registry.json"
+    genealogy_branch_registry_path = lineage_dir / "genealogy_branch_registry.json"
+    fragmentation_watchlist_path = lineage_dir / "lineage_fragmentation_watchlist.json"
+    lineage_failure_trace_path = lineage_dir / "lineage_failure_trace.json"
+    governance_state_path = lineage_dir / "capability_lineage_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    governed_capability_invention_layer = (
+        governed_capability_invention_layer if isinstance(governed_capability_invention_layer, dict) else {}
+    )
+    autonomous_capability_expansion_layer = (
+        autonomous_capability_expansion_layer if isinstance(autonomous_capability_expansion_layer, dict) else {}
+    )
+    self_expansion_quality_layer = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+    hypothesis_falsification_and_experiment_design_layer = (
+        hypothesis_falsification_and_experiment_design_layer
+        if isinstance(hypothesis_falsification_and_experiment_design_layer, dict)
+        else {}
+    )
+    rollback_orchestration_and_safe_reversion_layer = (
+        rollback_orchestration_and_safe_reversion_layer
+        if isinstance(rollback_orchestration_and_safe_reversion_layer, dict)
+        else {}
+    )
+    system_coherence_and_drift_integrity_layer = (
+        system_coherence_and_drift_integrity_layer
+        if isinstance(system_coherence_and_drift_integrity_layer, dict)
+        else {}
+    )
+    learning_stability_and_catastrophic_drift_guard_layer = (
+        learning_stability_and_catastrophic_drift_guard_layer
+        if isinstance(learning_stability_and_catastrophic_drift_guard_layer, dict)
+        else {}
+    )
+    capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
+    self_suggestion_governor = self_suggestion_governor if isinstance(self_suggestion_governor, dict) else {}
+
+    invention_reliability = _bounded(float(governed_capability_invention_layer.get("invention_reliability", 0.5) or 0.5))
+    invention_redundancy = _bounded(float(governed_capability_invention_layer.get("redundancy_risk", 0.0) or 0.0))
+    invention_novelty = _bounded(float(governed_capability_invention_layer.get("novelty_score", 0.0) or 0.0))
+    expansion_reliability = _bounded(float(autonomous_capability_expansion_layer.get("expansion_reliability", 0.5) or 0.5))
+    expansion_pressure = _bounded(float(autonomous_capability_expansion_layer.get("expansion_pressure_score", 0.0) or 0.0))
+    expansion_readiness = _bounded(float(autonomous_capability_expansion_layer.get("expansion_readiness_score", 0.0) or 0.0))
+    quality_score = _bounded(float(self_expansion_quality_layer.get("expansion_quality_score", 0.5) or 0.5))
+    quality_redundancy = _bounded(float(self_expansion_quality_layer.get("redundancy_risk", 0.0) or 0.0))
+    regression_risk = _bounded(float(self_expansion_quality_layer.get("regression_risk", 0.0) or 0.0))
+    falsification_reliability = _bounded(
+        float(hypothesis_falsification_and_experiment_design_layer.get("falsification_reliability", 0.5) or 0.5)
+    )
+    hypothesis_readiness = _bounded(
+        float(hypothesis_falsification_and_experiment_design_layer.get("experiment_readiness_score", 0.5) or 0.5)
+    )
+    rollback_urgency = _bounded(float(rollback_orchestration_and_safe_reversion_layer.get("rollback_urgency", 0.0) or 0.0))
+    rollback_reliability = _bounded(
+        float(rollback_orchestration_and_safe_reversion_layer.get("rollback_reversion_reliability", 0.5) or 0.5)
+    )
+    coherence_reliability = _bounded(float(system_coherence_and_drift_integrity_layer.get("coherence_reliability", 0.5) or 0.5))
+    fragmentation_risk = _bounded(float(system_coherence_and_drift_integrity_layer.get("fragmentation_risk", 0.0) or 0.0))
+    learning_stability_score = _bounded(
+        float(learning_stability_and_catastrophic_drift_guard_layer.get("learning_stability_score", 0.5) or 0.5)
+    )
+    catastrophic_drift_risk = _bounded(
+        float(learning_stability_and_catastrophic_drift_guard_layer.get("catastrophic_drift_risk", 0.0) or 0.0)
+    )
+
+    repeated_unresolved = self_suggestion_governor.get("repeated_unresolved_gaps", [])
+    if not isinstance(repeated_unresolved, list):
+        repeated_unresolved = []
+    ladder_candidates = capability_evolution_ladder.get("capability_candidates", [])
+    if not isinstance(ladder_candidates, list):
+        ladder_candidates = []
+    branch_signatures: dict[str, int] = {}
+    lineage_candidates: list[dict[str, Any]] = []
+    max_lineage_candidates = 50
+    max_hypothesis_length = 80
+    for index, candidate in enumerate(item for item in ladder_candidates[:max_lineage_candidates] if isinstance(item, dict)):
+        gap_type = str(candidate.get("gap_type", "unknown"))
+        hypothesis = str(candidate.get("capability_hypothesis", "unknown"))[:max_hypothesis_length]
+        signature = f"{gap_type}|{hypothesis}".lower()
+        branch_signatures[signature] = branch_signatures.get(signature, 0) + 1
+        lineage_candidates.append(
+            {
+                "lineage_id": f"lineage_candidate_{index + 1}",
+                "gap_type": gap_type,
+                "capability_hypothesis": hypothesis,
+                "lineage_signature": signature,
+            }
+        )
+    lineage_branch_count = max(1, len(branch_signatures))
+    unresolved_pressure = _bounded(len([item for item in repeated_unresolved if isinstance(item, dict)]) / 10.0)
+    branch_pressure = _bounded(min(1.0, lineage_branch_count / 12.0))
+    lineage_redundancy_pressure = _bounded(
+        max(0.0, quality_redundancy * 0.45 + invention_redundancy * 0.35 + (1.0 - invention_novelty) * 0.2)
+    )
+    lineage_fragmentation_risk = _bounded(
+        (fragmentation_risk * 0.3)
+        + (branch_pressure * 0.25)
+        + (unresolved_pressure * 0.2)
+        + (lineage_redundancy_pressure * 0.15)
+        + (rollback_urgency * 0.1)
+    )
+    lineage_failure_recurrence = _bounded(
+        (unresolved_pressure * 0.45)
+        + (regression_risk * 0.2)
+        + (catastrophic_drift_risk * 0.2)
+        + ((1.0 - hypothesis_readiness) * 0.15)
+    )
+    ancestry_clarity_score = _bounded(
+        (invention_reliability * 0.25)
+        + (expansion_readiness * 0.2)
+        + ((1.0 - lineage_fragmentation_risk) * 0.2)
+        + ((1.0 - lineage_redundancy_pressure) * 0.2)
+        + (coherence_reliability * 0.15)
+    )
+    genealogy_integrity_score = _bounded(
+        (ancestry_clarity_score * 0.3)
+        + (falsification_reliability * 0.2)
+        + (quality_score * 0.15)
+        + (rollback_reliability * 0.15)
+        + (learning_stability_score * 0.1)
+        + ((1.0 - lineage_failure_recurrence) * 0.1)
+    )
+    lineage_reliability = _bounded(
+        (genealogy_integrity_score * 0.45)
+        + (ancestry_clarity_score * 0.3)
+        + ((1.0 - lineage_fragmentation_risk) * 0.15)
+        + ((1.0 - lineage_failure_recurrence) * 0.1)
+    )
+    promotion_freeze_recommended = bool(
+        lineage_fragmentation_risk >= 0.62
+        or ancestry_clarity_score <= 0.42
+        or genealogy_integrity_score <= 0.4
+    )
+
+    if unresolved_pressure >= 0.62:
+        dominant_lineage_axis = "unresolved_branching"
+    elif rollback_urgency >= 0.62:
+        dominant_lineage_axis = "rollback_lineage"
+    elif falsification_reliability <= 0.48:
+        dominant_lineage_axis = "falsification_lineage"
+    elif quality_score <= 0.5:
+        dominant_lineage_axis = "quality_lineage"
+    elif expansion_pressure >= 0.55:
+        dominant_lineage_axis = "expansion_lineage"
+    elif coherence_reliability >= 0.6 and learning_stability_score >= 0.55:
+        dominant_lineage_axis = "cross_context_lineage"
+    else:
+        dominant_lineage_axis = "invention_lineage"
+
+    if ancestry_clarity_score <= 0.35 or genealogy_integrity_score <= 0.35:
+        capability_lineage_state = "ancestry_critical"
+    elif lineage_fragmentation_risk >= 0.62:
+        capability_lineage_state = "fragmented"
+    elif lineage_branch_count >= 4 or lineage_redundancy_pressure >= 0.45:
+        capability_lineage_state = "branching"
+    else:
+        capability_lineage_state = "coherent"
+
+    genealogy_reason_cluster = (
+        "ancestry_integrity_collapse"
+        if capability_lineage_state == "ancestry_critical"
+        else "lineage_fragmentation_escalation"
+        if capability_lineage_state == "fragmented"
+        else "branching_redundancy_pressure"
+        if capability_lineage_state == "branching"
+        else "coherent_lineage_progression"
+    )
+
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+    }
+    payload = {
+        "capability_lineage_state": capability_lineage_state,
+        "genealogy_integrity_score": genealogy_integrity_score,
+        "ancestry_clarity_score": ancestry_clarity_score,
+        "lineage_fragmentation_risk": lineage_fragmentation_risk,
+        "lineage_redundancy_pressure": lineage_redundancy_pressure,
+        "lineage_failure_recurrence": lineage_failure_recurrence,
+        "lineage_branch_count": lineage_branch_count,
+        "dominant_lineage_axis": dominant_lineage_axis,
+        "genealogy_reason_cluster": genealogy_reason_cluster,
+        "lineage_reliability": lineage_reliability,
+        "promotion_freeze_recommended": promotion_freeze_recommended,
+        "governance_flags": governance_flags,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "lineage_candidate_registry": str(candidate_registry_path),
+            "genealogy_branch_registry": str(genealogy_branch_registry_path),
+            "lineage_fragmentation_watchlist": str(fragmentation_watchlist_path),
+            "lineage_failure_trace": str(lineage_failure_trace_path),
+            "capability_lineage_governance_state": str(governance_state_path),
+        },
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+    write_json_atomic(
+        candidate_registry_path,
+        {
+            "lineage_branch_count": lineage_branch_count,
+            "dominant_lineage_axis": dominant_lineage_axis,
+            "lineage_candidates": lineage_candidates,
+        },
+    )
+    write_json_atomic(
+        genealogy_branch_registry_path,
+        {
+            "branch_signatures": [
+                {"signature": signature, "count": count}
+                for signature, count in sorted(branch_signatures.items(), key=lambda item: (-item[1], item[0]))
+            ],
+            "lineage_redundancy_pressure": lineage_redundancy_pressure,
+            "ancestry_clarity_score": ancestry_clarity_score,
+        },
+    )
+    write_json_atomic(
+        fragmentation_watchlist_path,
+        {
+            "lineage_fragmentation_risk": lineage_fragmentation_risk,
+            "genealogy_reason_cluster": genealogy_reason_cluster,
+            "watchlist": [
+                {
+                    "dominant_lineage_axis": dominant_lineage_axis,
+                    "lineage_branch_count": lineage_branch_count,
+                    "unresolved_pressure": unresolved_pressure,
+                }
+            ],
+        },
+    )
+    write_json_atomic(
+        lineage_failure_trace_path,
+        {
+            "entries": [
+                {
+                    "replay_scope": replay_scope,
+                    "lineage_failure_recurrence": lineage_failure_recurrence,
+                    "lineage_fragmentation_risk": lineage_fragmentation_risk,
+                    "genealogy_reason_cluster": genealogy_reason_cluster,
                 }
             ]
         },
@@ -11205,6 +11626,91 @@ def run_self_evolving_indicator_layer(
     )
     decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
     unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    capability_lineage_engine = _capability_lineage_and_genealogy_intelligence_layer(
+        memory_root=memory_root,
+        replay_scope=replay_scope,
+        governed_capability_invention_layer=governed_capability_invention_engine,
+        autonomous_capability_expansion_layer=autonomous_capability_expansion_engine,
+        self_expansion_quality_layer=self_expansion_quality_engine,
+        hypothesis_falsification_and_experiment_design_layer=hypothesis_falsification_engine,
+        rollback_orchestration_and_safe_reversion_layer=rollback_orchestration_engine,
+        system_coherence_and_drift_integrity_layer=system_coherence_drift_integrity_engine,
+        learning_stability_and_catastrophic_drift_guard_layer=learning_stability_guard_engine,
+        capability_evolution_ladder=capability_evolution_ladder,
+        self_suggestion_governor=self_suggestion_governor,
+    )
+    self_suggestion_governor["capability_lineage_and_genealogy_intelligence_layer"] = {
+        "capability_lineage_state": capability_lineage_engine.get("capability_lineage_state", "coherent"),
+        "genealogy_integrity_score": capability_lineage_engine.get("genealogy_integrity_score", 0.0),
+        "ancestry_clarity_score": capability_lineage_engine.get("ancestry_clarity_score", 0.0),
+        "lineage_fragmentation_risk": capability_lineage_engine.get("lineage_fragmentation_risk", 0.0),
+        "lineage_reliability": capability_lineage_engine.get("lineage_reliability", 0.0),
+    }
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["capability_lineage_state"] = {
+        "state": str(capability_lineage_engine.get("capability_lineage_state", "coherent")),
+        "dominant_lineage_axis": str(capability_lineage_engine.get("dominant_lineage_axis", "invention_lineage")),
+        "genealogy_reason_cluster": str(
+            capability_lineage_engine.get("genealogy_reason_cluster", "coherent_lineage_progression")
+        ),
+    }
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["lineage_reliability"] = round(
+        max(0.0, min(1.0, float(capability_lineage_engine.get("lineage_reliability", 0.0) or 0.0))),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["capability_lineage"] = {
+        "genealogy_integrity_score": round(float(capability_lineage_engine.get("genealogy_integrity_score", 0.0) or 0.0), 4),
+        "ancestry_clarity_score": round(float(capability_lineage_engine.get("ancestry_clarity_score", 0.0) or 0.0), 4),
+        "lineage_fragmentation_risk": round(
+            float(capability_lineage_engine.get("lineage_fragmentation_risk", 0.0) or 0.0),
+            4,
+        ),
+        "lineage_redundancy_pressure": round(
+            float(capability_lineage_engine.get("lineage_redundancy_pressure", 0.0) or 0.0),
+            4,
+        ),
+        "promotion_freeze_recommended": bool(capability_lineage_engine.get("promotion_freeze_recommended", False)),
+        "dominant_lineage_axis": capability_lineage_engine.get("dominant_lineage_axis", "invention_lineage"),
+    }
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    lineage_fragmentation_risk = float(capability_lineage_engine.get("lineage_fragmentation_risk", 0.0) or 0.0)
+    ancestry_clarity_score = float(capability_lineage_engine.get("ancestry_clarity_score", 1.0) or 1.0)
+    if (lineage_fragmentation_risk >= 0.5 or ancestry_clarity_score <= 0.5) and (
+        "capability_lineage_pause_guard" not in pause_reasons
+    ):
+        pause_reasons.append("capability_lineage_pause_guard")
+    if (lineage_fragmentation_risk >= 0.62 or ancestry_clarity_score <= 0.4) and (
+        "capability_lineage_refusal_guard" not in refusal_reasons
+    ):
+        refusal_reasons.append("capability_lineage_refusal_guard")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        lineage_fragmentation_risk >= 0.5 or ancestry_clarity_score <= 0.5
+    )
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        lineage_fragmentation_risk >= 0.62 or ancestry_clarity_score <= 0.4
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
     survival_intelligence = {
         "capital_survival_engine": autonomous_behavior.get("capital_survival_engine", {}),
         "pain_memory_survival_layer": pain_memory_survival,
@@ -11237,6 +11743,7 @@ def run_self_evolving_indicator_layer(
         "learning_stability_and_catastrophic_drift_guard_layer": learning_stability_guard_engine,
         "rollback_orchestration_and_safe_reversion_layer": rollback_orchestration_engine,
         "hypothesis_falsification_and_experiment_design_layer": hypothesis_falsification_engine,
+        "capability_lineage_and_genealogy_intelligence_layer": capability_lineage_engine,
     }
     meta_learning_loop = _meta_learning_loop(
         memory_root=memory_root,
@@ -11282,5 +11789,6 @@ def run_self_evolving_indicator_layer(
         "learning_stability_and_catastrophic_drift_guard_layer": learning_stability_guard_engine,
         "rollback_orchestration_and_safe_reversion_layer": rollback_orchestration_engine,
         "hypothesis_falsification_and_experiment_design_layer": hypothesis_falsification_engine,
+        "capability_lineage_and_genealogy_intelligence_layer": capability_lineage_engine,
         "meta_learning_loop": meta_learning_loop,
     }

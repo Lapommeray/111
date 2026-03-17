@@ -432,6 +432,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "learning_stability_state",
         "rollback_orchestration_state",
         "hypothesis_falsification_state",
+        "capability_lineage_state",
     }
     assert 0.0 <= unified["unified_field_score"] <= 1.0
     assert 0.0 <= unified["confidence_structure"]["composite_confidence"] <= 1.0
@@ -748,6 +749,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "learning_stability_state",
         "rollback_orchestration_state",
         "hypothesis_falsification_state",
+        "capability_lineage_state",
     }
 
 
@@ -4673,5 +4675,232 @@ def test_hypothesis_falsification_layer_feeds_learning_stability_nonbreaking(tmp
     learning = result["learning_stability_and_catastrophic_drift_guard_layer"]
     assert 0.0 <= float(layer["experiment_readiness_score"]) <= 1.0
     assert 0.0 <= float(layer["falsification_reliability"]) <= 1.0
+    assert 0.0 <= float(learning["learning_stability_score"]) <= 1.0
+    assert 0.0 <= float(learning["catastrophic_drift_risk"]) <= 1.0
+
+
+def test_capability_lineage_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "clp1", "status": "closed", "result": "loss", "pnl_points": -1.3, "failure_cause": "execution_failure"},
+            {"trade_id": "clp2", "status": "closed", "result": "loss", "pnl_points": -1.1, "failure_cause": "slippage_spike"},
+            {"trade_id": "clp3", "status": "closed", "result": "win", "pnl_points": 0.6, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.3, "spread_ratio": 3.1, "slippage_ratio": 2.8},
+        replay_scope="full_replay",
+    )
+    layer = result["capability_lineage_and_genealogy_intelligence_layer"]
+    assert Path(layer["paths"]["latest"]).exists()
+    assert Path(layer["paths"]["history"]).exists()
+    assert Path(layer["paths"]["lineage_candidate_registry"]).exists()
+    assert Path(layer["paths"]["genealogy_branch_registry"]).exists()
+    assert Path(layer["paths"]["lineage_fragmentation_watchlist"]).exists()
+    assert Path(layer["paths"]["lineage_failure_trace"]).exists()
+    assert Path(layer["paths"]["capability_lineage_governance_state"]).exists()
+
+
+def test_capability_lineage_layer_returns_expected_schema(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cls1", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "execution_failure"},
+            {"trade_id": "cls2", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "partial_fill"},
+            {"trade_id": "cls3", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.1, "spread_ratio": 2.9, "slippage_ratio": 2.6},
+        replay_scope="focused_replay",
+    )
+    layer = result["capability_lineage_and_genealogy_intelligence_layer"]
+    expected_keys = {
+        "capability_lineage_state",
+        "genealogy_integrity_score",
+        "ancestry_clarity_score",
+        "lineage_fragmentation_risk",
+        "lineage_redundancy_pressure",
+        "lineage_failure_recurrence",
+        "lineage_branch_count",
+        "dominant_lineage_axis",
+        "genealogy_reason_cluster",
+        "lineage_reliability",
+        "promotion_freeze_recommended",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(layer))
+    assert layer["capability_lineage_state"] in {"coherent", "branching", "fragmented", "ancestry_critical"}
+    assert layer["dominant_lineage_axis"] in {
+        "invention_lineage",
+        "expansion_lineage",
+        "quality_lineage",
+        "rollback_lineage",
+        "falsification_lineage",
+        "cross_context_lineage",
+        "unresolved_branching",
+    }
+    assert 0.0 <= float(layer["genealogy_integrity_score"]) <= 1.0
+    assert 0.0 <= float(layer["ancestry_clarity_score"]) <= 1.0
+    assert 0.0 <= float(layer["lineage_fragmentation_risk"]) <= 1.0
+    assert 0.0 <= float(layer["lineage_redundancy_pressure"]) <= 1.0
+    assert 0.0 <= float(layer["lineage_failure_recurrence"]) <= 1.0
+    assert 0.0 <= float(layer["lineage_reliability"]) <= 1.0
+    assert int(layer["lineage_branch_count"]) >= 1
+    assert isinstance(layer["promotion_freeze_recommended"], bool)
+
+
+def test_capability_lineage_layer_adds_unified_field_components_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "clu1", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "execution_failure"},
+            {"trade_id": "clu2", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.3, "slippage_ratio": 2.1},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "unified_field_score" in unified
+    assert "composite_confidence" in unified["confidence_structure"]
+    assert "capability_lineage_state" in unified["components"]
+    assert "lineage_reliability" in unified["confidence_structure"]
+    assert "capability_lineage" in unified["decision_refinements"]
+
+
+def test_capability_lineage_layer_additively_influences_refusal_pause_behavior(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "clb1", "status": "closed", "result": "loss", "pnl_points": -1.8, "failure_cause": "execution_failure"},
+            {"trade_id": "clb2", "status": "closed", "result": "loss", "pnl_points": -1.6, "failure_cause": "partial_fill"},
+            {"trade_id": "clb3", "status": "closed", "result": "loss", "pnl_points": -1.4, "failure_cause": "spread_spike"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.8, "spread_ratio": 3.8, "slippage_ratio": 3.6},
+        replay_scope="full_replay",
+    )
+    behavior = result["unified_market_intelligence_field"]["decision_refinements"]["refusal_pause_behavior"]
+    layer = result["capability_lineage_and_genealogy_intelligence_layer"]
+    assert isinstance(behavior.get("pause_reasons"), list)
+    assert isinstance(behavior.get("refusal_reasons"), list)
+    if float(layer["lineage_fragmentation_risk"]) >= 0.5 or float(layer["ancestry_clarity_score"]) <= 0.5:
+        assert "capability_lineage_pause_guard" in behavior["pause_reasons"]
+    if "capability_lineage_pause_guard" in behavior["pause_reasons"]:
+        assert behavior["should_pause"] is True
+    if float(layer["lineage_fragmentation_risk"]) >= 0.62 or float(layer["ancestry_clarity_score"]) <= 0.4:
+        assert "capability_lineage_refusal_guard" in behavior["refusal_reasons"]
+    if "capability_lineage_refusal_guard" in behavior["refusal_reasons"]:
+        assert behavior["should_refuse"] is True
+
+
+def test_capability_lineage_layer_detects_fragmentation_under_redundant_branch_pressure(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cld1", "status": "closed", "result": "flat", "pnl_points": 0.0, "failure_cause": "none"},
+            {"trade_id": "cld2", "status": "closed", "result": "flat", "pnl_points": 0.0, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    layer = result["capability_lineage_and_genealogy_intelligence_layer"]
+    assert layer["capability_lineage_state"] in {"coherent", "branching", "fragmented", "ancestry_critical"}
+    assert 0.0 <= float(layer["lineage_fragmentation_risk"]) <= 1.0
+
+
+def test_capability_lineage_layer_history_rolls_and_governance_is_sandbox_replay_only(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    for i in range(3):
+        run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"clh{i}a", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "execution_failure"},
+                {"trade_id": f"clh{i}b", "status": "closed", "result": "win", "pnl_points": 0.4, "failure_cause": "none"},
+            ],
+            market_state={"structure_state": "range", "volatility_ratio": 1.9, "spread_ratio": 2.4, "slippage_ratio": 2.1},
+            replay_scope="focused_replay",
+        )
+    history = json.loads((memory_root / "capability_lineage" / "capability_lineage_history.json").read_text(encoding="utf-8"))
+    assert history["snapshots"]
+    assert len(history["snapshots"]) <= 200
+    latest = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "clhla", "status": "closed", "result": "loss", "pnl_points": -0.7, "failure_cause": "execution_failure"},
+            {"trade_id": "clhlb", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.1, "slippage_ratio": 1.9},
+        replay_scope="focused_replay",
+    )
+    flags = latest["capability_lineage_and_genealogy_intelligence_layer"]["governance_flags"]
+    assert flags["sandbox_only"] is True
+    assert flags["replay_validation_required"] is True
+    assert flags["live_deployment_allowed"] is False
+    assert flags["no_blind_live_self_rewrites"] is True
+
+
+def test_capability_lineage_layer_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cln1", "status": "closed", "result": "loss", "pnl_points": -0.2},
+            {"trade_id": "cln2", "status": "closed", "result": "flat", "pnl_points": 0.0},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    layer = result["capability_lineage_and_genealogy_intelligence_layer"]
+    assert layer["capability_lineage_state"] in {"coherent", "branching", "fragmented", "ancestry_critical"}
+    assert 0.0 <= float(layer["genealogy_integrity_score"]) <= 1.0
+    assert 0.0 <= float(layer["ancestry_clarity_score"]) <= 1.0
+    assert 0.0 <= float(layer["lineage_fragmentation_risk"]) <= 1.0
+    assert 0.0 <= float(layer["lineage_reliability"]) <= 1.0
+
+
+def test_capability_lineage_layer_feeds_self_expansion_quality_components_nonbreaking(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "clq1", "status": "closed", "result": "loss", "pnl_points": -1.2, "failure_cause": "execution_failure"},
+            {"trade_id": "clq2", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "slippage_spike"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.4, "spread_ratio": 3.3, "slippage_ratio": 3.0},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "clq3", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "execution_failure"},
+            {"trade_id": "clq4", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 2.7, "slippage_ratio": 2.4},
+        replay_scope="full_replay",
+    )
+    quality_components = second["self_expansion_quality_layer"]["quality_components"]
+    for key in (
+        "lineage_integrity_context",
+        "ancestry_clarity_context",
+        "lineage_fragmentation_pressure_context",
+        "lineage_redundancy_context",
+        "lineage_reliability_context",
+    ):
+        assert key in quality_components
+        assert 0.0 <= float(quality_components[key]) <= 1.0
+
+
+def test_capability_lineage_layer_feeds_learning_stability_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cll1", "status": "closed", "result": "loss", "pnl_points": -1.2, "failure_cause": "execution_failure"},
+            {"trade_id": "cll2", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "partial_fill"},
+            {"trade_id": "cll3", "status": "closed", "result": "win", "pnl_points": 0.6, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.3, "spread_ratio": 3.0, "slippage_ratio": 2.7},
+        replay_scope="full_replay",
+    )
+    layer = result["capability_lineage_and_genealogy_intelligence_layer"]
+    learning = result["learning_stability_and_catastrophic_drift_guard_layer"]
+    assert 0.0 <= float(layer["genealogy_integrity_score"]) <= 1.0
+    assert 0.0 <= float(layer["lineage_reliability"]) <= 1.0
     assert 0.0 <= float(learning["learning_stability_score"]) <= 1.0
     assert 0.0 <= float(learning["catastrophic_drift_risk"]) <= 1.0
