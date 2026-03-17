@@ -1588,6 +1588,34 @@ def _capability_evolution_governance_ladder(
         max(0.0, min(1.0, sum(historical_reliability_scores) / max(1, len(historical_reliability_scores)))),
         4,
     )
+    structural_alignment_registry = read_json_safe(
+        memory_root / "structural_memory_graph" / "regime_memory_alignment_registry.json",
+        default={"regimes": {}},
+    )
+    if not isinstance(structural_alignment_registry, dict):
+        structural_alignment_registry = {"regimes": {}}
+    structural_alignment_items = structural_alignment_registry.get("regimes", {})
+    if not isinstance(structural_alignment_items, dict):
+        structural_alignment_items = {}
+    structural_alignment_scores = [
+        float(item.get("alignment_score", 0.5) or 0.5)
+        for item in structural_alignment_items.values()
+        if isinstance(item, dict)
+    ]
+    prior_structural_alignment = round(
+        max(0.0, min(1.0, sum(structural_alignment_scores) / max(1, len(structural_alignment_scores)))),
+        4,
+    )
+    structural_context_registry = read_json_safe(
+        memory_root / "structural_memory_graph" / "structural_context_registry.json",
+        default={"contexts": {}},
+    )
+    if not isinstance(structural_context_registry, dict):
+        structural_context_registry = {"contexts": {}}
+    structural_context_items = structural_context_registry.get("contexts", {})
+    if not isinstance(structural_context_items, dict):
+        structural_context_items = {}
+    structural_context_coverage = min(1.0, len(structural_context_items) / 25.0)
 
     candidates: list[dict[str, Any]] = []
     validation_records: list[dict[str, Any]] = []
@@ -1642,6 +1670,11 @@ def _capability_evolution_governance_ladder(
                 "prior_cycle_hostility": prior_cycle_hostility,
                 "predatory_liquidity_state": predatory_liquidity_state,
                 "source": "memory/adversarial_execution/detector_reliability_registry.json",
+            },
+            "structural_memory_context": {
+                "prior_alignment_score": prior_structural_alignment,
+                "context_coverage": round(float(structural_context_coverage), 4),
+                "source": "memory/structural_memory_graph/regime_memory_alignment_registry.json",
             },
             "governance": {
                 "sandbox_only": True,
@@ -2102,6 +2135,366 @@ def _unified_market_intelligence_field(
     return {**payload, "paths": {"latest": str(latest_path), "history": str(history_path)}}
 
 
+def _structural_memory_graph_layer(
+    *,
+    memory_root: Path,
+    closed: list[dict[str, Any]],
+    market_state: dict[str, Any],
+    unified_market_intelligence_field: dict[str, Any],
+    execution_microstructure_engine: dict[str, Any],
+    adversarial_execution_engine: dict[str, Any] | None = None,
+    contradiction_arbitration_engine: dict[str, Any] | None = None,
+    replay_scope: str,
+) -> dict[str, Any]:
+    structural_dir = memory_root / "structural_memory_graph"
+    structural_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = structural_dir / "structural_memory_graph_latest.json"
+    history_path = structural_dir / "structural_memory_graph_history.json"
+    context_registry_path = structural_dir / "structural_context_registry.json"
+    zone_registry_path = structural_dir / "zone_magnet_registry.json"
+    episodic_links_path = structural_dir / "episodic_pattern_links.json"
+    regime_alignment_path = structural_dir / "regime_memory_alignment_registry.json"
+    governance_path = structural_dir / "structural_memory_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    settled = [
+        item
+        for item in closed[-120:]
+        if isinstance(item, dict) and str(item.get("result", "")).lower() in {"win", "loss", "flat"}
+    ]
+    regime_state = str(unified_market_intelligence_field.get("components", {}).get("regime_state", "unknown"))
+    structure_state = str(market_state.get("structure_state", "unknown"))
+    execution_state = str(execution_microstructure_engine.get("execution_state", "insufficient_data"))
+    context_key = f"{replay_scope}|{structure_state}|{regime_state}|{execution_state}"
+    losses = sum(1 for trade in settled if str(trade.get("result", "")).lower() == "loss")
+    wins = sum(1 for trade in settled if str(trade.get("result", "")).lower() == "win")
+    flats = sum(1 for trade in settled if str(trade.get("result", "")).lower() == "flat")
+    cycle_signature = {
+        "context_key": context_key,
+        "settled_count": len(settled),
+        "losses": losses,
+        "wins": wins,
+        "flats": flats,
+        "structure_state": structure_state,
+        "regime_state": regime_state,
+        "execution_state": execution_state,
+        "execution_penalty": round(float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0), 4),
+        "composite_confidence": round(
+            float(unified_market_intelligence_field.get("confidence_structure", {}).get("composite_confidence", 0.0) or 0.0),
+            4,
+        ),
+    }
+    previous_latest = read_json_safe(latest_path, default={})
+    if isinstance(previous_latest, dict) and previous_latest.get("input_signature") == cycle_signature:
+        returned = dict(previous_latest)
+        returned.pop("input_signature", None)
+        return {
+            **returned,
+            "paths": {
+                "latest": str(latest_path),
+                "history": str(history_path),
+                "structural_context_registry": str(context_registry_path),
+                "zone_magnet_registry": str(zone_registry_path),
+                "episodic_pattern_links": str(episodic_links_path),
+                "regime_memory_alignment_registry": str(regime_alignment_path),
+                "structural_memory_governance_state": str(governance_path),
+            },
+        }
+
+    context_registry = read_json_safe(context_registry_path, default={"contexts": {}})
+    if not isinstance(context_registry, dict):
+        context_registry = {"contexts": {}}
+    contexts = context_registry.get("contexts", {})
+    if not isinstance(contexts, dict):
+        contexts = {}
+    prior_context = contexts.get(context_key, {})
+    if not isinstance(prior_context, dict):
+        prior_context = {}
+    prior_occurrences = int(prior_context.get("occurrences", 0) or 0)
+
+    zone_registry = read_json_safe(zone_registry_path, default={"zones": {}})
+    if not isinstance(zone_registry, dict):
+        zone_registry = {"zones": {}}
+    zones = zone_registry.get("zones", {})
+    if not isinstance(zones, dict):
+        zones = {}
+
+    zone_counts: dict[str, int] = {}
+    for trade in settled:
+        for key in ("entry_price", "intended_entry_price", "average_fill_price"):
+            value = trade.get(key)
+            if not isinstance(value, (int, float)):
+                continue
+            bucket = int(math.floor(float(value) / _PRICE_LEVEL_BUCKET_SIZE))
+            zone_key = f"zone_{bucket}"
+            zone_counts[zone_key] = zone_counts.get(zone_key, 0) + 1
+            break
+    zone_occurrences = list(zone_counts.values())
+    structural_magnet_score = _bounded(max(zone_occurrences, default=0) / max(1, len(settled)))
+
+    for zone_key, count in zone_counts.items():
+        zone_state = zones.get(zone_key, {"occurrences": 0, "wins": 0, "losses": 0})
+        if not isinstance(zone_state, dict):
+            zone_state = {"occurrences": 0, "wins": 0, "losses": 0}
+        zone_state["occurrences"] = int(zone_state.get("occurrences", 0) or 0) + int(count)
+        zone_state["last_context_key"] = context_key
+        zones[zone_key] = zone_state
+    write_json_atomic(zone_registry_path, {"zones": zones})
+
+    episodic_clusters: dict[tuple[str, str, str], dict[str, int]] = {}
+    for trade in settled:
+        key = (
+            str(trade.get("setup_type", "unknown")),
+            str(trade.get("session", "unknown")),
+            str(trade.get("failure_cause", "unknown")),
+        )
+        if key not in episodic_clusters:
+            episodic_clusters[key] = {"wins": 0, "losses": 0, "flats": 0}
+        result = str(trade.get("result", "")).lower()
+        if result == "win":
+            episodic_clusters[key]["wins"] += 1
+        elif result == "loss":
+            episodic_clusters[key]["losses"] += 1
+        else:
+            episodic_clusters[key]["flats"] += 1
+    episodic_pattern_links = []
+    for index, (cluster_key, counts) in enumerate(
+        sorted(
+            episodic_clusters.items(),
+            key=lambda item: (sum(item[1].values()), item[0]),
+            reverse=True,
+        )[:6]
+    ):
+        total = sum(counts.values())
+        if total < 2:
+            continue
+        wins = int(counts["wins"])
+        losses = int(counts["losses"])
+        if losses > wins:
+            outcome_bias = "risk_off"
+        elif wins > losses:
+            outcome_bias = "continuation"
+        else:
+            outcome_bias = "mixed"
+        episodic_pattern_links.append(
+            {
+                "episode_id": f"episode_{index + 1}",
+                "context_signature": {
+                    "setup_type": cluster_key[0],
+                    "session": cluster_key[1],
+                    "failure_cause": cluster_key[2],
+                },
+                "occurrences": total,
+                "outcome_bias": outcome_bias,
+                "link_strength": _bounded(total / max(1, len(settled))),
+            }
+        )
+    episodic_payload = read_json_safe(episodic_links_path, default={"episodes": []})
+    if not isinstance(episodic_payload, dict):
+        episodic_payload = {"episodes": []}
+    episodes = episodic_payload.get("episodes", [])
+    if not isinstance(episodes, list):
+        episodes = []
+    episodes.extend(episodic_pattern_links)
+    write_json_atomic(episodic_links_path, {"episodes": episodes[-300:]})
+
+    historical_recurrence_score = _bounded((prior_occurrences + 1) / max(1, prior_occurrences + 3))
+    long_horizon_context_match = _bounded((historical_recurrence_score * 0.65) + (structural_magnet_score * 0.35))
+
+    regime_alignment_payload = read_json_safe(regime_alignment_path, default={"regimes": {}})
+    if not isinstance(regime_alignment_payload, dict):
+        regime_alignment_payload = {"regimes": {}}
+    regimes = regime_alignment_payload.get("regimes", {})
+    if not isinstance(regimes, dict):
+        regimes = {}
+    regime_key = f"{replay_scope}|{regime_state}"
+    prior_regime = regimes.get(regime_key, {})
+    if not isinstance(prior_regime, dict):
+        prior_regime = {}
+
+    loss_ratio = _bounded(losses / max(1, len(settled)))
+    prior_alignment = _bounded(float(prior_regime.get("alignment_score", 0.5) or 0.5))
+    current_alignment = _bounded(1.0 - abs(loss_ratio - float(prior_context.get("loss_ratio", loss_ratio) or loss_ratio)))
+    observations = int(prior_regime.get("observations", 0) or 0) + 1
+    regime_memory_alignment = _bounded(((prior_alignment * max(0, observations - 1)) + current_alignment) / max(1, observations))
+    regimes[regime_key] = {
+        "alignment_score": regime_memory_alignment,
+        "observations": observations,
+        "structure_state": structure_state,
+        "execution_state": execution_state,
+    }
+    write_json_atomic(regime_alignment_path, {"regimes": regimes})
+
+    transition_count = 0
+    if len(settled) > 1:
+        for left, right in zip(settled[:-1], settled[1:]):
+            if str(left.get("result", "")).lower() != str(right.get("result", "")).lower():
+                transition_count += 1
+    structural_reversal_bias = _bounded(transition_count / max(1, len(settled) - 1))
+    recent_abs = [abs(float(item.get("pnl_points", 0.0) or 0.0)) for item in settled[-6:]]
+    baseline_abs = [abs(float(item.get("pnl_points", 0.0) or 0.0)) for item in settled[-24:-6]]
+    recent_intensity = sum(recent_abs) / max(1, len(recent_abs))
+    baseline_intensity = sum(baseline_abs) / max(1, len(baseline_abs)) if baseline_abs else recent_intensity
+    structural_acceleration_bias = _bounded(recent_intensity / max(1e-6, baseline_intensity + _DEFAULT_RETEST_INTERVAL_PADDING))
+
+    adversarial_execution_engine = adversarial_execution_engine if isinstance(adversarial_execution_engine, dict) else {}
+    adversarial_state = adversarial_execution_engine.get("adversarial_execution_state", {})
+    if not isinstance(adversarial_state, dict):
+        adversarial_state = {}
+    hostility = _bounded(float(adversarial_state.get("historical_execution_hostility", 0.0) or 0.0))
+    execution_penalty = _bounded(float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0))
+    memory_reliability = _bounded(
+        (long_horizon_context_match * 0.34)
+        + (regime_memory_alignment * 0.3)
+        + (structural_magnet_score * 0.22)
+        + ((1.0 - structural_reversal_bias) * 0.14)
+        - (execution_penalty * 0.08)
+        - (hostility * 0.08)
+    )
+    if memory_reliability >= 0.72:
+        memory_state = "strong"
+    elif memory_reliability >= 0.52:
+        memory_state = "moderate"
+    elif memory_reliability > 0.0:
+        memory_state = "weak"
+    else:
+        memory_state = "insufficient_data"
+
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    composite_confidence = _bounded(float(confidence_structure.get("composite_confidence", 0.0) or 0.0))
+    structural_memory_active = bool(
+        long_horizon_context_match >= 0.6
+        or structural_reversal_bias >= 0.62
+        or structural_magnet_score >= 0.72
+    )
+    memory_adjustment = 0.0
+    if structural_memory_active:
+        memory_adjustment = _bounded(
+            ((memory_reliability - 0.5) * 0.28)
+            + ((long_horizon_context_match - 0.5) * 0.12)
+            - (structural_reversal_bias * 0.08)
+            - (structural_acceleration_bias * 0.06),
+            low=-0.4,
+            high=0.4,
+        )
+    memory_adjusted_confidence = _bounded(composite_confidence + memory_adjustment)
+
+    structural_memory_multiplier = 1.0
+    if structural_memory_active:
+        structural_memory_multiplier = _bounded(
+            1.0
+            - (structural_reversal_bias * 0.3)
+            - ((1.0 - memory_reliability) * 0.25)
+            - (structural_acceleration_bias * 0.2)
+            + (structural_magnet_score * 0.08),
+            low=0.25,
+            high=1.0,
+        )
+    pause_reasons: list[str] = []
+    refusal_reasons: list[str] = []
+    should_pause = structural_memory_active and long_horizon_context_match >= 0.5 and (
+        structural_reversal_bias >= 0.62 or structural_acceleration_bias >= 0.82
+    )
+    should_refuse = (
+        structural_memory_active
+        and long_horizon_context_match >= 0.65
+        and structural_reversal_bias >= 0.74
+        and memory_reliability >= 0.45
+    )
+    if should_pause:
+        pause_reasons.append("structural_memory_recurrence_hostility")
+    if should_refuse:
+        refusal_reasons.append("structural_memory_reversal_refuse_guard")
+    if structural_memory_active and regime_memory_alignment < 0.42:
+        pause_reasons.append("structural_memory_regime_misalignment")
+
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "pause_guard_triggered": should_pause,
+        "refuse_guard_triggered": should_refuse,
+    }
+    structural_state = {
+        "structural_memory_state": memory_state,
+        "historical_recurrence_score": historical_recurrence_score,
+        "structural_magnet_score": structural_magnet_score,
+        "long_horizon_context_match": long_horizon_context_match,
+        "regime_memory_alignment": regime_memory_alignment,
+        "episodic_pattern_links": episodic_pattern_links,
+        "structural_reversal_bias": structural_reversal_bias,
+        "structural_acceleration_bias": structural_acceleration_bias,
+        "memory_reliability": memory_reliability,
+        "governance_flags": governance_flags,
+    }
+    confidence_adjustments = {
+        "memory_confidence_adjustment": memory_adjustment,
+        "memory_adjusted_confidence": memory_adjusted_confidence,
+    }
+    risk_adjustments = {
+        "structural_memory_multiplier": structural_memory_multiplier,
+        "should_pause": should_pause,
+        "should_refuse": should_refuse,
+        "pause_reasons": pause_reasons,
+        "refusal_reasons": refusal_reasons,
+    }
+    context_links = {
+        "context_key": context_key,
+        "zone_keys": sorted(zone_counts, key=lambda key: zone_counts[key], reverse=True)[:6],
+        "episode_count": len(episodic_pattern_links),
+    }
+    governance = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+    }
+    payload = {
+        "input_signature": cycle_signature,
+        "structural_memory_state": structural_state,
+        "confidence_adjustments": confidence_adjustments,
+        "risk_adjustments": risk_adjustments,
+        "context_links": context_links,
+        "governance": governance,
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+    contexts[context_key] = {
+        "occurrences": prior_occurrences + 1,
+        "historical_recurrence_score": historical_recurrence_score,
+        "loss_ratio": loss_ratio,
+        "memory_reliability": memory_reliability,
+    }
+    write_json_atomic(context_registry_path, {"contexts": contexts})
+    write_json_atomic(governance_path, governance_flags)
+    returned_payload = dict(payload)
+    returned_payload.pop("input_signature", None)
+    return {
+        **returned_payload,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "structural_context_registry": str(context_registry_path),
+            "zone_magnet_registry": str(zone_registry_path),
+            "episodic_pattern_links": str(episodic_links_path),
+            "regime_memory_alignment_registry": str(regime_alignment_path),
+            "structural_memory_governance_state": str(governance_path),
+        },
+    }
+
+
 def _calibration_and_uncertainty_governance_layer(
     *,
     memory_root: Path,
@@ -2370,6 +2763,7 @@ def _contradiction_arbitration_and_belief_resolution_layer(
     detector_generator: dict[str, Any],
     replay_scope: str,
     adversarial_execution_engine: dict[str, Any] | None = None,
+    structural_memory_graph_engine: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     arbitration_dir = memory_root / "contradiction_arbitration"
     arbitration_dir.mkdir(parents=True, exist_ok=True)
@@ -2405,6 +2799,13 @@ def _contradiction_arbitration_and_belief_resolution_layer(
         adversarial_state = {}
     hostile_execution_score = _bounded(float(adversarial_state.get("hostile_execution_score", 0.0) or 0.0))
     historical_execution_hostility = _bounded(float(adversarial_state.get("historical_execution_hostility", 0.0) or 0.0))
+    structural_memory_graph_engine = structural_memory_graph_engine if isinstance(structural_memory_graph_engine, dict) else {}
+    structural_memory_state = structural_memory_graph_engine.get("structural_memory_state", {})
+    if not isinstance(structural_memory_state, dict):
+        structural_memory_state = {}
+    long_horizon_context_match = _bounded(float(structural_memory_state.get("long_horizon_context_match", 0.0) or 0.0))
+    structural_reversal_bias = _bounded(float(structural_memory_state.get("structural_reversal_bias", 0.0) or 0.0))
+    structural_memory_reliability = _bounded(float(structural_memory_state.get("memory_reliability", 0.0) or 0.0))
     pain_risk = _bounded(float(pain_geometry_engine.get("pain_risk_surface", {}).get("current_state_risk", 0.0) or 0.0))
     negative_score = _bounded(float(negative_space_engine.get("signal", {}).get("deviation_score", 0.0) or 0.0))
     counterfactual_items = counterfactual_engine.get("counterfactual_evaluations", [])
@@ -2470,6 +2871,9 @@ def _contradiction_arbitration_and_belief_resolution_layer(
         "pain_risk": pain_risk,
         "counterfactual_advantage": counterfactual_advantage,
         "liquidity_vulnerability": liquidity_vulnerability,
+        "long_horizon_context_match": long_horizon_context_match,
+        "structural_reversal_bias": structural_reversal_bias,
+        "structural_memory_reliability": structural_memory_reliability,
         "strategy_mode": strategy_mode,
     }
     previous_latest = read_json_safe(latest_path, default={})
@@ -2587,6 +2991,19 @@ def _contradiction_arbitration_and_belief_resolution_layer(
         belief_intent="predatory_execution_safety",
         historical_reliability=_bounded(1.0 - historical_execution_hostility),
         execution_adjusted_trust=_bounded(hostile_execution_score * (1.0 - (execution_penalty * 0.3))),
+    )
+    structural_direction = "wait"
+    if structural_reversal_bias >= 0.65 and long_horizon_context_match >= 0.65:
+        structural_direction = "risk_off"
+    elif structural_memory_reliability >= 0.55:
+        structural_direction = "continuation"
+    _belief(
+        source_layer="structural_memory_graph_layer",
+        belief_direction=structural_direction,
+        belief_confidence=max(structural_reversal_bias, structural_memory_reliability),
+        belief_intent="long_horizon_structural_memory",
+        historical_reliability=long_horizon_context_match,
+        execution_adjusted_trust=_bounded(structural_memory_reliability * (1.0 - (execution_penalty * 0.15))),
     )
 
     contradictions: list[dict[str, Any]] = []
@@ -2894,6 +3311,7 @@ def _detect_improvement_gaps(
     contradiction_arbitration_engine: dict[str, Any] | None = None,
     calibration_uncertainty_engine: dict[str, Any] | None = None,
     adversarial_execution_engine: dict[str, Any] | None = None,
+    structural_memory_graph_engine: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
     repeated = autonomous_behavior.get("trade_review_engine", {}).get("repeated_failure_patterns", [])
@@ -3153,6 +3571,51 @@ def _detect_improvement_gaps(
                     "severity": round(min(1.0, max(raw_confidence - calibrated_confidence, execution_penalty)), 4),
                 }
             )
+    structural_memory_graph_engine = structural_memory_graph_engine if isinstance(structural_memory_graph_engine, dict) else {}
+    structural_memory_state = structural_memory_graph_engine.get("structural_memory_state", {})
+    if not isinstance(structural_memory_state, dict):
+        structural_memory_state = {}
+    memory_reliability = float(structural_memory_state.get("memory_reliability", 0.0) or 0.0)
+    structural_reversal_bias = float(structural_memory_state.get("structural_reversal_bias", 0.0) or 0.0)
+    long_horizon_context_match = float(structural_memory_state.get("long_horizon_context_match", 0.0) or 0.0)
+    regime_memory_alignment = float(structural_memory_state.get("regime_memory_alignment", 0.0) or 0.0)
+    structural_magnet_score = float(structural_memory_state.get("structural_magnet_score", 0.0) or 0.0)
+    if memory_reliability > 0.0 and memory_reliability < 0.45:
+        gaps.append(
+            {
+                "gap_type": "low_structural_memory_reliability",
+                "detail": "structural_memory_reliability_degraded",
+                "frequency": 1,
+                "severity": round(min(1.0, 1.0 - memory_reliability), 4),
+            }
+        )
+    if long_horizon_context_match >= 0.5 and structural_reversal_bias >= 0.62:
+        gaps.append(
+            {
+                "gap_type": "recurrent_structural_reversal_not_captured",
+                "detail": "recurrent_structural_reversal_context",
+                "frequency": max(1, int(round((long_horizon_context_match + structural_reversal_bias) * 3))),
+                "severity": round(min(1.0, max(long_horizon_context_match, structural_reversal_bias)), 4),
+            }
+        )
+    if long_horizon_context_match >= 0.45 and regime_memory_alignment > 0.0 and regime_memory_alignment < 0.5:
+        gaps.append(
+            {
+                "gap_type": "regime_memory_misalignment",
+                "detail": "structural_regime_memory_alignment_gap",
+                "frequency": 1,
+                "severity": round(min(1.0, 1.0 - regime_memory_alignment), 4),
+            }
+        )
+    if structural_magnet_score >= 0.65 and long_horizon_context_match >= 0.5:
+        gaps.append(
+            {
+                "gap_type": "persistent_structural_magnet_behavior_unmodeled",
+                "detail": "persistent_structural_magnet_context",
+                "frequency": max(1, int(round((structural_magnet_score + long_horizon_context_match) * 3))),
+                "severity": round(min(1.0, max(structural_magnet_score, long_horizon_context_match)), 4),
+            }
+        )
     return gaps
 
 
@@ -3227,6 +3690,19 @@ def _suggestion_templates(gap_type: str) -> list[dict[str, str]]:
         ],
         "sweep_aftermath_fill_collapse_pattern": [
             {"suggestion_type": "new_execution_refinement", "target": "sweep_aftermath_fill_collapse_guard"},
+        ],
+        "low_structural_memory_reliability": [
+            {"suggestion_type": "new_detector_idea", "target": "structural_memory_reliability_recovery_detector"},
+        ],
+        "recurrent_structural_reversal_not_captured": [
+            {"suggestion_type": "new_survival_rule", "target": "structural_reversal_memory_guard"},
+            {"suggestion_type": "new_detector_idea", "target": "structural_reversal_recurrence_detector"},
+        ],
+        "regime_memory_misalignment": [
+            {"suggestion_type": "new_detector_idea", "target": "regime_structural_alignment_detector"},
+        ],
+        "persistent_structural_magnet_behavior_unmodeled": [
+            {"suggestion_type": "new_feature_combination", "target": "structural_magnet_memory_features"},
         ],
         "autonomous_capability_proposal": [
             {"suggestion_type": "new_capability_hypothesis", "target": "autonomous_capability_discovery"},
@@ -3309,6 +3785,10 @@ def _component_for_gap(gap_type: str) -> str:
         "chronic_adverse_selection_risk": "adversarial_execution_intelligence_layer",
         "quote_fade_execution_fragility": "adversarial_execution_intelligence_layer",
         "sweep_aftermath_fill_collapse_pattern": "adversarial_execution_intelligence_layer",
+        "low_structural_memory_reliability": "structural_memory_graph_layer",
+        "recurrent_structural_reversal_not_captured": "structural_memory_graph_layer",
+        "regime_memory_misalignment": "structural_memory_graph_layer",
+        "persistent_structural_magnet_behavior_unmodeled": "structural_memory_graph_layer",
         "autonomous_capability_proposal": "capability_evolution_governance_ladder",
     }
     return mapping.get(gap_type, "self_evolving_indicator_layer")
@@ -3367,6 +3847,7 @@ def _self_suggestion_governor(
     capability_evolution_ladder: dict[str, Any] | None = None,
     replay_scope: str,
     adversarial_execution_engine: dict[str, Any] | None = None,
+    structural_memory_graph_engine: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     registry_dir = memory_root / "capability_registry"
     registry_dir.mkdir(parents=True, exist_ok=True)
@@ -3410,6 +3891,7 @@ def _self_suggestion_governor(
         contradiction_arbitration_engine=contradiction_arbitration_engine,
         calibration_uncertainty_engine=calibration_uncertainty_engine,
         adversarial_execution_engine=adversarial_execution_engine,
+        structural_memory_graph_engine=structural_memory_graph_engine,
     )
     calibration_uncertainty_engine = (
         calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
@@ -3421,6 +3903,10 @@ def _self_suggestion_governor(
     adversarial_state = adversarial_execution_engine.get("adversarial_execution_state", {})
     if not isinstance(adversarial_state, dict):
         adversarial_state = {}
+    structural_memory_graph_engine = structural_memory_graph_engine if isinstance(structural_memory_graph_engine, dict) else {}
+    structural_memory_state = structural_memory_graph_engine.get("structural_memory_state", {})
+    if not isinstance(structural_memory_state, dict):
+        structural_memory_state = {}
     capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
     capability_candidates = capability_evolution_ladder.get("capability_candidates", [])
     if isinstance(capability_candidates, list):
@@ -3466,6 +3952,9 @@ def _self_suggestion_governor(
         ),
         "hostile_execution_score": round(float(adversarial_state.get("hostile_execution_score", 0.0) or 0.0), 4),
         "predatory_liquidity_state": str(adversarial_state.get("predatory_liquidity_state", "normal")),
+        "structural_memory_reliability": round(float(structural_memory_state.get("memory_reliability", 0.0) or 0.0), 4),
+        "structural_reversal_bias": round(float(structural_memory_state.get("structural_reversal_bias", 0.0) or 0.0), 4),
+        "long_horizon_context_match": round(float(structural_memory_state.get("long_horizon_context_match", 0.0) or 0.0), 4),
     }
     if previous_governor.get("input_signature") == input_signature:
         return previous_governor
@@ -3960,6 +4449,69 @@ def run_self_evolving_indicator_layer(
     )
     decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
     unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    structural_memory_graph_engine = _structural_memory_graph_layer(
+        memory_root=memory_root,
+        closed=closed,
+        market_state=market_state,
+        unified_market_intelligence_field=unified_market_intelligence_field,
+        execution_microstructure_engine=execution_microstructure_engine,
+        adversarial_execution_engine=adversarial_execution_engine,
+        replay_scope=replay_scope,
+    )
+    structural_state = structural_memory_graph_engine.get("structural_memory_state", {})
+    if not isinstance(structural_state, dict):
+        structural_state = {}
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["structural_memory_state"] = structural_state
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    for key in ("historical_recurrence_score", "long_horizon_context_match", "memory_reliability"):
+        if key in structural_state:
+            confidence_structure[key] = structural_state[key]
+    memory_adjusted_confidence = structural_memory_graph_engine.get("confidence_adjustments", {}).get("memory_adjusted_confidence")
+    if isinstance(memory_adjusted_confidence, (int, float)):
+        confidence_structure["memory_adjusted_confidence"] = round(max(0.0, min(1.0, float(memory_adjusted_confidence))), 4)
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    risk_sizing = decision_refinements.get("risk_sizing", {})
+    if not isinstance(risk_sizing, dict):
+        risk_sizing = {}
+    structural_multiplier = float(
+        structural_memory_graph_engine.get("risk_adjustments", {}).get("structural_memory_multiplier", 1.0) or 1.0
+    )
+    risk_sizing["structural_memory_multiplier"] = round(max(0.25, min(1.0, structural_multiplier)), 4)
+    decision_refinements["risk_sizing"] = risk_sizing
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    for reason in structural_memory_graph_engine.get("risk_adjustments", {}).get("refusal_reasons", []):
+        if reason not in refusal_reasons:
+            refusal_reasons.append(str(reason))
+    for reason in structural_memory_graph_engine.get("risk_adjustments", {}).get("pause_reasons", []):
+        if reason not in pause_reasons:
+            pause_reasons.append(str(reason))
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        structural_memory_graph_engine.get("risk_adjustments", {}).get("should_refuse", False)
+    )
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        structural_memory_graph_engine.get("risk_adjustments", {}).get("should_pause", False)
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
     calibration_uncertainty_engine = _calibration_and_uncertainty_governance_layer(
         memory_root=memory_root,
         closed=closed,
@@ -4040,6 +4592,7 @@ def run_self_evolving_indicator_layer(
         strategy_evolution=strategy_evolution,
         detector_generator=detector_generator,
         replay_scope=replay_scope,
+        structural_memory_graph_engine=structural_memory_graph_engine,
     )
     contradiction_confidence = float(
         contradiction_arbitration_engine.get("confidence_adjustments", {}).get("contradiction_adjusted_confidence", 0.0) or 0.0
@@ -4101,6 +4654,7 @@ def run_self_evolving_indicator_layer(
         mutation_candidates=mutation_candidates,
         capability_evolution_ladder=capability_evolution_ladder,
         replay_scope=replay_scope,
+        structural_memory_graph_engine=structural_memory_graph_engine,
     )
     survival_intelligence = {
         "capital_survival_engine": autonomous_behavior.get("capital_survival_engine", {}),
@@ -4114,6 +4668,7 @@ def run_self_evolving_indicator_layer(
         "fractal_liquidity_decay_functions": liquidity_decay_engine,
         "execution_microstructure_intelligence_layer": execution_microstructure_engine,
         "adversarial_execution_intelligence_layer": adversarial_execution_engine,
+        "structural_memory_graph_layer": structural_memory_graph_engine,
         "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
         "contradiction_arbitration_and_belief_resolution_layer": contradiction_arbitration_engine,
         "recursive_self_modeling": recursive_self_modeling,
@@ -4144,6 +4699,7 @@ def run_self_evolving_indicator_layer(
         "fractal_liquidity_decay_functions": liquidity_decay_engine,
         "execution_microstructure_intelligence_layer": execution_microstructure_engine,
         "adversarial_execution_intelligence_layer": adversarial_execution_engine,
+        "structural_memory_graph_layer": structural_memory_graph_engine,
         "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
         "contradiction_arbitration_and_belief_resolution_layer": contradiction_arbitration_engine,
         "recursive_self_modeling": recursive_self_modeling,
