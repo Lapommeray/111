@@ -1,0 +1,10 @@
+{
+  "clusters": {
+    "evaluation_replay|range|range|insufficient_data": {
+      "occurrences": 1,
+      "type_counts": {
+        "directional_opposition": 7
+      }
+    }
+  }
+}

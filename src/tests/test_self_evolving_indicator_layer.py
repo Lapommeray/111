@@ -418,6 +418,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "execution_microstructure_state",
         "adversarial_execution_state",
         "structural_memory_state",
+        "latent_transition_hazard_state",
     }
     assert 0.0 <= unified["unified_field_score"] <= 1.0
     assert 0.0 <= unified["confidence_structure"]["composite_confidence"] <= 1.0
@@ -719,6 +720,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "execution_microstructure_state",
         "adversarial_execution_state",
         "structural_memory_state",
+        "latent_transition_hazard_state",
     }
 
 
@@ -1581,6 +1583,207 @@ def test_structural_memory_graph_history_rolls_and_governance_is_sandbox_replay_
         replay_scope="focused_replay",
     )
     governance = latest["structural_memory_graph_layer"]["governance"]
+    assert governance["sandbox_only"] is True
+    assert governance["replay_validation_required"] is True
+    assert governance["live_deployment_allowed"] is False
+    assert governance["no_blind_live_self_rewrites"] is True
+
+
+def test_latent_transition_hazard_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "lth1", "status": "closed", "result": "loss", "pnl_points": -1.0, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "lth2", "status": "closed", "result": "win", "pnl_points": 0.5, "setup_type": "reversal", "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.3, "slippage_ratio": 2.1},
+        replay_scope="focused_replay",
+    )
+    latent = result["latent_transition_hazard_layer"]
+    assert Path(latent["paths"]["latest"]).exists()
+    assert Path(latent["paths"]["history"]).exists()
+    assert Path(latent["paths"]["transition_hazard_registry"]).exists()
+    assert Path(latent["paths"]["precursor_instability_events"]).exists()
+    assert Path(latent["paths"]["historical_transition_match_registry"]).exists()
+    assert Path(latent["paths"]["latent_transition_governance_state"]).exists()
+
+
+def test_latent_transition_hazard_layer_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "ltn1", "status": "closed", "result": "loss", "pnl_points": -0.5},
+            {"trade_id": "ltn2", "status": "closed", "result": "win", "pnl_points": 0.4},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    state = result["latent_transition_hazard_layer"]["latent_transition_hazard_state"]
+    assert state["transition_hazard_state"] in {"stable", "watch", "elevated", "critical"}
+    assert 0.0 <= state["transition_hazard_score"] <= 1.0
+    assert 0.0 <= state["hazard_reliability"] <= 1.0
+    assert result["latent_transition_hazard_layer"]["governance"]["sandbox_only"] is True
+
+
+def test_latent_transition_hazard_layer_adds_unified_field_components_without_overwriting_existing_fields(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "ltu1", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "execution_failure"},
+            {"trade_id": "ltu2", "status": "closed", "result": "win", "pnl_points": 0.6, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 2.0, "slippage_ratio": 1.9},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "unified_field_score" in unified
+    assert "composite_confidence" in unified["confidence_structure"]
+    assert "latent_transition_hazard_state" in unified["components"]
+    assert "transition_hazard_score" in unified["confidence_structure"]
+    assert "hazard_adjusted_confidence" in unified["confidence_structure"]
+
+
+def test_latent_transition_hazard_layer_additively_influences_confidence_and_risk_sizing(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "ltc1", "status": "closed", "result": "loss", "pnl_points": -1.0, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "ltc2", "status": "closed", "result": "loss", "pnl_points": -0.9, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "ltc3", "status": "closed", "result": "win", "pnl_points": 0.3, "setup_type": "reversal", "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.5, "slippage_ratio": 2.3},
+        replay_scope="full_replay",
+    )
+    confidence = result["unified_market_intelligence_field"]["confidence_structure"]
+    risk = result["unified_market_intelligence_field"]["decision_refinements"]["risk_sizing"]
+    assert "transition_confidence_suppression" in confidence
+    assert "hazard_adjusted_confidence" in confidence
+    assert "transition_hazard_multiplier" in risk
+    assert 0.25 <= risk["transition_hazard_multiplier"] <= 1.0
+
+
+def test_latent_transition_hazard_layer_adds_pause_refusal_reasons_under_precursor_instability(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "ltp1", "status": "closed", "result": "loss", "pnl_points": -1.2, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure", "intended_entry_price": 2010.0, "average_fill_price": 2017.0, "signal_time": 10, "first_fill_time": 95, "requested_size": 1.0, "filled_size": 0.35},
+            {"trade_id": "ltp2", "status": "closed", "result": "loss", "pnl_points": -1.0, "setup_type": "breakout", "session": "asia", "failure_cause": "partial_fill", "intended_entry_price": 2011.0, "average_fill_price": 2018.0, "signal_time": 15, "first_fill_time": 100, "requested_size": 1.0, "filled_size": 0.3},
+            {"trade_id": "ltp3", "status": "closed", "result": "loss", "pnl_points": -0.9, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure", "intended_entry_price": 2012.0, "average_fill_price": 2019.0, "signal_time": 20, "first_fill_time": 105, "requested_size": 1.0, "filled_size": 0.25},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 3.0, "slippage_ratio": 3.0},
+        replay_scope="full_replay",
+    )
+    behavior = result["unified_market_intelligence_field"]["decision_refinements"]["refusal_pause_behavior"]
+    reasons = set(behavior["pause_reasons"] + behavior["refusal_reasons"])
+    assert "latent_precursor_instability_pause" in reasons or "latent_transition_hazard_refuse_guard" in reasons
+
+
+def test_latent_transition_hazard_layer_feeds_contradiction_arbitration_belief_set_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "ltb1", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "execution_failure"},
+            {"trade_id": "ltb2", "status": "closed", "result": "win", "pnl_points": 0.4, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.4, "slippage_ratio": 2.2},
+        replay_scope="full_replay",
+    )
+    contradiction = result["contradiction_arbitration_and_belief_resolution_layer"]
+    assert any(item.get("source_layer") == "latent_transition_hazard_layer" for item in contradiction["beliefs"])
+    assert contradiction["arbitration"]["conflict_state"] in {"active", "clear"}
+
+
+def test_latent_transition_hazard_layer_feeds_calibration_uncertainty_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "ltk1", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "execution_failure"},
+            {"trade_id": "ltk2", "status": "closed", "result": "loss", "pnl_points": -0.7, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 2.3, "slippage_ratio": 2.2},
+        replay_scope="focused_replay",
+    )
+    calibration = result["calibration_and_uncertainty_governance_layer"]["calibration_state"]
+    assert "latent_transition_context" in calibration
+    assert 0.0 <= calibration["latent_transition_context"]["transition_hazard_score"] <= 1.0
+
+
+def test_latent_transition_hazard_layer_feeds_self_suggestion_governor_gap_detection(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    trade_outcomes = [
+        {"trade_id": "ltg1", "status": "closed", "result": "loss", "pnl_points": -1.0, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+        {"trade_id": "ltg2", "status": "closed", "result": "loss", "pnl_points": -0.9, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+        {"trade_id": "ltg3", "status": "closed", "result": "loss", "pnl_points": -0.8, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+    ]
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 3.0, "slippage_ratio": 3.0},
+        replay_scope="focused_replay",
+    )
+    gap_types = {item.get("gap_type") for item in second["self_suggestion_governor"]["detected_gaps"]}
+    expected = {
+        "latent_transition_hazard_under_modeled",
+        "hazard_directional_bias_mismatch",
+        "hazard_reliability_decay",
+        "precursor_instability_not_captured",
+    }
+    assert gap_types.intersection(expected)
+
+
+def test_capability_evolution_ladder_reads_prior_latent_transition_context_nonbreaking(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "ltl1", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "execution_failure"},
+            {"trade_id": "ltl2", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.4, "slippage_ratio": 2.2},
+        replay_scope="full_replay",
+    )
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "ltl3", "status": "closed", "result": "loss", "pnl_points": -0.7, "failure_cause": "execution_failure"},
+            {"trade_id": "ltl4", "status": "closed", "result": "win", "pnl_points": 0.4, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 2.0, "slippage_ratio": 1.9},
+        replay_scope="focused_replay",
+    )
+    payload = json.loads((memory_root / "capability_evolution" / "capability_candidates.json").read_text(encoding="utf-8"))
+    candidates = payload.get("capability_candidates", [])
+    if candidates:
+        context = candidates[0].get("latent_transition_context", {})
+        assert "prior_cycle_transition_hazard_score" in context
+        assert "context_coverage" in context
+        assert 0.0 <= float(context["prior_cycle_transition_hazard_score"]) <= 1.0
+
+
+def test_latent_transition_hazard_history_rolls_and_governance_is_sandbox_replay_only(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    for index in range(3):
+        run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"lthh{index}a", "status": "closed", "result": "loss", "pnl_points": -0.9},
+                {"trade_id": f"lthh{index}b", "status": "closed", "result": "win", "pnl_points": 0.4},
+            ],
+            market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 2.0, "slippage_ratio": 1.9},
+            replay_scope="focused_replay",
+        )
+    history_payload = json.loads((memory_root / "latent_transition_hazard" / "latent_transition_hazard_history.json").read_text(encoding="utf-8"))
+    assert len(history_payload["snapshots"]) <= 200
+    latest = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "lthhl1", "status": "closed", "result": "loss", "pnl_points": -0.8},
+            {"trade_id": "lthhl2", "status": "closed", "result": "win", "pnl_points": 0.5},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.2, "slippage_ratio": 2.0},
+        replay_scope="focused_replay",
+    )
+    governance = latest["latent_transition_hazard_layer"]["governance"]
     assert governance["sandbox_only"] is True
     assert governance["replay_validation_required"] is True
     assert governance["live_deployment_allowed"] is False

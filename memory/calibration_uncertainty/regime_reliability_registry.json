@@ -1,0 +1,9 @@
+{
+  "regimes": {
+    "evaluation_replay|range|insufficient_data": {
+      "context_key": "evaluation_replay|range|insufficient_data",
+      "reliability_score": 0.5759,
+      "observations": 1
+    }
+  }
+}
