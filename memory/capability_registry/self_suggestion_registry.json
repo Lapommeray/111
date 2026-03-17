@@ -1,5 +1,5 @@
 {
-  "cycle_index": 1,
+  "cycle_index": 2,
   "proposed_improvements": [
     {
       "cycle_index": 1,
@@ -200,6 +200,72 @@
         "core_module_deletion_allowed": false,
         "quarantine_supported": true
       }
+    },
+    {
+      "cycle_index": 2,
+      "signature": "new_execution_refinement::confidence_calibration_guard",
+      "gap_type": "confidence_miscalibration_drift",
+      "reason": "vague_suggestion_rejected"
+    },
+    {
+      "cycle_index": 2,
+      "signature": "new_survival_rule::miscalibration_pause_rule",
+      "gap_type": "confidence_miscalibration_drift",
+      "reason": "vague_suggestion_rejected"
+    },
+    {
+      "cycle_index": 2,
+      "signature": "new_detector_idea::hazard_reliability_recovery_detector",
+      "gap_type": "hazard_reliability_decay",
+      "reason": "vague_suggestion_rejected"
+    },
+    {
+      "cycle_index": 2,
+      "signature": "new_detector_idea::cross_regime_transfer_breakdown_detector",
+      "gap_type": "cross_regime_transfer_breakdown",
+      "reason": "vague_suggestion_rejected"
+    },
+    {
+      "cycle_index": 2,
+      "signature": "new_survival_rule::cross_regime_transfer_quarantine_guard",
+      "gap_type": "cross_regime_transfer_breakdown",
+      "reason": "vague_suggestion_rejected"
+    },
+    {
+      "cycle_index": 2,
+      "signature": "new_detector_idea::session_transfer_stability_detector",
+      "gap_type": "session_transfer_instability",
+      "reason": "vague_suggestion_rejected"
+    },
+    {
+      "cycle_index": 2,
+      "signature": "new_strategy_mutation::volatility_transfer_aware_adaptation",
+      "gap_type": "volatility_transfer_failure",
+      "reason": "vague_suggestion_rejected"
+    },
+    {
+      "cycle_index": 2,
+      "signature": "new_execution_refinement::liquidity_transfer_failure_guard",
+      "gap_type": "liquidity_transfer_failure",
+      "reason": "vague_suggestion_rejected"
+    },
+    {
+      "cycle_index": 2,
+      "signature": "new_detector_idea::general_gap_detector",
+      "gap_type": "causal_intervention_robustness_breakdown",
+      "reason": "vague_suggestion_rejected"
+    },
+    {
+      "cycle_index": 2,
+      "signature": "new_detector_idea::general_gap_detector",
+      "gap_type": "invention_maturity_stall",
+      "reason": "vague_suggestion_rejected"
+    },
+    {
+      "cycle_index": 2,
+      "signature": "new_detector_idea::general_gap_detector",
+      "gap_type": "invention_reliability_decay",
+      "reason": "vague_suggestion_rejected"
     }
   ],
   "promoted_improvements": [
