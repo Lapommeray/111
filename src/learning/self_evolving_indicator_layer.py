@@ -2079,6 +2079,12 @@ def _capability_evolution_governance_ladder(
         4,
     )
     incoming_promotion_maturity = str(quality_layer_context.get("promotion_maturity", "seeded"))
+    prior_capability_expansion = read_json_safe(
+        memory_root / "capability_expansion" / "capability_expansion_latest.json",
+        default={},
+    )
+    if not isinstance(prior_capability_expansion, dict):
+        prior_capability_expansion = {}
     prior_transfer_robustness = read_json_safe(
         memory_root / "transfer_robustness" / "transfer_robustness_latest.json",
         default={},
@@ -2239,6 +2245,10 @@ def _capability_evolution_governance_ladder(
                 "primary_intervention_axis": prior_primary_intervention_axis,
                 "promotion_penalty": causal_promotion_penalty,
                 "source": "memory/causal_intervention_robustness/causal_intervention_robustness_latest.json",
+            },
+            "autonomous_capability_expansion_context": {
+                "integration_mode": "prior_cycle_context_optional",
+                "source": "memory/capability_expansion/capability_expansion_latest.json",
             },
             "governance": {
                 "sandbox_only": True,
@@ -4886,6 +4896,7 @@ def _detect_improvement_gaps(
     cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
     causal_intervention_counterfactual_robustness_layer: dict[str, Any] | None = None,
     governed_capability_invention_layer: dict[str, Any] | None = None,
+    autonomous_capability_expansion_layer: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
     repeated = autonomous_behavior.get("trade_review_engine", {}).get("repeated_failure_patterns", [])
@@ -5425,6 +5436,39 @@ def _detect_improvement_gaps(
                 "detail": str(governed_capability_invention_layer.get("capability_invention_state", "unknown")),
                 "frequency": max(1, int(round((1.0 - invention_reliability) * 4))),
                 "severity": round(min(1.0, 1.0 - invention_reliability), 4),
+            }
+        )
+    autonomous_capability_expansion_layer = (
+        autonomous_capability_expansion_layer if isinstance(autonomous_capability_expansion_layer, dict) else {}
+    )
+    expansion_readiness_score = float(autonomous_capability_expansion_layer.get("expansion_readiness_score", 0.0) or 0.0)
+    rollbackability_score = float(autonomous_capability_expansion_layer.get("rollbackability_score", 0.0) or 0.0)
+    expansion_reliability = float(autonomous_capability_expansion_layer.get("expansion_reliability", 0.0) or 0.0)
+    if expansion_readiness_score <= 0.4:
+        gaps.append(
+            {
+                "gap_type": "expansion_readiness_stall",
+                "detail": str(autonomous_capability_expansion_layer.get("capability_expansion_state", "stalled")),
+                "frequency": max(1, int(round((1.0 - expansion_readiness_score) * 4))),
+                "severity": round(min(1.0, 1.0 - expansion_readiness_score), 4),
+            }
+        )
+    if rollbackability_score <= 0.42:
+        gaps.append(
+            {
+                "gap_type": "expansion_rollback_risk",
+                "detail": str(autonomous_capability_expansion_layer.get("dominant_expansion_axis", "risk")),
+                "frequency": max(1, int(round((1.0 - rollbackability_score) * 4))),
+                "severity": round(min(1.0, 1.0 - rollbackability_score), 4),
+            }
+        )
+    if expansion_reliability <= 0.45:
+        gaps.append(
+            {
+                "gap_type": "expansion_reliability_decay",
+                "detail": str(autonomous_capability_expansion_layer.get("expansion_reason_cluster", "expansion_reliability_decay")),
+                "frequency": max(1, int(round((1.0 - expansion_reliability) * 4))),
+                "severity": round(min(1.0, 1.0 - expansion_reliability), 4),
             }
         )
     return gaps
@@ -6659,6 +6703,7 @@ def _self_suggestion_governor(
     portfolio_multi_context_capital_allocation_layer: dict[str, Any] | None = None,
     temporal_execution_sequencing_layer: dict[str, Any] | None = None,
     governed_capability_invention_layer: dict[str, Any] | None = None,
+    autonomous_capability_expansion_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     registry_dir = memory_root / "capability_registry"
     registry_dir.mkdir(parents=True, exist_ok=True)
@@ -6690,6 +6735,8 @@ def _self_suggestion_governor(
     previous_governor = read_json_safe(governor_path, default={})
     if not isinstance(previous_governor, dict):
         previous_governor = {}
+    if not isinstance(autonomous_capability_expansion_layer, dict):
+        autonomous_capability_expansion_layer = {}
 
     gaps = _detect_improvement_gaps(
         closed=closed,
@@ -6708,6 +6755,7 @@ def _self_suggestion_governor(
         cross_regime_transfer_robustness_layer=cross_regime_transfer_robustness_layer,
         causal_intervention_counterfactual_robustness_layer=causal_intervention_counterfactual_robustness_layer,
         governed_capability_invention_layer=governed_capability_invention_layer,
+        autonomous_capability_expansion_layer=autonomous_capability_expansion_layer,
     )
     calibration_uncertainty_engine = (
         calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
@@ -7499,6 +7547,221 @@ def _governed_capability_invention_layer(
     return payload
 
 
+def _autonomous_capability_expansion_layer(
+    *,
+    memory_root: Path,
+    self_suggestion_governor: dict[str, Any],
+    capability_evolution_ladder: dict[str, Any],
+    governed_capability_invention_layer: dict[str, Any],
+    replay_scope: str,
+) -> dict[str, Any]:
+    expansion_dir = memory_root / "capability_expansion"
+    expansion_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = expansion_dir / "capability_expansion_latest.json"
+    history_path = expansion_dir / "capability_expansion_history.json"
+    candidate_registry_path = expansion_dir / "expansion_candidate_registry.json"
+    readiness_registry_path = expansion_dir / "expansion_readiness_registry.json"
+    rollback_watchlist_path = expansion_dir / "expansion_rollback_watchlist.json"
+    maturity_registry_path = expansion_dir / "expansion_maturity_registry.json"
+    governance_state_path = expansion_dir / "expansion_governance_state.json"
+
+    self_suggestion_governor = self_suggestion_governor if isinstance(self_suggestion_governor, dict) else {}
+    capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
+    governed_capability_invention_layer = (
+        governed_capability_invention_layer if isinstance(governed_capability_invention_layer, dict) else {}
+    )
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    detected_gaps = self_suggestion_governor.get("detected_gaps", [])
+    if not isinstance(detected_gaps, list):
+        detected_gaps = []
+    repeated_unresolved = self_suggestion_governor.get("repeated_unresolved_gaps", [])
+    if not isinstance(repeated_unresolved, list):
+        repeated_unresolved = []
+    ladder_candidates = capability_evolution_ladder.get("capability_candidates", [])
+    if not isinstance(ladder_candidates, list):
+        ladder_candidates = []
+
+    invention_state = str(governed_capability_invention_layer.get("capability_invention_state", "seeded"))
+    invention_pressure_score = _bounded(float(governed_capability_invention_layer.get("invention_pressure_score", 0.0) or 0.0))
+    invention_reliability = _bounded(float(governed_capability_invention_layer.get("invention_reliability", 0.0) or 0.0))
+    invention_maturity_score = _bounded(float(governed_capability_invention_layer.get("invention_maturity_score", 0.0) or 0.0))
+    redundancy_risk = _bounded(float(governed_capability_invention_layer.get("redundancy_risk", 0.0) or 0.0))
+    dominant_expansion_axis = str(governed_capability_invention_layer.get("dominant_invention_axis", "coherence"))
+    expansion_reason_cluster = str(
+        governed_capability_invention_layer.get("invention_reason_cluster", "insufficient_expansion_signal")
+    )
+    candidate_invention_count = max(
+        0,
+        int(governed_capability_invention_layer.get("candidate_invention_count", 0) or 0),
+    )
+
+    candidate_registry_source = str(governed_capability_invention_layer.get("paths", {}).get("invention_candidate_registry", ""))
+    invention_candidate_registry = (
+        read_json_safe(Path(candidate_registry_source), default={}) if candidate_registry_source.strip() else {}
+    )
+    if not isinstance(invention_candidate_registry, dict):
+        invention_candidate_registry = {}
+    invention_candidates = invention_candidate_registry.get("candidate_inventions", [])
+    if not isinstance(invention_candidates, list):
+        invention_candidates = []
+    experiment_intents = [
+        {
+            "experiment_id": f"expansion_intent_{index + 1}",
+            "candidate_id": str(item.get("candidate_id", f"invention_candidate_{index + 1}")),
+            "expansion_axis": str(item.get("invention_axis", dominant_expansion_axis)),
+            "reason_cluster": str(item.get("reason_cluster", expansion_reason_cluster)),
+            "intent_state": "sandbox_ready",
+            "governance": {
+                "sandbox_only": True,
+                "replay_validation_required": True,
+                "live_deployment_allowed": False,
+            },
+        }
+        for index, item in enumerate(item for item in invention_candidates[:40] if isinstance(item, dict))
+    ]
+    candidate_expansion_count = len(experiment_intents) if experiment_intents else candidate_invention_count
+
+    unresolved_pressure = _bounded(len(repeated_unresolved) / 10.0)
+    gap_pressure = _bounded(len([item for item in detected_gaps if isinstance(item, dict)]) / 20.0)
+    candidate_pressure = _bounded(len([item for item in ladder_candidates if isinstance(item, dict)]) / 20.0)
+    expansion_pressure_score = _bounded(
+        (invention_pressure_score * 0.45)
+        + (unresolved_pressure * 0.25)
+        + (gap_pressure * 0.15)
+        + (candidate_pressure * 0.15)
+    )
+    rollbackability_score = _bounded(
+        ((1.0 - redundancy_risk) * 0.45)
+        + (invention_reliability * 0.25)
+        + (invention_maturity_score * 0.2)
+        + ((1.0 if replay_scope == "full_replay" else 0.85) * 0.1)
+    )
+    expansion_readiness_score = _bounded(
+        (invention_reliability * 0.4)
+        + (invention_maturity_score * 0.3)
+        + (rollbackability_score * 0.2)
+        + ((1.0 - redundancy_risk) * 0.1)
+    )
+    expansion_reliability = _bounded(
+        (invention_reliability * 0.55)
+        + (expansion_readiness_score * 0.25)
+        + ((1.0 - redundancy_risk) * 0.2)
+    )
+    expansion_maturity_score = _bounded(
+        (invention_maturity_score * 0.6)
+        + (expansion_readiness_score * 0.2)
+        + (min(1.0, candidate_expansion_count / 8.0) * 0.2)
+    )
+
+    if candidate_expansion_count == 0 and expansion_pressure_score <= 0.2:
+        capability_expansion_state = "seeded"
+    elif expansion_reliability <= 0.4 or rollbackability_score <= 0.42:
+        capability_expansion_state = "constrained"
+    elif expansion_readiness_score >= 0.68 and rollbackability_score >= 0.62 and expansion_reliability >= 0.6:
+        capability_expansion_state = "sandbox_ready"
+    elif expansion_readiness_score >= 0.5 and expansion_maturity_score >= 0.45:
+        capability_expansion_state = "staged"
+    else:
+        capability_expansion_state = "stalled"
+
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+    }
+    input_signature = {
+        "replay_scope": replay_scope,
+        "invention_state": invention_state,
+        "invention_pressure_score": invention_pressure_score,
+        "invention_reliability": invention_reliability,
+        "invention_maturity_score": invention_maturity_score,
+        "candidate_expansion_count": candidate_expansion_count,
+        "dominant_expansion_axis": dominant_expansion_axis,
+    }
+    payload = {
+        "input_signature": input_signature,
+        "capability_expansion_state": capability_expansion_state,
+        "expansion_readiness_score": expansion_readiness_score,
+        "expansion_reliability": expansion_reliability,
+        "rollbackability_score": rollbackability_score,
+        "expansion_maturity_score": expansion_maturity_score,
+        "expansion_pressure_score": expansion_pressure_score,
+        "candidate_expansion_count": candidate_expansion_count,
+        "dominant_expansion_axis": dominant_expansion_axis,
+        "expansion_reason_cluster": expansion_reason_cluster,
+        "governance_flags": governance_flags,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "expansion_candidate_registry": str(candidate_registry_path),
+            "expansion_readiness_registry": str(readiness_registry_path),
+            "expansion_rollback_watchlist": str(rollback_watchlist_path),
+            "expansion_maturity_registry": str(maturity_registry_path),
+            "expansion_governance_state": str(governance_state_path),
+        },
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+    write_json_atomic(
+        candidate_registry_path,
+        {
+            "candidate_expansion_count": candidate_expansion_count,
+            "experiment_intents": experiment_intents,
+            "dominant_expansion_axis": dominant_expansion_axis,
+            "expansion_reason_cluster": expansion_reason_cluster,
+        },
+    )
+    readiness_registry = read_json_safe(readiness_registry_path, default={"entries": []})
+    if not isinstance(readiness_registry, dict):
+        readiness_registry = {"entries": []}
+    readiness_entries = readiness_registry.get("entries", [])
+    if not isinstance(readiness_entries, list):
+        readiness_entries = []
+    readiness_entries.append(
+        {
+            "replay_scope": replay_scope,
+            "capability_expansion_state": capability_expansion_state,
+            "expansion_readiness_score": expansion_readiness_score,
+            "expansion_reliability": expansion_reliability,
+            "rollbackability_score": rollbackability_score,
+            "expansion_pressure_score": expansion_pressure_score,
+        }
+    )
+    write_json_atomic(readiness_registry_path, {"entries": readiness_entries[-400:]})
+    rollback_watchlist = [
+        {
+            "capability_expansion_state": capability_expansion_state,
+            "rollbackability_score": rollbackability_score,
+            "dominant_expansion_axis": dominant_expansion_axis,
+            "expansion_reason_cluster": expansion_reason_cluster,
+        }
+    ]
+    write_json_atomic(rollback_watchlist_path, {"watchlist": rollback_watchlist[-200:]})
+    write_json_atomic(
+        maturity_registry_path,
+        {
+            "capability_expansion_state": capability_expansion_state,
+            "expansion_maturity_score": expansion_maturity_score,
+            "expansion_readiness_score": expansion_readiness_score,
+            "expansion_reliability": expansion_reliability,
+            "candidate_expansion_count": candidate_expansion_count,
+        },
+    )
+    write_json_atomic(governance_state_path, {**governance_flags, "replay_scope": replay_scope})
+    return payload
+
+
 def _self_expansion_quality_layer(
     *,
     memory_root: Path,
@@ -7517,6 +7780,7 @@ def _self_expansion_quality_layer(
     portfolio_multi_context_capital_allocation_layer: dict[str, Any] | None = None,
     temporal_execution_sequencing_layer: dict[str, Any] | None = None,
     governed_capability_invention_layer: dict[str, Any] | None = None,
+    autonomous_capability_expansion_layer: dict[str, Any] | None = None,
     replay_scope: str,
 ) -> dict[str, Any]:
     quality_dir = memory_root / "self_expansion_quality"
@@ -7561,6 +7825,9 @@ def _self_expansion_quality_layer(
     )
     governed_capability_invention_layer = (
         governed_capability_invention_layer if isinstance(governed_capability_invention_layer, dict) else {}
+    )
+    autonomous_capability_expansion_layer = (
+        autonomous_capability_expansion_layer if isinstance(autonomous_capability_expansion_layer, dict) else {}
     )
 
     candidates = capability_evolution_ladder.get("capability_candidates", [])
@@ -7917,6 +8184,26 @@ def _self_expansion_quality_layer(
         ),
         "invention_reliability_context": round(
             max(0.0, min(1.0, float(governed_capability_invention_layer.get("invention_reliability", 0.0) or 0.0))),
+            4,
+        ),
+        "expansion_pressure_context": round(
+            max(0.0, min(1.0, float(autonomous_capability_expansion_layer.get("expansion_pressure_score", 0.0) or 0.0))),
+            4,
+        ),
+        "expansion_readiness_context": round(
+            max(0.0, min(1.0, float(autonomous_capability_expansion_layer.get("expansion_readiness_score", 0.0) or 0.0))),
+            4,
+        ),
+        "expansion_rollbackability_context": round(
+            max(0.0, min(1.0, float(autonomous_capability_expansion_layer.get("rollbackability_score", 0.0) or 0.0))),
+            4,
+        ),
+        "expansion_maturity_context": round(
+            max(0.0, min(1.0, float(autonomous_capability_expansion_layer.get("expansion_maturity_score", 0.0) or 0.0))),
+            4,
+        ),
+        "expansion_reliability_context": round(
+            max(0.0, min(1.0, float(autonomous_capability_expansion_layer.get("expansion_reliability", 0.0) or 0.0))),
             4,
         ),
         "promotion_confidence_multiplier": promotion_confidence_multiplier,
@@ -9739,6 +10026,71 @@ def run_self_evolving_indicator_layer(
         "dominant_invention_axis": governed_capability_invention_engine.get("dominant_invention_axis", "coherence"),
     }
     unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    autonomous_capability_expansion_engine = _autonomous_capability_expansion_layer(
+        memory_root=memory_root,
+        self_suggestion_governor=self_suggestion_governor,
+        capability_evolution_ladder=capability_evolution_ladder,
+        governed_capability_invention_layer=governed_capability_invention_engine,
+        replay_scope=replay_scope,
+    )
+    self_suggestion_governor["autonomous_capability_expansion_layer"] = {
+        "capability_expansion_state": autonomous_capability_expansion_engine.get("capability_expansion_state", "seeded"),
+        "expansion_readiness_score": autonomous_capability_expansion_engine.get("expansion_readiness_score", 0.0),
+        "expansion_reliability": autonomous_capability_expansion_engine.get("expansion_reliability", 0.0),
+        "rollbackability_score": autonomous_capability_expansion_engine.get("rollbackability_score", 0.0),
+        "expansion_maturity_score": autonomous_capability_expansion_engine.get("expansion_maturity_score", 0.0),
+        "expansion_pressure_score": autonomous_capability_expansion_engine.get("expansion_pressure_score", 0.0),
+        "candidate_expansion_count": autonomous_capability_expansion_engine.get("candidate_expansion_count", 0),
+        "dominant_expansion_axis": autonomous_capability_expansion_engine.get("dominant_expansion_axis", "coherence"),
+    }
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["capability_expansion_state"] = {
+        "state": str(autonomous_capability_expansion_engine.get("capability_expansion_state", "seeded")),
+        "dominant_expansion_axis": str(autonomous_capability_expansion_engine.get("dominant_expansion_axis", "coherence")),
+        "expansion_reason_cluster": str(
+            autonomous_capability_expansion_engine.get("expansion_reason_cluster", "insufficient_expansion_signal")
+        ),
+    }
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["expansion_reliability"] = round(
+        max(0.0, min(1.0, float(autonomous_capability_expansion_engine.get("expansion_reliability", 0.0) or 0.0))),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["capability_expansion"] = {
+        "capability_expansion_state": autonomous_capability_expansion_engine.get("capability_expansion_state", "seeded"),
+        "expansion_readiness_score": round(
+            float(autonomous_capability_expansion_engine.get("expansion_readiness_score", 0.0) or 0.0),
+            4,
+        ),
+        "expansion_reliability": round(
+            float(autonomous_capability_expansion_engine.get("expansion_reliability", 0.0) or 0.0),
+            4,
+        ),
+        "rollbackability_score": round(
+            float(autonomous_capability_expansion_engine.get("rollbackability_score", 0.0) or 0.0),
+            4,
+        ),
+        "expansion_maturity_score": round(
+            float(autonomous_capability_expansion_engine.get("expansion_maturity_score", 0.0) or 0.0),
+            4,
+        ),
+        "expansion_pressure_score": round(
+            float(autonomous_capability_expansion_engine.get("expansion_pressure_score", 0.0) or 0.0),
+            4,
+        ),
+        "candidate_expansion_count": int(autonomous_capability_expansion_engine.get("candidate_expansion_count", 0) or 0),
+        "dominant_expansion_axis": autonomous_capability_expansion_engine.get("dominant_expansion_axis", "coherence"),
+    }
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
     self_expansion_quality_engine = _self_expansion_quality_layer(
         memory_root=memory_root,
         capability_evolution_ladder=capability_evolution_ladder,
@@ -9756,6 +10108,7 @@ def run_self_evolving_indicator_layer(
         portfolio_multi_context_capital_allocation_layer=portfolio_multi_context_capital_allocation_engine,
         temporal_execution_sequencing_layer=temporal_execution_sequencing_engine,
         governed_capability_invention_layer=governed_capability_invention_engine,
+        autonomous_capability_expansion_layer=autonomous_capability_expansion_engine,
         replay_scope=replay_scope,
     )
     components = unified_market_intelligence_field.get("components", {})
@@ -9941,6 +10294,7 @@ def run_self_evolving_indicator_layer(
         "discovery_state_tags": discovery_state_tags,
         "unified_market_intelligence_field": unified_market_intelligence_field,
         "governed_capability_invention_layer": governed_capability_invention_engine,
+        "autonomous_capability_expansion_layer": autonomous_capability_expansion_engine,
         "self_expansion_quality_layer": self_expansion_quality_engine,
         "system_coherence_and_drift_integrity_layer": system_coherence_drift_integrity_engine,
         "learning_stability_and_catastrophic_drift_guard_layer": learning_stability_guard_engine,
@@ -9983,6 +10337,7 @@ def run_self_evolving_indicator_layer(
         "discovery_state_tags": discovery_state_tags,
         "unified_market_intelligence_field": unified_market_intelligence_field,
         "governed_capability_invention_layer": governed_capability_invention_engine,
+        "autonomous_capability_expansion_layer": autonomous_capability_expansion_engine,
         "self_expansion_quality_layer": self_expansion_quality_engine,
         "system_coherence_and_drift_integrity_layer": system_coherence_drift_integrity_engine,
         "learning_stability_and_catastrophic_drift_guard_layer": learning_stability_guard_engine,
