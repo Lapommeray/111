@@ -5662,6 +5662,308 @@ def _is_vague_suggestion(suggestion: dict[str, Any]) -> bool:
     return False
 
 
+def _temporal_execution_sequencing_layer(
+    *,
+    memory_root: Path,
+    closed: list[dict[str, Any]],
+    market_state: dict[str, Any],
+    replay_scope: str,
+    execution_microstructure_engine: dict[str, Any],
+    adversarial_execution_engine: dict[str, Any] | None = None,
+    deception_inference_engine: dict[str, Any] | None = None,
+    latent_transition_hazard_engine: dict[str, Any] | None = None,
+    calibration_uncertainty_engine: dict[str, Any] | None = None,
+    contradiction_arbitration_engine: dict[str, Any] | None = None,
+    structural_memory_graph_engine: dict[str, Any] | None = None,
+    unified_market_intelligence_field: dict[str, Any] | None = None,
+    self_expansion_quality_layer: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    sequencing_dir = memory_root / "temporal_execution"
+    sequencing_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = sequencing_dir / "temporal_execution_latest.json"
+    history_path = sequencing_dir / "temporal_execution_history.json"
+    reason_registry_path = sequencing_dir / "sequencing_reason_registry.json"
+    execution_window_quality_registry_path = sequencing_dir / "execution_window_quality_registry.json"
+    transition_trace_path = sequencing_dir / "temporal_sequence_transition_trace.json"
+    governance_path = sequencing_dir / "temporal_execution_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    execution_microstructure_engine = execution_microstructure_engine if isinstance(execution_microstructure_engine, dict) else {}
+    adversarial_execution_engine = adversarial_execution_engine if isinstance(adversarial_execution_engine, dict) else {}
+    deception_inference_engine = deception_inference_engine if isinstance(deception_inference_engine, dict) else {}
+    latent_transition_hazard_engine = latent_transition_hazard_engine if isinstance(latent_transition_hazard_engine, dict) else {}
+    calibration_uncertainty_engine = calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
+    contradiction_arbitration_engine = contradiction_arbitration_engine if isinstance(contradiction_arbitration_engine, dict) else {}
+    structural_memory_graph_engine = structural_memory_graph_engine if isinstance(structural_memory_graph_engine, dict) else {}
+    unified_market_intelligence_field = (
+        unified_market_intelligence_field if isinstance(unified_market_intelligence_field, dict) else {}
+    )
+    self_expansion_quality_layer = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    adversarial_state = adversarial_execution_engine.get("adversarial_execution_state", {})
+    if not isinstance(adversarial_state, dict):
+        adversarial_state = {}
+    deception_state = deception_inference_engine.get("deception_state", {})
+    if not isinstance(deception_state, dict):
+        deception_state = {}
+    latent_state = latent_transition_hazard_engine.get("latent_transition_hazard_state", {})
+    if not isinstance(latent_state, dict):
+        latent_state = {}
+    calibration_state = calibration_uncertainty_engine.get("calibration_state", {})
+    if not isinstance(calibration_state, dict):
+        calibration_state = {}
+    contradiction_state = contradiction_arbitration_engine.get("arbitration", {})
+    if not isinstance(contradiction_state, dict):
+        contradiction_state = {}
+    structural_state = structural_memory_graph_engine.get("structural_memory_state", {})
+    if not isinstance(structural_state, dict):
+        structural_state = {}
+
+    execution_penalty = _bounded(float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0))
+    entry_timing_degradation = _bounded(float(execution_microstructure_engine.get("entry_timing_degradation", 0.0) or 0.0))
+    failure_cluster_risk = _bounded(float(execution_microstructure_engine.get("failure_cluster_risk", 0.0) or 0.0))
+    should_delay_entry = bool(execution_microstructure_engine.get("should_delay_entry", False))
+    should_refuse_trade = bool(execution_microstructure_engine.get("should_refuse_trade", False))
+    fill_delay_state = str(execution_microstructure_engine.get("fill_delay_state", "normal"))
+
+    hostile_execution_score = _bounded(float(adversarial_state.get("hostile_execution_score", 0.0) or 0.0))
+    deception_score = _bounded(float(deception_state.get("deception_score", 0.0) or 0.0))
+    transition_hazard_score = _bounded(float(latent_state.get("transition_hazard_score", 0.0) or 0.0))
+    calibration_drift = _bounded(float(calibration_state.get("calibration_drift", 0.0) or 0.0))
+    contradiction_severity = _bounded(float(contradiction_state.get("max_contradiction_severity", 0.0) or 0.0))
+    contradiction_outcome = str(contradiction_state.get("outcome", "allow"))
+    memory_reliability = _bounded(float(structural_state.get("memory_reliability", 0.5) or 0.5))
+    expansion_quality_score = _bounded(float(self_expansion_quality_layer.get("expansion_quality_score", 0.5) or 0.5))
+    composite_confidence = _bounded(float(confidence_structure.get("composite_confidence", 0.5) or 0.5))
+    telemetry_count = len([item for item in closed if isinstance(item, dict)])
+
+    execution_window_quality = _bounded(
+        1.0
+        - min(
+            1.0,
+            (execution_penalty * 0.45)
+            + (entry_timing_degradation * 0.2)
+            + (failure_cluster_risk * 0.15)
+            + (hostile_execution_score * 0.1)
+            + (deception_score * 0.1),
+        )
+    )
+    timing_priority_score = _bounded(
+        (execution_penalty * 0.25)
+        + (entry_timing_degradation * 0.2)
+        + (transition_hazard_score * 0.14)
+        + (calibration_drift * 0.12)
+        + (contradiction_severity * 0.1)
+        + (hostile_execution_score * 0.1)
+        + (deception_score * 0.09)
+        + (0.12 if should_delay_entry else 0.0)
+        + (0.15 if should_refuse_trade else 0.0)
+        + (0.08 if contradiction_outcome in {"pause", "refuse"} else 0.0)
+    )
+    sequencing_reliability = _bounded(
+        (execution_window_quality * 0.35)
+        + (composite_confidence * 0.2)
+        + (memory_reliability * 0.2)
+        + (expansion_quality_score * 0.1)
+        + ((1.0 - calibration_drift) * 0.08)
+        + ((1.0 - contradiction_severity) * 0.07)
+        - (timing_priority_score * 0.25)
+    )
+    phase_maturity_score = _bounded(
+        (sequencing_reliability * 0.35)
+        + (memory_reliability * 0.25)
+        + (execution_window_quality * 0.2)
+        + (expansion_quality_score * 0.2)
+    )
+
+    delay_bias = _bounded(
+        (timing_priority_score * 0.32)
+        + ((1.0 - execution_window_quality) * 0.2)
+        + (transition_hazard_score * 0.14)
+        + (calibration_drift * 0.12)
+        + (0.15 if should_delay_entry else 0.0)
+    )
+    abandon_bias = _bounded(
+        (timing_priority_score * 0.22)
+        + (contradiction_severity * 0.15)
+        + (hostile_execution_score * 0.14)
+        + (failure_cluster_risk * 0.12)
+        + (0.2 if should_refuse_trade else 0.0)
+        + (0.12 if contradiction_outcome == "refuse" else 0.0)
+    )
+    stagger_bias = _bounded(
+        ((1.0 - execution_penalty) * 0.2)
+        + (delay_bias * 0.25)
+        + (sequencing_reliability * 0.3)
+        + ((1.0 - abandon_bias) * 0.15)
+        + (0.1 if fill_delay_state in {"elevated", "degraded"} else 0.0)
+    )
+    entry_now_bias = _bounded(
+        (composite_confidence * 0.35)
+        + (execution_window_quality * 0.35)
+        + (sequencing_reliability * 0.2)
+        + ((1.0 - delay_bias) * 0.1)
+        - (abandon_bias * 0.25)
+    )
+
+    reason_candidates = {
+        "execution_drag_cluster": execution_penalty + entry_timing_degradation + failure_cluster_risk,
+        "hazard_uncertainty_cluster": transition_hazard_score + calibration_drift + contradiction_severity,
+        "hostile_adverse_cluster": hostile_execution_score + deception_score + abandon_bias,
+        "staggered_opportunity_cluster": stagger_bias + entry_now_bias + sequencing_reliability,
+    }
+    sequencing_reason_cluster = sorted(reason_candidates.items(), key=lambda item: (item[1], item[0]), reverse=True)[0][0]
+
+    recommended_sequence_mode = "hold"
+    if abandon_bias >= 0.72:
+        recommended_sequence_mode = "abandon"
+    elif delay_bias >= 0.68 and stagger_bias >= 0.5:
+        recommended_sequence_mode = "stagger"
+    elif delay_bias >= 0.58:
+        recommended_sequence_mode = "delay"
+    elif entry_now_bias >= 0.6 and sequencing_reliability >= 0.55 and execution_window_quality >= 0.5:
+        recommended_sequence_mode = "enter_now"
+
+    temporal_execution_state = (
+        "unstable"
+        if abandon_bias >= 0.72 or sequencing_reliability < 0.35
+        else "deferential"
+        if recommended_sequence_mode in {"delay", "stagger", "hold"}
+        else "ready"
+    )
+    sequence_actions: list[str] = []
+    if recommended_sequence_mode == "abandon":
+        sequence_actions.append("abandon_sequence_until_execution_window_recovers")
+    elif recommended_sequence_mode == "delay":
+        sequence_actions.append("delay_entry_until_execution_window_quality_recovers")
+    elif recommended_sequence_mode == "stagger":
+        sequence_actions.append("stagger_entry_with_governed_tranche_steps")
+    elif recommended_sequence_mode == "enter_now":
+        sequence_actions.append("enter_now_under_current_governed_controls")
+    else:
+        sequence_actions.append("hold_and_reassess_next_execution_window")
+
+    timing_controls = {
+        "max_deferral_cycles": max(1, min(4, 1 + int(round(delay_bias * 3)))),
+        "stagger_tranche_count": max(1, min(4, 1 + int(round(stagger_bias * 2)))),
+        "phase_out_pressure": round(min(1.0, abandon_bias * 0.85), 4),
+        "window_recheck_interval": max(1, min(6, 1 + int(round((1.0 - execution_window_quality) * 5)))),
+    }
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+    }
+    payload = {
+        "temporal_execution_state": temporal_execution_state,
+        "timing_priority_score": timing_priority_score,
+        "sequencing_reliability": sequencing_reliability,
+        "entry_now_bias": entry_now_bias,
+        "delay_bias": delay_bias,
+        "stagger_bias": stagger_bias,
+        "abandon_bias": abandon_bias,
+        "phase_maturity_score": phase_maturity_score,
+        "execution_window_quality": execution_window_quality,
+        "sequencing_reason_cluster": sequencing_reason_cluster,
+        "recommended_sequence_mode": recommended_sequence_mode,
+        "sequence_actions": sequence_actions,
+        "timing_controls": timing_controls,
+        "governance_flags": governance_flags,
+    }
+    previous_payload = read_json_safe(latest_path, default={})
+    if not isinstance(previous_payload, dict):
+        previous_payload = {}
+    write_json_atomic(latest_path, payload)
+
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+
+    reason_registry = read_json_safe(reason_registry_path, default={"entries": []})
+    if not isinstance(reason_registry, dict):
+        reason_registry = {"entries": []}
+    reason_entries = reason_registry.get("entries", [])
+    if not isinstance(reason_entries, list):
+        reason_entries = []
+    reason_entries.append(
+        {
+            "replay_scope": replay_scope,
+            "sequencing_reason_cluster": sequencing_reason_cluster,
+            "recommended_sequence_mode": recommended_sequence_mode,
+            "timing_priority_score": timing_priority_score,
+            "sequencing_reliability": sequencing_reliability,
+        }
+    )
+    write_json_atomic(reason_registry_path, {"entries": reason_entries[-400:]})
+
+    execution_window_registry = read_json_safe(execution_window_quality_registry_path, default={"entries": []})
+    if not isinstance(execution_window_registry, dict):
+        execution_window_registry = {"entries": []}
+    execution_window_entries = execution_window_registry.get("entries", [])
+    if not isinstance(execution_window_entries, list):
+        execution_window_entries = []
+    execution_window_entries.append(
+        {
+            "replay_scope": replay_scope,
+            "execution_window_quality": execution_window_quality,
+            "entry_timing_degradation": entry_timing_degradation,
+            "execution_penalty": execution_penalty,
+            "sample_size": telemetry_count,
+        }
+    )
+    write_json_atomic(execution_window_quality_registry_path, {"entries": execution_window_entries[-400:]})
+
+    transition_trace = read_json_safe(transition_trace_path, default={"transitions": []})
+    if not isinstance(transition_trace, dict):
+        transition_trace = {"transitions": []}
+    transitions = transition_trace.get("transitions", [])
+    if not isinstance(transitions, list):
+        transitions = []
+    transitions.append(
+        {
+            "replay_scope": replay_scope,
+            "from_state": str(previous_payload.get("temporal_execution_state", "seed")),
+            "to_state": temporal_execution_state,
+            "from_mode": str(previous_payload.get("recommended_sequence_mode", "seed")),
+            "to_mode": recommended_sequence_mode,
+            "timing_priority_score": timing_priority_score,
+        }
+    )
+    write_json_atomic(transition_trace_path, {"transitions": transitions[-400:]})
+    write_json_atomic(
+        governance_path,
+        {
+            "sandbox_only": True,
+            "replay_validation_required": True,
+            "live_deployment_allowed": False,
+            "no_blind_live_self_rewrites": True,
+            "replay_scope": replay_scope,
+        },
+    )
+    return {
+        **payload,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "sequencing_reason_registry": str(reason_registry_path),
+            "execution_window_quality_registry": str(execution_window_quality_registry_path),
+            "temporal_sequence_transition_trace": str(transition_trace_path),
+            "temporal_execution_governance_state": str(governance_path),
+        },
+    }
+
+
 def _hierarchical_decision_policy_layer(
     *,
     memory_root: Path,
@@ -5678,6 +5980,7 @@ def _hierarchical_decision_policy_layer(
     cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
     causal_intervention_counterfactual_robustness_layer: dict[str, Any] | None = None,
     self_expansion_quality_layer: dict[str, Any] | None = None,
+    temporal_execution_sequencing_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     policy_dir = memory_root / "decision_policy"
     policy_dir.mkdir(parents=True, exist_ok=True)
@@ -5710,6 +6013,9 @@ def _hierarchical_decision_policy_layer(
         else {}
     )
     self_expansion_quality_layer = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+    temporal_execution_sequencing_layer = (
+        temporal_execution_sequencing_layer if isinstance(temporal_execution_sequencing_layer, dict) else {}
+    )
 
     confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
     if not isinstance(confidence_structure, dict):
@@ -5753,6 +6059,11 @@ def _hierarchical_decision_policy_layer(
     transfer_score = _bounded(float(cross_regime_transfer_robustness_layer.get("cross_regime_transfer_score", 0.5) or 0.5))
     memory_reliability = _bounded(float(structural_state.get("memory_reliability", 0.5) or 0.5))
     expansion_quality = _bounded(float(self_expansion_quality_layer.get("expansion_quality_score", 0.5) or 0.5))
+    timing_priority_score = _bounded(float(temporal_execution_sequencing_layer.get("timing_priority_score", 0.0) or 0.0))
+    sequencing_reliability = _bounded(float(temporal_execution_sequencing_layer.get("sequencing_reliability", 0.5) or 0.5))
+    execution_window_quality = _bounded(float(temporal_execution_sequencing_layer.get("execution_window_quality", 0.5) or 0.5))
+    delay_bias = _bounded(float(temporal_execution_sequencing_layer.get("delay_bias", 0.0) or 0.0))
+    abandon_bias = _bounded(float(temporal_execution_sequencing_layer.get("abandon_bias", 0.0) or 0.0))
     contradiction_pressure = 0.3 if contradiction_outcome == "refuse" else 0.2 if contradiction_outcome == "pause" else 0.0
 
     survival_priority_score = _bounded(
@@ -5772,7 +6083,11 @@ def _hierarchical_decision_policy_layer(
         + (memory_reliability * 0.15)
         + (intervention_reliability * 0.2)
         + (expansion_quality * 0.1)
+        + (sequencing_reliability * 0.08)
         - (execution_penalty * 0.2)
+        - ((1.0 - execution_window_quality) * 0.14)
+        - (delay_bias * 0.08)
+        - (abandon_bias * 0.1)
         - (contradiction_severity * 0.15)
         - (false_improvement_risk * 0.1)
     )
@@ -5781,6 +6096,7 @@ def _hierarchical_decision_policy_layer(
         + (contradiction_severity * 0.25)
         + (false_improvement_risk * 0.15)
         + (execution_penalty * 0.1)
+        + (abandon_bias * 0.16)
         + (calibration_drift * 0.1)
         + (0.15 if contradiction_outcome == "refuse" else 0.0)
     )
@@ -5790,6 +6106,9 @@ def _hierarchical_decision_policy_layer(
         + (calibration_drift * 0.2)
         + ((1.0 - intervention_reliability) * 0.2)
         + (transition_hazard_score * 0.1)
+        + (delay_bias * 0.14)
+        + ((1.0 - execution_window_quality) * 0.08)
+        + (timing_priority_score * 0.08)
         + (0.15 if contradiction_outcome == "pause" else 0.0)
     )
 
@@ -5814,6 +6133,7 @@ def _hierarchical_decision_policy_layer(
         "execution_hostility_cluster": execution_penalty + hostile_execution_score + deception_score,
         "fragility_cluster": calibration_drift + transition_hazard_score + (1.0 - intervention_reliability),
         "opportunity_alignment_cluster": opportunity_priority_score + calibrated_confidence + transfer_score,
+        "temporal_sequencing_pressure_cluster": delay_bias + abandon_bias + (1.0 - execution_window_quality),
     }
     dominant_reason_cluster = sorted(reason_candidates.items(), key=lambda item: (item[1], item[0]), reverse=True)[0][0]
     mean_priority = (survival_priority_score + opportunity_priority_score + refusal_priority_score + deferral_priority_score) / 4.0
@@ -5870,6 +6190,7 @@ def _hierarchical_decision_policy_layer(
         "policy_reliability": policy_reliability,
         "policy_risk_multiplier": policy_risk_multiplier,
         "policy_confidence_adjustment": policy_confidence_adjustment,
+        "temporal_sequencing_pressure": _bounded(delay_bias + abandon_bias + (1.0 - execution_window_quality)),
         "governance_flags": governance_flags,
     }
     previous_policy = read_json_safe(latest_path, default={})
@@ -5979,6 +6300,7 @@ def _portfolio_multi_context_capital_allocation_layer(
     cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
     causal_intervention_counterfactual_robustness_layer: dict[str, Any] | None = None,
     self_expansion_quality_layer: dict[str, Any] | None = None,
+    temporal_execution_sequencing_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     allocation_dir = memory_root / "capital_allocation"
     allocation_dir.mkdir(parents=True, exist_ok=True)
@@ -6016,6 +6338,9 @@ def _portfolio_multi_context_capital_allocation_layer(
         else {}
     )
     self_expansion_quality_layer = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+    temporal_execution_sequencing_layer = (
+        temporal_execution_sequencing_layer if isinstance(temporal_execution_sequencing_layer, dict) else {}
+    )
 
     confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
     if not isinstance(confidence_structure, dict):
@@ -6062,6 +6387,11 @@ def _portfolio_multi_context_capital_allocation_layer(
         float(causal_intervention_counterfactual_robustness_layer.get("false_improvement_risk", 0.0) or 0.0)
     )
     expansion_quality_score = _bounded(float(self_expansion_quality_layer.get("expansion_quality_score", 0.5) or 0.5))
+    sequencing_reliability = _bounded(float(temporal_execution_sequencing_layer.get("sequencing_reliability", 0.5) or 0.5))
+    delay_bias = _bounded(float(temporal_execution_sequencing_layer.get("delay_bias", 0.0) or 0.0))
+    abandon_bias = _bounded(float(temporal_execution_sequencing_layer.get("abandon_bias", 0.0) or 0.0))
+    stagger_bias = _bounded(float(temporal_execution_sequencing_layer.get("stagger_bias", 0.0) or 0.0))
+    execution_window_quality = _bounded(float(temporal_execution_sequencing_layer.get("execution_window_quality", 0.5) or 0.5))
     memory_reliability = _bounded(float(structural_state.get("memory_reliability", 0.5) or 0.5))
     volatility_ratio = _bounded(float(market_state.get("volatility_ratio", 1.0) or 1.0) / 3.0)
     capital_survival_pressure = _bounded(
@@ -6079,6 +6409,9 @@ def _portfolio_multi_context_capital_allocation_layer(
         + (policy_conflict_score * 0.08)
         + (overfit_risk * 0.08)
         + (false_improvement_risk * 0.06)
+        + (delay_bias * 0.08)
+        + (abandon_bias * 0.08)
+        + ((1.0 - execution_window_quality) * 0.06)
         + (survival_priority_score * 0.12)
         + (volatility_ratio * 0.05)
         + (capital_survival_pressure * 0.05)
@@ -6091,8 +6424,12 @@ def _portfolio_multi_context_capital_allocation_layer(
         + (cross_regime_transfer_score * 0.14)
         + (memory_reliability * 0.08)
         + (expansion_quality_score * 0.06)
+        + (sequencing_reliability * 0.08)
         + (intervention_reliability * 0.08)
         - (execution_penalty * 0.12)
+        - (delay_bias * 0.08)
+        - (abandon_bias * 0.12)
+        - ((1.0 - execution_window_quality) * 0.08)
         - (policy_conflict_score * 0.1)
         - (false_improvement_risk * 0.08)
     )
@@ -6118,11 +6455,14 @@ def _portfolio_multi_context_capital_allocation_layer(
         + (cross_regime_transfer_score * 0.18)
         + (intervention_reliability * 0.14)
         + (memory_reliability * 0.1)
+        + (sequencing_reliability * 0.08)
         + (expansion_quality_score * 0.1)
         - (policy_conflict_score * 0.16)
         - (calibration_drift * 0.12)
+        - (abandon_bias * 0.08)
         - (execution_penalty * 0.08)
     )
+    staged_release_bonus = 0.03 if stagger_bias >= 0.58 and sequencing_reliability >= 0.58 else 0.0
     recommended_capital_fraction = round(
         max(
             0.05,
@@ -6131,6 +6471,7 @@ def _portfolio_multi_context_capital_allocation_layer(
                 0.16
                 + (allocation_priority_score * 0.52)
                 + (allocation_reliability * 0.26)
+                + staged_release_bonus
                 - (survival_exposure_bias * 0.3)
                 - (exposure_compression_score * 0.28),
             ),
@@ -6171,6 +6512,8 @@ def _portfolio_multi_context_capital_allocation_layer(
         "allocation_reliability": allocation_reliability,
         "recommended_capital_fraction": recommended_capital_fraction,
         "allocation_reason_cluster": allocation_reason_cluster,
+        "temporal_pacing_pressure": _bounded(delay_bias + abandon_bias + (1.0 - execution_window_quality)),
+        "staged_deployment_bias": _bounded(stagger_bias * sequencing_reliability),
         "governance_flags": governance_flags,
     }
 
@@ -6280,6 +6623,7 @@ def _self_suggestion_governor(
     causal_intervention_counterfactual_robustness_layer: dict[str, Any] | None = None,
     hierarchical_decision_policy_layer: dict[str, Any] | None = None,
     portfolio_multi_context_capital_allocation_layer: dict[str, Any] | None = None,
+    temporal_execution_sequencing_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     registry_dir = memory_root / "capability_registry"
     registry_dir.mkdir(parents=True, exist_ok=True)
@@ -6367,6 +6711,42 @@ def _self_suggestion_governor(
         if isinstance(portfolio_multi_context_capital_allocation_layer, dict)
         else {}
     )
+    temporal_execution_sequencing_layer = (
+        temporal_execution_sequencing_layer if isinstance(temporal_execution_sequencing_layer, dict) else {}
+    )
+    temporal_execution_state = str(temporal_execution_sequencing_layer.get("temporal_execution_state", "unknown"))
+    timing_priority_score = float(temporal_execution_sequencing_layer.get("timing_priority_score", 0.0) or 0.0)
+    sequencing_reliability = float(temporal_execution_sequencing_layer.get("sequencing_reliability", 0.5) or 0.5)
+    delay_bias = float(temporal_execution_sequencing_layer.get("delay_bias", 0.0) or 0.0)
+    abandon_bias = float(temporal_execution_sequencing_layer.get("abandon_bias", 0.0) or 0.0)
+    execution_window_quality = float(temporal_execution_sequencing_layer.get("execution_window_quality", 0.5) or 0.5)
+    if delay_bias >= 0.62 or temporal_execution_state in {"deferential", "unstable"}:
+        gaps.append(
+            {
+                "gap_type": "temporal_sequencing_instability",
+                "detail": temporal_execution_state,
+                "frequency": max(1, int(round(delay_bias * 4))),
+                "severity": round(min(1.0, max(0.45, delay_bias)), 4),
+            }
+        )
+    if execution_window_quality <= 0.45:
+        gaps.append(
+            {
+                "gap_type": "execution_window_quality_degradation",
+                "detail": "execution_window_quality_degradation",
+                "frequency": max(1, int(round((1.0 - execution_window_quality) * 4))),
+                "severity": round(min(1.0, max(0.45, 1.0 - execution_window_quality)), 4),
+            }
+        )
+    if abandon_bias >= 0.62:
+        gaps.append(
+            {
+                "gap_type": "temporal_abandonment_pressure",
+                "detail": "abandonment_pressure",
+                "frequency": max(1, int(round(abandon_bias * 4))),
+                "severity": round(min(1.0, max(0.5, abandon_bias)), 4),
+            }
+        )
     capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
     capability_candidates = capability_evolution_ladder.get("capability_candidates", [])
     if isinstance(capability_candidates, list):
@@ -6460,6 +6840,12 @@ def _self_suggestion_governor(
             float(portfolio_multi_context_capital_allocation_layer.get("survival_exposure_bias", 0.0) or 0.0),
             4,
         ),
+        "temporal_execution_state": temporal_execution_state,
+        "timing_priority_score": round(timing_priority_score, 4),
+        "sequencing_reliability": round(sequencing_reliability, 4),
+        "execution_window_quality": round(execution_window_quality, 4),
+        "temporal_delay_bias": round(delay_bias, 4),
+        "temporal_abandon_bias": round(abandon_bias, 4),
     }
     if previous_governor.get("input_signature") == input_signature:
         return previous_governor
@@ -6514,6 +6900,12 @@ def _self_suggestion_governor(
         quality_threshold_delta = round(min(0.2, quality_threshold_delta + 0.04), 4)
     if opportunity_allocation_bias >= 0.62 and allocation_reliability >= 0.64 and exposure_compression_score <= 0.55:
         quality_threshold_delta = round(max(0.0, quality_threshold_delta - 0.02), 4)
+    if temporal_execution_state in {"deferential", "unstable"}:
+        quality_threshold_delta = round(min(0.2, quality_threshold_delta + 0.04), 4)
+    if abandon_bias >= 0.66:
+        quality_threshold_delta = round(min(0.2, quality_threshold_delta + 0.04), 4)
+    if execution_window_quality <= 0.45:
+        quality_threshold_delta = round(min(0.2, quality_threshold_delta + 0.03), 4)
     min_threshold = _SUGGESTION_LOW_VALUE_THRESHOLD + (0.08 if noisy_cluster else 0.0)
     max_per_cycle = _SUGGESTION_MAX_PER_NOISY_CYCLE if noisy_cluster else _SUGGESTION_MAX_PER_CYCLE
     min_threshold = round(min(1.0, min_threshold + quality_threshold_delta), 4)
@@ -6800,6 +7192,14 @@ def _self_suggestion_governor(
                 4,
             ),
         },
+        "temporal_execution_sequencing_layer": {
+            "temporal_execution_state": temporal_execution_state,
+            "timing_priority_score": round(timing_priority_score, 4),
+            "sequencing_reliability": round(sequencing_reliability, 4),
+            "delay_bias": round(delay_bias, 4),
+            "abandon_bias": round(abandon_bias, 4),
+            "execution_window_quality": round(execution_window_quality, 4),
+        },
         "paths": {
             "registry": str(registry_path),
             "governor": str(governor_path),
@@ -6834,6 +7234,7 @@ def _self_expansion_quality_layer(
     causal_intervention_counterfactual_robustness_layer: dict[str, Any] | None = None,
     hierarchical_decision_policy_layer: dict[str, Any] | None = None,
     portfolio_multi_context_capital_allocation_layer: dict[str, Any] | None = None,
+    temporal_execution_sequencing_layer: dict[str, Any] | None = None,
     replay_scope: str,
 ) -> dict[str, Any]:
     quality_dir = memory_root / "self_expansion_quality"
@@ -6872,6 +7273,9 @@ def _self_expansion_quality_layer(
         portfolio_multi_context_capital_allocation_layer
         if isinstance(portfolio_multi_context_capital_allocation_layer, dict)
         else {}
+    )
+    temporal_execution_sequencing_layer = (
+        temporal_execution_sequencing_layer if isinstance(temporal_execution_sequencing_layer, dict) else {}
     )
 
     candidates = capability_evolution_ladder.get("capability_candidates", [])
@@ -7044,6 +7448,31 @@ def _self_expansion_quality_layer(
         1.0,
         max(0.0, float(portfolio_multi_context_capital_allocation_layer.get("context_competition_score", 0.0) or 0.0)),
     )
+    temporal_sequencing_reliability = min(
+        1.0,
+        max(0.0, float(temporal_execution_sequencing_layer.get("sequencing_reliability", 0.5) or 0.5)),
+    )
+    temporal_delay_bias = min(1.0, max(0.0, float(temporal_execution_sequencing_layer.get("delay_bias", 0.0) or 0.0)))
+    temporal_abandon_bias = min(
+        1.0,
+        max(0.0, float(temporal_execution_sequencing_layer.get("abandon_bias", 0.0) or 0.0)),
+    )
+    temporal_execution_window_quality = min(
+        1.0,
+        max(0.0, float(temporal_execution_sequencing_layer.get("execution_window_quality", 0.5) or 0.5)),
+    )
+    temporal_timing_priority = min(
+        1.0,
+        max(0.0, float(temporal_execution_sequencing_layer.get("timing_priority_score", 0.0) or 0.0)),
+    )
+    temporal_sequencing_pressure = min(
+        1.0,
+        max(
+            0.0,
+            temporal_delay_bias + temporal_abandon_bias + (1.0 - temporal_execution_window_quality) + temporal_timing_priority,
+        )
+        / 3.0,
+    )
     regression_risk = round(
         max(
             0.0,
@@ -7072,6 +7501,8 @@ def _self_expansion_quality_layer(
                 + (capital_allocation_exposure_compression * 0.04)
                 + (capital_allocation_context_competition * 0.03)
                 + ((1.0 - capital_allocation_reliability) * 0.03)
+                + ((1.0 - temporal_sequencing_reliability) * 0.04)
+                + (temporal_sequencing_pressure * 0.04)
                 + contradiction_pressure,
             ),
         ),
@@ -7175,6 +7606,14 @@ def _self_expansion_quality_layer(
         "capital_allocation_reliability_context": round(capital_allocation_reliability, 4),
         "capital_allocation_exposure_compression_pressure": round(capital_allocation_exposure_compression, 4),
         "capital_allocation_context_competition_pressure": round(capital_allocation_context_competition, 4),
+        "temporal_execution_state_context": str(
+            temporal_execution_sequencing_layer.get("temporal_execution_state", "unknown")
+        ),
+        "temporal_sequencing_reliability_context": round(temporal_sequencing_reliability, 4),
+        "temporal_delay_abandon_pressure": round(min(1.0, temporal_delay_bias + temporal_abandon_bias), 4),
+        "temporal_execution_window_quality_context": round(temporal_execution_window_quality, 4),
+        "temporal_timing_priority_context": round(temporal_timing_priority, 4),
+        "temporal_sequencing_pressure_context": round(temporal_sequencing_pressure, 4),
         "promotion_confidence_multiplier": promotion_confidence_multiplier,
         "quarantine_pressure_delta": quarantine_pressure_delta,
         "expansion_rate_limit": expansion_rate_limit,
@@ -7908,6 +8347,95 @@ def run_self_evolving_indicator_layer(
         structural_memory_graph_engine=structural_memory_graph_engine,
         latent_transition_hazard_engine=latent_transition_hazard_engine,
     )
+    temporal_execution_sequencing_engine = _temporal_execution_sequencing_layer(
+        memory_root=memory_root,
+        closed=closed,
+        market_state=market_state,
+        replay_scope=replay_scope,
+        execution_microstructure_engine=execution_microstructure_engine,
+        adversarial_execution_engine=adversarial_execution_engine,
+        deception_inference_engine=deception_inference_engine,
+        latent_transition_hazard_engine=latent_transition_hazard_engine,
+        calibration_uncertainty_engine=calibration_uncertainty_engine,
+        contradiction_arbitration_engine=contradiction_arbitration_engine,
+        structural_memory_graph_engine=structural_memory_graph_engine,
+        unified_market_intelligence_field=unified_market_intelligence_field,
+        self_expansion_quality_layer=quality_integration_context,
+    )
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["temporal_execution_state"] = {
+        "state": str(temporal_execution_sequencing_engine.get("temporal_execution_state", "unknown")),
+        "recommended_sequence_mode": str(temporal_execution_sequencing_engine.get("recommended_sequence_mode", "hold")),
+        "sequencing_reason_cluster": str(temporal_execution_sequencing_engine.get("sequencing_reason_cluster", "unknown")),
+    }
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["timing_priority_score"] = round(
+        max(0.0, min(1.0, float(temporal_execution_sequencing_engine.get("timing_priority_score", 0.0) or 0.0))),
+        4,
+    )
+    confidence_structure["sequencing_reliability"] = round(
+        max(0.0, min(1.0, float(temporal_execution_sequencing_engine.get("sequencing_reliability", 0.0) or 0.0))),
+        4,
+    )
+    confidence_structure["execution_window_quality"] = round(
+        max(0.0, min(1.0, float(temporal_execution_sequencing_engine.get("execution_window_quality", 0.0) or 0.0))),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["temporal_execution"] = {
+        "temporal_execution_state": temporal_execution_sequencing_engine.get("temporal_execution_state", "unknown"),
+        "recommended_sequence_mode": temporal_execution_sequencing_engine.get("recommended_sequence_mode", "hold"),
+        "timing_priority_score": round(
+            float(temporal_execution_sequencing_engine.get("timing_priority_score", 0.0) or 0.0),
+            4,
+        ),
+        "sequencing_reliability": round(
+            float(temporal_execution_sequencing_engine.get("sequencing_reliability", 0.0) or 0.0),
+            4,
+        ),
+        "execution_window_quality": round(
+            float(temporal_execution_sequencing_engine.get("execution_window_quality", 0.0) or 0.0),
+            4,
+        ),
+        "sequence_actions": list(temporal_execution_sequencing_engine.get("sequence_actions", [])),
+        "timing_controls": dict(temporal_execution_sequencing_engine.get("timing_controls", {})),
+    }
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    if float(temporal_execution_sequencing_engine.get("delay_bias", 0.0) or 0.0) >= 0.62:
+        if "temporal_execution_delay_bias_guard" not in pause_reasons:
+            pause_reasons.append("temporal_execution_delay_bias_guard")
+    if float(temporal_execution_sequencing_engine.get("abandon_bias", 0.0) or 0.0) >= 0.68:
+        if "temporal_execution_abandon_bias_guard" not in refusal_reasons:
+            refusal_reasons.append("temporal_execution_abandon_bias_guard")
+    if float(temporal_execution_sequencing_engine.get("execution_window_quality", 1.0) or 1.0) <= 0.42:
+        if "temporal_execution_window_quality_guard" not in pause_reasons:
+            pause_reasons.append("temporal_execution_window_quality_guard")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        temporal_execution_sequencing_engine.get("recommended_sequence_mode") == "abandon"
+    )
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        temporal_execution_sequencing_engine.get("recommended_sequence_mode") in {"delay", "stagger", "hold"}
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
     contradiction_confidence = float(
         contradiction_arbitration_engine.get("confidence_adjustments", {}).get("contradiction_adjusted_confidence", 0.0) or 0.0
     )
@@ -7966,6 +8494,7 @@ def run_self_evolving_indicator_layer(
         cross_regime_transfer_robustness_layer=cross_regime_transfer_robustness_engine,
         causal_intervention_counterfactual_robustness_layer=causal_intervention_robustness_engine,
         self_expansion_quality_layer=quality_integration_context,
+        temporal_execution_sequencing_layer=temporal_execution_sequencing_engine,
     )
     components = unified_market_intelligence_field.get("components", {})
     if not isinstance(components, dict):
@@ -8052,6 +8581,7 @@ def run_self_evolving_indicator_layer(
         cross_regime_transfer_robustness_layer=cross_regime_transfer_robustness_engine,
         causal_intervention_counterfactual_robustness_layer=causal_intervention_robustness_engine,
         self_expansion_quality_layer=quality_integration_context,
+        temporal_execution_sequencing_layer=temporal_execution_sequencing_engine,
     )
     components = unified_market_intelligence_field.get("components", {})
     if not isinstance(components, dict):
@@ -8168,6 +8698,7 @@ def run_self_evolving_indicator_layer(
         causal_intervention_counterfactual_robustness_layer=causal_intervention_robustness_engine,
         hierarchical_decision_policy_layer=hierarchical_decision_policy_engine,
         portfolio_multi_context_capital_allocation_layer=portfolio_multi_context_capital_allocation_engine,
+        temporal_execution_sequencing_layer=temporal_execution_sequencing_engine,
     )
     self_expansion_quality_engine = _self_expansion_quality_layer(
         memory_root=memory_root,
@@ -8184,6 +8715,7 @@ def run_self_evolving_indicator_layer(
         causal_intervention_counterfactual_robustness_layer=causal_intervention_robustness_engine,
         hierarchical_decision_policy_layer=hierarchical_decision_policy_engine,
         portfolio_multi_context_capital_allocation_layer=portfolio_multi_context_capital_allocation_engine,
+        temporal_execution_sequencing_layer=temporal_execution_sequencing_engine,
         replay_scope=replay_scope,
     )
     components = unified_market_intelligence_field.get("components", {})
@@ -8223,6 +8755,7 @@ def run_self_evolving_indicator_layer(
         "latent_transition_hazard_layer": latent_transition_hazard_engine,
         "cross_regime_transfer_robustness_layer": cross_regime_transfer_robustness_engine,
         "causal_intervention_counterfactual_robustness_layer": causal_intervention_robustness_engine,
+        "temporal_execution_sequencing_layer": temporal_execution_sequencing_engine,
         "hierarchical_decision_policy_layer": hierarchical_decision_policy_engine,
         "portfolio_multi_context_capital_allocation_layer": portfolio_multi_context_capital_allocation_engine,
         "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
@@ -8261,6 +8794,7 @@ def run_self_evolving_indicator_layer(
         "latent_transition_hazard_layer": latent_transition_hazard_engine,
         "cross_regime_transfer_robustness_layer": cross_regime_transfer_robustness_engine,
         "causal_intervention_counterfactual_robustness_layer": causal_intervention_robustness_engine,
+        "temporal_execution_sequencing_layer": temporal_execution_sequencing_engine,
         "hierarchical_decision_policy_layer": hierarchical_decision_policy_engine,
         "portfolio_multi_context_capital_allocation_layer": portfolio_multi_context_capital_allocation_engine,
         "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
