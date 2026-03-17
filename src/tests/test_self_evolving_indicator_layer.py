@@ -417,6 +417,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "liquidity_decay_state",
         "execution_microstructure_state",
         "adversarial_execution_state",
+        "structural_memory_state",
     }
     assert 0.0 <= unified["unified_field_score"] <= 1.0
     assert 0.0 <= unified["confidence_structure"]["composite_confidence"] <= 1.0
@@ -717,6 +718,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "liquidity_decay_state",
         "execution_microstructure_state",
         "adversarial_execution_state",
+        "structural_memory_state",
     }
 
 
@@ -1370,3 +1372,216 @@ def test_capability_evolution_ladder_reads_prior_adversarial_hostility_context_n
         context = candidates[0].get("adversarial_execution_context", {})
         assert "prior_cycle_hostility" in context
         assert 0.0 <= float(context["prior_cycle_hostility"]) <= 1.0
+
+
+def test_structural_memory_graph_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "sm1", "status": "closed", "result": "loss", "pnl_points": -1.0, "entry_price": 2010.0, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "sm2", "status": "closed", "result": "win", "pnl_points": 0.8, "entry_price": 2011.0, "setup_type": "breakout", "session": "asia", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.2, "spread_ratio": 1.3, "slippage_ratio": 1.2},
+        replay_scope="focused_replay",
+    )
+    structural = result["structural_memory_graph_layer"]
+    assert Path(structural["paths"]["latest"]).exists()
+    assert Path(structural["paths"]["history"]).exists()
+    assert Path(structural["paths"]["structural_context_registry"]).exists()
+    assert Path(structural["paths"]["zone_magnet_registry"]).exists()
+    assert Path(structural["paths"]["episodic_pattern_links"]).exists()
+    assert Path(structural["paths"]["regime_memory_alignment_registry"]).exists()
+    assert Path(structural["paths"]["structural_memory_governance_state"]).exists()
+
+
+def test_structural_memory_graph_layer_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "smn1", "status": "closed", "result": "loss", "pnl_points": -0.5},
+            {"trade_id": "smn2", "status": "closed", "result": "win", "pnl_points": 0.4},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    structural_state = result["structural_memory_graph_layer"]["structural_memory_state"]
+    assert structural_state["structural_memory_state"] in {"insufficient_data", "weak", "moderate", "strong"}
+    assert 0.0 <= structural_state["historical_recurrence_score"] <= 1.0
+    assert 0.0 <= structural_state["memory_reliability"] <= 1.0
+    assert result["structural_memory_graph_layer"]["governance"]["sandbox_only"] is True
+
+
+def test_structural_memory_graph_layer_adds_unified_field_components_without_overwriting_existing_fields(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "smu1", "status": "closed", "result": "loss", "pnl_points": -0.9, "entry_price": 2010.0, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "smu2", "status": "closed", "result": "win", "pnl_points": 0.7, "entry_price": 2012.0, "setup_type": "reversal", "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.3, "spread_ratio": 1.5, "slippage_ratio": 1.3},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "unified_field_score" in unified
+    assert "composite_confidence" in unified["confidence_structure"]
+    assert "structural_memory_state" in unified["components"]
+    assert "historical_recurrence_score" in unified["confidence_structure"]
+    assert "memory_reliability" in unified["confidence_structure"]
+
+
+def test_structural_memory_graph_layer_additively_influences_confidence_and_risk_sizing(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "smc1", "status": "closed", "result": "loss", "pnl_points": -0.8, "entry_price": 2010.0, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "smc2", "status": "closed", "result": "loss", "pnl_points": -0.7, "entry_price": 2010.5, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "smc3", "status": "closed", "result": "win", "pnl_points": 0.6, "entry_price": 2011.0, "setup_type": "reversal", "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 1.9, "slippage_ratio": 1.8},
+        replay_scope="full_replay",
+    )
+    confidence = result["unified_market_intelligence_field"]["confidence_structure"]
+    risk = result["unified_market_intelligence_field"]["decision_refinements"]["risk_sizing"]
+    assert "long_horizon_context_match" in confidence
+    assert "memory_reliability" in confidence
+    assert "memory_adjusted_confidence" in confidence
+    assert "structural_memory_multiplier" in risk
+    assert 0.25 <= risk["structural_memory_multiplier"] <= 1.0
+
+
+def test_structural_memory_graph_layer_adds_pause_refusal_reasons_under_recurrent_structural_hostility(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    trade_outcomes = [
+        {"trade_id": "smh1", "status": "closed", "result": "loss", "pnl_points": -1.2, "entry_price": 2010.0, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+        {"trade_id": "smh2", "status": "closed", "result": "win", "pnl_points": 0.2, "entry_price": 2010.1, "setup_type": "breakout", "session": "asia", "failure_cause": "none"},
+        {"trade_id": "smh3", "status": "closed", "result": "loss", "pnl_points": -1.0, "entry_price": 2010.0, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+        {"trade_id": "smh4", "status": "closed", "result": "win", "pnl_points": 0.1, "entry_price": 2010.2, "setup_type": "breakout", "session": "asia", "failure_cause": "none"},
+        {"trade_id": "smh5", "status": "closed", "result": "loss", "pnl_points": -1.1, "entry_price": 2010.0, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+        {"trade_id": "smh6", "status": "closed", "result": "win", "pnl_points": 0.15, "entry_price": 2010.2, "setup_type": "breakout", "session": "asia", "failure_cause": "none"},
+    ]
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 2.1, "slippage_ratio": 2.0},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 2.1, "slippage_ratio": 2.0},
+        replay_scope="full_replay",
+    )
+    behavior = second["unified_market_intelligence_field"]["decision_refinements"]["refusal_pause_behavior"]
+    reasons = set(behavior["pause_reasons"] + behavior["refusal_reasons"])
+    assert (
+        "structural_memory_recurrence_hostility" in reasons
+        or "structural_memory_reversal_refuse_guard" in reasons
+        or "structural_memory_regime_misalignment" in reasons
+    )
+
+
+def test_structural_memory_graph_layer_feeds_contradiction_arbitration_belief_set_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "smb1", "status": "closed", "result": "loss", "pnl_points": -0.9, "entry_price": 2010.0, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "smb2", "status": "closed", "result": "win", "pnl_points": 0.6, "entry_price": 2010.0, "setup_type": "breakout", "session": "asia", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.4, "spread_ratio": 1.8, "slippage_ratio": 1.6},
+        replay_scope="full_replay",
+    )
+    contradiction = result["contradiction_arbitration_and_belief_resolution_layer"]
+    assert any(item.get("source_layer") == "structural_memory_graph_layer" for item in contradiction["beliefs"])
+    assert contradiction["arbitration"]["conflict_state"] in {"active", "clear"}
+
+
+def test_structural_memory_graph_layer_feeds_self_suggestion_governor_gap_detection(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    trade_outcomes = [
+        {"trade_id": "smg1", "status": "closed", "result": "loss", "pnl_points": -1.0, "entry_price": 2010.0, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+        {"trade_id": "smg2", "status": "closed", "result": "win", "pnl_points": 0.2, "entry_price": 2010.0, "setup_type": "breakout", "session": "asia", "failure_cause": "none"},
+        {"trade_id": "smg3", "status": "closed", "result": "loss", "pnl_points": -1.1, "entry_price": 2010.0, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+        {"trade_id": "smg4", "status": "closed", "result": "win", "pnl_points": 0.15, "entry_price": 2010.0, "setup_type": "breakout", "session": "asia", "failure_cause": "none"},
+    ]
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 1.9, "slippage_ratio": 1.7},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 1.9, "slippage_ratio": 1.7},
+        replay_scope="full_replay",
+    )
+    gap_types = {item.get("gap_type") for item in second["self_suggestion_governor"]["detected_gaps"]}
+    expected = {
+        "low_structural_memory_reliability",
+        "recurrent_structural_reversal_not_captured",
+        "regime_memory_misalignment",
+        "persistent_structural_magnet_behavior_unmodeled",
+    }
+    assert gap_types.intersection(expected)
+
+
+def test_capability_evolution_ladder_reads_prior_structural_memory_context_nonbreaking(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "sml1", "status": "closed", "result": "loss", "pnl_points": -0.9, "entry_price": 2010.0, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "sml2", "status": "closed", "result": "win", "pnl_points": 0.6, "entry_price": 2010.0, "setup_type": "breakout", "session": "asia", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.3, "spread_ratio": 1.5, "slippage_ratio": 1.3},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "sml3", "status": "closed", "result": "loss", "pnl_points": -0.8, "entry_price": 2011.0, "setup_type": "breakout", "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "sml4", "status": "closed", "result": "win", "pnl_points": 0.5, "entry_price": 2011.0, "setup_type": "breakout", "session": "asia", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.4, "spread_ratio": 1.6, "slippage_ratio": 1.4},
+        replay_scope="focused_replay",
+    )
+    assert second["structural_memory_graph_layer"]["structural_memory_state"]
+    candidates_path = memory_root / "capability_evolution" / "capability_candidates.json"
+    payload = json.loads(candidates_path.read_text(encoding="utf-8"))
+    candidates = payload.get("capability_candidates", [])
+    if candidates:
+        context = candidates[0].get("structural_memory_context", {})
+        assert "prior_alignment_score" in context
+        assert "context_coverage" in context
+        assert 0.0 <= float(context["prior_alignment_score"]) <= 1.0
+
+
+def test_structural_memory_graph_history_rolls_and_governance_is_sandbox_replay_only(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    for index in range(3):
+        run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"smh{index}a", "status": "closed", "result": "loss", "pnl_points": -0.6, "entry_price": 2010.0},
+                {"trade_id": f"smh{index}b", "status": "closed", "result": "win", "pnl_points": 0.5, "entry_price": 2011.0},
+            ],
+            market_state={"structure_state": "range"},
+            replay_scope="focused_replay",
+        )
+    history_path = memory_root / "structural_memory_graph" / "structural_memory_graph_history.json"
+    payload = json.loads(history_path.read_text(encoding="utf-8"))
+    assert len(payload["snapshots"]) <= 200
+    latest = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "smhl1", "status": "closed", "result": "loss", "pnl_points": -0.7, "entry_price": 2010.0},
+            {"trade_id": "smhl2", "status": "closed", "result": "win", "pnl_points": 0.6, "entry_price": 2011.0},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    governance = latest["structural_memory_graph_layer"]["governance"]
+    assert governance["sandbox_only"] is True
+    assert governance["replay_validation_required"] is True
+    assert governance["live_deployment_allowed"] is False
+    assert governance["no_blind_live_self_rewrites"] is True
