@@ -1,0 +1,11 @@
+{
+  "pain_risk_surface": {
+    "current_state_risk": 0.0,
+    "sample_count": 0,
+    "method": "gaussian_kde_proxy"
+  },
+  "governance": {
+    "sandbox_only": true,
+    "validation_required": true
+  }
+}
