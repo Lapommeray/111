@@ -1328,6 +1328,7 @@ def _intelligence_gap_discovery_engine(
     unified_market_intelligence_field: dict[str, Any],
     pain_geometry_engine: dict[str, Any],
     execution_microstructure_engine: dict[str, Any],
+    self_expansion_quality_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     gap_dir = memory_root / "intelligence_gaps"
     gap_dir.mkdir(parents=True, exist_ok=True)
@@ -1417,6 +1418,56 @@ def _intelligence_gap_discovery_engine(
                 "replay_validation_required": True,
             }
         )
+    quality_layer_context = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+    expansion_quality_state = str(quality_layer_context.get("self_expansion_quality_state", "unknown"))
+    redundancy_risk = float(quality_layer_context.get("redundancy_risk", 0.0) or 0.0)
+    regression_risk = float(quality_layer_context.get("regression_risk", 0.0) or 0.0)
+    transferability_score = float(quality_layer_context.get("transferability_score", 0.5) or 0.5)
+    expansion_quality_score = float(quality_layer_context.get("expansion_quality_score", 0.5) or 0.5)
+    if redundancy_risk >= 0.6:
+        gaps.append(
+            {
+                "gap_type": "expansion_redundancy_pressure",
+                "evidence_strength": round(min(1.0, max(0.4, redundancy_risk)), 4),
+                "failure_clusters": failure_clusters[:5],
+                "hypothesized_capability": "redundancy_aware_capability_selector",
+                "sandbox_only": True,
+                "replay_validation_required": True,
+            }
+        )
+    if regression_risk >= 0.55:
+        gaps.append(
+            {
+                "gap_type": "expansion_regression_risk",
+                "evidence_strength": round(min(1.0, max(0.4, regression_risk)), 4),
+                "failure_clusters": failure_clusters[:5],
+                "hypothesized_capability": "regression_risk_containment_filter",
+                "sandbox_only": True,
+                "replay_validation_required": True,
+            }
+        )
+    if transferability_score <= 0.45:
+        gaps.append(
+            {
+                "gap_type": "poor_capability_transferability",
+                "evidence_strength": round(min(1.0, max(0.35, 1.0 - transferability_score)), 4),
+                "failure_clusters": failure_clusters[:5],
+                "hypothesized_capability": "cross_context_transferability_validator",
+                "sandbox_only": True,
+                "replay_validation_required": True,
+            }
+        )
+    if expansion_quality_state in {"degraded", "critical"} or expansion_quality_score < 0.5:
+        gaps.append(
+            {
+                "gap_type": "degraded_expansion_quality_state",
+                "evidence_strength": round(min(1.0, max(0.35, 1.0 - expansion_quality_score)), 4),
+                "failure_clusters": failure_clusters[:5],
+                "hypothesized_capability": "self_expansion_quality_stabilizer",
+                "sandbox_only": True,
+                "replay_validation_required": True,
+            }
+        )
 
     payload = {
         "intelligence_gaps": sorted(gaps, key=lambda item: item["evidence_strength"], reverse=True),
@@ -1449,6 +1500,7 @@ def _synthetic_data_plane_expansion_engine(
     counterfactual_engine: dict[str, Any],
     unified_market_intelligence_field: dict[str, Any],
     execution_microstructure_engine: dict[str, Any],
+    self_expansion_quality_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     planes_dir = memory_root / "synthetic_data_planes"
     planes_dir.mkdir(parents=True, exist_ok=True)
@@ -1471,6 +1523,13 @@ def _synthetic_data_plane_expansion_engine(
     confidence_stability = round(max(0.0, min(1.0, 1.0 - abs(composite_confidence - 0.6))), 4)
     drawdown_cluster_pressure = round(min(1.0, false_entry_frequency * 1.4), 4)
     execution_penalty = round(float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0), 4)
+    quality_layer_context = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+    redundancy_risk = round(float(quality_layer_context.get("redundancy_risk", 0.0) or 0.0), 4)
+    regression_risk = round(float(quality_layer_context.get("regression_risk", 0.0) or 0.0), 4)
+    expansion_quality_score = round(float(quality_layer_context.get("expansion_quality_score", 0.5) or 0.5), 4)
+    overlap_map = quality_layer_context.get("capability_overlap_map", {})
+    overlap_pairs = sum(len(item) for item in overlap_map.values()) if isinstance(overlap_map, dict) else 0
+    quality_penalty = round(min(0.18, (redundancy_risk * 0.1) + (regression_risk * 0.08)), 4)
 
     plane_specs = [
         ("session_fragility_curve", ["session", "spread_ratio", "volatility"]),
@@ -1493,6 +1552,7 @@ def _synthetic_data_plane_expansion_engine(
                     + (drawdown_cluster_pressure * 0.2)
                     + (false_entry_frequency * 0.2)
                     - (execution_penalty * 0.1)
+                    - quality_penalty
                     - (index * 0.03),
                 ),
             ),
@@ -1507,7 +1567,12 @@ def _synthetic_data_plane_expansion_engine(
                 "confidence_stability": confidence_stability,
                 "drawdown_cluster_pressure": drawdown_cluster_pressure,
                 "false_entry_frequency": false_entry_frequency,
-                "promotion_candidate": predictive_value >= 0.68 and counterfactual_advantage >= 0.35,
+                "promotion_candidate": predictive_value >= (0.68 + min(0.1, redundancy_risk * 0.08)) and counterfactual_advantage >= 0.35,
+                "self_expansion_quality_context": {
+                    "redundancy_risk": redundancy_risk,
+                    "regression_risk": regression_risk,
+                    "expansion_quality_score": expansion_quality_score,
+                },
                 "governance": {"sandbox_only": True, "replay_validation_required": True},
             }
         )
@@ -1522,6 +1587,12 @@ def _synthetic_data_plane_expansion_engine(
             },
             "counterfactual_advantage": counterfactual_advantage,
             "confidence_stability": confidence_stability,
+            "self_expansion_quality": {
+                "redundancy_risk": redundancy_risk,
+                "regression_risk": regression_risk,
+                "expansion_quality_score": expansion_quality_score,
+                "overlap_pair_count": overlap_pairs,
+            },
         },
     }
     write_json_atomic(latest_path, payload)
@@ -1544,6 +1615,7 @@ def _capability_evolution_governance_ladder(
     unified_market_intelligence_field: dict[str, Any],
     replay_scope: str,
     adversarial_execution_engine: dict[str, Any] | None = None,
+    self_expansion_quality_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     evolution_dir = memory_root / "capability_evolution"
     evolution_dir.mkdir(parents=True, exist_ok=True)
@@ -1633,6 +1705,28 @@ def _capability_evolution_governance_ladder(
         4,
     )
     latent_transition_context_coverage = round(min(1.0, len(latent_transition_items) / 25.0), 4)
+    quality_layer_context = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+    promotion_confidence_multiplier = round(
+        max(
+            0.75,
+            min(
+                1.0,
+                float(quality_layer_context.get("quality_components", {}).get("promotion_confidence_multiplier", 1.0) or 1.0),
+            ),
+        ),
+        4,
+    )
+    quarantine_pressure = round(
+        max(
+            0.0,
+            min(
+                0.2,
+                float(quality_layer_context.get("quality_components", {}).get("quarantine_pressure_delta", 0.0) or 0.0),
+            ),
+        ),
+        4,
+    )
+    incoming_promotion_maturity = str(quality_layer_context.get("promotion_maturity", "seeded"))
 
     candidates: list[dict[str, Any]] = []
     validation_records: list[dict[str, Any]] = []
@@ -1648,13 +1742,14 @@ def _capability_evolution_governance_ladder(
         prototype_plane = str(best_plane.get("synthetic_plane_name", "none"))
         prototype_predictive = float(best_plane.get("predictive_value", 0.0) or 0.0)
         replay_score = round(min(1.0, (evidence_strength * 0.5) + (prototype_predictive * 0.3) + (unified_confidence * 0.2)), 4)
-        comparative_advantage = round(min(1.0, (replay_score * 0.55) + (prototype_predictive * 0.45)), 4)
-        conflict_with_unified = round(min(1.0, max(0.0, replay_score - unified_score + 0.2)), 4)
-        if replay_score < 0.42:
+        quality_adjusted_replay_score = round(max(0.0, min(1.0, replay_score * promotion_confidence_multiplier)), 4)
+        comparative_advantage = round(min(1.0, (quality_adjusted_replay_score * 0.55) + (prototype_predictive * 0.45)), 4)
+        conflict_with_unified = round(min(1.0, max(0.0, quality_adjusted_replay_score - unified_score + 0.2 + quarantine_pressure)), 4)
+        if quality_adjusted_replay_score < (0.42 + quarantine_pressure):
             decision = "rejected"
-        elif conflict_with_unified >= 0.65:
+        elif conflict_with_unified >= (0.65 - min(0.15, quarantine_pressure)):
             decision = "quarantined"
-        elif replay_score >= 0.72 and comparative_advantage >= 0.58 and conflict_with_unified < 0.45:
+        elif quality_adjusted_replay_score >= (0.72 + (quarantine_pressure * 0.5)) and comparative_advantage >= 0.58 and conflict_with_unified < 0.45:
             decision = "promoted"
         else:
             decision = "sandbox_only_retained"
@@ -1671,14 +1766,26 @@ def _capability_evolution_governance_ladder(
                 "capability_hypothesis_generation",
                 "synthetic_prototype_construction",
                 "replay_validation",
+                "self_expansion_quality_evaluation",
                 "comparative_advantage_test",
                 "conflict_check_unified_field",
                 "governor_promotion_decision",
             ],
-            "replay_validation": {"scope": replay_scope, "score": replay_score, "passed": replay_score >= 0.52},
+            "replay_validation": {
+                "scope": replay_scope,
+                "score": quality_adjusted_replay_score,
+                "raw_score": replay_score,
+                "passed": quality_adjusted_replay_score >= (0.52 + quarantine_pressure),
+            },
             "comparative_advantage": comparative_advantage,
             "unified_conflict_score": conflict_with_unified,
             "governance_decision": decision,
+            "promotion_maturity": incoming_promotion_maturity,
+            "self_expansion_quality_context": {
+                "promotion_confidence_multiplier": promotion_confidence_multiplier,
+                "quarantine_pressure_delta": quarantine_pressure,
+                "source": "memory/self_expansion_quality/self_expansion_quality_latest.json",
+            },
             "calibration_reliability_context": {
                 "prior_cycle_reliability": calibration_reliability,
                 "source": "memory/calibration_uncertainty/regime_reliability_registry.json",
@@ -1709,7 +1816,8 @@ def _capability_evolution_governance_ladder(
             {
                 "capability_id": candidate["capability_id"],
                 "hypothesis": hypothesis,
-                "replay_validation_score": replay_score,
+                "replay_validation_score": quality_adjusted_replay_score,
+                "raw_replay_validation_score": replay_score,
                 "comparative_advantage": comparative_advantage,
                 "unified_conflict_score": conflict_with_unified,
                 "outcome": decision,
@@ -4322,6 +4430,7 @@ def _self_suggestion_governor(
     adversarial_execution_engine: dict[str, Any] | None = None,
     structural_memory_graph_engine: dict[str, Any] | None = None,
     latent_transition_hazard_engine: dict[str, Any] | None = None,
+    self_expansion_quality_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     registry_dir = memory_root / "capability_registry"
     registry_dir.mkdir(parents=True, exist_ok=True)
@@ -4454,8 +4563,21 @@ def _self_suggestion_governor(
         unresolved_counter[sig] = unresolved_counter.get(sig, 0) + 1
 
     noisy_cluster = len(gaps) >= 4
+    quality_layer_context = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+    expansion_quality_score = float(quality_layer_context.get("expansion_quality_score", 1.0) or 1.0)
+    redundancy_risk = float(quality_layer_context.get("redundancy_risk", 0.0) or 0.0)
+    regression_risk = float(quality_layer_context.get("regression_risk", 0.0) or 0.0)
+    durability_score = float(quality_layer_context.get("durability_score", 1.0) or 1.0)
+    transferability_score = float(quality_layer_context.get("transferability_score", 1.0) or 1.0)
+    quality_threshold_delta = round(
+        min(0.12, max(0.0, ((1.0 - expansion_quality_score) * 0.08) + (redundancy_risk * 0.03) + (regression_risk * 0.03))),
+        4,
+    )
+    expansion_rate_limit = 1 if expansion_quality_score < 0.55 else 0
     min_threshold = _SUGGESTION_LOW_VALUE_THRESHOLD + (0.08 if noisy_cluster else 0.0)
     max_per_cycle = _SUGGESTION_MAX_PER_NOISY_CYCLE if noisy_cluster else _SUGGESTION_MAX_PER_CYCLE
+    min_threshold = round(min(1.0, min_threshold + quality_threshold_delta), 4)
+    max_per_cycle = max(1, max_per_cycle - expansion_rate_limit)
 
     previous_proposed = previous_registry.get("proposed_improvements", [])
     prior_signatures = {
@@ -4573,7 +4695,11 @@ def _self_suggestion_governor(
                 0.0,
                 min(
                     1.0,
-                    suggestion["priority_score"] + (strategy_expectancy * 0.15) + (unified_confidence * 0.08) - (0.02 * index),
+                    suggestion["priority_score"]
+                    + (strategy_expectancy * 0.15)
+                    + (unified_confidence * 0.08)
+                    - (0.02 * index)
+                    - min(0.12, (regression_risk * 0.07) + ((1.0 - durability_score) * 0.03) + ((1.0 - transferability_score) * 0.02)),
                 ),
             ),
             4,
@@ -4643,6 +4769,13 @@ def _self_suggestion_governor(
             "max_suggestions_per_cycle": max_per_cycle,
             "stricter_thresholds_active": noisy_cluster,
             "priority_threshold": round(min_threshold, 4),
+            "self_expansion_quality_discipline": {
+                "quality_threshold_delta": quality_threshold_delta,
+                "expansion_rate_limit": expansion_rate_limit,
+                "expansion_quality_score": round(expansion_quality_score, 4),
+                "redundancy_risk": round(redundancy_risk, 4),
+                "regression_risk": round(regression_risk, 4),
+            },
         },
         "repeated_unresolved_gaps": repeated_unresolved,
         "safety_controls": {
@@ -4705,6 +4838,339 @@ def _self_suggestion_governor(
     cycles.append(cycle_payload)
     write_json_atomic(history_path, {"cycles": cycles[-150:]})
     return cycle_payload
+
+
+def _self_expansion_quality_layer(
+    *,
+    memory_root: Path,
+    capability_evolution_ladder: dict[str, Any],
+    self_suggestion_governor: dict[str, Any],
+    intelligence_gap_engine: dict[str, Any],
+    synthetic_data_plane_engine: dict[str, Any],
+    unified_market_intelligence_field: dict[str, Any],
+    calibration_uncertainty_engine: dict[str, Any] | None = None,
+    contradiction_arbitration_engine: dict[str, Any] | None = None,
+    structural_memory_graph_engine: dict[str, Any] | None = None,
+    latent_transition_hazard_engine: dict[str, Any] | None = None,
+    replay_scope: str,
+) -> dict[str, Any]:
+    quality_dir = memory_root / "self_expansion_quality"
+    quality_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = quality_dir / "self_expansion_quality_latest.json"
+    history_path = quality_dir / "self_expansion_quality_history.json"
+    quality_registry_path = quality_dir / "capability_quality_registry.json"
+    overlap_registry_path = quality_dir / "capability_overlap_registry.json"
+    maturity_registry_path = quality_dir / "promotion_maturity_registry.json"
+    regression_watchlist_path = quality_dir / "expansion_regression_watchlist.json"
+    governance_path = quality_dir / "self_expansion_quality_governance_state.json"
+
+    capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
+    self_suggestion_governor = self_suggestion_governor if isinstance(self_suggestion_governor, dict) else {}
+    intelligence_gap_engine = intelligence_gap_engine if isinstance(intelligence_gap_engine, dict) else {}
+    synthetic_data_plane_engine = synthetic_data_plane_engine if isinstance(synthetic_data_plane_engine, dict) else {}
+    unified_market_intelligence_field = (
+        unified_market_intelligence_field if isinstance(unified_market_intelligence_field, dict) else {}
+    )
+    calibration_uncertainty_engine = calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
+    contradiction_arbitration_engine = contradiction_arbitration_engine if isinstance(contradiction_arbitration_engine, dict) else {}
+    structural_memory_graph_engine = structural_memory_graph_engine if isinstance(structural_memory_graph_engine, dict) else {}
+    latent_transition_hazard_engine = latent_transition_hazard_engine if isinstance(latent_transition_hazard_engine, dict) else {}
+
+    candidates = capability_evolution_ladder.get("capability_candidates", [])
+    if not isinstance(candidates, list):
+        candidates = []
+    validation_history = capability_evolution_ladder.get("validation_history", [])
+    if not isinstance(validation_history, list):
+        validation_history = []
+    promotion_registry = capability_evolution_ladder.get("promotion_registry", {})
+    if not isinstance(promotion_registry, dict):
+        promotion_registry = {}
+    anti_noise = self_suggestion_governor.get("anti_noise_controls", {})
+    if not isinstance(anti_noise, dict):
+        anti_noise = {}
+    repeated_unresolved = self_suggestion_governor.get("repeated_unresolved_gaps", [])
+    if not isinstance(repeated_unresolved, list):
+        repeated_unresolved = []
+    synthetic_planes = synthetic_data_plane_engine.get("synthetic_data_planes", [])
+    if not isinstance(synthetic_planes, list):
+        synthetic_planes = []
+    intelligence_gaps = intelligence_gap_engine.get("intelligence_gaps", [])
+    if not isinstance(intelligence_gaps, list):
+        intelligence_gaps = []
+
+    def _token_set(*parts: str) -> set[str]:
+        tokens: set[str] = set()
+        for part in parts:
+            normalized = "".join(ch.lower() if ch.isalnum() else " " for ch in part)
+            tokens.update(token for token in normalized.split() if token)
+        return tokens
+
+    texts: dict[str, set[str]] = {}
+    for item in candidates:
+        if not isinstance(item, dict):
+            continue
+        capability_id = str(item.get("capability_id", "unknown"))
+        texts[capability_id] = _token_set(
+            str(item.get("gap_type", "")),
+            str(item.get("capability_hypothesis", "")),
+            str(item.get("synthetic_prototype", {}).get("synthetic_plane_name", "")),
+        )
+
+    capability_overlap_map: dict[str, list[dict[str, Any]]] = {}
+    redundancy_scores: list[float] = []
+    overlap_source = list(texts.items())[:40]
+    for capability_id, left_tokens in overlap_source:
+        peers: list[dict[str, Any]] = []
+        max_overlap = 0.0
+        for other_id, right_tokens in overlap_source:
+            if capability_id == other_id:
+                continue
+            union = left_tokens | right_tokens
+            overlap = round(len(left_tokens & right_tokens) / max(1, len(union)), 4)
+            if overlap > 0.0:
+                peers.append({"other_capability_id": other_id, "overlap_score": overlap, "basis": "token_overlap"})
+            max_overlap = max(max_overlap, overlap)
+        capability_overlap_map[capability_id] = sorted(peers, key=lambda item: item["overlap_score"], reverse=True)[:5]
+        redundancy_scores.append(max_overlap)
+
+    redundancy_risk = round(sum(redundancy_scores) / max(1, len(redundancy_scores)), 4)
+    capability_novelty_score = round(max(0.0, min(1.0, 1.0 - redundancy_risk)), 4)
+
+    replay_scores = [
+        float(item.get("replay_validation_score", 0.0) or 0.0) for item in validation_history if isinstance(item, dict)
+    ]
+    replay_quality = round(sum(replay_scores) / max(1, len(replay_scores)), 4)
+    promoted_count = len([item for item in promotion_registry.get("promoted", []) if isinstance(item, dict)])
+    quarantined_count = len([item for item in promotion_registry.get("quarantined", []) if isinstance(item, dict)])
+    rejected_count = len([item for item in promotion_registry.get("rejected", []) if isinstance(item, dict)])
+    candidate_count = len([item for item in candidates if isinstance(item, dict)])
+    promoted_ratio = promoted_count / max(1, candidate_count)
+
+    structural_state = structural_memory_graph_engine.get("structural_memory_state", {})
+    if not isinstance(structural_state, dict):
+        structural_state = {}
+    latent_state = latent_transition_hazard_engine.get("latent_transition_hazard_state", {})
+    if not isinstance(latent_state, dict):
+        latent_state = {}
+    calibration_state = calibration_uncertainty_engine.get("calibration_state", {})
+    if not isinstance(calibration_state, dict):
+        calibration_state = {}
+    contradiction_state = contradiction_arbitration_engine.get("arbitration", {})
+    if not isinstance(contradiction_state, dict):
+        contradiction_state = {}
+
+    durability_score = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                (replay_quality * 0.5)
+                + (promoted_ratio * 0.2)
+                + (float(structural_state.get("memory_reliability", 0.5) or 0.5) * 0.2)
+                + (float(calibration_state.get("regime_specific_reliability", {}).get("reliability_score", 0.5) or 0.5) * 0.1),
+            ),
+        ),
+        4,
+    )
+    unique_gap_types = {str(item.get("gap_type", "unknown")) for item in candidates if isinstance(item, dict)}
+    unique_planes = {str(item.get("synthetic_plane_name", "unknown")) for item in synthetic_planes if isinstance(item, dict)}
+    transferability_score = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                (min(1.0, len(unique_gap_types) / 5.0) * 0.45)
+                + (min(1.0, len(unique_planes) / 6.0) * 0.35)
+                + (float(structural_state.get("long_horizon_context_match", 0.5) or 0.5) * 0.2),
+            ),
+        ),
+        4,
+    )
+    unresolved_pressure = min(1.0, len(repeated_unresolved) / 8.0)
+    low_value_pressure = min(1.0, float(anti_noise.get("low_value_pruned", 0) or 0) / 8.0)
+    contradiction_pressure = 0.2 if str(contradiction_state.get("outcome", "allow")) in {"pause", "refuse"} else 0.0
+    hazard_pressure = min(1.0, float(latent_state.get("transition_hazard_score", 0.0) or 0.0))
+    regression_risk = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                (quarantined_count + rejected_count) / max(1, candidate_count)
+                + (low_value_pressure * 0.15)
+                + (unresolved_pressure * 0.15)
+                + (hazard_pressure * 0.1)
+                + contradiction_pressure,
+            ),
+        ),
+        4,
+    )
+    comparative_scores = [
+        float(item.get("comparative_advantage", 0.0) or 0.0) for item in validation_history if isinstance(item, dict)
+    ]
+    comparative_quality = round(sum(comparative_scores) / max(1, len(comparative_scores)), 4)
+    conflict_scores = [float(item.get("unified_conflict_score", 0.0) or 0.0) for item in validation_history if isinstance(item, dict)]
+    conflict_penalty = round(sum(conflict_scores) / max(1, len(conflict_scores)), 4)
+    expansion_quality_score = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                (capability_novelty_score * 0.18)
+                + (durability_score * 0.24)
+                + (transferability_score * 0.2)
+                + (replay_quality * 0.18)
+                + (comparative_quality * 0.15)
+                - (regression_risk * 0.2)
+                - (conflict_penalty * 0.1),
+            ),
+        ),
+        4,
+    )
+    if expansion_quality_score >= 0.72:
+        self_expansion_quality_state = "healthy"
+    elif expansion_quality_score >= 0.55:
+        self_expansion_quality_state = "watch"
+    elif expansion_quality_score >= 0.38:
+        self_expansion_quality_state = "degraded"
+    else:
+        self_expansion_quality_state = "critical"
+
+    if promoted_ratio >= 0.6 and expansion_quality_score >= 0.72 and transferability_score >= 0.6:
+        promotion_maturity = "promotion_hardened"
+    elif promoted_ratio >= 0.4 and expansion_quality_score >= 0.64:
+        promotion_maturity = "promotion_ready"
+    elif durability_score >= 0.5 and replay_quality >= 0.52:
+        promotion_maturity = "cross_context_validated"
+    elif replay_quality >= 0.45:
+        promotion_maturity = "sandbox_validated"
+    else:
+        promotion_maturity = "seeded"
+
+    promotion_confidence_multiplier = round(max(0.75, min(1.0, 0.82 + (expansion_quality_score * 0.18) - (regression_risk * 0.2))), 4)
+    quarantine_pressure_delta = round(max(0.0, min(0.2, (regression_risk * 0.12) + (redundancy_risk * 0.08))), 4)
+    expansion_rate_limit = 1 if self_expansion_quality_state in {"degraded", "critical"} else 0
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "promotion_confidence_reduced": promotion_confidence_multiplier < 0.95,
+        "quarantine_pressure_increased": quarantine_pressure_delta > 0.05,
+        "expansion_rate_limited": expansion_rate_limit > 0,
+        "no_blind_live_self_rewrites": True,
+    }
+    quality_components = {
+        "replay_quality": replay_quality,
+        "comparative_quality": comparative_quality,
+        "conflict_penalty": conflict_penalty,
+        "duplicate_pressure": round(min(1.0, float(anti_noise.get("duplicate_suppression", 0) or 0) / 8.0), 4),
+        "low_value_pressure": round(low_value_pressure, 4),
+        "unresolved_gap_pressure": round(unresolved_pressure, 4),
+        "calibration_reliability_context": round(
+            float(calibration_state.get("regime_specific_reliability", {}).get("reliability_score", 0.5) or 0.5),
+            4,
+        ),
+        "structural_alignment_context": round(float(structural_state.get("regime_memory_alignment", 0.5) or 0.5), 4),
+        "transition_hazard_context": round(hazard_pressure, 4),
+        "promotion_confidence_multiplier": promotion_confidence_multiplier,
+        "quarantine_pressure_delta": quarantine_pressure_delta,
+        "expansion_rate_limit": expansion_rate_limit,
+    }
+
+    capability_quality_records: list[dict[str, Any]] = []
+    for item in candidates:
+        if not isinstance(item, dict):
+            continue
+        capability_id = str(item.get("capability_id", "unknown"))
+        overlaps = capability_overlap_map.get(capability_id, [])
+        local_redundancy = max([float(entry.get("overlap_score", 0.0) or 0.0) for entry in overlaps], default=0.0)
+        capability_quality_records.append(
+            {
+                "capability_id": capability_id,
+                "capability_novelty_score": round(max(0.0, min(1.0, 1.0 - local_redundancy)), 4),
+                "redundancy_risk": round(local_redundancy, 4),
+                "durability_score": durability_score,
+                "transferability_score": transferability_score,
+                "regression_risk": regression_risk,
+                "promotion_maturity": promotion_maturity,
+            }
+        )
+
+    regression_watchlist = [
+        {
+            "capability_id": item.get("capability_id", "unknown"),
+            "reason": "elevated_regression_risk",
+            "regression_risk": regression_risk,
+        }
+        for item in candidates
+        if isinstance(item, dict) and regression_risk >= 0.6
+    ]
+    existing_governance_state = read_json_safe(governance_path, default={})
+    if not isinstance(existing_governance_state, dict):
+        existing_governance_state = {}
+    integration_enabled = bool(existing_governance_state.get("allow_cross_cycle_integration", False))
+    governance_state = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "replay_scope": replay_scope,
+        "expansion_discipline_mode": "strict" if expansion_rate_limit else "normal",
+        "allow_cross_cycle_integration": integration_enabled,
+    }
+    payload = {
+        "self_expansion_quality_state": self_expansion_quality_state,
+        "integration_enabled": integration_enabled,
+        "capability_novelty_score": capability_novelty_score,
+        "redundancy_risk": redundancy_risk,
+        "durability_score": durability_score,
+        "transferability_score": transferability_score,
+        "regression_risk": regression_risk,
+        "capability_overlap_map": capability_overlap_map,
+        "expansion_quality_score": expansion_quality_score,
+        "promotion_maturity": promotion_maturity,
+        "governance_flags": governance_flags,
+        "quality_components": quality_components,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "capability_quality_registry": str(quality_registry_path),
+            "capability_overlap_registry": str(overlap_registry_path),
+            "promotion_maturity_registry": str(maturity_registry_path),
+            "expansion_regression_watchlist": str(regression_watchlist_path),
+            "governance_state": str(governance_path),
+        },
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+    write_json_atomic(
+        quality_registry_path,
+        {
+            "expansion_quality_score": expansion_quality_score,
+            "capabilities": capability_quality_records,
+            "candidate_count": candidate_count,
+            "intelligence_gap_count": len([item for item in intelligence_gaps if isinstance(item, dict)]),
+        },
+    )
+    write_json_atomic(overlap_registry_path, {"capability_overlap_map": capability_overlap_map})
+    write_json_atomic(
+        maturity_registry_path,
+        {
+            "promotion_maturity": promotion_maturity,
+            "self_expansion_quality_state": self_expansion_quality_state,
+            "promoted_count": promoted_count,
+            "candidate_count": candidate_count,
+        },
+    )
+    write_json_atomic(regression_watchlist_path, {"watchlist": regression_watchlist})
+    write_json_atomic(governance_path, governance_state)
+    return payload
 
 
 def run_self_evolving_indicator_layer(
@@ -4815,6 +5281,15 @@ def run_self_evolving_indicator_layer(
             "adversarial_execution_state": adversarial_execution_engine.get("adversarial_execution_state", {}),
         },
     }
+    previous_self_expansion_quality = read_json_safe(
+        memory_root / "self_expansion_quality" / "self_expansion_quality_latest.json",
+        default={},
+    )
+    if not isinstance(previous_self_expansion_quality, dict):
+        previous_self_expansion_quality = {}
+    quality_integration_context = (
+        previous_self_expansion_quality if bool(previous_self_expansion_quality.get("integration_enabled", False)) else {}
+    )
     intelligence_gap_engine = _intelligence_gap_discovery_engine(
         memory_root=memory_root,
         closed=closed,
@@ -4822,6 +5297,7 @@ def run_self_evolving_indicator_layer(
         unified_market_intelligence_field=provisional_unified_market_intelligence,
         pain_geometry_engine=pain_geometry_engine,
         execution_microstructure_engine=execution_microstructure_engine,
+        self_expansion_quality_layer=quality_integration_context,
     )
     synthetic_data_plane_engine = _synthetic_data_plane_expansion_engine(
         memory_root=memory_root,
@@ -4830,6 +5306,7 @@ def run_self_evolving_indicator_layer(
         counterfactual_engine=counterfactual_engine,
         unified_market_intelligence_field=provisional_unified_market_intelligence,
         execution_microstructure_engine=execution_microstructure_engine,
+        self_expansion_quality_layer=quality_integration_context,
     )
     capability_evolution_ladder = _capability_evolution_governance_ladder(
         memory_root=memory_root,
@@ -4837,6 +5314,7 @@ def run_self_evolving_indicator_layer(
         synthetic_data_plane_engine=synthetic_data_plane_engine,
         unified_market_intelligence_field=provisional_unified_market_intelligence,
         adversarial_execution_engine=adversarial_execution_engine,
+        self_expansion_quality_layer=quality_integration_context,
         replay_scope=replay_scope,
     )
     discovery_state_tags = _discovery_state_tags(
@@ -5229,7 +5707,41 @@ def run_self_evolving_indicator_layer(
         replay_scope=replay_scope,
         structural_memory_graph_engine=structural_memory_graph_engine,
         latent_transition_hazard_engine=latent_transition_hazard_engine,
+        self_expansion_quality_layer=quality_integration_context,
     )
+    self_expansion_quality_engine = _self_expansion_quality_layer(
+        memory_root=memory_root,
+        capability_evolution_ladder=capability_evolution_ladder,
+        self_suggestion_governor=self_suggestion_governor,
+        intelligence_gap_engine=intelligence_gap_engine,
+        synthetic_data_plane_engine=synthetic_data_plane_engine,
+        unified_market_intelligence_field=unified_market_intelligence_field,
+        calibration_uncertainty_engine=calibration_uncertainty_engine,
+        contradiction_arbitration_engine=contradiction_arbitration_engine,
+        structural_memory_graph_engine=structural_memory_graph_engine,
+        latent_transition_hazard_engine=latent_transition_hazard_engine,
+        replay_scope=replay_scope,
+    )
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["self_expansion_quality_state"] = self_expansion_quality_engine.get("self_expansion_quality_state", "unknown")
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["expansion_quality_adjusted_confidence"] = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                float(confidence_structure.get("composite_confidence", 0.0) or 0.0)
+                * float(self_expansion_quality_engine.get("quality_components", {}).get("promotion_confidence_multiplier", 1.0) or 1.0),
+            ),
+        ),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
     survival_intelligence = {
         "capital_survival_engine": autonomous_behavior.get("capital_survival_engine", {}),
         "pain_memory_survival_layer": pain_memory_survival,
@@ -5249,6 +5761,7 @@ def run_self_evolving_indicator_layer(
         "recursive_self_modeling": recursive_self_modeling,
         "discovery_state_tags": discovery_state_tags,
         "unified_market_intelligence_field": unified_market_intelligence_field,
+        "self_expansion_quality_layer": self_expansion_quality_engine,
     }
     meta_learning_loop = _meta_learning_loop(
         memory_root=memory_root,
@@ -5281,5 +5794,6 @@ def run_self_evolving_indicator_layer(
         "recursive_self_modeling": recursive_self_modeling,
         "discovery_state_tags": discovery_state_tags,
         "unified_market_intelligence_field": unified_market_intelligence_field,
+        "self_expansion_quality_layer": self_expansion_quality_engine,
         "meta_learning_loop": meta_learning_loop,
     }
