@@ -1068,30 +1068,15 @@
         }
       },
       "self_suggestion_governor": {
-        "cycle_index": 2,
+        "cycle_index": 1,
         "input_signature": {
           "replay_scope": "evaluation_replay",
           "gap_signatures": [
-            "confidence_miscalibration_drift::confidence_calibration_drift",
             "low_value_noisy_mutations::mutation_noise_cluster",
             "weak_detector_reliability::detector_sandbox_failures"
           ],
           "strongest_branch": "mutated_strategy_a",
-          "closed_count": 0,
-          "unified_field_score": 0.458,
-          "unified_confidence": 0.4241,
-          "execution_quality_score": 1.0,
-          "execution_penalty": 0.0,
-          "contradiction_outcome": "reduce_size",
-          "contradiction_severity": 0.437,
-          "calibration_drift": 0.6786,
-          "confidence_reliability_band": "low",
-          "execution_adjusted_uncertainty": 0.5055,
-          "hostile_execution_score": 0.0663,
-          "predatory_liquidity_state": "normal",
-          "structural_memory_reliability": 0.5083,
-          "structural_reversal_bias": 0.0,
-          "long_horizon_context_match": 0.2166
+          "closed_count": 0
         },
         "detected_gaps": [
           {
@@ -1105,36 +1090,256 @@
             "detail": "mutation_noise_cluster",
             "frequency": 1,
             "severity": 0.5
-          },
-          {
-            "gap_type": "confidence_miscalibration_drift",
-            "detail": "confidence_calibration_drift",
-            "frequency": 3,
-            "severity": 0.6786
           }
         ],
-        "proposed_improvements": [],
-        "implemented_improvements": [],
-        "promoted_improvements": [],
-        "rejected_improvements": [
+        "proposed_improvements": [
           {
-            "cycle_index": 2,
-            "signature": "new_execution_refinement::confidence_calibration_guard",
-            "gap_type": "confidence_miscalibration_drift",
-            "reason": "vague_suggestion_rejected"
+            "cycle_index": 1,
+            "suggestion_type": "new_feature_combination",
+            "target": "detector_ensemble_features",
+            "gap_type": "weak_detector_reliability",
+            "gap_detail": "detector_sandbox_failures",
+            "expected_usefulness": 0.95,
+            "pain_failure_frequency": 5,
+            "regime_sensitivity": 0.5,
+            "execution_impact": 0.45,
+            "survival_impact": 0.5,
+            "priority_score": 0.75,
+            "governance": {
+              "sandbox_only": true,
+              "live_deployment_allowed": false,
+              "blind_live_rewrite_blocked": true
+            },
+            "signature": "new_feature_combination::detector_ensemble_features"
           },
           {
-            "cycle_index": 2,
-            "signature": "new_survival_rule::miscalibration_pause_rule",
-            "gap_type": "confidence_miscalibration_drift",
-            "reason": "vague_suggestion_rejected"
+            "cycle_index": 1,
+            "suggestion_type": "new_strategy_mutation",
+            "target": "detector_threshold_mutation",
+            "gap_type": "weak_detector_reliability",
+            "gap_detail": "detector_sandbox_failures",
+            "expected_usefulness": 0.95,
+            "pain_failure_frequency": 5,
+            "regime_sensitivity": 0.5,
+            "execution_impact": 0.45,
+            "survival_impact": 0.5,
+            "priority_score": 0.75,
+            "governance": {
+              "sandbox_only": true,
+              "live_deployment_allowed": false,
+              "blind_live_rewrite_blocked": true
+            },
+            "signature": "new_strategy_mutation::detector_threshold_mutation"
+          },
+          {
+            "cycle_index": 1,
+            "suggestion_type": "new_survival_rule",
+            "target": "mutation_noise_filter",
+            "gap_type": "low_value_noisy_mutations",
+            "gap_detail": "mutation_noise_cluster",
+            "expected_usefulness": 0.7,
+            "pain_failure_frequency": 1,
+            "regime_sensitivity": 0.5,
+            "execution_impact": 0.45,
+            "survival_impact": 0.5,
+            "priority_score": 0.5025,
+            "governance": {
+              "sandbox_only": true,
+              "live_deployment_allowed": false,
+              "blind_live_rewrite_blocked": true
+            },
+            "signature": "new_survival_rule::mutation_noise_filter"
+          },
+          {
+            "cycle_index": 1,
+            "suggestion_type": "new_strategy_mutation",
+            "target": "quality_gated_mutation_generator",
+            "gap_type": "low_value_noisy_mutations",
+            "gap_detail": "mutation_noise_cluster",
+            "expected_usefulness": 0.7,
+            "pain_failure_frequency": 1,
+            "regime_sensitivity": 0.5,
+            "execution_impact": 0.45,
+            "survival_impact": 0.5,
+            "priority_score": 0.5025,
+            "governance": {
+              "sandbox_only": true,
+              "live_deployment_allowed": false,
+              "blind_live_rewrite_blocked": true
+            },
+            "signature": "new_strategy_mutation::quality_gated_mutation_generator"
+          }
+        ],
+        "implemented_improvements": [
+          {
+            "suggestion_signature": "new_feature_combination::detector_ensemble_features",
+            "implementation_id": "sandbox_impl_1_1",
+            "sandbox_module_name": "sandbox_detector_ensemble_features",
+            "suggestion_type": "new_feature_combination",
+            "target": "detector_ensemble_features",
+            "replay_test": {
+              "scope": "evaluation_replay",
+              "baseline": "mutated_strategy_a",
+              "comparison": "sandbox_vs_baseline",
+              "score": 0.7575
+            },
+            "governance_decision": "promote",
+            "governance": {
+              "sandbox_only": true,
+              "live_activation_allowed": false,
+              "core_module_deletion_allowed": false,
+              "quarantine_supported": true
+            }
+          },
+          {
+            "suggestion_signature": "new_strategy_mutation::detector_threshold_mutation",
+            "implementation_id": "sandbox_impl_1_2",
+            "sandbox_module_name": "sandbox_detector_threshold_mutation",
+            "suggestion_type": "new_strategy_mutation",
+            "target": "detector_threshold_mutation",
+            "replay_test": {
+              "scope": "evaluation_replay",
+              "baseline": "mutated_strategy_a",
+              "comparison": "sandbox_vs_baseline",
+              "score": 0.7375
+            },
+            "governance_decision": "promote",
+            "governance": {
+              "sandbox_only": true,
+              "live_activation_allowed": false,
+              "core_module_deletion_allowed": false,
+              "quarantine_supported": true
+            }
+          },
+          {
+            "suggestion_signature": "new_survival_rule::mutation_noise_filter",
+            "implementation_id": "sandbox_impl_1_3",
+            "sandbox_module_name": "sandbox_mutation_noise_filter",
+            "suggestion_type": "new_survival_rule",
+            "target": "mutation_noise_filter",
+            "replay_test": {
+              "scope": "evaluation_replay",
+              "baseline": "mutated_strategy_a",
+              "comparison": "sandbox_vs_baseline",
+              "score": 0.47
+            },
+            "governance_decision": "quarantine",
+            "governance": {
+              "sandbox_only": true,
+              "live_activation_allowed": false,
+              "core_module_deletion_allowed": false,
+              "quarantine_supported": true
+            }
+          },
+          {
+            "suggestion_signature": "new_strategy_mutation::quality_gated_mutation_generator",
+            "implementation_id": "sandbox_impl_1_4",
+            "sandbox_module_name": "sandbox_quality_gated_mutation_generator",
+            "suggestion_type": "new_strategy_mutation",
+            "target": "quality_gated_mutation_generator",
+            "replay_test": {
+              "scope": "evaluation_replay",
+              "baseline": "mutated_strategy_a",
+              "comparison": "sandbox_vs_baseline",
+              "score": 0.45
+            },
+            "governance_decision": "quarantine",
+            "governance": {
+              "sandbox_only": true,
+              "live_activation_allowed": false,
+              "core_module_deletion_allowed": false,
+              "quarantine_supported": true
+            }
+          }
+        ],
+        "promoted_improvements": [
+          {
+            "suggestion_signature": "new_feature_combination::detector_ensemble_features",
+            "implementation_id": "sandbox_impl_1_1",
+            "sandbox_module_name": "sandbox_detector_ensemble_features",
+            "suggestion_type": "new_feature_combination",
+            "target": "detector_ensemble_features",
+            "replay_test": {
+              "scope": "evaluation_replay",
+              "baseline": "mutated_strategy_a",
+              "comparison": "sandbox_vs_baseline",
+              "score": 0.7575
+            },
+            "governance_decision": "promote",
+            "governance": {
+              "sandbox_only": true,
+              "live_activation_allowed": false,
+              "core_module_deletion_allowed": false,
+              "quarantine_supported": true
+            }
+          },
+          {
+            "suggestion_signature": "new_strategy_mutation::detector_threshold_mutation",
+            "implementation_id": "sandbox_impl_1_2",
+            "sandbox_module_name": "sandbox_detector_threshold_mutation",
+            "suggestion_type": "new_strategy_mutation",
+            "target": "detector_threshold_mutation",
+            "replay_test": {
+              "scope": "evaluation_replay",
+              "baseline": "mutated_strategy_a",
+              "comparison": "sandbox_vs_baseline",
+              "score": 0.7375
+            },
+            "governance_decision": "promote",
+            "governance": {
+              "sandbox_only": true,
+              "live_activation_allowed": false,
+              "core_module_deletion_allowed": false,
+              "quarantine_supported": true
+            }
+          }
+        ],
+        "rejected_improvements": [
+          {
+            "suggestion_signature": "new_survival_rule::mutation_noise_filter",
+            "implementation_id": "sandbox_impl_1_3",
+            "sandbox_module_name": "sandbox_mutation_noise_filter",
+            "suggestion_type": "new_survival_rule",
+            "target": "mutation_noise_filter",
+            "replay_test": {
+              "scope": "evaluation_replay",
+              "baseline": "mutated_strategy_a",
+              "comparison": "sandbox_vs_baseline",
+              "score": 0.47
+            },
+            "governance_decision": "quarantine",
+            "governance": {
+              "sandbox_only": true,
+              "live_activation_allowed": false,
+              "core_module_deletion_allowed": false,
+              "quarantine_supported": true
+            }
+          },
+          {
+            "suggestion_signature": "new_strategy_mutation::quality_gated_mutation_generator",
+            "implementation_id": "sandbox_impl_1_4",
+            "sandbox_module_name": "sandbox_quality_gated_mutation_generator",
+            "suggestion_type": "new_strategy_mutation",
+            "target": "quality_gated_mutation_generator",
+            "replay_test": {
+              "scope": "evaluation_replay",
+              "baseline": "mutated_strategy_a",
+              "comparison": "sandbox_vs_baseline",
+              "score": 0.45
+            },
+            "governance_decision": "quarantine",
+            "governance": {
+              "sandbox_only": true,
+              "live_activation_allowed": false,
+              "core_module_deletion_allowed": false,
+              "quarantine_supported": true
+            }
           }
         ],
         "anti_noise_controls": {
-          "duplicate_suppression": 4,
+          "duplicate_suppression": 0,
           "low_value_pruned": 0,
           "cooldown_suppressed": 0,
-          "vague_rejected": 2,
           "max_suggestions_per_cycle": 6,
           "stricter_thresholds_active": false,
           "priority_threshold": 0.35
@@ -1146,1253 +1351,10 @@
           "no_blind_live_self_rewrites": true,
           "stable_core_module_deletion_blocked": true
         },
-        "discovery_state_tags": {
-          "synthetic_feature_state": "active",
-          "negative_space_state": "normal",
-          "invariant_break_state": "stable",
-          "pain_geometry_risk": 0.0,
-          "counterfactual_evaluation": "none",
-          "liquidity_decay_state": "insufficient_data"
-        },
-        "unified_market_intelligence_field": {
-          "unified_field_score": 0.458,
-          "composite_confidence": 0.4241,
-          "refusal_pause_behavior": {
-            "should_refuse": true,
-            "should_pause": true,
-            "refusal_reasons": [
-              "weak_detector_reliability"
-            ],
-            "pause_reasons": [
-              "calibration_drift_elevated",
-              "confidence_reliability_band_degraded"
-            ]
-          }
-        },
-        "execution_microstructure_intelligence_layer": {
-          "execution_quality_score": 1.0,
-          "execution_penalty": 0.0,
-          "execution_state": "insufficient_data",
-          "recommended_actions": [
-            "maintain_current_execution_controls"
-          ]
-        },
-        "adversarial_execution_intelligence_layer": {
-          "adversarial_execution_state": {
-            "hostile_execution_score": 0.0663,
-            "toxicity_proxy": 0.036,
-            "quote_fade_proxy": 0.18,
-            "sweep_aftermath_risk": 0.0,
-            "fill_collapse_risk": 0.14,
-            "adverse_selection_risk": 0.05,
-            "predatory_liquidity_state": "normal",
-            "historical_execution_hostility": 0.0663,
-            "execution_survival_bias": 0.0298,
-            "governance_flags": {
-              "sandbox_only": true,
-              "replay_validation_required": true,
-              "live_deployment_allowed": false,
-              "no_blind_live_self_rewrites": true
-            }
-          },
-          "confidence_adjustments": {
-            "hostility_penalty": 0.0972,
-            "hostility_adjusted_confidence": 0.9479
-          },
-          "risk_adjustments": {
-            "adversarial_execution_multiplier": 0.9569,
-            "should_reduce_size": false,
-            "should_pause": false,
-            "should_refuse": false,
-            "pause_reasons": [],
-            "refusal_reasons": []
-          }
-        },
-        "contradiction_arbitration_and_belief_resolution_layer": {
-          "arbitration": {
-            "outcome": "reduce_size",
-            "dominant_source": "unified_market_intelligence_field",
-            "max_contradiction_severity": 0.437,
-            "conflict_state": "active",
-            "reasons": [
-              "directional_opposition",
-              "directional_opposition",
-              "directional_opposition",
-              "directional_opposition",
-              "directional_opposition",
-              "directional_opposition"
-            ]
-          },
-          "confidence_adjustments": {
-            "base_composite_confidence": 0.4241,
-            "contradiction_penalty": 0.153,
-            "contradiction_adjusted_confidence": 0.2711
-          },
-          "risk_adjustments": {
-            "contradiction_multiplier": 0.7596,
-            "recommended_action": "reduce_size",
-            "should_reduce_size": true,
-            "should_pause": false,
-            "should_refuse": false
-          }
-        },
-        "calibration_and_uncertainty_governance_layer": {
-          "calibration_state": {
-            "raw_confidence": 0.4241,
-            "calibrated_confidence": 0.0669,
-            "calibration_drift": 0.6786,
-            "confidence_reliability_band": "low",
-            "epistemic_uncertainty": 1.0,
-            "aleatoric_proxy": 0.0,
-            "historical_confidence_error": 0.4241,
-            "regime_specific_reliability": {
-              "context_key": "evaluation_replay|range|insufficient_data",
-              "reliability_score": 0.5759,
-              "observations": 1
-            },
-            "execution_adjusted_uncertainty": 0.5055,
-            "governance_flags": {
-              "sandbox_only": true,
-              "replay_validation_required": true,
-              "live_deployment_allowed": false,
-              "no_blind_live_self_rewrites": true,
-              "pause_guard_triggered": true,
-              "refuse_guard_triggered": false
-            }
-          },
-          "confidence_adjustments": {
-            "confidence_delta": 0.3572,
-            "risk_multiplier": 0.5266,
-            "should_pause": true,
-            "should_refuse": false,
-            "pause_reasons": [
-              "calibration_drift_elevated",
-              "confidence_reliability_band_degraded"
-            ],
-            "refusal_reasons": []
-          },
-          "governance": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_self_rewrites": true
-          }
-        },
         "paths": {
           "registry": "memory/capability_registry/self_suggestion_registry.json",
           "governor": "memory/capability_registry/self_suggestion_governor.json",
           "history": "memory/capability_registry/self_suggestion_governor_history.json"
-        }
-      },
-      "synthetic_feature_invention_engine": {
-        "feature_candidates": [
-          {
-            "feature_name": "macro_conflict_score",
-            "value": 0.0,
-            "inputs_used": [
-              "dxy_state",
-              "yield_state"
-            ]
-          },
-          {
-            "feature_name": "liquidity_pressure_index",
-            "value": 0.925,
-            "inputs_used": [
-              "spread_ratio",
-              "slippage_ratio",
-              "detector_trigger_count"
-            ]
-          },
-          {
-            "feature_name": "session_fragility_score",
-            "value": 0.5,
-            "inputs_used": [
-              "session_state",
-              "volatility_ratio"
-            ]
-          },
-          {
-            "feature_name": "trap_probability_factor",
-            "value": 0.8,
-            "inputs_used": [
-              "volatility_ratio",
-              "spread_ratio",
-              "dxy_state",
-              "yield_state"
-            ]
-          }
-        ],
-        "feature_performance": [
-          {
-            "feature_name": "macro_conflict_score",
-            "predictive_usefulness": 0.0,
-            "signal_quality_delta": -0.25,
-            "validation": {
-              "scope": "evaluation_replay",
-              "historical_sample_size": 0,
-              "sandbox_only": true,
-              "explainable": true,
-              "testable": true
-            }
-          },
-          {
-            "feature_name": "liquidity_pressure_index",
-            "predictive_usefulness": 0.0925,
-            "signal_quality_delta": -0.1575,
-            "validation": {
-              "scope": "evaluation_replay",
-              "historical_sample_size": 0,
-              "sandbox_only": true,
-              "explainable": true,
-              "testable": true
-            }
-          },
-          {
-            "feature_name": "session_fragility_score",
-            "predictive_usefulness": 0.05,
-            "signal_quality_delta": -0.2,
-            "validation": {
-              "scope": "evaluation_replay",
-              "historical_sample_size": 0,
-              "sandbox_only": true,
-              "explainable": true,
-              "testable": true
-            }
-          },
-          {
-            "feature_name": "trap_probability_factor",
-            "predictive_usefulness": 0.08,
-            "signal_quality_delta": -0.17,
-            "validation": {
-              "scope": "evaluation_replay",
-              "historical_sample_size": 0,
-              "sandbox_only": true,
-              "explainable": true,
-              "testable": true
-            }
-          }
-        ],
-        "synthetic_features": [
-          {
-            "feature_name": "liquidity_pressure_index",
-            "value": 0.925,
-            "inputs_used": [
-              "spread_ratio",
-              "slippage_ratio",
-              "detector_trigger_count"
-            ],
-            "predictive_usefulness": 0.0925,
-            "signal_quality_delta": -0.1575,
-            "validation": {
-              "scope": "evaluation_replay",
-              "historical_sample_size": 0,
-              "sandbox_only": true,
-              "explainable": true,
-              "testable": true
-            }
-          },
-          {
-            "feature_name": "trap_probability_factor",
-            "value": 0.8,
-            "inputs_used": [
-              "volatility_ratio",
-              "spread_ratio",
-              "dxy_state",
-              "yield_state"
-            ],
-            "predictive_usefulness": 0.08,
-            "signal_quality_delta": -0.17,
-            "validation": {
-              "scope": "evaluation_replay",
-              "historical_sample_size": 0,
-              "sandbox_only": true,
-              "explainable": true,
-              "testable": true
-            }
-          }
-        ],
-        "pruned_feature_count": 2,
-        "paths": {
-          "synthetic_features": "memory/synthetic_features/synthetic_features_latest.json",
-          "feature_candidates": "memory/feature_candidates/synthetic_feature_candidates.json",
-          "feature_performance": "memory/feature_performance/synthetic_feature_performance.json"
-        }
-      },
-      "negative_space_pattern_recognition": {
-        "signal": {
-          "negative_space_signal": false,
-          "expectation_model": {
-            "context": "baseline",
-            "expected_direction": "flat",
-            "expected_distribution_center": 0.0
-          },
-          "actual_behavior": {
-            "direction": "flat",
-            "pnl_points": 0.0
-          },
-          "deviation_score": 0.0,
-          "validation": {
-            "scope": "evaluation_replay",
-            "sandbox_only": true,
-            "validation_passed": false
-          }
-        },
-        "paths": {
-          "latest": "memory/negative_space_signals/negative_space_signal_latest.json",
-          "history": "memory/negative_space_signals/negative_space_history.json"
-        }
-      },
-      "temporal_invariance_break_detection": {
-        "invariant_break_events": [
-          {
-            "invariant_name": "gold_vs_dxy_inverse",
-            "sign_flip": false,
-            "stability": 1.0,
-            "previous_stability": 0.8,
-            "invariant_break": false,
-            "confidence_multiplier": 1.0,
-            "trigger_deeper_analysis": false,
-            "validation": {
-              "scope": "evaluation_replay",
-              "sandbox_only": true
-            }
-          },
-          {
-            "invariant_name": "gold_vs_real_yields_inverse",
-            "sign_flip": false,
-            "stability": 0.95,
-            "previous_stability": 0.8,
-            "invariant_break": false,
-            "confidence_multiplier": 1.0,
-            "trigger_deeper_analysis": false,
-            "validation": {
-              "scope": "evaluation_replay",
-              "sandbox_only": true
-            }
-          },
-          {
-            "invariant_name": "volatility_breakout_response",
-            "sign_flip": false,
-            "stability": 1.0,
-            "previous_stability": 0.8,
-            "invariant_break": false,
-            "confidence_multiplier": 1.0,
-            "trigger_deeper_analysis": false,
-            "validation": {
-              "scope": "evaluation_replay",
-              "sandbox_only": true
-            }
-          }
-        ],
-        "paths": {
-          "events": "memory/invariant_break_events/invariant_break_events_latest.json",
-          "models": "memory/invariant_break_events/invariant_models.json"
-        }
-      },
-      "pain_geometry_fields": {
-        "loss_coordinates": [],
-        "pain_risk_surface": {
-          "current_state_risk": 0.0,
-          "sample_count": 0,
-          "method": "gaussian_kde_proxy"
-        },
-        "paths": {
-          "coordinates": "memory/pain_geometry/loss_coordinates.json",
-          "surface": "memory/pain_geometry/pain_risk_surface.json"
-        }
-      },
-      "counterfactual_trade_engine": {
-        "counterfactual_evaluations": [],
-        "paths": {
-          "latest": "memory/counterfactual_results/counterfactual_latest.json",
-          "history": "memory/counterfactual_results/counterfactual_history.json"
-        }
-      },
-      "fractal_liquidity_decay_functions": {
-        "liquidity_decay_models": [],
-        "path": "memory/liquidity_decay_models/liquidity_decay_latest.json"
-      },
-      "execution_microstructure_intelligence_layer": {
-        "execution_quality_score": 1.0,
-        "execution_confidence": 0.35,
-        "execution_state": "insufficient_data",
-        "slippage_state": "normal",
-        "spread_state": "normal",
-        "fill_delay_state": "normal",
-        "partial_fill_state": "normal",
-        "failure_cluster_risk": 0.0,
-        "entry_timing_degradation": 0.0,
-        "execution_penalty": 0.0,
-        "should_reduce_size": false,
-        "should_delay_entry": false,
-        "should_refuse_trade": false,
-        "recommended_actions": [
-          "maintain_current_execution_controls"
-        ],
-        "governance": {
-          "sandbox_only": true,
-          "no_blind_live_self_rewrites": true,
-          "replay_validation_required": true,
-          "direct_live_override_allowed": false
-        },
-        "paths": {
-          "latest": "memory/execution_microstructure/execution_microstructure_latest.json",
-          "history": "memory/execution_microstructure/execution_microstructure_history.json",
-          "failure_clusters": "memory/execution_microstructure/execution_failure_clusters.json",
-          "quality_baselines": "memory/execution_microstructure/execution_quality_baselines.json",
-          "entry_timing_degradation": "memory/execution_microstructure/entry_timing_degradation.json"
-        }
-      },
-      "adversarial_execution_intelligence_layer": {
-        "adversarial_execution_state": {
-          "hostile_execution_score": 0.0663,
-          "toxicity_proxy": 0.036,
-          "quote_fade_proxy": 0.18,
-          "sweep_aftermath_risk": 0.0,
-          "fill_collapse_risk": 0.14,
-          "adverse_selection_risk": 0.05,
-          "predatory_liquidity_state": "normal",
-          "historical_execution_hostility": 0.0663,
-          "execution_survival_bias": 0.0298,
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_self_rewrites": true
-          }
-        },
-        "confidence_adjustments": {
-          "hostility_penalty": 0.0972,
-          "hostility_adjusted_confidence": 0.9479
-        },
-        "risk_adjustments": {
-          "adversarial_execution_multiplier": 0.9569,
-          "should_reduce_size": false,
-          "should_pause": false,
-          "should_refuse": false,
-          "pause_reasons": [],
-          "refusal_reasons": []
-        },
-        "governance": {
-          "sandbox_only": true,
-          "replay_validation_required": true,
-          "live_deployment_allowed": false,
-          "no_blind_live_self_rewrites": true,
-          "pause_guard_triggered": false,
-          "refuse_guard_triggered": false
-        },
-        "paths": {
-          "latest": "memory/adversarial_execution/adversarial_execution_latest.json",
-          "history": "memory/adversarial_execution/adversarial_execution_history.json",
-          "hostility_event_registry": "memory/adversarial_execution/hostility_event_registry.json",
-          "contextual_hostility_clusters": "memory/adversarial_execution/contextual_hostility_clusters.json",
-          "hostility_governance_state": "memory/adversarial_execution/hostility_governance_state.json",
-          "detector_reliability_registry": "memory/adversarial_execution/detector_reliability_registry.json"
-        }
-      },
-      "structural_memory_graph_layer": {
-        "structural_memory_state": {
-          "structural_memory_state": "weak",
-          "historical_recurrence_score": 0.3333,
-          "structural_magnet_score": 0.0,
-          "long_horizon_context_match": 0.2166,
-          "regime_memory_alignment": 1.0,
-          "episodic_pattern_links": [],
-          "structural_reversal_bias": 0.0,
-          "structural_acceleration_bias": 0.0,
-          "memory_reliability": 0.5083,
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_self_rewrites": true,
-            "pause_guard_triggered": false,
-            "refuse_guard_triggered": false
-          }
-        },
-        "confidence_adjustments": {
-          "memory_confidence_adjustment": 0.0,
-          "memory_adjusted_confidence": 0.4241
-        },
-        "risk_adjustments": {
-          "structural_memory_multiplier": 1.0,
-          "should_pause": false,
-          "should_refuse": false,
-          "pause_reasons": [],
-          "refusal_reasons": []
-        },
-        "context_links": {
-          "context_key": "evaluation_replay|range|range|insufficient_data",
-          "zone_keys": [],
-          "episode_count": 0
-        },
-        "governance": {
-          "sandbox_only": true,
-          "replay_validation_required": true,
-          "live_deployment_allowed": false,
-          "no_blind_live_self_rewrites": true
-        },
-        "paths": {
-          "latest": "memory/structural_memory_graph/structural_memory_graph_latest.json",
-          "history": "memory/structural_memory_graph/structural_memory_graph_history.json",
-          "structural_context_registry": "memory/structural_memory_graph/structural_context_registry.json",
-          "zone_magnet_registry": "memory/structural_memory_graph/zone_magnet_registry.json",
-          "episodic_pattern_links": "memory/structural_memory_graph/episodic_pattern_links.json",
-          "regime_memory_alignment_registry": "memory/structural_memory_graph/regime_memory_alignment_registry.json",
-          "structural_memory_governance_state": "memory/structural_memory_graph/structural_memory_governance_state.json"
-        }
-      },
-      "calibration_and_uncertainty_governance_layer": {
-        "calibration_state": {
-          "raw_confidence": 0.4241,
-          "calibrated_confidence": 0.0669,
-          "calibration_drift": 0.6786,
-          "confidence_reliability_band": "low",
-          "epistemic_uncertainty": 1.0,
-          "aleatoric_proxy": 0.0,
-          "historical_confidence_error": 0.4241,
-          "regime_specific_reliability": {
-            "context_key": "evaluation_replay|range|insufficient_data",
-            "reliability_score": 0.5759,
-            "observations": 1
-          },
-          "execution_adjusted_uncertainty": 0.5055,
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_self_rewrites": true,
-            "pause_guard_triggered": true,
-            "refuse_guard_triggered": false
-          }
-        },
-        "confidence_adjustments": {
-          "confidence_delta": 0.3572,
-          "risk_multiplier": 0.5266,
-          "should_pause": true,
-          "should_refuse": false,
-          "pause_reasons": [
-            "calibration_drift_elevated",
-            "confidence_reliability_band_degraded"
-          ],
-          "refusal_reasons": []
-        },
-        "governance": {
-          "sandbox_only": true,
-          "replay_validation_required": true,
-          "live_deployment_allowed": false,
-          "no_blind_live_self_rewrites": true
-        },
-        "paths": {
-          "latest": "memory/calibration_uncertainty/calibration_uncertainty_latest.json",
-          "history": "memory/calibration_uncertainty/calibration_uncertainty_history.json",
-          "confidence_error_registry": "memory/calibration_uncertainty/confidence_error_registry.json",
-          "regime_reliability_registry": "memory/calibration_uncertainty/regime_reliability_registry.json",
-          "governance_state": "memory/calibration_uncertainty/calibration_governance_state.json"
-        }
-      },
-      "contradiction_arbitration_and_belief_resolution_layer": {
-        "input_signature": {
-          "context_signature": {
-            "replay_scope": "evaluation_replay",
-            "structure_state": "range",
-            "volatility_ratio": 1.0,
-            "spread_ratio": 1.0,
-            "slippage_ratio": 1.0,
-            "regime_state": "range",
-            "execution_state": "insufficient_data"
-          },
-          "unified_confidence": 0.4241,
-          "execution_penalty": 0.0,
-          "execution_confidence": 0.35,
-          "negative_signal": false,
-          "negative_score": 0.0,
-          "invariant_break_count": 0,
-          "pain_risk": 0.0,
-          "counterfactual_advantage": 0.0,
-          "liquidity_vulnerability": 0.0,
-          "long_horizon_context_match": 0.2166,
-          "structural_reversal_bias": 0.0,
-          "structural_memory_reliability": 0.5083,
-          "strategy_mode": "defensive"
-        },
-        "beliefs": [
-          {
-            "belief_id": "belief_1_unified_market_intelligence_field",
-            "source_layer": "unified_market_intelligence_field",
-            "belief_direction": "risk_off",
-            "belief_confidence": 0.4241,
-            "belief_intent": "composite_unified_intelligence",
-            "historical_reliability": 0.0,
-            "execution_adjusted_trust": 0.4241,
-            "context_signature": {
-              "replay_scope": "evaluation_replay",
-              "structure_state": "range",
-              "volatility_ratio": 1.0,
-              "spread_ratio": 1.0,
-              "slippage_ratio": 1.0,
-              "regime_state": "range",
-              "execution_state": "insufficient_data"
-            },
-            "governance_flags": {
-              "sandbox_only": true,
-              "replay_validation_required": true,
-              "live_deployment_allowed": false,
-              "no_blind_live_rewrites": true
-            }
-          },
-          {
-            "belief_id": "belief_2_execution_microstructure_intelligence_layer",
-            "source_layer": "execution_microstructure_intelligence_layer",
-            "belief_direction": "continuation",
-            "belief_confidence": 0.35,
-            "belief_intent": "execution_safety",
-            "historical_reliability": 1.0,
-            "execution_adjusted_trust": 1.0,
-            "context_signature": {
-              "replay_scope": "evaluation_replay",
-              "structure_state": "range",
-              "volatility_ratio": 1.0,
-              "spread_ratio": 1.0,
-              "slippage_ratio": 1.0,
-              "regime_state": "range",
-              "execution_state": "insufficient_data"
-            },
-            "governance_flags": {
-              "sandbox_only": true,
-              "replay_validation_required": true,
-              "live_deployment_allowed": false,
-              "no_blind_live_rewrites": true
-            }
-          },
-          {
-            "belief_id": "belief_3_negative_space_pattern_recognition",
-            "source_layer": "negative_space_pattern_recognition",
-            "belief_direction": "continuation",
-            "belief_confidence": 0.0,
-            "belief_intent": "trap_detection",
-            "historical_reliability": 0.0,
-            "execution_adjusted_trust": 0.0,
-            "context_signature": {
-              "replay_scope": "evaluation_replay",
-              "structure_state": "range",
-              "volatility_ratio": 1.0,
-              "spread_ratio": 1.0,
-              "slippage_ratio": 1.0,
-              "regime_state": "range",
-              "execution_state": "insufficient_data"
-            },
-            "governance_flags": {
-              "sandbox_only": true,
-              "replay_validation_required": true,
-              "live_deployment_allowed": false,
-              "no_blind_live_rewrites": true
-            }
-          },
-          {
-            "belief_id": "belief_4_temporal_invariance_break_detection",
-            "source_layer": "temporal_invariance_break_detection",
-            "belief_direction": "continuation",
-            "belief_confidence": 0.45,
-            "belief_intent": "invariance_integrity_guard",
-            "historical_reliability": 1.0,
-            "execution_adjusted_trust": 0.45,
-            "context_signature": {
-              "replay_scope": "evaluation_replay",
-              "structure_state": "range",
-              "volatility_ratio": 1.0,
-              "spread_ratio": 1.0,
-              "slippage_ratio": 1.0,
-              "regime_state": "range",
-              "execution_state": "insufficient_data"
-            },
-            "governance_flags": {
-              "sandbox_only": true,
-              "replay_validation_required": true,
-              "live_deployment_allowed": false,
-              "no_blind_live_rewrites": true
-            }
-          },
-          {
-            "belief_id": "belief_5_pain_geometry_fields",
-            "source_layer": "pain_geometry_fields",
-            "belief_direction": "continuation",
-            "belief_confidence": 0.0,
-            "belief_intent": "drawdown_surface_risk",
-            "historical_reliability": 1.0,
-            "execution_adjusted_trust": 0.0,
-            "context_signature": {
-              "replay_scope": "evaluation_replay",
-              "structure_state": "range",
-              "volatility_ratio": 1.0,
-              "spread_ratio": 1.0,
-              "slippage_ratio": 1.0,
-              "regime_state": "range",
-              "execution_state": "insufficient_data"
-            },
-            "governance_flags": {
-              "sandbox_only": true,
-              "replay_validation_required": true,
-              "live_deployment_allowed": false,
-              "no_blind_live_rewrites": true
-            }
-          },
-          {
-            "belief_id": "belief_6_counterfactual_trade_engine",
-            "source_layer": "counterfactual_trade_engine",
-            "belief_direction": "wait",
-            "belief_confidence": 0.0,
-            "belief_intent": "counterfactual_continuation",
-            "historical_reliability": 0.45,
-            "execution_adjusted_trust": 0.0,
-            "context_signature": {
-              "replay_scope": "evaluation_replay",
-              "structure_state": "range",
-              "volatility_ratio": 1.0,
-              "spread_ratio": 1.0,
-              "slippage_ratio": 1.0,
-              "regime_state": "range",
-              "execution_state": "insufficient_data"
-            },
-            "governance_flags": {
-              "sandbox_only": true,
-              "replay_validation_required": true,
-              "live_deployment_allowed": false,
-              "no_blind_live_rewrites": true
-            }
-          },
-          {
-            "belief_id": "belief_7_fractal_liquidity_decay_functions",
-            "source_layer": "fractal_liquidity_decay_functions",
-            "belief_direction": "continuation",
-            "belief_confidence": 0.0,
-            "belief_intent": "liquidity_stability",
-            "historical_reliability": 1.0,
-            "execution_adjusted_trust": 0.0,
-            "context_signature": {
-              "replay_scope": "evaluation_replay",
-              "structure_state": "range",
-              "volatility_ratio": 1.0,
-              "spread_ratio": 1.0,
-              "slippage_ratio": 1.0,
-              "regime_state": "range",
-              "execution_state": "insufficient_data"
-            },
-            "governance_flags": {
-              "sandbox_only": true,
-              "replay_validation_required": true,
-              "live_deployment_allowed": false,
-              "no_blind_live_rewrites": true
-            }
-          },
-          {
-            "belief_id": "belief_8_adversarial_execution_intelligence_layer",
-            "source_layer": "adversarial_execution_intelligence_layer",
-            "belief_direction": "continuation",
-            "belief_confidence": 0.0663,
-            "belief_intent": "predatory_execution_safety",
-            "historical_reliability": 0.9337,
-            "execution_adjusted_trust": 0.0663,
-            "context_signature": {
-              "replay_scope": "evaluation_replay",
-              "structure_state": "range",
-              "volatility_ratio": 1.0,
-              "spread_ratio": 1.0,
-              "slippage_ratio": 1.0,
-              "regime_state": "range",
-              "execution_state": "insufficient_data"
-            },
-            "governance_flags": {
-              "sandbox_only": true,
-              "replay_validation_required": true,
-              "live_deployment_allowed": false,
-              "no_blind_live_rewrites": true
-            }
-          },
-          {
-            "belief_id": "belief_9_structural_memory_graph_layer",
-            "source_layer": "structural_memory_graph_layer",
-            "belief_direction": "wait",
-            "belief_confidence": 0.5083,
-            "belief_intent": "long_horizon_structural_memory",
-            "historical_reliability": 0.2166,
-            "execution_adjusted_trust": 0.5083,
-            "context_signature": {
-              "replay_scope": "evaluation_replay",
-              "structure_state": "range",
-              "volatility_ratio": 1.0,
-              "spread_ratio": 1.0,
-              "slippage_ratio": 1.0,
-              "regime_state": "range",
-              "execution_state": "insufficient_data"
-            },
-            "governance_flags": {
-              "sandbox_only": true,
-              "replay_validation_required": true,
-              "live_deployment_allowed": false,
-              "no_blind_live_rewrites": true
-            }
-          }
-        ],
-        "contradictions": [
-          {
-            "contradiction_id": "contradiction_1_directional_opposition",
-            "belief_sources": [
-              "unified_market_intelligence_field",
-              "execution_microstructure_intelligence_layer"
-            ],
-            "contradiction_type": "directional_opposition",
-            "contradiction_severity": 0.3871,
-            "contradiction_partners": [
-              "belief_1_unified_market_intelligence_field",
-              "belief_2_execution_microstructure_intelligence_layer"
-            ],
-            "dominance_candidate": "unified_market_intelligence_field",
-            "historical_recurrence": 0,
-            "historical_outcome_bias": "refuse",
-            "arbitration_outcome": "reduce_size",
-            "resolution_rationale": [
-              "opposed_directional_beliefs_detected"
-            ],
-            "governance_flags": {
-              "sandbox_only": true,
-              "replay_validation_required": true,
-              "live_deployment_allowed": false,
-              "no_blind_live_rewrites": true
-            }
-          },
-          {
-            "contradiction_id": "contradiction_2_directional_opposition",
-            "belief_sources": [
-              "unified_market_intelligence_field",
-              "negative_space_pattern_recognition"
-            ],
-            "contradiction_type": "directional_opposition",
-            "contradiction_severity": 0.212,
-            "contradiction_partners": [
-              "belief_1_unified_market_intelligence_field",
-              "belief_3_negative_space_pattern_recognition"
-            ],
-            "dominance_candidate": "unified_market_intelligence_field",
-            "historical_recurrence": 0,
-            "historical_outcome_bias": "refuse",
-            "arbitration_outcome": "reduce_size",
-            "resolution_rationale": [
-              "opposed_directional_beliefs_detected"
-            ],
-            "governance_flags": {
-              "sandbox_only": true,
-              "replay_validation_required": true,
-              "live_deployment_allowed": false,
-              "no_blind_live_rewrites": true
-            }
-          },
-          {
-            "contradiction_id": "contradiction_3_directional_opposition",
-            "belief_sources": [
-              "unified_market_intelligence_field",
-              "temporal_invariance_break_detection"
-            ],
-            "contradiction_type": "directional_opposition",
-            "contradiction_severity": 0.437,
-            "contradiction_partners": [
-              "belief_1_unified_market_intelligence_field",
-              "belief_4_temporal_invariance_break_detection"
-            ],
-            "dominance_candidate": "unified_market_intelligence_field",
-            "historical_recurrence": 0,
-            "historical_outcome_bias": "refuse",
-            "arbitration_outcome": "reduce_size",
-            "resolution_rationale": [
-              "opposed_directional_beliefs_detected"
-            ],
-            "governance_flags": {
-              "sandbox_only": true,
-              "replay_validation_required": true,
-              "live_deployment_allowed": false,
-              "no_blind_live_rewrites": true
-            }
-          },
-          {
-            "contradiction_id": "contradiction_4_directional_opposition",
-            "belief_sources": [
-              "unified_market_intelligence_field",
-              "pain_geometry_fields"
-            ],
-            "contradiction_type": "directional_opposition",
-            "contradiction_severity": 0.212,
-            "contradiction_partners": [
-              "belief_1_unified_market_intelligence_field",
-              "belief_5_pain_geometry_fields"
-            ],
-            "dominance_candidate": "unified_market_intelligence_field",
-            "historical_recurrence": 0,
-            "historical_outcome_bias": "refuse",
-            "arbitration_outcome": "reduce_size",
-            "resolution_rationale": [
-              "opposed_directional_beliefs_detected"
-            ],
-            "governance_flags": {
-              "sandbox_only": true,
-              "replay_validation_required": true,
-              "live_deployment_allowed": false,
-              "no_blind_live_rewrites": true
-            }
-          },
-          {
-            "contradiction_id": "contradiction_5_directional_opposition",
-            "belief_sources": [
-              "unified_market_intelligence_field",
-              "fractal_liquidity_decay_functions"
-            ],
-            "contradiction_type": "directional_opposition",
-            "contradiction_severity": 0.212,
-            "contradiction_partners": [
-              "belief_1_unified_market_intelligence_field",
-              "belief_7_fractal_liquidity_decay_functions"
-            ],
-            "dominance_candidate": "unified_market_intelligence_field",
-            "historical_recurrence": 0,
-            "historical_outcome_bias": "refuse",
-            "arbitration_outcome": "reduce_size",
-            "resolution_rationale": [
-              "opposed_directional_beliefs_detected"
-            ],
-            "governance_flags": {
-              "sandbox_only": true,
-              "replay_validation_required": true,
-              "live_deployment_allowed": false,
-              "no_blind_live_rewrites": true
-            }
-          },
-          {
-            "contradiction_id": "contradiction_6_directional_opposition",
-            "belief_sources": [
-              "unified_market_intelligence_field",
-              "adversarial_execution_intelligence_layer"
-            ],
-            "contradiction_type": "directional_opposition",
-            "contradiction_severity": 0.2452,
-            "contradiction_partners": [
-              "belief_1_unified_market_intelligence_field",
-              "belief_8_adversarial_execution_intelligence_layer"
-            ],
-            "dominance_candidate": "unified_market_intelligence_field",
-            "historical_recurrence": 0,
-            "historical_outcome_bias": "refuse",
-            "arbitration_outcome": "reduce_size",
-            "resolution_rationale": [
-              "opposed_directional_beliefs_detected"
-            ],
-            "governance_flags": {
-              "sandbox_only": true,
-              "replay_validation_required": true,
-              "live_deployment_allowed": false,
-              "no_blind_live_rewrites": true
-            }
-          }
-        ],
-        "arbitration": {
-          "outcome": "reduce_size",
-          "dominant_source": "unified_market_intelligence_field",
-          "max_contradiction_severity": 0.437,
-          "conflict_state": "active",
-          "reasons": [
-            "directional_opposition",
-            "directional_opposition",
-            "directional_opposition",
-            "directional_opposition",
-            "directional_opposition",
-            "directional_opposition"
-          ]
-        },
-        "confidence_adjustments": {
-          "base_composite_confidence": 0.4241,
-          "contradiction_penalty": 0.153,
-          "contradiction_adjusted_confidence": 0.2711
-        },
-        "risk_adjustments": {
-          "contradiction_multiplier": 0.7596,
-          "recommended_action": "reduce_size",
-          "should_reduce_size": true,
-          "should_pause": false,
-          "should_refuse": false
-        },
-        "historical_context": {
-          "context_signature": {
-            "replay_scope": "evaluation_replay",
-            "structure_state": "range",
-            "volatility_ratio": 1.0,
-            "spread_ratio": 1.0,
-            "slippage_ratio": 1.0,
-            "regime_state": "range",
-            "execution_state": "insufficient_data"
-          },
-          "type_counts": {
-            "directional_opposition": 6
-          },
-          "total_recurrence": 0,
-          "recurrence_ratio": 0.0
-        },
-        "governance": {
-          "sandbox_only": true,
-          "replay_validation_required": true,
-          "live_deployment_allowed": false,
-          "no_blind_live_rewrites": true,
-          "conflict_override_requires_replay_validation": true
-        },
-        "paths": {
-          "latest": "memory/contradiction_arbitration/contradiction_arbitration_latest.json",
-          "history": "memory/contradiction_arbitration/contradiction_arbitration_history.json",
-          "belief_state_registry": "memory/contradiction_arbitration/belief_state_registry.json",
-          "contradiction_events": "memory/contradiction_arbitration/contradiction_events.json",
-          "resolution_outcome_registry": "memory/contradiction_arbitration/resolution_outcome_registry.json",
-          "contextual_contradiction_clusters": "memory/contradiction_arbitration/contextual_contradiction_clusters.json",
-          "governance_state": "memory/contradiction_arbitration/governance_state.json"
-        }
-      },
-      "recursive_self_modeling": {
-        "configuration_evaluations": [
-          {
-            "config_id": "cfg_balanced",
-            "detector_set": "default+negative_space",
-            "feature_set": "core+synthetic",
-            "risk_behavior": "adaptive",
-            "performance_stability": 0.7,
-            "discovery_potential": 0.64,
-            "regime_adaptability": 0.6,
-            "learning_efficiency": 0.65,
-            "long_term_improvement_score": 0.655,
-            "validation": {
-              "scope": "evaluation_replay",
-              "sandbox_only": true
-            }
-          },
-          {
-            "config_id": "cfg_survival",
-            "detector_set": "survival_priority",
-            "feature_set": "core+pain_geometry",
-            "risk_behavior": "defensive",
-            "performance_stability": 0.66,
-            "discovery_potential": 0.58,
-            "regime_adaptability": 0.6,
-            "learning_efficiency": 0.65,
-            "long_term_improvement_score": 0.626,
-            "validation": {
-              "scope": "evaluation_replay",
-              "sandbox_only": true
-            }
-          },
-          {
-            "config_id": "cfg_discovery",
-            "detector_set": "expanded",
-            "feature_set": "core+synthetic+counterfactual",
-            "risk_behavior": "exploratory",
-            "performance_stability": 0.62,
-            "discovery_potential": 0.52,
-            "regime_adaptability": 0.6,
-            "learning_efficiency": 0.65,
-            "long_term_improvement_score": 0.597,
-            "validation": {
-              "scope": "evaluation_replay",
-              "sandbox_only": true
-            }
-          }
-        ],
-        "selected_configuration": {
-          "config_id": "cfg_balanced",
-          "detector_set": "default+negative_space",
-          "feature_set": "core+synthetic",
-          "risk_behavior": "adaptive",
-          "performance_stability": 0.7,
-          "discovery_potential": 0.64,
-          "regime_adaptability": 0.6,
-          "learning_efficiency": 0.65,
-          "long_term_improvement_score": 0.655,
-          "validation": {
-            "scope": "evaluation_replay",
-            "sandbox_only": true
-          }
-        },
-        "governance": {
-          "sandbox_only": true,
-          "direct_live_self_rewrite_allowed": false,
-          "promotion_requires_governance": true
-        },
-        "execution_microstructure_assessment": {
-          "execution_quality_score": 1.0,
-          "execution_penalty": 0.0,
-          "failure_cluster_risk": 0.0
-        },
-        "path": "memory/self_modeling/self_modeling_latest.json"
-      },
-      "discovery_state_tags": {
-        "synthetic_feature_state": "active",
-        "negative_space_state": "normal",
-        "invariant_break_state": "stable",
-        "pain_geometry_risk": 0.0,
-        "counterfactual_evaluation": "none",
-        "liquidity_decay_state": "insufficient_data"
-      },
-      "unified_market_intelligence_field": {
-        "components": {
-          "macro_state": {
-            "session_state": "unknown",
-            "structure_state": "range",
-            "volatility_ratio": 1.0,
-            "spread_ratio": 1.0,
-            "dxy_state": "unknown",
-            "yield_state": "unknown"
-          },
-          "regime_state": "range",
-          "detector_reliability": {
-            "state": "weak",
-            "reliability_score": 0.0,
-            "passed_count": 0,
-            "failed_count": 5,
-            "candidate_count": 5
-          },
-          "synthetic_feature_state": {
-            "state": "active",
-            "feature_count": 2
-          },
-          "negative_space_state": {
-            "state": "normal",
-            "deviation_score": 0.0
-          },
-          "invariant_break_state": {
-            "state": "stable",
-            "break_count": 0
-          },
-          "pain_geometry_risk": {
-            "current_state_risk": 0.0
-          },
-          "counterfactual_evaluation": {
-            "state": "none",
-            "edge_ratio": 0.0
-          },
-          "liquidity_decay_state": {
-            "state": "resilient",
-            "avg_vulnerability": 0.0,
-            "model_count": 0
-          },
-          "execution_microstructure_state": {
-            "state": "insufficient_data",
-            "execution_quality_score": 1.0,
-            "execution_penalty": 0.0,
-            "failure_cluster_risk": 0.0
-          },
-          "adversarial_execution_state": {
-            "hostile_execution_score": 0.0663,
-            "toxicity_proxy": 0.036,
-            "quote_fade_proxy": 0.18,
-            "sweep_aftermath_risk": 0.0,
-            "fill_collapse_risk": 0.14,
-            "adverse_selection_risk": 0.05,
-            "predatory_liquidity_state": "normal",
-            "historical_execution_hostility": 0.0663,
-            "execution_survival_bias": 0.0298,
-            "governance_flags": {
-              "sandbox_only": true,
-              "replay_validation_required": true,
-              "live_deployment_allowed": false,
-              "no_blind_live_self_rewrites": true
-            }
-          },
-          "structural_memory_state": {
-            "structural_memory_state": "weak",
-            "historical_recurrence_score": 0.3333,
-            "structural_magnet_score": 0.0,
-            "long_horizon_context_match": 0.2166,
-            "regime_memory_alignment": 1.0,
-            "episodic_pattern_links": [],
-            "structural_reversal_bias": 0.0,
-            "structural_acceleration_bias": 0.0,
-            "memory_reliability": 0.5083,
-            "governance_flags": {
-              "sandbox_only": true,
-              "replay_validation_required": true,
-              "live_deployment_allowed": false,
-              "no_blind_live_self_rewrites": true,
-              "pause_guard_triggered": false,
-              "refuse_guard_triggered": false
-            }
-          }
-        },
-        "unified_field_score": 0.458,
-        "confidence_structure": {
-          "regime_confidence": 0.95,
-          "detector_confidence": 0.0,
-          "counterfactual_confidence": 0.0,
-          "composite_confidence": 0.4241,
-          "confidence_band": "low",
-          "hostility_adjusted_confidence": 0.402,
-          "historical_recurrence_score": 0.3333,
-          "long_horizon_context_match": 0.2166,
-          "memory_reliability": 0.5083,
-          "memory_adjusted_confidence": 0.4241,
-          "calibrated_confidence": 0.0669,
-          "calibration_drift": 0.6786,
-          "confidence_reliability_band": "low",
-          "historical_confidence_error": 0.4241,
-          "execution_adjusted_uncertainty": 0.5055,
-          "contradiction_adjusted_confidence": 0.2711
-        },
-        "decision_refinements": {
-          "signal_confidence": {
-            "base": 0.475,
-            "refined": 0.4306,
-            "multiplier": 0.9696
-          },
-          "risk_sizing": {
-            "base": 0.85,
-            "refined": 0.8588,
-            "multiplier": 1.0103,
-            "adversarial_execution_multiplier": 0.9569,
-            "structural_memory_multiplier": 1.0,
-            "calibration_multiplier": 0.5266,
-            "calibration_adjusted_refined": 0.4522,
-            "contradiction_multiplier": 0.7596
-          },
-          "refusal_pause_behavior": {
-            "should_refuse": true,
-            "should_pause": true,
-            "refusal_reasons": [
-              "weak_detector_reliability"
-            ],
-            "pause_reasons": [
-              "calibration_drift_elevated",
-              "confidence_reliability_band_degraded"
-            ]
-          },
-          "strategy_selection": {
-            "mode": "defensive",
-            "selected_branch_id": "mutated_strategy_a",
-            "default_branch_id": "mutated_strategy_a"
-          }
-        },
-        "governance": {
-          "sandbox_only": true,
-          "live_protection_preserved": true,
-          "direct_live_override_allowed": false
-        },
-        "paths": {
-          "latest": "memory/market_intelligence/unified_market_intelligence_latest.json",
-          "history": "memory/market_intelligence/unified_market_intelligence_history.json"
-        },
-        "contradiction_arbitration": {
-          "outcome": "reduce_size",
-          "dominant_source": "unified_market_intelligence_field",
-          "max_contradiction_severity": 0.437,
-          "conflict_state": "active",
-          "reasons": [
-            "directional_opposition",
-            "directional_opposition",
-            "directional_opposition",
-            "directional_opposition",
-            "directional_opposition",
-            "directional_opposition"
-          ]
         }
       }
     },
@@ -2413,30 +1375,15 @@
       }
     },
     "self_suggestion_governor": {
-      "cycle_index": 2,
+      "cycle_index": 1,
       "input_signature": {
         "replay_scope": "evaluation_replay",
         "gap_signatures": [
-          "confidence_miscalibration_drift::confidence_calibration_drift",
           "low_value_noisy_mutations::mutation_noise_cluster",
           "weak_detector_reliability::detector_sandbox_failures"
         ],
         "strongest_branch": "mutated_strategy_a",
-        "closed_count": 0,
-        "unified_field_score": 0.458,
-        "unified_confidence": 0.4241,
-        "execution_quality_score": 1.0,
-        "execution_penalty": 0.0,
-        "contradiction_outcome": "reduce_size",
-        "contradiction_severity": 0.437,
-        "calibration_drift": 0.6786,
-        "confidence_reliability_band": "low",
-        "execution_adjusted_uncertainty": 0.5055,
-        "hostile_execution_score": 0.0663,
-        "predatory_liquidity_state": "normal",
-        "structural_memory_reliability": 0.5083,
-        "structural_reversal_bias": 0.0,
-        "long_horizon_context_match": 0.2166
+        "closed_count": 0
       },
       "detected_gaps": [
         {
@@ -2450,36 +1397,256 @@
           "detail": "mutation_noise_cluster",
           "frequency": 1,
           "severity": 0.5
-        },
-        {
-          "gap_type": "confidence_miscalibration_drift",
-          "detail": "confidence_calibration_drift",
-          "frequency": 3,
-          "severity": 0.6786
         }
       ],
-      "proposed_improvements": [],
-      "implemented_improvements": [],
-      "promoted_improvements": [],
-      "rejected_improvements": [
+      "proposed_improvements": [
         {
-          "cycle_index": 2,
-          "signature": "new_execution_refinement::confidence_calibration_guard",
-          "gap_type": "confidence_miscalibration_drift",
-          "reason": "vague_suggestion_rejected"
+          "cycle_index": 1,
+          "suggestion_type": "new_feature_combination",
+          "target": "detector_ensemble_features",
+          "gap_type": "weak_detector_reliability",
+          "gap_detail": "detector_sandbox_failures",
+          "expected_usefulness": 0.95,
+          "pain_failure_frequency": 5,
+          "regime_sensitivity": 0.5,
+          "execution_impact": 0.45,
+          "survival_impact": 0.5,
+          "priority_score": 0.75,
+          "governance": {
+            "sandbox_only": true,
+            "live_deployment_allowed": false,
+            "blind_live_rewrite_blocked": true
+          },
+          "signature": "new_feature_combination::detector_ensemble_features"
         },
         {
-          "cycle_index": 2,
-          "signature": "new_survival_rule::miscalibration_pause_rule",
-          "gap_type": "confidence_miscalibration_drift",
-          "reason": "vague_suggestion_rejected"
+          "cycle_index": 1,
+          "suggestion_type": "new_strategy_mutation",
+          "target": "detector_threshold_mutation",
+          "gap_type": "weak_detector_reliability",
+          "gap_detail": "detector_sandbox_failures",
+          "expected_usefulness": 0.95,
+          "pain_failure_frequency": 5,
+          "regime_sensitivity": 0.5,
+          "execution_impact": 0.45,
+          "survival_impact": 0.5,
+          "priority_score": 0.75,
+          "governance": {
+            "sandbox_only": true,
+            "live_deployment_allowed": false,
+            "blind_live_rewrite_blocked": true
+          },
+          "signature": "new_strategy_mutation::detector_threshold_mutation"
+        },
+        {
+          "cycle_index": 1,
+          "suggestion_type": "new_survival_rule",
+          "target": "mutation_noise_filter",
+          "gap_type": "low_value_noisy_mutations",
+          "gap_detail": "mutation_noise_cluster",
+          "expected_usefulness": 0.7,
+          "pain_failure_frequency": 1,
+          "regime_sensitivity": 0.5,
+          "execution_impact": 0.45,
+          "survival_impact": 0.5,
+          "priority_score": 0.5025,
+          "governance": {
+            "sandbox_only": true,
+            "live_deployment_allowed": false,
+            "blind_live_rewrite_blocked": true
+          },
+          "signature": "new_survival_rule::mutation_noise_filter"
+        },
+        {
+          "cycle_index": 1,
+          "suggestion_type": "new_strategy_mutation",
+          "target": "quality_gated_mutation_generator",
+          "gap_type": "low_value_noisy_mutations",
+          "gap_detail": "mutation_noise_cluster",
+          "expected_usefulness": 0.7,
+          "pain_failure_frequency": 1,
+          "regime_sensitivity": 0.5,
+          "execution_impact": 0.45,
+          "survival_impact": 0.5,
+          "priority_score": 0.5025,
+          "governance": {
+            "sandbox_only": true,
+            "live_deployment_allowed": false,
+            "blind_live_rewrite_blocked": true
+          },
+          "signature": "new_strategy_mutation::quality_gated_mutation_generator"
+        }
+      ],
+      "implemented_improvements": [
+        {
+          "suggestion_signature": "new_feature_combination::detector_ensemble_features",
+          "implementation_id": "sandbox_impl_1_1",
+          "sandbox_module_name": "sandbox_detector_ensemble_features",
+          "suggestion_type": "new_feature_combination",
+          "target": "detector_ensemble_features",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "baseline": "mutated_strategy_a",
+            "comparison": "sandbox_vs_baseline",
+            "score": 0.7575
+          },
+          "governance_decision": "promote",
+          "governance": {
+            "sandbox_only": true,
+            "live_activation_allowed": false,
+            "core_module_deletion_allowed": false,
+            "quarantine_supported": true
+          }
+        },
+        {
+          "suggestion_signature": "new_strategy_mutation::detector_threshold_mutation",
+          "implementation_id": "sandbox_impl_1_2",
+          "sandbox_module_name": "sandbox_detector_threshold_mutation",
+          "suggestion_type": "new_strategy_mutation",
+          "target": "detector_threshold_mutation",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "baseline": "mutated_strategy_a",
+            "comparison": "sandbox_vs_baseline",
+            "score": 0.7375
+          },
+          "governance_decision": "promote",
+          "governance": {
+            "sandbox_only": true,
+            "live_activation_allowed": false,
+            "core_module_deletion_allowed": false,
+            "quarantine_supported": true
+          }
+        },
+        {
+          "suggestion_signature": "new_survival_rule::mutation_noise_filter",
+          "implementation_id": "sandbox_impl_1_3",
+          "sandbox_module_name": "sandbox_mutation_noise_filter",
+          "suggestion_type": "new_survival_rule",
+          "target": "mutation_noise_filter",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "baseline": "mutated_strategy_a",
+            "comparison": "sandbox_vs_baseline",
+            "score": 0.47
+          },
+          "governance_decision": "quarantine",
+          "governance": {
+            "sandbox_only": true,
+            "live_activation_allowed": false,
+            "core_module_deletion_allowed": false,
+            "quarantine_supported": true
+          }
+        },
+        {
+          "suggestion_signature": "new_strategy_mutation::quality_gated_mutation_generator",
+          "implementation_id": "sandbox_impl_1_4",
+          "sandbox_module_name": "sandbox_quality_gated_mutation_generator",
+          "suggestion_type": "new_strategy_mutation",
+          "target": "quality_gated_mutation_generator",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "baseline": "mutated_strategy_a",
+            "comparison": "sandbox_vs_baseline",
+            "score": 0.45
+          },
+          "governance_decision": "quarantine",
+          "governance": {
+            "sandbox_only": true,
+            "live_activation_allowed": false,
+            "core_module_deletion_allowed": false,
+            "quarantine_supported": true
+          }
+        }
+      ],
+      "promoted_improvements": [
+        {
+          "suggestion_signature": "new_feature_combination::detector_ensemble_features",
+          "implementation_id": "sandbox_impl_1_1",
+          "sandbox_module_name": "sandbox_detector_ensemble_features",
+          "suggestion_type": "new_feature_combination",
+          "target": "detector_ensemble_features",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "baseline": "mutated_strategy_a",
+            "comparison": "sandbox_vs_baseline",
+            "score": 0.7575
+          },
+          "governance_decision": "promote",
+          "governance": {
+            "sandbox_only": true,
+            "live_activation_allowed": false,
+            "core_module_deletion_allowed": false,
+            "quarantine_supported": true
+          }
+        },
+        {
+          "suggestion_signature": "new_strategy_mutation::detector_threshold_mutation",
+          "implementation_id": "sandbox_impl_1_2",
+          "sandbox_module_name": "sandbox_detector_threshold_mutation",
+          "suggestion_type": "new_strategy_mutation",
+          "target": "detector_threshold_mutation",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "baseline": "mutated_strategy_a",
+            "comparison": "sandbox_vs_baseline",
+            "score": 0.7375
+          },
+          "governance_decision": "promote",
+          "governance": {
+            "sandbox_only": true,
+            "live_activation_allowed": false,
+            "core_module_deletion_allowed": false,
+            "quarantine_supported": true
+          }
+        }
+      ],
+      "rejected_improvements": [
+        {
+          "suggestion_signature": "new_survival_rule::mutation_noise_filter",
+          "implementation_id": "sandbox_impl_1_3",
+          "sandbox_module_name": "sandbox_mutation_noise_filter",
+          "suggestion_type": "new_survival_rule",
+          "target": "mutation_noise_filter",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "baseline": "mutated_strategy_a",
+            "comparison": "sandbox_vs_baseline",
+            "score": 0.47
+          },
+          "governance_decision": "quarantine",
+          "governance": {
+            "sandbox_only": true,
+            "live_activation_allowed": false,
+            "core_module_deletion_allowed": false,
+            "quarantine_supported": true
+          }
+        },
+        {
+          "suggestion_signature": "new_strategy_mutation::quality_gated_mutation_generator",
+          "implementation_id": "sandbox_impl_1_4",
+          "sandbox_module_name": "sandbox_quality_gated_mutation_generator",
+          "suggestion_type": "new_strategy_mutation",
+          "target": "quality_gated_mutation_generator",
+          "replay_test": {
+            "scope": "evaluation_replay",
+            "baseline": "mutated_strategy_a",
+            "comparison": "sandbox_vs_baseline",
+            "score": 0.45
+          },
+          "governance_decision": "quarantine",
+          "governance": {
+            "sandbox_only": true,
+            "live_activation_allowed": false,
+            "core_module_deletion_allowed": false,
+            "quarantine_supported": true
+          }
         }
       ],
       "anti_noise_controls": {
-        "duplicate_suppression": 4,
+        "duplicate_suppression": 0,
         "low_value_pruned": 0,
         "cooldown_suppressed": 0,
-        "vague_rejected": 2,
         "max_suggestions_per_cycle": 6,
         "stricter_thresholds_active": false,
         "priority_threshold": 0.35
@@ -2491,1253 +1658,10 @@
         "no_blind_live_self_rewrites": true,
         "stable_core_module_deletion_blocked": true
       },
-      "discovery_state_tags": {
-        "synthetic_feature_state": "active",
-        "negative_space_state": "normal",
-        "invariant_break_state": "stable",
-        "pain_geometry_risk": 0.0,
-        "counterfactual_evaluation": "none",
-        "liquidity_decay_state": "insufficient_data"
-      },
-      "unified_market_intelligence_field": {
-        "unified_field_score": 0.458,
-        "composite_confidence": 0.4241,
-        "refusal_pause_behavior": {
-          "should_refuse": true,
-          "should_pause": true,
-          "refusal_reasons": [
-            "weak_detector_reliability"
-          ],
-          "pause_reasons": [
-            "calibration_drift_elevated",
-            "confidence_reliability_band_degraded"
-          ]
-        }
-      },
-      "execution_microstructure_intelligence_layer": {
-        "execution_quality_score": 1.0,
-        "execution_penalty": 0.0,
-        "execution_state": "insufficient_data",
-        "recommended_actions": [
-          "maintain_current_execution_controls"
-        ]
-      },
-      "adversarial_execution_intelligence_layer": {
-        "adversarial_execution_state": {
-          "hostile_execution_score": 0.0663,
-          "toxicity_proxy": 0.036,
-          "quote_fade_proxy": 0.18,
-          "sweep_aftermath_risk": 0.0,
-          "fill_collapse_risk": 0.14,
-          "adverse_selection_risk": 0.05,
-          "predatory_liquidity_state": "normal",
-          "historical_execution_hostility": 0.0663,
-          "execution_survival_bias": 0.0298,
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_self_rewrites": true
-          }
-        },
-        "confidence_adjustments": {
-          "hostility_penalty": 0.0972,
-          "hostility_adjusted_confidence": 0.9479
-        },
-        "risk_adjustments": {
-          "adversarial_execution_multiplier": 0.9569,
-          "should_reduce_size": false,
-          "should_pause": false,
-          "should_refuse": false,
-          "pause_reasons": [],
-          "refusal_reasons": []
-        }
-      },
-      "contradiction_arbitration_and_belief_resolution_layer": {
-        "arbitration": {
-          "outcome": "reduce_size",
-          "dominant_source": "unified_market_intelligence_field",
-          "max_contradiction_severity": 0.437,
-          "conflict_state": "active",
-          "reasons": [
-            "directional_opposition",
-            "directional_opposition",
-            "directional_opposition",
-            "directional_opposition",
-            "directional_opposition",
-            "directional_opposition"
-          ]
-        },
-        "confidence_adjustments": {
-          "base_composite_confidence": 0.4241,
-          "contradiction_penalty": 0.153,
-          "contradiction_adjusted_confidence": 0.2711
-        },
-        "risk_adjustments": {
-          "contradiction_multiplier": 0.7596,
-          "recommended_action": "reduce_size",
-          "should_reduce_size": true,
-          "should_pause": false,
-          "should_refuse": false
-        }
-      },
-      "calibration_and_uncertainty_governance_layer": {
-        "calibration_state": {
-          "raw_confidence": 0.4241,
-          "calibrated_confidence": 0.0669,
-          "calibration_drift": 0.6786,
-          "confidence_reliability_band": "low",
-          "epistemic_uncertainty": 1.0,
-          "aleatoric_proxy": 0.0,
-          "historical_confidence_error": 0.4241,
-          "regime_specific_reliability": {
-            "context_key": "evaluation_replay|range|insufficient_data",
-            "reliability_score": 0.5759,
-            "observations": 1
-          },
-          "execution_adjusted_uncertainty": 0.5055,
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_self_rewrites": true,
-            "pause_guard_triggered": true,
-            "refuse_guard_triggered": false
-          }
-        },
-        "confidence_adjustments": {
-          "confidence_delta": 0.3572,
-          "risk_multiplier": 0.5266,
-          "should_pause": true,
-          "should_refuse": false,
-          "pause_reasons": [
-            "calibration_drift_elevated",
-            "confidence_reliability_band_degraded"
-          ],
-          "refusal_reasons": []
-        },
-        "governance": {
-          "sandbox_only": true,
-          "replay_validation_required": true,
-          "live_deployment_allowed": false,
-          "no_blind_live_self_rewrites": true
-        }
-      },
       "paths": {
         "registry": "memory/capability_registry/self_suggestion_registry.json",
         "governor": "memory/capability_registry/self_suggestion_governor.json",
         "history": "memory/capability_registry/self_suggestion_governor_history.json"
-      }
-    },
-    "synthetic_feature_invention_engine": {
-      "feature_candidates": [
-        {
-          "feature_name": "macro_conflict_score",
-          "value": 0.0,
-          "inputs_used": [
-            "dxy_state",
-            "yield_state"
-          ]
-        },
-        {
-          "feature_name": "liquidity_pressure_index",
-          "value": 0.925,
-          "inputs_used": [
-            "spread_ratio",
-            "slippage_ratio",
-            "detector_trigger_count"
-          ]
-        },
-        {
-          "feature_name": "session_fragility_score",
-          "value": 0.5,
-          "inputs_used": [
-            "session_state",
-            "volatility_ratio"
-          ]
-        },
-        {
-          "feature_name": "trap_probability_factor",
-          "value": 0.8,
-          "inputs_used": [
-            "volatility_ratio",
-            "spread_ratio",
-            "dxy_state",
-            "yield_state"
-          ]
-        }
-      ],
-      "feature_performance": [
-        {
-          "feature_name": "macro_conflict_score",
-          "predictive_usefulness": 0.0,
-          "signal_quality_delta": -0.25,
-          "validation": {
-            "scope": "evaluation_replay",
-            "historical_sample_size": 0,
-            "sandbox_only": true,
-            "explainable": true,
-            "testable": true
-          }
-        },
-        {
-          "feature_name": "liquidity_pressure_index",
-          "predictive_usefulness": 0.0925,
-          "signal_quality_delta": -0.1575,
-          "validation": {
-            "scope": "evaluation_replay",
-            "historical_sample_size": 0,
-            "sandbox_only": true,
-            "explainable": true,
-            "testable": true
-          }
-        },
-        {
-          "feature_name": "session_fragility_score",
-          "predictive_usefulness": 0.05,
-          "signal_quality_delta": -0.2,
-          "validation": {
-            "scope": "evaluation_replay",
-            "historical_sample_size": 0,
-            "sandbox_only": true,
-            "explainable": true,
-            "testable": true
-          }
-        },
-        {
-          "feature_name": "trap_probability_factor",
-          "predictive_usefulness": 0.08,
-          "signal_quality_delta": -0.17,
-          "validation": {
-            "scope": "evaluation_replay",
-            "historical_sample_size": 0,
-            "sandbox_only": true,
-            "explainable": true,
-            "testable": true
-          }
-        }
-      ],
-      "synthetic_features": [
-        {
-          "feature_name": "liquidity_pressure_index",
-          "value": 0.925,
-          "inputs_used": [
-            "spread_ratio",
-            "slippage_ratio",
-            "detector_trigger_count"
-          ],
-          "predictive_usefulness": 0.0925,
-          "signal_quality_delta": -0.1575,
-          "validation": {
-            "scope": "evaluation_replay",
-            "historical_sample_size": 0,
-            "sandbox_only": true,
-            "explainable": true,
-            "testable": true
-          }
-        },
-        {
-          "feature_name": "trap_probability_factor",
-          "value": 0.8,
-          "inputs_used": [
-            "volatility_ratio",
-            "spread_ratio",
-            "dxy_state",
-            "yield_state"
-          ],
-          "predictive_usefulness": 0.08,
-          "signal_quality_delta": -0.17,
-          "validation": {
-            "scope": "evaluation_replay",
-            "historical_sample_size": 0,
-            "sandbox_only": true,
-            "explainable": true,
-            "testable": true
-          }
-        }
-      ],
-      "pruned_feature_count": 2,
-      "paths": {
-        "synthetic_features": "memory/synthetic_features/synthetic_features_latest.json",
-        "feature_candidates": "memory/feature_candidates/synthetic_feature_candidates.json",
-        "feature_performance": "memory/feature_performance/synthetic_feature_performance.json"
-      }
-    },
-    "negative_space_pattern_recognition": {
-      "signal": {
-        "negative_space_signal": false,
-        "expectation_model": {
-          "context": "baseline",
-          "expected_direction": "flat",
-          "expected_distribution_center": 0.0
-        },
-        "actual_behavior": {
-          "direction": "flat",
-          "pnl_points": 0.0
-        },
-        "deviation_score": 0.0,
-        "validation": {
-          "scope": "evaluation_replay",
-          "sandbox_only": true,
-          "validation_passed": false
-        }
-      },
-      "paths": {
-        "latest": "memory/negative_space_signals/negative_space_signal_latest.json",
-        "history": "memory/negative_space_signals/negative_space_history.json"
-      }
-    },
-    "temporal_invariance_break_detection": {
-      "invariant_break_events": [
-        {
-          "invariant_name": "gold_vs_dxy_inverse",
-          "sign_flip": false,
-          "stability": 1.0,
-          "previous_stability": 0.8,
-          "invariant_break": false,
-          "confidence_multiplier": 1.0,
-          "trigger_deeper_analysis": false,
-          "validation": {
-            "scope": "evaluation_replay",
-            "sandbox_only": true
-          }
-        },
-        {
-          "invariant_name": "gold_vs_real_yields_inverse",
-          "sign_flip": false,
-          "stability": 0.95,
-          "previous_stability": 0.8,
-          "invariant_break": false,
-          "confidence_multiplier": 1.0,
-          "trigger_deeper_analysis": false,
-          "validation": {
-            "scope": "evaluation_replay",
-            "sandbox_only": true
-          }
-        },
-        {
-          "invariant_name": "volatility_breakout_response",
-          "sign_flip": false,
-          "stability": 1.0,
-          "previous_stability": 0.8,
-          "invariant_break": false,
-          "confidence_multiplier": 1.0,
-          "trigger_deeper_analysis": false,
-          "validation": {
-            "scope": "evaluation_replay",
-            "sandbox_only": true
-          }
-        }
-      ],
-      "paths": {
-        "events": "memory/invariant_break_events/invariant_break_events_latest.json",
-        "models": "memory/invariant_break_events/invariant_models.json"
-      }
-    },
-    "pain_geometry_fields": {
-      "loss_coordinates": [],
-      "pain_risk_surface": {
-        "current_state_risk": 0.0,
-        "sample_count": 0,
-        "method": "gaussian_kde_proxy"
-      },
-      "paths": {
-        "coordinates": "memory/pain_geometry/loss_coordinates.json",
-        "surface": "memory/pain_geometry/pain_risk_surface.json"
-      }
-    },
-    "counterfactual_trade_engine": {
-      "counterfactual_evaluations": [],
-      "paths": {
-        "latest": "memory/counterfactual_results/counterfactual_latest.json",
-        "history": "memory/counterfactual_results/counterfactual_history.json"
-      }
-    },
-    "fractal_liquidity_decay_functions": {
-      "liquidity_decay_models": [],
-      "path": "memory/liquidity_decay_models/liquidity_decay_latest.json"
-    },
-    "execution_microstructure_intelligence_layer": {
-      "execution_quality_score": 1.0,
-      "execution_confidence": 0.35,
-      "execution_state": "insufficient_data",
-      "slippage_state": "normal",
-      "spread_state": "normal",
-      "fill_delay_state": "normal",
-      "partial_fill_state": "normal",
-      "failure_cluster_risk": 0.0,
-      "entry_timing_degradation": 0.0,
-      "execution_penalty": 0.0,
-      "should_reduce_size": false,
-      "should_delay_entry": false,
-      "should_refuse_trade": false,
-      "recommended_actions": [
-        "maintain_current_execution_controls"
-      ],
-      "governance": {
-        "sandbox_only": true,
-        "no_blind_live_self_rewrites": true,
-        "replay_validation_required": true,
-        "direct_live_override_allowed": false
-      },
-      "paths": {
-        "latest": "memory/execution_microstructure/execution_microstructure_latest.json",
-        "history": "memory/execution_microstructure/execution_microstructure_history.json",
-        "failure_clusters": "memory/execution_microstructure/execution_failure_clusters.json",
-        "quality_baselines": "memory/execution_microstructure/execution_quality_baselines.json",
-        "entry_timing_degradation": "memory/execution_microstructure/entry_timing_degradation.json"
-      }
-    },
-    "adversarial_execution_intelligence_layer": {
-      "adversarial_execution_state": {
-        "hostile_execution_score": 0.0663,
-        "toxicity_proxy": 0.036,
-        "quote_fade_proxy": 0.18,
-        "sweep_aftermath_risk": 0.0,
-        "fill_collapse_risk": 0.14,
-        "adverse_selection_risk": 0.05,
-        "predatory_liquidity_state": "normal",
-        "historical_execution_hostility": 0.0663,
-        "execution_survival_bias": 0.0298,
-        "governance_flags": {
-          "sandbox_only": true,
-          "replay_validation_required": true,
-          "live_deployment_allowed": false,
-          "no_blind_live_self_rewrites": true
-        }
-      },
-      "confidence_adjustments": {
-        "hostility_penalty": 0.0972,
-        "hostility_adjusted_confidence": 0.9479
-      },
-      "risk_adjustments": {
-        "adversarial_execution_multiplier": 0.9569,
-        "should_reduce_size": false,
-        "should_pause": false,
-        "should_refuse": false,
-        "pause_reasons": [],
-        "refusal_reasons": []
-      },
-      "governance": {
-        "sandbox_only": true,
-        "replay_validation_required": true,
-        "live_deployment_allowed": false,
-        "no_blind_live_self_rewrites": true,
-        "pause_guard_triggered": false,
-        "refuse_guard_triggered": false
-      },
-      "paths": {
-        "latest": "memory/adversarial_execution/adversarial_execution_latest.json",
-        "history": "memory/adversarial_execution/adversarial_execution_history.json",
-        "hostility_event_registry": "memory/adversarial_execution/hostility_event_registry.json",
-        "contextual_hostility_clusters": "memory/adversarial_execution/contextual_hostility_clusters.json",
-        "hostility_governance_state": "memory/adversarial_execution/hostility_governance_state.json",
-        "detector_reliability_registry": "memory/adversarial_execution/detector_reliability_registry.json"
-      }
-    },
-    "structural_memory_graph_layer": {
-      "structural_memory_state": {
-        "structural_memory_state": "weak",
-        "historical_recurrence_score": 0.3333,
-        "structural_magnet_score": 0.0,
-        "long_horizon_context_match": 0.2166,
-        "regime_memory_alignment": 1.0,
-        "episodic_pattern_links": [],
-        "structural_reversal_bias": 0.0,
-        "structural_acceleration_bias": 0.0,
-        "memory_reliability": 0.5083,
-        "governance_flags": {
-          "sandbox_only": true,
-          "replay_validation_required": true,
-          "live_deployment_allowed": false,
-          "no_blind_live_self_rewrites": true,
-          "pause_guard_triggered": false,
-          "refuse_guard_triggered": false
-        }
-      },
-      "confidence_adjustments": {
-        "memory_confidence_adjustment": 0.0,
-        "memory_adjusted_confidence": 0.4241
-      },
-      "risk_adjustments": {
-        "structural_memory_multiplier": 1.0,
-        "should_pause": false,
-        "should_refuse": false,
-        "pause_reasons": [],
-        "refusal_reasons": []
-      },
-      "context_links": {
-        "context_key": "evaluation_replay|range|range|insufficient_data",
-        "zone_keys": [],
-        "episode_count": 0
-      },
-      "governance": {
-        "sandbox_only": true,
-        "replay_validation_required": true,
-        "live_deployment_allowed": false,
-        "no_blind_live_self_rewrites": true
-      },
-      "paths": {
-        "latest": "memory/structural_memory_graph/structural_memory_graph_latest.json",
-        "history": "memory/structural_memory_graph/structural_memory_graph_history.json",
-        "structural_context_registry": "memory/structural_memory_graph/structural_context_registry.json",
-        "zone_magnet_registry": "memory/structural_memory_graph/zone_magnet_registry.json",
-        "episodic_pattern_links": "memory/structural_memory_graph/episodic_pattern_links.json",
-        "regime_memory_alignment_registry": "memory/structural_memory_graph/regime_memory_alignment_registry.json",
-        "structural_memory_governance_state": "memory/structural_memory_graph/structural_memory_governance_state.json"
-      }
-    },
-    "calibration_and_uncertainty_governance_layer": {
-      "calibration_state": {
-        "raw_confidence": 0.4241,
-        "calibrated_confidence": 0.0669,
-        "calibration_drift": 0.6786,
-        "confidence_reliability_band": "low",
-        "epistemic_uncertainty": 1.0,
-        "aleatoric_proxy": 0.0,
-        "historical_confidence_error": 0.4241,
-        "regime_specific_reliability": {
-          "context_key": "evaluation_replay|range|insufficient_data",
-          "reliability_score": 0.5759,
-          "observations": 1
-        },
-        "execution_adjusted_uncertainty": 0.5055,
-        "governance_flags": {
-          "sandbox_only": true,
-          "replay_validation_required": true,
-          "live_deployment_allowed": false,
-          "no_blind_live_self_rewrites": true,
-          "pause_guard_triggered": true,
-          "refuse_guard_triggered": false
-        }
-      },
-      "confidence_adjustments": {
-        "confidence_delta": 0.3572,
-        "risk_multiplier": 0.5266,
-        "should_pause": true,
-        "should_refuse": false,
-        "pause_reasons": [
-          "calibration_drift_elevated",
-          "confidence_reliability_band_degraded"
-        ],
-        "refusal_reasons": []
-      },
-      "governance": {
-        "sandbox_only": true,
-        "replay_validation_required": true,
-        "live_deployment_allowed": false,
-        "no_blind_live_self_rewrites": true
-      },
-      "paths": {
-        "latest": "memory/calibration_uncertainty/calibration_uncertainty_latest.json",
-        "history": "memory/calibration_uncertainty/calibration_uncertainty_history.json",
-        "confidence_error_registry": "memory/calibration_uncertainty/confidence_error_registry.json",
-        "regime_reliability_registry": "memory/calibration_uncertainty/regime_reliability_registry.json",
-        "governance_state": "memory/calibration_uncertainty/calibration_governance_state.json"
-      }
-    },
-    "contradiction_arbitration_and_belief_resolution_layer": {
-      "input_signature": {
-        "context_signature": {
-          "replay_scope": "evaluation_replay",
-          "structure_state": "range",
-          "volatility_ratio": 1.0,
-          "spread_ratio": 1.0,
-          "slippage_ratio": 1.0,
-          "regime_state": "range",
-          "execution_state": "insufficient_data"
-        },
-        "unified_confidence": 0.4241,
-        "execution_penalty": 0.0,
-        "execution_confidence": 0.35,
-        "negative_signal": false,
-        "negative_score": 0.0,
-        "invariant_break_count": 0,
-        "pain_risk": 0.0,
-        "counterfactual_advantage": 0.0,
-        "liquidity_vulnerability": 0.0,
-        "long_horizon_context_match": 0.2166,
-        "structural_reversal_bias": 0.0,
-        "structural_memory_reliability": 0.5083,
-        "strategy_mode": "defensive"
-      },
-      "beliefs": [
-        {
-          "belief_id": "belief_1_unified_market_intelligence_field",
-          "source_layer": "unified_market_intelligence_field",
-          "belief_direction": "risk_off",
-          "belief_confidence": 0.4241,
-          "belief_intent": "composite_unified_intelligence",
-          "historical_reliability": 0.0,
-          "execution_adjusted_trust": 0.4241,
-          "context_signature": {
-            "replay_scope": "evaluation_replay",
-            "structure_state": "range",
-            "volatility_ratio": 1.0,
-            "spread_ratio": 1.0,
-            "slippage_ratio": 1.0,
-            "regime_state": "range",
-            "execution_state": "insufficient_data"
-          },
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_rewrites": true
-          }
-        },
-        {
-          "belief_id": "belief_2_execution_microstructure_intelligence_layer",
-          "source_layer": "execution_microstructure_intelligence_layer",
-          "belief_direction": "continuation",
-          "belief_confidence": 0.35,
-          "belief_intent": "execution_safety",
-          "historical_reliability": 1.0,
-          "execution_adjusted_trust": 1.0,
-          "context_signature": {
-            "replay_scope": "evaluation_replay",
-            "structure_state": "range",
-            "volatility_ratio": 1.0,
-            "spread_ratio": 1.0,
-            "slippage_ratio": 1.0,
-            "regime_state": "range",
-            "execution_state": "insufficient_data"
-          },
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_rewrites": true
-          }
-        },
-        {
-          "belief_id": "belief_3_negative_space_pattern_recognition",
-          "source_layer": "negative_space_pattern_recognition",
-          "belief_direction": "continuation",
-          "belief_confidence": 0.0,
-          "belief_intent": "trap_detection",
-          "historical_reliability": 0.0,
-          "execution_adjusted_trust": 0.0,
-          "context_signature": {
-            "replay_scope": "evaluation_replay",
-            "structure_state": "range",
-            "volatility_ratio": 1.0,
-            "spread_ratio": 1.0,
-            "slippage_ratio": 1.0,
-            "regime_state": "range",
-            "execution_state": "insufficient_data"
-          },
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_rewrites": true
-          }
-        },
-        {
-          "belief_id": "belief_4_temporal_invariance_break_detection",
-          "source_layer": "temporal_invariance_break_detection",
-          "belief_direction": "continuation",
-          "belief_confidence": 0.45,
-          "belief_intent": "invariance_integrity_guard",
-          "historical_reliability": 1.0,
-          "execution_adjusted_trust": 0.45,
-          "context_signature": {
-            "replay_scope": "evaluation_replay",
-            "structure_state": "range",
-            "volatility_ratio": 1.0,
-            "spread_ratio": 1.0,
-            "slippage_ratio": 1.0,
-            "regime_state": "range",
-            "execution_state": "insufficient_data"
-          },
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_rewrites": true
-          }
-        },
-        {
-          "belief_id": "belief_5_pain_geometry_fields",
-          "source_layer": "pain_geometry_fields",
-          "belief_direction": "continuation",
-          "belief_confidence": 0.0,
-          "belief_intent": "drawdown_surface_risk",
-          "historical_reliability": 1.0,
-          "execution_adjusted_trust": 0.0,
-          "context_signature": {
-            "replay_scope": "evaluation_replay",
-            "structure_state": "range",
-            "volatility_ratio": 1.0,
-            "spread_ratio": 1.0,
-            "slippage_ratio": 1.0,
-            "regime_state": "range",
-            "execution_state": "insufficient_data"
-          },
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_rewrites": true
-          }
-        },
-        {
-          "belief_id": "belief_6_counterfactual_trade_engine",
-          "source_layer": "counterfactual_trade_engine",
-          "belief_direction": "wait",
-          "belief_confidence": 0.0,
-          "belief_intent": "counterfactual_continuation",
-          "historical_reliability": 0.45,
-          "execution_adjusted_trust": 0.0,
-          "context_signature": {
-            "replay_scope": "evaluation_replay",
-            "structure_state": "range",
-            "volatility_ratio": 1.0,
-            "spread_ratio": 1.0,
-            "slippage_ratio": 1.0,
-            "regime_state": "range",
-            "execution_state": "insufficient_data"
-          },
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_rewrites": true
-          }
-        },
-        {
-          "belief_id": "belief_7_fractal_liquidity_decay_functions",
-          "source_layer": "fractal_liquidity_decay_functions",
-          "belief_direction": "continuation",
-          "belief_confidence": 0.0,
-          "belief_intent": "liquidity_stability",
-          "historical_reliability": 1.0,
-          "execution_adjusted_trust": 0.0,
-          "context_signature": {
-            "replay_scope": "evaluation_replay",
-            "structure_state": "range",
-            "volatility_ratio": 1.0,
-            "spread_ratio": 1.0,
-            "slippage_ratio": 1.0,
-            "regime_state": "range",
-            "execution_state": "insufficient_data"
-          },
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_rewrites": true
-          }
-        },
-        {
-          "belief_id": "belief_8_adversarial_execution_intelligence_layer",
-          "source_layer": "adversarial_execution_intelligence_layer",
-          "belief_direction": "continuation",
-          "belief_confidence": 0.0663,
-          "belief_intent": "predatory_execution_safety",
-          "historical_reliability": 0.9337,
-          "execution_adjusted_trust": 0.0663,
-          "context_signature": {
-            "replay_scope": "evaluation_replay",
-            "structure_state": "range",
-            "volatility_ratio": 1.0,
-            "spread_ratio": 1.0,
-            "slippage_ratio": 1.0,
-            "regime_state": "range",
-            "execution_state": "insufficient_data"
-          },
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_rewrites": true
-          }
-        },
-        {
-          "belief_id": "belief_9_structural_memory_graph_layer",
-          "source_layer": "structural_memory_graph_layer",
-          "belief_direction": "wait",
-          "belief_confidence": 0.5083,
-          "belief_intent": "long_horizon_structural_memory",
-          "historical_reliability": 0.2166,
-          "execution_adjusted_trust": 0.5083,
-          "context_signature": {
-            "replay_scope": "evaluation_replay",
-            "structure_state": "range",
-            "volatility_ratio": 1.0,
-            "spread_ratio": 1.0,
-            "slippage_ratio": 1.0,
-            "regime_state": "range",
-            "execution_state": "insufficient_data"
-          },
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_rewrites": true
-          }
-        }
-      ],
-      "contradictions": [
-        {
-          "contradiction_id": "contradiction_1_directional_opposition",
-          "belief_sources": [
-            "unified_market_intelligence_field",
-            "execution_microstructure_intelligence_layer"
-          ],
-          "contradiction_type": "directional_opposition",
-          "contradiction_severity": 0.3871,
-          "contradiction_partners": [
-            "belief_1_unified_market_intelligence_field",
-            "belief_2_execution_microstructure_intelligence_layer"
-          ],
-          "dominance_candidate": "unified_market_intelligence_field",
-          "historical_recurrence": 0,
-          "historical_outcome_bias": "refuse",
-          "arbitration_outcome": "reduce_size",
-          "resolution_rationale": [
-            "opposed_directional_beliefs_detected"
-          ],
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_rewrites": true
-          }
-        },
-        {
-          "contradiction_id": "contradiction_2_directional_opposition",
-          "belief_sources": [
-            "unified_market_intelligence_field",
-            "negative_space_pattern_recognition"
-          ],
-          "contradiction_type": "directional_opposition",
-          "contradiction_severity": 0.212,
-          "contradiction_partners": [
-            "belief_1_unified_market_intelligence_field",
-            "belief_3_negative_space_pattern_recognition"
-          ],
-          "dominance_candidate": "unified_market_intelligence_field",
-          "historical_recurrence": 0,
-          "historical_outcome_bias": "refuse",
-          "arbitration_outcome": "reduce_size",
-          "resolution_rationale": [
-            "opposed_directional_beliefs_detected"
-          ],
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_rewrites": true
-          }
-        },
-        {
-          "contradiction_id": "contradiction_3_directional_opposition",
-          "belief_sources": [
-            "unified_market_intelligence_field",
-            "temporal_invariance_break_detection"
-          ],
-          "contradiction_type": "directional_opposition",
-          "contradiction_severity": 0.437,
-          "contradiction_partners": [
-            "belief_1_unified_market_intelligence_field",
-            "belief_4_temporal_invariance_break_detection"
-          ],
-          "dominance_candidate": "unified_market_intelligence_field",
-          "historical_recurrence": 0,
-          "historical_outcome_bias": "refuse",
-          "arbitration_outcome": "reduce_size",
-          "resolution_rationale": [
-            "opposed_directional_beliefs_detected"
-          ],
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_rewrites": true
-          }
-        },
-        {
-          "contradiction_id": "contradiction_4_directional_opposition",
-          "belief_sources": [
-            "unified_market_intelligence_field",
-            "pain_geometry_fields"
-          ],
-          "contradiction_type": "directional_opposition",
-          "contradiction_severity": 0.212,
-          "contradiction_partners": [
-            "belief_1_unified_market_intelligence_field",
-            "belief_5_pain_geometry_fields"
-          ],
-          "dominance_candidate": "unified_market_intelligence_field",
-          "historical_recurrence": 0,
-          "historical_outcome_bias": "refuse",
-          "arbitration_outcome": "reduce_size",
-          "resolution_rationale": [
-            "opposed_directional_beliefs_detected"
-          ],
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_rewrites": true
-          }
-        },
-        {
-          "contradiction_id": "contradiction_5_directional_opposition",
-          "belief_sources": [
-            "unified_market_intelligence_field",
-            "fractal_liquidity_decay_functions"
-          ],
-          "contradiction_type": "directional_opposition",
-          "contradiction_severity": 0.212,
-          "contradiction_partners": [
-            "belief_1_unified_market_intelligence_field",
-            "belief_7_fractal_liquidity_decay_functions"
-          ],
-          "dominance_candidate": "unified_market_intelligence_field",
-          "historical_recurrence": 0,
-          "historical_outcome_bias": "refuse",
-          "arbitration_outcome": "reduce_size",
-          "resolution_rationale": [
-            "opposed_directional_beliefs_detected"
-          ],
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_rewrites": true
-          }
-        },
-        {
-          "contradiction_id": "contradiction_6_directional_opposition",
-          "belief_sources": [
-            "unified_market_intelligence_field",
-            "adversarial_execution_intelligence_layer"
-          ],
-          "contradiction_type": "directional_opposition",
-          "contradiction_severity": 0.2452,
-          "contradiction_partners": [
-            "belief_1_unified_market_intelligence_field",
-            "belief_8_adversarial_execution_intelligence_layer"
-          ],
-          "dominance_candidate": "unified_market_intelligence_field",
-          "historical_recurrence": 0,
-          "historical_outcome_bias": "refuse",
-          "arbitration_outcome": "reduce_size",
-          "resolution_rationale": [
-            "opposed_directional_beliefs_detected"
-          ],
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_rewrites": true
-          }
-        }
-      ],
-      "arbitration": {
-        "outcome": "reduce_size",
-        "dominant_source": "unified_market_intelligence_field",
-        "max_contradiction_severity": 0.437,
-        "conflict_state": "active",
-        "reasons": [
-          "directional_opposition",
-          "directional_opposition",
-          "directional_opposition",
-          "directional_opposition",
-          "directional_opposition",
-          "directional_opposition"
-        ]
-      },
-      "confidence_adjustments": {
-        "base_composite_confidence": 0.4241,
-        "contradiction_penalty": 0.153,
-        "contradiction_adjusted_confidence": 0.2711
-      },
-      "risk_adjustments": {
-        "contradiction_multiplier": 0.7596,
-        "recommended_action": "reduce_size",
-        "should_reduce_size": true,
-        "should_pause": false,
-        "should_refuse": false
-      },
-      "historical_context": {
-        "context_signature": {
-          "replay_scope": "evaluation_replay",
-          "structure_state": "range",
-          "volatility_ratio": 1.0,
-          "spread_ratio": 1.0,
-          "slippage_ratio": 1.0,
-          "regime_state": "range",
-          "execution_state": "insufficient_data"
-        },
-        "type_counts": {
-          "directional_opposition": 6
-        },
-        "total_recurrence": 0,
-        "recurrence_ratio": 0.0
-      },
-      "governance": {
-        "sandbox_only": true,
-        "replay_validation_required": true,
-        "live_deployment_allowed": false,
-        "no_blind_live_rewrites": true,
-        "conflict_override_requires_replay_validation": true
-      },
-      "paths": {
-        "latest": "memory/contradiction_arbitration/contradiction_arbitration_latest.json",
-        "history": "memory/contradiction_arbitration/contradiction_arbitration_history.json",
-        "belief_state_registry": "memory/contradiction_arbitration/belief_state_registry.json",
-        "contradiction_events": "memory/contradiction_arbitration/contradiction_events.json",
-        "resolution_outcome_registry": "memory/contradiction_arbitration/resolution_outcome_registry.json",
-        "contextual_contradiction_clusters": "memory/contradiction_arbitration/contextual_contradiction_clusters.json",
-        "governance_state": "memory/contradiction_arbitration/governance_state.json"
-      }
-    },
-    "recursive_self_modeling": {
-      "configuration_evaluations": [
-        {
-          "config_id": "cfg_balanced",
-          "detector_set": "default+negative_space",
-          "feature_set": "core+synthetic",
-          "risk_behavior": "adaptive",
-          "performance_stability": 0.7,
-          "discovery_potential": 0.64,
-          "regime_adaptability": 0.6,
-          "learning_efficiency": 0.65,
-          "long_term_improvement_score": 0.655,
-          "validation": {
-            "scope": "evaluation_replay",
-            "sandbox_only": true
-          }
-        },
-        {
-          "config_id": "cfg_survival",
-          "detector_set": "survival_priority",
-          "feature_set": "core+pain_geometry",
-          "risk_behavior": "defensive",
-          "performance_stability": 0.66,
-          "discovery_potential": 0.58,
-          "regime_adaptability": 0.6,
-          "learning_efficiency": 0.65,
-          "long_term_improvement_score": 0.626,
-          "validation": {
-            "scope": "evaluation_replay",
-            "sandbox_only": true
-          }
-        },
-        {
-          "config_id": "cfg_discovery",
-          "detector_set": "expanded",
-          "feature_set": "core+synthetic+counterfactual",
-          "risk_behavior": "exploratory",
-          "performance_stability": 0.62,
-          "discovery_potential": 0.52,
-          "regime_adaptability": 0.6,
-          "learning_efficiency": 0.65,
-          "long_term_improvement_score": 0.597,
-          "validation": {
-            "scope": "evaluation_replay",
-            "sandbox_only": true
-          }
-        }
-      ],
-      "selected_configuration": {
-        "config_id": "cfg_balanced",
-        "detector_set": "default+negative_space",
-        "feature_set": "core+synthetic",
-        "risk_behavior": "adaptive",
-        "performance_stability": 0.7,
-        "discovery_potential": 0.64,
-        "regime_adaptability": 0.6,
-        "learning_efficiency": 0.65,
-        "long_term_improvement_score": 0.655,
-        "validation": {
-          "scope": "evaluation_replay",
-          "sandbox_only": true
-        }
-      },
-      "governance": {
-        "sandbox_only": true,
-        "direct_live_self_rewrite_allowed": false,
-        "promotion_requires_governance": true
-      },
-      "execution_microstructure_assessment": {
-        "execution_quality_score": 1.0,
-        "execution_penalty": 0.0,
-        "failure_cluster_risk": 0.0
-      },
-      "path": "memory/self_modeling/self_modeling_latest.json"
-    },
-    "discovery_state_tags": {
-      "synthetic_feature_state": "active",
-      "negative_space_state": "normal",
-      "invariant_break_state": "stable",
-      "pain_geometry_risk": 0.0,
-      "counterfactual_evaluation": "none",
-      "liquidity_decay_state": "insufficient_data"
-    },
-    "unified_market_intelligence_field": {
-      "components": {
-        "macro_state": {
-          "session_state": "unknown",
-          "structure_state": "range",
-          "volatility_ratio": 1.0,
-          "spread_ratio": 1.0,
-          "dxy_state": "unknown",
-          "yield_state": "unknown"
-        },
-        "regime_state": "range",
-        "detector_reliability": {
-          "state": "weak",
-          "reliability_score": 0.0,
-          "passed_count": 0,
-          "failed_count": 5,
-          "candidate_count": 5
-        },
-        "synthetic_feature_state": {
-          "state": "active",
-          "feature_count": 2
-        },
-        "negative_space_state": {
-          "state": "normal",
-          "deviation_score": 0.0
-        },
-        "invariant_break_state": {
-          "state": "stable",
-          "break_count": 0
-        },
-        "pain_geometry_risk": {
-          "current_state_risk": 0.0
-        },
-        "counterfactual_evaluation": {
-          "state": "none",
-          "edge_ratio": 0.0
-        },
-        "liquidity_decay_state": {
-          "state": "resilient",
-          "avg_vulnerability": 0.0,
-          "model_count": 0
-        },
-        "execution_microstructure_state": {
-          "state": "insufficient_data",
-          "execution_quality_score": 1.0,
-          "execution_penalty": 0.0,
-          "failure_cluster_risk": 0.0
-        },
-        "adversarial_execution_state": {
-          "hostile_execution_score": 0.0663,
-          "toxicity_proxy": 0.036,
-          "quote_fade_proxy": 0.18,
-          "sweep_aftermath_risk": 0.0,
-          "fill_collapse_risk": 0.14,
-          "adverse_selection_risk": 0.05,
-          "predatory_liquidity_state": "normal",
-          "historical_execution_hostility": 0.0663,
-          "execution_survival_bias": 0.0298,
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_self_rewrites": true
-          }
-        },
-        "structural_memory_state": {
-          "structural_memory_state": "weak",
-          "historical_recurrence_score": 0.3333,
-          "structural_magnet_score": 0.0,
-          "long_horizon_context_match": 0.2166,
-          "regime_memory_alignment": 1.0,
-          "episodic_pattern_links": [],
-          "structural_reversal_bias": 0.0,
-          "structural_acceleration_bias": 0.0,
-          "memory_reliability": 0.5083,
-          "governance_flags": {
-            "sandbox_only": true,
-            "replay_validation_required": true,
-            "live_deployment_allowed": false,
-            "no_blind_live_self_rewrites": true,
-            "pause_guard_triggered": false,
-            "refuse_guard_triggered": false
-          }
-        }
-      },
-      "unified_field_score": 0.458,
-      "confidence_structure": {
-        "regime_confidence": 0.95,
-        "detector_confidence": 0.0,
-        "counterfactual_confidence": 0.0,
-        "composite_confidence": 0.4241,
-        "confidence_band": "low",
-        "hostility_adjusted_confidence": 0.402,
-        "historical_recurrence_score": 0.3333,
-        "long_horizon_context_match": 0.2166,
-        "memory_reliability": 0.5083,
-        "memory_adjusted_confidence": 0.4241,
-        "calibrated_confidence": 0.0669,
-        "calibration_drift": 0.6786,
-        "confidence_reliability_band": "low",
-        "historical_confidence_error": 0.4241,
-        "execution_adjusted_uncertainty": 0.5055,
-        "contradiction_adjusted_confidence": 0.2711
-      },
-      "decision_refinements": {
-        "signal_confidence": {
-          "base": 0.475,
-          "refined": 0.4306,
-          "multiplier": 0.9696
-        },
-        "risk_sizing": {
-          "base": 0.85,
-          "refined": 0.8588,
-          "multiplier": 1.0103,
-          "adversarial_execution_multiplier": 0.9569,
-          "structural_memory_multiplier": 1.0,
-          "calibration_multiplier": 0.5266,
-          "calibration_adjusted_refined": 0.4522,
-          "contradiction_multiplier": 0.7596
-        },
-        "refusal_pause_behavior": {
-          "should_refuse": true,
-          "should_pause": true,
-          "refusal_reasons": [
-            "weak_detector_reliability"
-          ],
-          "pause_reasons": [
-            "calibration_drift_elevated",
-            "confidence_reliability_band_degraded"
-          ]
-        },
-        "strategy_selection": {
-          "mode": "defensive",
-          "selected_branch_id": "mutated_strategy_a",
-          "default_branch_id": "mutated_strategy_a"
-        }
-      },
-      "governance": {
-        "sandbox_only": true,
-        "live_protection_preserved": true,
-        "direct_live_override_allowed": false
-      },
-      "paths": {
-        "latest": "memory/market_intelligence/unified_market_intelligence_latest.json",
-        "history": "memory/market_intelligence/unified_market_intelligence_history.json"
-      },
-      "contradiction_arbitration": {
-        "outcome": "reduce_size",
-        "dominant_source": "unified_market_intelligence_field",
-        "max_contradiction_severity": 0.437,
-        "conflict_state": "active",
-        "reasons": [
-          "directional_opposition",
-          "directional_opposition",
-          "directional_opposition",
-          "directional_opposition",
-          "directional_opposition",
-          "directional_opposition"
-        ]
       }
     },
     "meta_learning_loop": {
