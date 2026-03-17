@@ -423,6 +423,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "transfer_robustness_state",
         "causal_intervention_robustness_state",
         "decision_policy_state",
+        "capital_allocation_state",
         "self_expansion_quality_state",
     }
     assert 0.0 <= unified["unified_field_score"] <= 1.0
@@ -731,6 +732,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "transfer_robustness_state",
         "causal_intervention_robustness_state",
         "decision_policy_state",
+        "capital_allocation_state",
         "self_expansion_quality_state",
     }
 
@@ -2944,3 +2946,216 @@ def test_hierarchical_decision_policy_layer_nonbreaking_with_missing_inputs(tmp_
     assert policy["governance_flags"]["sandbox_only"] is True
     assert policy["governance_flags"]["replay_validation_required"] is True
     assert policy["governance_flags"]["live_deployment_allowed"] is False
+
+
+def test_portfolio_multi_context_capital_allocation_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cap1", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia"},
+            {"trade_id": "cap2", "status": "closed", "result": "win", "pnl_points": 0.6, "session": "london"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 2.0, "slippage_ratio": 1.9},
+        replay_scope="full_replay",
+    )
+    allocation = result["portfolio_multi_context_capital_allocation_layer"]
+    assert Path(allocation["paths"]["latest"]).exists()
+    assert Path(allocation["paths"]["history"]).exists()
+    assert Path(allocation["paths"]["allocation_reason_registry"]).exists()
+    assert Path(allocation["paths"]["context_competition_registry"]).exists()
+    assert Path(allocation["paths"]["exposure_compression_trace"]).exists()
+    assert Path(allocation["paths"]["capital_allocation_governance_state"]).exists()
+
+
+def test_portfolio_multi_context_capital_allocation_layer_returns_expected_schema(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cas1", "status": "closed", "result": "loss", "pnl_points": -1.0},
+            {"trade_id": "cas2", "status": "closed", "result": "win", "pnl_points": 0.5},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.1, "slippage_ratio": 1.9},
+        replay_scope="full_replay",
+    )
+    allocation = result["portfolio_multi_context_capital_allocation_layer"]
+    expected_keys = {
+        "capital_allocation_state",
+        "allocation_priority_score",
+        "survival_exposure_bias",
+        "opportunity_allocation_bias",
+        "exposure_compression_score",
+        "context_competition_score",
+        "allocation_reliability",
+        "recommended_capital_fraction",
+        "allocation_reason_cluster",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(allocation))
+
+
+def test_portfolio_multi_context_capital_allocation_layer_adds_unified_field_components_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cau1", "status": "closed", "result": "loss", "pnl_points": -0.7},
+            {"trade_id": "cau2", "status": "closed", "result": "win", "pnl_points": 0.4},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.4, "spread_ratio": 1.8, "slippage_ratio": 1.6},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "unified_field_score" in unified
+    assert "composite_confidence" in unified["confidence_structure"]
+    assert "capital_allocation_state" in unified["components"]
+    assert "allocation_reliability" in unified["confidence_structure"]
+    assert "context_competition_score" in unified["confidence_structure"]
+    assert "capital_allocation" in unified["decision_refinements"]
+    assert "refined" in unified["decision_refinements"]["risk_sizing"]
+
+
+def test_portfolio_multi_context_capital_allocation_layer_additively_influences_risk_sizing_and_refusal_pause_behavior(
+    tmp_path: Path,
+) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "car1", "status": "closed", "result": "loss", "pnl_points": -1.2, "failure_cause": "execution_failure"},
+            {"trade_id": "car2", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "execution_failure"},
+            {"trade_id": "car3", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "execution_failure"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.2, "spread_ratio": 3.2, "slippage_ratio": 3.0},
+        replay_scope="full_replay",
+    )
+    refinements = result["unified_market_intelligence_field"]["decision_refinements"]
+    assert "capital_allocation_multiplier" in refinements["risk_sizing"]
+    assert 0.25 <= float(refinements["risk_sizing"]["capital_allocation_multiplier"]) <= 1.0
+    behavior = refinements["refusal_pause_behavior"]
+    all_reasons = set(behavior.get("refusal_reasons", [])) | set(behavior.get("pause_reasons", []))
+    assert any(reason.startswith("capital_allocation_") for reason in all_reasons)
+
+
+def test_portfolio_multi_context_capital_allocation_layer_prioritizes_survival_under_fragility(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "caf1", "status": "closed", "result": "loss", "pnl_points": -1.1, "session": "asia"},
+            {"trade_id": "caf2", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia"},
+            {"trade_id": "caf3", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.3, "spread_ratio": 3.5, "slippage_ratio": 3.4},
+        replay_scope="full_replay",
+    )
+    allocation = result["portfolio_multi_context_capital_allocation_layer"]
+    assert allocation["survival_exposure_bias"] >= allocation["opportunity_allocation_bias"]
+    assert allocation["capital_allocation_state"] in {"capital_preservation", "context_competitive", "balanced_guarded"}
+
+
+def test_portfolio_multi_context_capital_allocation_layer_allows_opportunity_bias_only_when_reliability_high(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cao1", "status": "closed", "result": "win", "pnl_points": 0.8, "session": "london"},
+            {"trade_id": "cao2", "status": "closed", "result": "win", "pnl_points": 0.7, "session": "new_york"},
+            {"trade_id": "cao3", "status": "closed", "result": "win", "pnl_points": 0.6, "session": "asia"},
+        ],
+        market_state={"structure_state": "trend", "volatility_ratio": 1.0, "spread_ratio": 1.0, "slippage_ratio": 1.0},
+        replay_scope="focused_replay",
+    )
+    allocation = result["portfolio_multi_context_capital_allocation_layer"]
+    if allocation["opportunity_allocation_bias"] > allocation["survival_exposure_bias"]:
+        assert allocation["allocation_reliability"] >= 0.55
+    else:
+        assert allocation["opportunity_allocation_bias"] <= allocation["survival_exposure_bias"]
+
+
+def test_portfolio_multi_context_capital_allocation_layer_feeds_self_suggestion_governor_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cag1", "status": "closed", "result": "loss", "pnl_points": -1.0},
+            {"trade_id": "cag2", "status": "closed", "result": "loss", "pnl_points": -0.8},
+            {"trade_id": "cag3", "status": "closed", "result": "loss", "pnl_points": -0.7},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 3.1, "slippage_ratio": 2.9},
+        replay_scope="full_replay",
+    )
+    governor = result["self_suggestion_governor"]
+    assert "portfolio_multi_context_capital_allocation_layer" in governor
+    assert "anti_noise_controls" in governor
+    assert "priority_threshold" in governor["anti_noise_controls"]
+
+
+def test_portfolio_multi_context_capital_allocation_layer_feeds_self_expansion_quality_components_nonbreaking(
+    tmp_path: Path,
+) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cae1", "status": "closed", "result": "loss", "pnl_points": -0.9},
+            {"trade_id": "cae2", "status": "closed", "result": "win", "pnl_points": 0.5},
+            {"trade_id": "cae3", "status": "closed", "result": "loss", "pnl_points": -0.3},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.2, "slippage_ratio": 2.0},
+        replay_scope="full_replay",
+    )
+    quality = result["self_expansion_quality_layer"]
+    components = quality["quality_components"]
+    assert "capital_allocation_state_context" in components
+    assert "capital_allocation_reliability_context" in components
+    assert "capital_allocation_exposure_compression_pressure" in components
+    assert "capital_allocation_context_competition_pressure" in components
+
+
+def test_portfolio_multi_context_capital_allocation_layer_history_rolls_and_governance_is_sandbox_replay_only(
+    tmp_path: Path,
+) -> None:
+    memory_root = tmp_path / "memory"
+    for index in range(3):
+        result = run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"cah{index}a", "status": "closed", "result": "loss", "pnl_points": -0.8},
+                {"trade_id": f"cah{index}b", "status": "closed", "result": "win", "pnl_points": 0.5},
+            ],
+            market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 2.0, "slippage_ratio": 1.9},
+            replay_scope="focused_replay",
+        )
+    allocation = result["portfolio_multi_context_capital_allocation_layer"]
+    flags = allocation["governance_flags"]
+    assert flags["sandbox_only"] is True
+    assert flags["replay_validation_required"] is True
+    assert flags["live_deployment_allowed"] is False
+    history_payload = json.loads((memory_root / "capital_allocation" / "capital_allocation_history.json").read_text(encoding="utf-8"))
+    assert history_payload["snapshots"]
+    assert len(history_payload["snapshots"]) <= 200
+    governance = json.loads(
+        (memory_root / "capital_allocation" / "capital_allocation_governance_state.json").read_text(encoding="utf-8")
+    )
+    assert governance["sandbox_only"] is True
+    assert governance["replay_validation_required"] is True
+    assert governance["live_deployment_allowed"] is False
+    assert governance["replay_scope"] == "focused_replay"
+
+
+def test_portfolio_multi_context_capital_allocation_layer_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "can1", "status": "closed", "result": "loss", "pnl_points": -0.2},
+            {"trade_id": "can2", "status": "closed", "result": "flat", "pnl_points": 0.0},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    allocation = result["portfolio_multi_context_capital_allocation_layer"]
+    assert 0.0 <= allocation["allocation_priority_score"] <= 1.0
+    assert 0.0 <= allocation["survival_exposure_bias"] <= 1.0
+    assert 0.0 <= allocation["opportunity_allocation_bias"] <= 1.0
+    assert 0.0 <= allocation["exposure_compression_score"] <= 1.0
+    assert 0.0 <= allocation["context_competition_score"] <= 1.0
+    assert 0.0 <= allocation["allocation_reliability"] <= 1.0
+    assert 0.05 <= allocation["recommended_capital_fraction"] <= 0.95
+    assert allocation["governance_flags"]["sandbox_only"] is True
+    assert allocation["governance_flags"]["replay_validation_required"] is True
+    assert allocation["governance_flags"]["live_deployment_allowed"] is False

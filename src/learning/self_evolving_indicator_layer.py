@@ -5961,6 +5961,299 @@ def _hierarchical_decision_policy_layer(
     }
 
 
+def _portfolio_multi_context_capital_allocation_layer(
+    *,
+    memory_root: Path,
+    market_state: dict[str, Any],
+    replay_scope: str,
+    autonomous_behavior: dict[str, Any],
+    unified_market_intelligence_field: dict[str, Any],
+    hierarchical_decision_policy_layer: dict[str, Any],
+    execution_microstructure_engine: dict[str, Any] | None = None,
+    adversarial_execution_engine: dict[str, Any] | None = None,
+    deception_inference_engine: dict[str, Any] | None = None,
+    structural_memory_graph_engine: dict[str, Any] | None = None,
+    latent_transition_hazard_engine: dict[str, Any] | None = None,
+    calibration_uncertainty_engine: dict[str, Any] | None = None,
+    contradiction_arbitration_engine: dict[str, Any] | None = None,
+    cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
+    causal_intervention_counterfactual_robustness_layer: dict[str, Any] | None = None,
+    self_expansion_quality_layer: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    allocation_dir = memory_root / "capital_allocation"
+    allocation_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = allocation_dir / "capital_allocation_latest.json"
+    history_path = allocation_dir / "capital_allocation_history.json"
+    reason_registry_path = allocation_dir / "allocation_reason_registry.json"
+    context_competition_registry_path = allocation_dir / "context_competition_registry.json"
+    exposure_compression_trace_path = allocation_dir / "exposure_compression_trace.json"
+    governance_path = allocation_dir / "capital_allocation_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    market_state = market_state if isinstance(market_state, dict) else {}
+    autonomous_behavior = autonomous_behavior if isinstance(autonomous_behavior, dict) else {}
+    unified_market_intelligence_field = (
+        unified_market_intelligence_field if isinstance(unified_market_intelligence_field, dict) else {}
+    )
+    hierarchical_decision_policy_layer = (
+        hierarchical_decision_policy_layer if isinstance(hierarchical_decision_policy_layer, dict) else {}
+    )
+    execution_microstructure_engine = execution_microstructure_engine if isinstance(execution_microstructure_engine, dict) else {}
+    adversarial_execution_engine = adversarial_execution_engine if isinstance(adversarial_execution_engine, dict) else {}
+    deception_inference_engine = deception_inference_engine if isinstance(deception_inference_engine, dict) else {}
+    structural_memory_graph_engine = structural_memory_graph_engine if isinstance(structural_memory_graph_engine, dict) else {}
+    latent_transition_hazard_engine = latent_transition_hazard_engine if isinstance(latent_transition_hazard_engine, dict) else {}
+    calibration_uncertainty_engine = calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
+    contradiction_arbitration_engine = contradiction_arbitration_engine if isinstance(contradiction_arbitration_engine, dict) else {}
+    cross_regime_transfer_robustness_layer = (
+        cross_regime_transfer_robustness_layer if isinstance(cross_regime_transfer_robustness_layer, dict) else {}
+    )
+    causal_intervention_counterfactual_robustness_layer = (
+        causal_intervention_counterfactual_robustness_layer
+        if isinstance(causal_intervention_counterfactual_robustness_layer, dict)
+        else {}
+    )
+    self_expansion_quality_layer = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    calibration_state = calibration_uncertainty_engine.get("calibration_state", {})
+    if not isinstance(calibration_state, dict):
+        calibration_state = {}
+    contradiction_state = contradiction_arbitration_engine.get("arbitration", {})
+    if not isinstance(contradiction_state, dict):
+        contradiction_state = {}
+    adversarial_state = adversarial_execution_engine.get("adversarial_execution_state", {})
+    if not isinstance(adversarial_state, dict):
+        adversarial_state = {}
+    deception_state = deception_inference_engine.get("deception_state", {})
+    if not isinstance(deception_state, dict):
+        deception_state = {}
+    structural_state = structural_memory_graph_engine.get("structural_memory_state", {})
+    if not isinstance(structural_state, dict):
+        structural_state = {}
+    latent_state = latent_transition_hazard_engine.get("latent_transition_hazard_state", {})
+    if not isinstance(latent_state, dict):
+        latent_state = {}
+
+    calibrated_confidence = _bounded(float(confidence_structure.get("composite_confidence", 0.5) or 0.5))
+    execution_penalty = _bounded(float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0))
+    hostile_execution_score = _bounded(float(adversarial_state.get("hostile_execution_score", 0.0) or 0.0))
+    deception_score = _bounded(float(deception_state.get("deception_score", 0.0) or 0.0))
+    transition_hazard_score = _bounded(float(latent_state.get("transition_hazard_score", 0.0) or 0.0))
+    calibration_drift = _bounded(float(calibration_state.get("calibration_drift", 0.0) or 0.0))
+    contradiction_severity = _bounded(float(contradiction_state.get("max_contradiction_severity", 0.0) or 0.0))
+    contradiction_outcome = str(contradiction_state.get("outcome", "allow"))
+    policy_conflict_score = _bounded(float(hierarchical_decision_policy_layer.get("policy_conflict_score", 0.0) or 0.0))
+    policy_reliability = _bounded(float(hierarchical_decision_policy_layer.get("policy_reliability", 0.5) or 0.5))
+    survival_priority_score = _bounded(float(hierarchical_decision_policy_layer.get("survival_priority_score", 0.0) or 0.0))
+    opportunity_priority_score = _bounded(
+        float(hierarchical_decision_policy_layer.get("opportunity_priority_score", 0.0) or 0.0)
+    )
+    cross_regime_transfer_score = _bounded(float(cross_regime_transfer_robustness_layer.get("cross_regime_transfer_score", 0.5) or 0.5))
+    overfit_risk = _bounded(float(cross_regime_transfer_robustness_layer.get("overfit_risk", 0.0) or 0.0))
+    intervention_reliability = _bounded(
+        float(causal_intervention_counterfactual_robustness_layer.get("intervention_reliability", 0.5) or 0.5)
+    )
+    false_improvement_risk = _bounded(
+        float(causal_intervention_counterfactual_robustness_layer.get("false_improvement_risk", 0.0) or 0.0)
+    )
+    expansion_quality_score = _bounded(float(self_expansion_quality_layer.get("expansion_quality_score", 0.5) or 0.5))
+    memory_reliability = _bounded(float(structural_state.get("memory_reliability", 0.5) or 0.5))
+    volatility_ratio = _bounded(float(market_state.get("volatility_ratio", 1.0) or 1.0) / 3.0)
+    capital_survival_pressure = _bounded(
+        float(autonomous_behavior.get("capital_survival_engine", {}).get("survival_pressure", 0.0) or 0.0)
+    )
+    contradiction_pressure = 0.12 if contradiction_outcome == "refuse" else 0.07 if contradiction_outcome == "pause" else 0.0
+
+    survival_exposure_bias = _bounded(
+        (execution_penalty * 0.2)
+        + (hostile_execution_score * 0.12)
+        + (deception_score * 0.08)
+        + (transition_hazard_score * 0.14)
+        + (calibration_drift * 0.12)
+        + (contradiction_severity * 0.1)
+        + (policy_conflict_score * 0.08)
+        + (overfit_risk * 0.08)
+        + (false_improvement_risk * 0.06)
+        + (survival_priority_score * 0.12)
+        + (volatility_ratio * 0.05)
+        + (capital_survival_pressure * 0.05)
+        + contradiction_pressure
+    )
+    opportunity_allocation_bias = _bounded(
+        (calibrated_confidence * 0.24)
+        + (policy_reliability * 0.2)
+        + (opportunity_priority_score * 0.2)
+        + (cross_regime_transfer_score * 0.14)
+        + (memory_reliability * 0.08)
+        + (expansion_quality_score * 0.06)
+        + (intervention_reliability * 0.08)
+        - (execution_penalty * 0.12)
+        - (policy_conflict_score * 0.1)
+        - (false_improvement_risk * 0.08)
+    )
+    context_competition_score = _bounded(
+        min(1.0, survival_exposure_bias + opportunity_allocation_bias)
+        * (0.55 + ((1.0 - abs(survival_exposure_bias - opportunity_allocation_bias)) * 0.45))
+    )
+    exposure_compression_score = _bounded(
+        (survival_exposure_bias * 0.4)
+        + (context_competition_score * 0.24)
+        + (policy_conflict_score * 0.14)
+        + (1.0 - policy_reliability) * 0.12
+        + (false_improvement_risk * 0.1)
+    )
+    allocation_priority_score = _bounded(
+        (opportunity_allocation_bias * 0.55)
+        + ((1.0 - exposure_compression_score) * 0.25)
+        + (policy_reliability * 0.2)
+    )
+    allocation_reliability = _bounded(
+        (calibrated_confidence * 0.22)
+        + (policy_reliability * 0.26)
+        + (cross_regime_transfer_score * 0.18)
+        + (intervention_reliability * 0.14)
+        + (memory_reliability * 0.1)
+        + (expansion_quality_score * 0.1)
+        - (policy_conflict_score * 0.16)
+        - (calibration_drift * 0.12)
+        - (execution_penalty * 0.08)
+    )
+    recommended_capital_fraction = round(
+        max(
+            0.05,
+            min(
+                0.95,
+                0.16
+                + (allocation_priority_score * 0.52)
+                + (allocation_reliability * 0.26)
+                - (survival_exposure_bias * 0.3)
+                - (exposure_compression_score * 0.28),
+            ),
+        ),
+        4,
+    )
+    if survival_exposure_bias >= 0.72 or exposure_compression_score >= 0.72:
+        capital_allocation_state = "capital_preservation"
+    elif opportunity_allocation_bias >= 0.64 and allocation_reliability >= 0.62 and exposure_compression_score <= 0.56:
+        capital_allocation_state = "opportunity_selective"
+    elif context_competition_score >= 0.62:
+        capital_allocation_state = "context_competitive"
+    else:
+        capital_allocation_state = "balanced_guarded"
+
+    reason_candidates = {
+        "survival_pressure_cluster": survival_exposure_bias + execution_penalty + transition_hazard_score,
+        "opportunity_alignment_cluster": opportunity_allocation_bias + allocation_reliability + cross_regime_transfer_score,
+        "compression_pressure_cluster": exposure_compression_score + policy_conflict_score + false_improvement_risk,
+        "competition_pressure_cluster": context_competition_score + abs(survival_exposure_bias - opportunity_allocation_bias),
+    }
+    allocation_reason_cluster = sorted(reason_candidates.items(), key=lambda item: (item[1], item[0]), reverse=True)[0][0]
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "survival_priority_guard": survival_exposure_bias >= 0.7,
+        "allocation_compression_guard": exposure_compression_score >= 0.68,
+    }
+    payload = {
+        "capital_allocation_state": capital_allocation_state,
+        "allocation_priority_score": allocation_priority_score,
+        "survival_exposure_bias": survival_exposure_bias,
+        "opportunity_allocation_bias": opportunity_allocation_bias,
+        "exposure_compression_score": exposure_compression_score,
+        "context_competition_score": context_competition_score,
+        "allocation_reliability": allocation_reliability,
+        "recommended_capital_fraction": recommended_capital_fraction,
+        "allocation_reason_cluster": allocation_reason_cluster,
+        "governance_flags": governance_flags,
+    }
+
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+
+    reason_registry = read_json_safe(reason_registry_path, default={"entries": []})
+    if not isinstance(reason_registry, dict):
+        reason_registry = {"entries": []}
+    reason_entries = reason_registry.get("entries", [])
+    if not isinstance(reason_entries, list):
+        reason_entries = []
+    reason_entries.append(
+        {
+            "replay_scope": replay_scope,
+            "capital_allocation_state": capital_allocation_state,
+            "allocation_reason_cluster": allocation_reason_cluster,
+            "allocation_priority_score": allocation_priority_score,
+        }
+    )
+    write_json_atomic(reason_registry_path, {"entries": reason_entries[-400:]})
+
+    context_registry = read_json_safe(context_competition_registry_path, default={"entries": []})
+    if not isinstance(context_registry, dict):
+        context_registry = {"entries": []}
+    context_entries = context_registry.get("entries", [])
+    if not isinstance(context_entries, list):
+        context_entries = []
+    context_entries.append(
+        {
+            "replay_scope": replay_scope,
+            "context_competition_score": context_competition_score,
+            "survival_exposure_bias": survival_exposure_bias,
+            "opportunity_allocation_bias": opportunity_allocation_bias,
+        }
+    )
+    write_json_atomic(context_competition_registry_path, {"entries": context_entries[-400:]})
+
+    compression_trace = read_json_safe(exposure_compression_trace_path, default={"entries": []})
+    if not isinstance(compression_trace, dict):
+        compression_trace = {"entries": []}
+    compression_entries = compression_trace.get("entries", [])
+    if not isinstance(compression_entries, list):
+        compression_entries = []
+    compression_entries.append(
+        {
+            "replay_scope": replay_scope,
+            "exposure_compression_score": exposure_compression_score,
+            "recommended_capital_fraction": recommended_capital_fraction,
+            "allocation_reliability": allocation_reliability,
+        }
+    )
+    write_json_atomic(exposure_compression_trace_path, {"entries": compression_entries[-400:]})
+    write_json_atomic(
+        governance_path,
+        {
+            "sandbox_only": True,
+            "replay_validation_required": True,
+            "live_deployment_allowed": False,
+            "no_blind_live_self_rewrites": True,
+            "replay_scope": replay_scope,
+        },
+    )
+    return {
+        **payload,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "allocation_reason_registry": str(reason_registry_path),
+            "context_competition_registry": str(context_competition_registry_path),
+            "exposure_compression_trace": str(exposure_compression_trace_path),
+            "capital_allocation_governance_state": str(governance_path),
+        },
+    }
+
+
 def _self_suggestion_governor(
     *,
     memory_root: Path,
@@ -5986,6 +6279,7 @@ def _self_suggestion_governor(
     self_expansion_quality_layer: dict[str, Any] | None = None,
     causal_intervention_counterfactual_robustness_layer: dict[str, Any] | None = None,
     hierarchical_decision_policy_layer: dict[str, Any] | None = None,
+    portfolio_multi_context_capital_allocation_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     registry_dir = memory_root / "capability_registry"
     registry_dir.mkdir(parents=True, exist_ok=True)
@@ -6068,6 +6362,11 @@ def _self_suggestion_governor(
     hierarchical_decision_policy_layer = (
         hierarchical_decision_policy_layer if isinstance(hierarchical_decision_policy_layer, dict) else {}
     )
+    portfolio_multi_context_capital_allocation_layer = (
+        portfolio_multi_context_capital_allocation_layer
+        if isinstance(portfolio_multi_context_capital_allocation_layer, dict)
+        else {}
+    )
     capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
     capability_candidates = capability_evolution_ladder.get("capability_candidates", [])
     if isinstance(capability_candidates, list):
@@ -6142,6 +6441,25 @@ def _self_suggestion_governor(
         "dominant_policy_mode": str(hierarchical_decision_policy_layer.get("dominant_policy_mode", "balanced")),
         "policy_conflict_score": round(float(hierarchical_decision_policy_layer.get("policy_conflict_score", 0.0) or 0.0), 4),
         "policy_reliability": round(float(hierarchical_decision_policy_layer.get("policy_reliability", 0.0) or 0.0), 4),
+        "capital_allocation_state": str(
+            portfolio_multi_context_capital_allocation_layer.get("capital_allocation_state", "unknown")
+        ),
+        "capital_allocation_reliability": round(
+            float(portfolio_multi_context_capital_allocation_layer.get("allocation_reliability", 0.0) or 0.0),
+            4,
+        ),
+        "capital_allocation_exposure_compression": round(
+            float(portfolio_multi_context_capital_allocation_layer.get("exposure_compression_score", 0.0) or 0.0),
+            4,
+        ),
+        "capital_allocation_context_competition": round(
+            float(portfolio_multi_context_capital_allocation_layer.get("context_competition_score", 0.0) or 0.0),
+            4,
+        ),
+        "capital_allocation_survival_bias": round(
+            float(portfolio_multi_context_capital_allocation_layer.get("survival_exposure_bias", 0.0) or 0.0),
+            4,
+        ),
     }
     if previous_governor.get("input_signature") == input_signature:
         return previous_governor
@@ -6177,6 +6495,25 @@ def _self_suggestion_governor(
         quality_threshold_delta = round(min(0.2, quality_threshold_delta + 0.04), 4)
     if policy_conflict_score >= 0.6:
         quality_threshold_delta = round(min(0.2, quality_threshold_delta + 0.03), 4)
+    allocation_reliability = float(portfolio_multi_context_capital_allocation_layer.get("allocation_reliability", 0.5) or 0.5)
+    exposure_compression_score = float(
+        portfolio_multi_context_capital_allocation_layer.get("exposure_compression_score", 0.0) or 0.0
+    )
+    context_competition_score = float(
+        portfolio_multi_context_capital_allocation_layer.get("context_competition_score", 0.0) or 0.0
+    )
+    survival_exposure_bias = float(portfolio_multi_context_capital_allocation_layer.get("survival_exposure_bias", 0.0) or 0.0)
+    opportunity_allocation_bias = float(
+        portfolio_multi_context_capital_allocation_layer.get("opportunity_allocation_bias", 0.0) or 0.0
+    )
+    if exposure_compression_score >= 0.68:
+        quality_threshold_delta = round(min(0.2, quality_threshold_delta + 0.04), 4)
+    if context_competition_score >= 0.7:
+        quality_threshold_delta = round(min(0.2, quality_threshold_delta + 0.03), 4)
+    if survival_exposure_bias >= opportunity_allocation_bias and survival_exposure_bias >= 0.66:
+        quality_threshold_delta = round(min(0.2, quality_threshold_delta + 0.04), 4)
+    if opportunity_allocation_bias >= 0.62 and allocation_reliability >= 0.64 and exposure_compression_score <= 0.55:
+        quality_threshold_delta = round(max(0.0, quality_threshold_delta - 0.02), 4)
     min_threshold = _SUGGESTION_LOW_VALUE_THRESHOLD + (0.08 if noisy_cluster else 0.0)
     max_per_cycle = _SUGGESTION_MAX_PER_NOISY_CYCLE if noisy_cluster else _SUGGESTION_MAX_PER_CYCLE
     min_threshold = round(min(1.0, min_threshold + quality_threshold_delta), 4)
@@ -6441,6 +6778,28 @@ def _self_suggestion_governor(
             "policy_conflict_score": round(float(hierarchical_decision_policy_layer.get("policy_conflict_score", 0.0) or 0.0), 4),
             "policy_reliability": round(float(hierarchical_decision_policy_layer.get("policy_reliability", 0.0) or 0.0), 4),
         },
+        "portfolio_multi_context_capital_allocation_layer": {
+            "capital_allocation_state": portfolio_multi_context_capital_allocation_layer.get(
+                "capital_allocation_state",
+                "unknown",
+            ),
+            "allocation_reliability": round(
+                float(portfolio_multi_context_capital_allocation_layer.get("allocation_reliability", 0.0) or 0.0),
+                4,
+            ),
+            "exposure_compression_score": round(
+                float(portfolio_multi_context_capital_allocation_layer.get("exposure_compression_score", 0.0) or 0.0),
+                4,
+            ),
+            "context_competition_score": round(
+                float(portfolio_multi_context_capital_allocation_layer.get("context_competition_score", 0.0) or 0.0),
+                4,
+            ),
+            "survival_exposure_bias": round(
+                float(portfolio_multi_context_capital_allocation_layer.get("survival_exposure_bias", 0.0) or 0.0),
+                4,
+            ),
+        },
         "paths": {
             "registry": str(registry_path),
             "governor": str(governor_path),
@@ -6474,6 +6833,7 @@ def _self_expansion_quality_layer(
     cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
     causal_intervention_counterfactual_robustness_layer: dict[str, Any] | None = None,
     hierarchical_decision_policy_layer: dict[str, Any] | None = None,
+    portfolio_multi_context_capital_allocation_layer: dict[str, Any] | None = None,
     replay_scope: str,
 ) -> dict[str, Any]:
     quality_dir = memory_root / "self_expansion_quality"
@@ -6507,6 +6867,11 @@ def _self_expansion_quality_layer(
     )
     hierarchical_decision_policy_layer = (
         hierarchical_decision_policy_layer if isinstance(hierarchical_decision_policy_layer, dict) else {}
+    )
+    portfolio_multi_context_capital_allocation_layer = (
+        portfolio_multi_context_capital_allocation_layer
+        if isinstance(portfolio_multi_context_capital_allocation_layer, dict)
+        else {}
     )
 
     candidates = capability_evolution_ladder.get("capability_candidates", [])
@@ -6667,6 +7032,18 @@ def _self_expansion_quality_layer(
         1.0,
         float(hierarchical_decision_policy_layer.get("deferral_priority_score", 0.0) or 0.0),
     )
+    capital_allocation_reliability = min(
+        1.0,
+        max(0.0, float(portfolio_multi_context_capital_allocation_layer.get("allocation_reliability", 0.5) or 0.5)),
+    )
+    capital_allocation_exposure_compression = min(
+        1.0,
+        max(0.0, float(portfolio_multi_context_capital_allocation_layer.get("exposure_compression_score", 0.0) or 0.0)),
+    )
+    capital_allocation_context_competition = min(
+        1.0,
+        max(0.0, float(portfolio_multi_context_capital_allocation_layer.get("context_competition_score", 0.0) or 0.0)),
+    )
     regression_risk = round(
         max(
             0.0,
@@ -6692,6 +7069,9 @@ def _self_expansion_quality_layer(
                 )
                 + (policy_conflict_pressure * 0.06)
                 + ((policy_refusal_pressure + policy_deferral_pressure) * 0.03)
+                + (capital_allocation_exposure_compression * 0.04)
+                + (capital_allocation_context_competition * 0.03)
+                + ((1.0 - capital_allocation_reliability) * 0.03)
                 + contradiction_pressure,
             ),
         ),
@@ -6789,6 +7169,12 @@ def _self_expansion_quality_layer(
         "decision_policy_mode_context": str(hierarchical_decision_policy_layer.get("dominant_policy_mode", "balanced")),
         "decision_policy_conflict_pressure": round(policy_conflict_pressure, 4),
         "decision_policy_refusal_deferral_pressure": round(min(1.0, policy_refusal_pressure + policy_deferral_pressure), 4),
+        "capital_allocation_state_context": str(
+            portfolio_multi_context_capital_allocation_layer.get("capital_allocation_state", "unknown")
+        ),
+        "capital_allocation_reliability_context": round(capital_allocation_reliability, 4),
+        "capital_allocation_exposure_compression_pressure": round(capital_allocation_exposure_compression, 4),
+        "capital_allocation_context_competition_pressure": round(capital_allocation_context_competition, 4),
         "promotion_confidence_multiplier": promotion_confidence_multiplier,
         "quarantine_pressure_delta": quarantine_pressure_delta,
         "expansion_rate_limit": expansion_rate_limit,
@@ -7649,6 +8035,114 @@ def run_self_evolving_indicator_layer(
     )
     decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
     unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    portfolio_multi_context_capital_allocation_engine = _portfolio_multi_context_capital_allocation_layer(
+        memory_root=memory_root,
+        market_state=market_state,
+        replay_scope=replay_scope,
+        autonomous_behavior=autonomous_behavior,
+        unified_market_intelligence_field=unified_market_intelligence_field,
+        hierarchical_decision_policy_layer=hierarchical_decision_policy_engine,
+        execution_microstructure_engine=execution_microstructure_engine,
+        adversarial_execution_engine=adversarial_execution_engine,
+        deception_inference_engine=deception_inference_engine,
+        structural_memory_graph_engine=structural_memory_graph_engine,
+        latent_transition_hazard_engine=latent_transition_hazard_engine,
+        calibration_uncertainty_engine=calibration_uncertainty_engine,
+        contradiction_arbitration_engine=contradiction_arbitration_engine,
+        cross_regime_transfer_robustness_layer=cross_regime_transfer_robustness_engine,
+        causal_intervention_counterfactual_robustness_layer=causal_intervention_robustness_engine,
+        self_expansion_quality_layer=quality_integration_context,
+    )
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["capital_allocation_state"] = {
+        "state": str(portfolio_multi_context_capital_allocation_engine.get("capital_allocation_state", "unknown")),
+        "allocation_reason_cluster": str(
+            portfolio_multi_context_capital_allocation_engine.get("allocation_reason_cluster", "unknown")
+        ),
+        "recommended_capital_fraction": round(
+            float(portfolio_multi_context_capital_allocation_engine.get("recommended_capital_fraction", 0.0) or 0.0),
+            4,
+        ),
+    }
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["allocation_reliability"] = round(
+        max(
+            0.0,
+            min(1.0, float(portfolio_multi_context_capital_allocation_engine.get("allocation_reliability", 0.0) or 0.0)),
+        ),
+        4,
+    )
+    confidence_structure["context_competition_score"] = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                float(portfolio_multi_context_capital_allocation_engine.get("context_competition_score", 0.0) or 0.0),
+            ),
+        ),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    risk_sizing = decision_refinements.get("risk_sizing", {})
+    if not isinstance(risk_sizing, dict):
+        risk_sizing = {}
+    capital_fraction = float(portfolio_multi_context_capital_allocation_engine.get("recommended_capital_fraction", 0.2) or 0.2)
+    compression_score = float(portfolio_multi_context_capital_allocation_engine.get("exposure_compression_score", 0.0) or 0.0)
+    capital_allocation_multiplier = round(max(0.25, min(1.0, (capital_fraction * 0.75) + ((1.0 - compression_score) * 0.25))), 4)
+    risk_sizing["capital_allocation_multiplier"] = capital_allocation_multiplier
+    decision_refinements["risk_sizing"] = risk_sizing
+    decision_refinements["capital_allocation"] = {
+        "capital_allocation_state": portfolio_multi_context_capital_allocation_engine.get("capital_allocation_state", "unknown"),
+        "allocation_priority_score": round(
+            float(portfolio_multi_context_capital_allocation_engine.get("allocation_priority_score", 0.0) or 0.0),
+            4,
+        ),
+        "allocation_reliability": round(
+            float(portfolio_multi_context_capital_allocation_engine.get("allocation_reliability", 0.0) or 0.0),
+            4,
+        ),
+        "recommended_capital_fraction": round(capital_fraction, 4),
+    }
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    survival_exposure_bias = float(portfolio_multi_context_capital_allocation_engine.get("survival_exposure_bias", 0.0) or 0.0)
+    context_competition_score = float(portfolio_multi_context_capital_allocation_engine.get("context_competition_score", 0.0) or 0.0)
+    if (
+        str(portfolio_multi_context_capital_allocation_engine.get("capital_allocation_state", ""))
+        == "capital_preservation"
+        and "capital_allocation_survival_priority_guard" not in refusal_reasons
+    ):
+        refusal_reasons.append("capital_allocation_survival_priority_guard")
+    if compression_score >= 0.7 and "capital_allocation_exposure_compression_guard" not in pause_reasons:
+        pause_reasons.append("capital_allocation_exposure_compression_guard")
+    if context_competition_score >= 0.7 and "capital_allocation_context_competition_guard" not in pause_reasons:
+        pause_reasons.append("capital_allocation_context_competition_guard")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        survival_exposure_bias >= 0.84 and float(portfolio_multi_context_capital_allocation_engine.get("allocation_reliability", 1.0) or 1.0)
+        <= 0.5
+    )
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        compression_score >= 0.68 or context_competition_score >= 0.7
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
     self_suggestion_governor = _self_suggestion_governor(
         memory_root=memory_root,
         closed=closed,
@@ -7673,6 +8167,7 @@ def run_self_evolving_indicator_layer(
         self_expansion_quality_layer=quality_integration_context,
         causal_intervention_counterfactual_robustness_layer=causal_intervention_robustness_engine,
         hierarchical_decision_policy_layer=hierarchical_decision_policy_engine,
+        portfolio_multi_context_capital_allocation_layer=portfolio_multi_context_capital_allocation_engine,
     )
     self_expansion_quality_engine = _self_expansion_quality_layer(
         memory_root=memory_root,
@@ -7688,6 +8183,7 @@ def run_self_evolving_indicator_layer(
         cross_regime_transfer_robustness_layer=cross_regime_transfer_robustness_engine,
         causal_intervention_counterfactual_robustness_layer=causal_intervention_robustness_engine,
         hierarchical_decision_policy_layer=hierarchical_decision_policy_engine,
+        portfolio_multi_context_capital_allocation_layer=portfolio_multi_context_capital_allocation_engine,
         replay_scope=replay_scope,
     )
     components = unified_market_intelligence_field.get("components", {})
@@ -7728,6 +8224,7 @@ def run_self_evolving_indicator_layer(
         "cross_regime_transfer_robustness_layer": cross_regime_transfer_robustness_engine,
         "causal_intervention_counterfactual_robustness_layer": causal_intervention_robustness_engine,
         "hierarchical_decision_policy_layer": hierarchical_decision_policy_engine,
+        "portfolio_multi_context_capital_allocation_layer": portfolio_multi_context_capital_allocation_engine,
         "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
         "contradiction_arbitration_and_belief_resolution_layer": contradiction_arbitration_engine,
         "recursive_self_modeling": recursive_self_modeling,
@@ -7765,6 +8262,7 @@ def run_self_evolving_indicator_layer(
         "cross_regime_transfer_robustness_layer": cross_regime_transfer_robustness_engine,
         "causal_intervention_counterfactual_robustness_layer": causal_intervention_robustness_engine,
         "hierarchical_decision_policy_layer": hierarchical_decision_policy_engine,
+        "portfolio_multi_context_capital_allocation_layer": portfolio_multi_context_capital_allocation_engine,
         "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
         "contradiction_arbitration_and_belief_resolution_layer": contradiction_arbitration_engine,
         "recursive_self_modeling": recursive_self_modeling,
