@@ -434,6 +434,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "hypothesis_falsification_state",
         "capability_lineage_state",
         "knowledge_retirement_state",
+        "retirement_tombstone_state",
     }
     assert 0.0 <= unified["unified_field_score"] <= 1.0
     assert 0.0 <= unified["confidence_structure"]["composite_confidence"] <= 1.0
@@ -752,6 +753,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "hypothesis_falsification_state",
         "capability_lineage_state",
         "knowledge_retirement_state",
+        "retirement_tombstone_state",
     }
 
 
@@ -5151,3 +5153,283 @@ def test_knowledge_retirement_layer_feeds_capability_lineage_nonbreaking(tmp_pat
     assert 0.0 <= float(layer["retirement_pressure_score"]) <= 1.0
     assert 0.0 <= float(lineage["lineage_fragmentation_risk"]) <= 1.0
     assert 0.0 <= float(lineage["lineage_reliability"]) <= 1.0
+
+
+def test_retirement_tombstone_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "rtp1", "status": "closed", "result": "loss", "pnl_points": -1.2, "failure_cause": "execution_failure"},
+            {"trade_id": "rtp2", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "partial_fill"},
+            {"trade_id": "rtp3", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.4, "spread_ratio": 3.1, "slippage_ratio": 2.8},
+        replay_scope="full_replay",
+    )
+    layer = result["retirement_tombstone_and_resurrection_safety_layer"]
+    assert Path(layer["paths"]["latest"]).exists()
+    assert Path(layer["paths"]["history"]).exists()
+    assert Path(layer["paths"]["retired_capability_index"]).exists()
+    assert Path(layer["paths"]["resurrection_candidate_registry"]).exists()
+    assert Path(layer["paths"]["resurrection_decision_audit"]).exists()
+    assert Path(layer["paths"]["retirement_reactivation_guardrails"]).exists()
+    assert Path(layer["paths"]["retirement_tombstone_governance_state"]).exists()
+
+
+def test_retirement_tombstone_layer_returns_expected_schema(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "rts1", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "execution_failure"},
+            {"trade_id": "rts2", "status": "closed", "result": "win", "pnl_points": 0.6, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.9, "spread_ratio": 2.4, "slippage_ratio": 2.1},
+        replay_scope="focused_replay",
+    )
+    layer = result["retirement_tombstone_and_resurrection_safety_layer"]
+    expected_keys = {
+        "retirement_tombstone_state",
+        "resurrection_safety_score",
+        "tombstone_enforcement_reliability",
+        "reactivation_pressure",
+        "retired_capability_count",
+        "resurrection_candidate_count",
+        "unsafe_resurrection_risk",
+        "lineage_reactivation_contamination_risk",
+        "resurrection_reason_cluster",
+        "requalification_required",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(layer))
+    for key in (
+        "resurrection_safety_score",
+        "tombstone_enforcement_reliability",
+        "reactivation_pressure",
+        "unsafe_resurrection_risk",
+        "lineage_reactivation_contamination_risk",
+    ):
+        assert 0.0 <= float(layer[key]) <= 1.0
+    assert isinstance(layer["retirement_tombstone_state"], str)
+    assert isinstance(layer["resurrection_reason_cluster"], str)
+    assert isinstance(layer["requalification_required"], bool)
+
+
+def test_retirement_tombstone_layer_adds_unified_field_components_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "rtu1", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "execution_failure"},
+            {"trade_id": "rtu2", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.2, "slippage_ratio": 2.0},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "retirement_tombstone_state" in unified["components"]
+    assert "resurrection_safety_score" in unified["confidence_structure"]
+    assert "tombstone_enforcement_reliability" in unified["confidence_structure"]
+    assert "retirement_resurrection" in unified["decision_refinements"]
+
+
+def test_retirement_tombstone_layer_additively_influences_refusal_pause_behavior(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "rtb1", "status": "closed", "result": "loss", "pnl_points": -1.8, "failure_cause": "execution_failure"},
+            {"trade_id": "rtb2", "status": "closed", "result": "loss", "pnl_points": -1.4, "failure_cause": "partial_fill"},
+            {"trade_id": "rtb3", "status": "closed", "result": "loss", "pnl_points": -1.2, "failure_cause": "spread_spike"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.9, "spread_ratio": 3.9, "slippage_ratio": 3.7},
+        replay_scope="full_replay",
+    )
+    behavior = result["unified_market_intelligence_field"]["decision_refinements"]["refusal_pause_behavior"]
+    layer = result["retirement_tombstone_and_resurrection_safety_layer"]
+    assert isinstance(behavior.get("pause_reasons"), list)
+    assert isinstance(behavior.get("refusal_reasons"), list)
+    if float(layer["reactivation_pressure"]) >= 0.5:
+        assert "retirement_tombstone_pause_guard" in behavior["pause_reasons"]
+    if "retirement_tombstone_pause_guard" in behavior["pause_reasons"]:
+        assert behavior["should_pause"] is True
+    if float(layer["resurrection_safety_score"]) <= 0.45 or float(layer["unsafe_resurrection_risk"]) >= 0.62:
+        assert "retirement_tombstone_refusal_guard" in behavior["refusal_reasons"]
+    if "retirement_tombstone_refusal_guard" in behavior["refusal_reasons"]:
+        assert behavior["should_refuse"] is True
+
+
+def test_retirement_tombstone_layer_blocks_unsafe_resurrection_without_requalification(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "rtx1", "status": "closed", "result": "loss", "pnl_points": -1.5, "failure_cause": "execution_failure"},
+            {"trade_id": "rtx2", "status": "closed", "result": "loss", "pnl_points": -1.2, "failure_cause": "partial_fill"},
+            {"trade_id": "rtx3", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "slippage_spike"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 3.0, "spread_ratio": 4.0, "slippage_ratio": 3.8},
+        replay_scope="full_replay",
+    )
+    layer = result["retirement_tombstone_and_resurrection_safety_layer"]
+    if float(layer["unsafe_resurrection_risk"]) >= 0.5:
+        assert bool(layer["requalification_required"]) is True or float(layer["resurrection_safety_score"]) <= 0.6
+
+
+def test_retirement_tombstone_layer_allows_resurrection_when_falsification_and_rollback_gates_pass(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "rta1", "status": "closed", "result": "win", "pnl_points": 0.9, "failure_cause": "none"},
+            {"trade_id": "rta2", "status": "closed", "result": "win", "pnl_points": 0.8, "failure_cause": "none"},
+            {"trade_id": "rta3", "status": "closed", "result": "win", "pnl_points": 0.7, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.2, "spread_ratio": 1.3, "slippage_ratio": 1.2},
+        replay_scope="focused_replay",
+    )
+    layer = result["retirement_tombstone_and_resurrection_safety_layer"]
+    if float(layer["resurrection_safety_score"]) >= 0.6 and float(layer["tombstone_enforcement_reliability"]) >= 0.6:
+        assert layer["retirement_tombstone_state"] in {"stable", "controlled", "guarded"}
+
+
+def test_retirement_tombstone_layer_history_rolls_and_governance_is_sandbox_replay_only(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    for i in range(3):
+        run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"rth{i}a", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "execution_failure"},
+                {"trade_id": f"rth{i}b", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+            ],
+            market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.2, "slippage_ratio": 2.0},
+            replay_scope="focused_replay",
+        )
+    history = json.loads((memory_root / "retirement_tombstone_resurrection" / "retirement_tombstone_history.json").read_text(encoding="utf-8"))
+    assert history["snapshots"]
+    assert len(history["snapshots"]) <= 200
+    latest = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "rthla", "status": "closed", "result": "loss", "pnl_points": -0.6, "failure_cause": "execution_failure"},
+            {"trade_id": "rthlb", "status": "closed", "result": "win", "pnl_points": 0.4, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 1.9, "slippage_ratio": 1.8},
+        replay_scope="focused_replay",
+    )
+    flags = latest["retirement_tombstone_and_resurrection_safety_layer"]["governance_flags"]
+    assert flags["sandbox_only"] is True
+    assert flags["replay_validation_required"] is True
+    assert flags["live_deployment_allowed"] is False
+    assert flags["no_blind_live_self_rewrites"] is True
+
+
+def test_retirement_tombstone_layer_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "rtm1", "status": "closed", "result": "loss", "pnl_points": -0.2},
+            {"trade_id": "rtm2", "status": "closed", "result": "flat", "pnl_points": 0.0},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    layer = result["retirement_tombstone_and_resurrection_safety_layer"]
+    assert layer["paths"]["latest"]
+    assert isinstance(layer["retirement_tombstone_state"], str)
+    assert 0.0 <= float(layer["resurrection_safety_score"]) <= 1.0
+
+
+def test_retirement_tombstone_layer_feeds_self_suggestion_governor_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "rtg1", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "execution_failure"},
+            {"trade_id": "rtg2", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.3, "spread_ratio": 3.0, "slippage_ratio": 2.8},
+        replay_scope="full_replay",
+    )
+    governor = result["self_suggestion_governor"]
+    block = governor["retirement_tombstone_and_resurrection_safety_layer"]
+    assert {
+        "resurrection_safety_score",
+        "tombstone_enforcement_reliability",
+        "reactivation_pressure",
+    }.issubset(set(block))
+
+
+def test_retirement_tombstone_layer_feeds_self_expansion_quality_components_nonbreaking(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "rtq1", "status": "closed", "result": "loss", "pnl_points": -1.1, "failure_cause": "execution_failure"},
+            {"trade_id": "rtq2", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "slippage_spike"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.4, "spread_ratio": 3.2, "slippage_ratio": 3.0},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "rtq3", "status": "closed", "result": "loss", "pnl_points": -0.7, "failure_cause": "execution_failure"},
+            {"trade_id": "rtq4", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 2.7, "slippage_ratio": 2.5},
+        replay_scope="full_replay",
+    )
+    quality_components = second["self_expansion_quality_layer"]["quality_components"]
+    for key in (
+        "resurrection_safety_context",
+        "tombstone_enforcement_context",
+        "reactivation_pressure_context",
+    ):
+        assert key in quality_components
+        assert 0.0 <= float(quality_components[key]) <= 1.0
+
+
+def test_retirement_tombstone_layer_feeds_learning_stability_nonbreaking(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "rtl1", "status": "closed", "result": "loss", "pnl_points": -1.2, "failure_cause": "execution_failure"},
+            {"trade_id": "rtl2", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.6, "spread_ratio": 3.3, "slippage_ratio": 3.1},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "rtl3", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "execution_failure"},
+            {"trade_id": "rtl4", "status": "closed", "result": "win", "pnl_points": 0.4, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.2, "spread_ratio": 2.9, "slippage_ratio": 2.6},
+        replay_scope="full_replay",
+    )
+    learning = second["learning_stability_and_catastrophic_drift_guard_layer"]
+    assert "reactivation_instability_pressure" in learning
+    assert 0.0 <= float(learning["reactivation_instability_pressure"]) <= 1.0
+
+
+def test_retirement_tombstone_layer_feeds_capability_lineage_nonbreaking(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "rtc1", "status": "closed", "result": "loss", "pnl_points": -1.1, "failure_cause": "execution_failure"},
+            {"trade_id": "rtc2", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.5, "spread_ratio": 3.1, "slippage_ratio": 2.9},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "rtc3", "status": "closed", "result": "loss", "pnl_points": -0.7, "failure_cause": "execution_failure"},
+            {"trade_id": "rtc4", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 2.6, "slippage_ratio": 2.4},
+        replay_scope="full_replay",
+    )
+    lineage = second["capability_lineage_and_genealogy_intelligence_layer"]
+    assert "lineage_reactivation_contamination_risk" in lineage
+    assert 0.0 <= float(lineage["lineage_reactivation_contamination_risk"]) <= 1.0
