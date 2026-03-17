@@ -4904,6 +4904,7 @@ def _detect_improvement_gaps(
     hypothesis_falsification_and_experiment_design_layer: dict[str, Any] | None = None,
     capability_lineage_and_genealogy_intelligence_layer: dict[str, Any] | None = None,
     knowledge_retirement_and_pruning_governance_layer: dict[str, Any] | None = None,
+    retirement_tombstone_and_resurrection_safety_layer: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
     repeated = autonomous_behavior.get("trade_review_engine", {}).get("repeated_failure_patterns", [])
@@ -5671,6 +5672,66 @@ def _detect_improvement_gaps(
                 ),
                 "frequency": max(1, int(round((1.0 - pruning_reliability) * 4))),
                 "severity": round(min(1.0, 1.0 - pruning_reliability), 4),
+            }
+        )
+    retirement_tombstone_and_resurrection_safety_layer = (
+        retirement_tombstone_and_resurrection_safety_layer
+        if isinstance(retirement_tombstone_and_resurrection_safety_layer, dict)
+        else {}
+    )
+    tombstone_state = str(
+        retirement_tombstone_and_resurrection_safety_layer.get("retirement_tombstone_state", "unknown")
+    )
+    resurrection_safety_score = float(
+        retirement_tombstone_and_resurrection_safety_layer.get("resurrection_safety_score", 1.0) or 1.0
+    )
+    tombstone_enforcement_reliability = float(
+        retirement_tombstone_and_resurrection_safety_layer.get("tombstone_enforcement_reliability", 1.0) or 1.0
+    )
+    reactivation_pressure = float(
+        retirement_tombstone_and_resurrection_safety_layer.get("reactivation_pressure", 0.0) or 0.0
+    )
+    requalification_required = bool(
+        retirement_tombstone_and_resurrection_safety_layer.get("requalification_required", False)
+    )
+    unsafe_resurrection_risk = float(
+        retirement_tombstone_and_resurrection_safety_layer.get("unsafe_resurrection_risk", 0.0) or 0.0
+    )
+    if tombstone_state in {"deficit", "critical"} or tombstone_enforcement_reliability <= 0.45:
+        gaps.append(
+            {
+                "gap_type": "retirement_tombstone_deficit",
+                "detail": tombstone_state,
+                "frequency": max(1, int(round((1.0 - tombstone_enforcement_reliability) * 4))),
+                "severity": round(min(1.0, max(1.0 - tombstone_enforcement_reliability, 0.5)), 4),
+            }
+        )
+    if unsafe_resurrection_risk >= 0.5 or reactivation_pressure >= 0.55:
+        gaps.append(
+            {
+                "gap_type": "unsafe_resurrection_pressure",
+                "detail": str(
+                    retirement_tombstone_and_resurrection_safety_layer.get(
+                        "resurrection_reason_cluster",
+                        "unsafe_resurrection_pressure",
+                    )
+                ),
+                "frequency": max(1, int(round(max(unsafe_resurrection_risk, reactivation_pressure) * 4))),
+                "severity": round(min(1.0, max(unsafe_resurrection_risk, reactivation_pressure)), 4),
+            }
+        )
+    if requalification_required and resurrection_safety_score <= 0.55:
+        gaps.append(
+            {
+                "gap_type": "resurrection_requalification_failure",
+                "detail": str(
+                    retirement_tombstone_and_resurrection_safety_layer.get(
+                        "resurrection_reason_cluster",
+                        "requalification_required",
+                    )
+                ),
+                "frequency": 1,
+                "severity": round(min(1.0, max(1.0 - resurrection_safety_score, 0.45)), 4),
             }
         )
     return gaps
@@ -6910,6 +6971,7 @@ def _self_suggestion_governor(
     hypothesis_falsification_and_experiment_design_layer: dict[str, Any] | None = None,
     capability_lineage_and_genealogy_intelligence_layer: dict[str, Any] | None = None,
     knowledge_retirement_and_pruning_governance_layer: dict[str, Any] | None = None,
+    retirement_tombstone_and_resurrection_safety_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     registry_dir = memory_root / "capability_registry"
     registry_dir.mkdir(parents=True, exist_ok=True)
@@ -6966,6 +7028,7 @@ def _self_suggestion_governor(
         hypothesis_falsification_and_experiment_design_layer=hypothesis_falsification_and_experiment_design_layer,
         capability_lineage_and_genealogy_intelligence_layer=capability_lineage_and_genealogy_intelligence_layer,
         knowledge_retirement_and_pruning_governance_layer=knowledge_retirement_and_pruning_governance_layer,
+        retirement_tombstone_and_resurrection_safety_layer=retirement_tombstone_and_resurrection_safety_layer,
     )
     calibration_uncertainty_engine = (
         calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
@@ -7018,6 +7081,11 @@ def _self_suggestion_governor(
     temporal_execution_sequencing_layer = (
         temporal_execution_sequencing_layer if isinstance(temporal_execution_sequencing_layer, dict) else {}
     )
+    retirement_tombstone_and_resurrection_safety_layer = (
+        retirement_tombstone_and_resurrection_safety_layer
+        if isinstance(retirement_tombstone_and_resurrection_safety_layer, dict)
+        else {}
+    )
     temporal_execution_state = str(temporal_execution_sequencing_layer.get("temporal_execution_state", "unknown"))
     timing_priority_score = float(temporal_execution_sequencing_layer.get("timing_priority_score", 0.0) or 0.0)
     sequencing_reliability = float(temporal_execution_sequencing_layer.get("sequencing_reliability", 0.5) or 0.5)
@@ -7051,6 +7119,15 @@ def _self_suggestion_governor(
                 "severity": round(min(1.0, max(0.5, abandon_bias)), 4),
             }
         )
+    resurrection_safety_score = float(
+        retirement_tombstone_and_resurrection_safety_layer.get("resurrection_safety_score", 0.0) or 0.0
+    )
+    tombstone_enforcement_reliability = float(
+        retirement_tombstone_and_resurrection_safety_layer.get("tombstone_enforcement_reliability", 0.0) or 0.0
+    )
+    reactivation_pressure = float(
+        retirement_tombstone_and_resurrection_safety_layer.get("reactivation_pressure", 0.0) or 0.0
+    )
     capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
     capability_candidates = capability_evolution_ladder.get("capability_candidates", [])
     if isinstance(capability_candidates, list):
@@ -7150,6 +7227,9 @@ def _self_suggestion_governor(
         "execution_window_quality": round(execution_window_quality, 4),
         "temporal_delay_bias": round(delay_bias, 4),
         "temporal_abandon_bias": round(abandon_bias, 4),
+        "resurrection_safety_score": round(resurrection_safety_score, 4),
+        "tombstone_enforcement_reliability": round(tombstone_enforcement_reliability, 4),
+        "reactivation_pressure": round(reactivation_pressure, 4),
     }
     if previous_governor.get("input_signature") == input_signature:
         return previous_governor
@@ -7552,6 +7632,14 @@ def _self_suggestion_governor(
                 float(capability_lineage_and_genealogy_intelligence_layer.get("lineage_reliability", 0.0) or 0.0),
                 4,
             ),
+        },
+        "retirement_tombstone_and_resurrection_safety_layer": {
+            "retirement_tombstone_state": str(
+                retirement_tombstone_and_resurrection_safety_layer.get("retirement_tombstone_state", "unknown")
+            ),
+            "resurrection_safety_score": round(resurrection_safety_score, 4),
+            "tombstone_enforcement_reliability": round(tombstone_enforcement_reliability, 4),
+            "reactivation_pressure": round(reactivation_pressure, 4),
         },
         "paths": {
             "registry": str(registry_path),
@@ -8054,6 +8142,7 @@ def _self_expansion_quality_layer(
     hypothesis_falsification_and_experiment_design_layer: dict[str, Any] | None = None,
     capability_lineage_and_genealogy_intelligence_layer: dict[str, Any] | None = None,
     knowledge_retirement_and_pruning_governance_layer: dict[str, Any] | None = None,
+    retirement_tombstone_and_resurrection_safety_layer: dict[str, Any] | None = None,
     replay_scope: str,
 ) -> dict[str, Any]:
     quality_dir = memory_root / "self_expansion_quality"
@@ -8120,6 +8209,11 @@ def _self_expansion_quality_layer(
     knowledge_retirement_and_pruning_governance_layer = (
         knowledge_retirement_and_pruning_governance_layer
         if isinstance(knowledge_retirement_and_pruning_governance_layer, dict)
+        else {}
+    )
+    retirement_tombstone_and_resurrection_safety_layer = (
+        retirement_tombstone_and_resurrection_safety_layer
+        if isinstance(retirement_tombstone_and_resurrection_safety_layer, dict)
         else {}
     )
 
@@ -8692,6 +8786,42 @@ def _self_expansion_quality_layer(
             ),
             4,
         ),
+        "resurrection_safety_context": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    float(retirement_tombstone_and_resurrection_safety_layer.get("resurrection_safety_score", 0.0) or 0.0),
+                ),
+            ),
+            4,
+        ),
+        "tombstone_enforcement_context": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    float(
+                        retirement_tombstone_and_resurrection_safety_layer.get(
+                            "tombstone_enforcement_reliability",
+                            0.0,
+                        )
+                        or 0.0
+                    ),
+                ),
+            ),
+            4,
+        ),
+        "reactivation_pressure_context": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    float(retirement_tombstone_and_resurrection_safety_layer.get("reactivation_pressure", 0.0) or 0.0),
+                ),
+            ),
+            4,
+        ),
         "promotion_confidence_multiplier": promotion_confidence_multiplier,
         "quarantine_pressure_delta": quarantine_pressure_delta,
         "expansion_rate_limit": expansion_rate_limit,
@@ -9149,6 +9279,7 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
     structural_memory_graph_engine: dict[str, Any] | None = None,
     latent_transition_hazard_engine: dict[str, Any] | None = None,
     knowledge_retirement_and_pruning_governance_layer: dict[str, Any] | None = None,
+    retirement_tombstone_and_resurrection_safety_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     stability_dir = memory_root / "learning_stability"
     stability_dir.mkdir(parents=True, exist_ok=True)
@@ -9184,6 +9315,11 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
     knowledge_retirement_and_pruning_governance_layer = (
         knowledge_retirement_and_pruning_governance_layer
         if isinstance(knowledge_retirement_and_pruning_governance_layer, dict)
+        else {}
+    )
+    retirement_tombstone_and_resurrection_safety_layer = (
+        retirement_tombstone_and_resurrection_safety_layer
+        if isinstance(retirement_tombstone_and_resurrection_safety_layer, dict)
         else {}
     )
 
@@ -9265,6 +9401,12 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
     retirement_safety = _bounded(
         float(knowledge_retirement_and_pruning_governance_layer.get("retirement_safety_score", 1.0) or 1.0)
     )
+    reactivation_instability_pressure = _bounded(
+        (
+            float(retirement_tombstone_and_resurrection_safety_layer.get("reactivation_pressure", 0.0) or 0.0) * 0.55
+            + float(retirement_tombstone_and_resurrection_safety_layer.get("unsafe_resurrection_risk", 0.0) or 0.0) * 0.45
+        )
+    )
 
     regime_memory_alignment = _bounded(
         float(structural_state.get("regime_memory_alignment", 0.5) or 0.5)
@@ -9332,6 +9474,7 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
     )
     if has_retirement_context:
         catastrophic_drift_risk = _bounded(catastrophic_drift_risk + ((1.0 - retirement_safety) * 0.03))
+    catastrophic_drift_risk = _bounded(catastrophic_drift_risk + (reactivation_instability_pressure * 0.04))
 
     # --- Metric 3: capability_expansion_pressure ---
     capability_expansion_pressure = _bounded(
@@ -9342,6 +9485,7 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
     )
     if has_retirement_context:
         capability_expansion_pressure = _bounded(capability_expansion_pressure + (retirement_pressure * 0.05))
+    capability_expansion_pressure = _bounded(capability_expansion_pressure + (reactivation_instability_pressure * 0.03))
 
     # --- Metric 4: regime_overfit_risk ---
     regime_overfit_risk = _bounded(
@@ -9396,6 +9540,7 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
         "capability_expansion_pressure": capability_expansion_pressure,
         "regime_overfit_risk": regime_overfit_risk,
         "learning_fragmentation_risk": learning_fragmentation_risk,
+        "reactivation_instability_pressure": reactivation_instability_pressure,
         "stability_reliability": stability_reliability,
         "governance_flags": governance_flags,
     }
@@ -10053,6 +10198,7 @@ def _capability_lineage_and_genealogy_intelligence_layer(
     capability_evolution_ladder: dict[str, Any] | None = None,
     self_suggestion_governor: dict[str, Any] | None = None,
     knowledge_retirement_and_pruning_governance_layer: dict[str, Any] | None = None,
+    retirement_tombstone_and_resurrection_safety_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     lineage_dir = memory_root / "capability_lineage"
     lineage_dir.mkdir(parents=True, exist_ok=True)
@@ -10101,6 +10247,11 @@ def _capability_lineage_and_genealogy_intelligence_layer(
         if isinstance(knowledge_retirement_and_pruning_governance_layer, dict)
         else {}
     )
+    retirement_tombstone_and_resurrection_safety_layer = (
+        retirement_tombstone_and_resurrection_safety_layer
+        if isinstance(retirement_tombstone_and_resurrection_safety_layer, dict)
+        else {}
+    )
 
     invention_reliability = _bounded(float(governed_capability_invention_layer.get("invention_reliability", 0.5) or 0.5))
     invention_redundancy = _bounded(float(governed_capability_invention_layer.get("redundancy_risk", 0.0) or 0.0))
@@ -10131,6 +10282,22 @@ def _capability_lineage_and_genealogy_intelligence_layer(
     )
     retirement_pressure = _bounded(
         float(knowledge_retirement_and_pruning_governance_layer.get("retirement_pressure_score", 0.0) or 0.0)
+    )
+    lineage_reactivation_contamination_risk = _bounded(
+        (
+            float(
+                retirement_tombstone_and_resurrection_safety_layer.get(
+                    "lineage_reactivation_contamination_risk",
+                    0.0,
+                )
+                or 0.0
+            )
+            * 0.7
+        )
+        + (
+            float(retirement_tombstone_and_resurrection_safety_layer.get("unsafe_resurrection_risk", 0.0) or 0.0)
+            * 0.3
+        )
     )
 
     repeated_unresolved = self_suggestion_governor.get("repeated_unresolved_gaps", [])
@@ -10169,12 +10336,14 @@ def _capability_lineage_and_genealogy_intelligence_layer(
         + (lineage_redundancy_pressure * 0.15)
         + (rollback_urgency * 0.1)
         + (retirement_pressure * 0.1)
+        + (lineage_reactivation_contamination_risk * 0.1)
     )
     lineage_failure_recurrence = _bounded(
         (unresolved_pressure * 0.45)
         + (regression_risk * 0.2)
         + (catastrophic_drift_risk * 0.2)
         + ((1.0 - hypothesis_readiness) * 0.15)
+        + (lineage_reactivation_contamination_risk * 0.1)
     )
     ancestry_clarity_score = _bounded(
         (invention_reliability * 0.25)
@@ -10250,6 +10419,7 @@ def _capability_lineage_and_genealogy_intelligence_layer(
         "lineage_fragmentation_risk": lineage_fragmentation_risk,
         "lineage_redundancy_pressure": lineage_redundancy_pressure,
         "lineage_failure_recurrence": lineage_failure_recurrence,
+        "lineage_reactivation_contamination_risk": lineage_reactivation_contamination_risk,
         "lineage_branch_count": lineage_branch_count,
         "dominant_lineage_axis": dominant_lineage_axis,
         "genealogy_reason_cluster": genealogy_reason_cluster,
@@ -10555,6 +10725,262 @@ def _knowledge_retirement_and_pruning_governance_layer(
             "retirement_pressure_score": retirement_pressure_score,
             "retirement_safety_score": retirement_safety_score,
             "replay_scope": replay_scope,
+        },
+    )
+    write_json_atomic(governance_state_path, {**governance_flags, "replay_scope": replay_scope})
+    return payload
+
+
+def _retirement_tombstone_and_resurrection_safety_layer(
+    *,
+    memory_root: Path,
+    replay_scope: str,
+    knowledge_retirement_and_pruning_governance_layer: dict[str, Any],
+    capability_evolution_ladder: dict[str, Any],
+    self_suggestion_governor: dict[str, Any],
+    capability_lineage_and_genealogy_intelligence_layer: dict[str, Any] | None = None,
+    rollback_orchestration_and_safe_reversion_layer: dict[str, Any] | None = None,
+    hypothesis_falsification_and_experiment_design_layer: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    tombstone_dir = memory_root / "retirement_tombstone_resurrection"
+    tombstone_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = tombstone_dir / "retirement_tombstone_latest.json"
+    history_path = tombstone_dir / "retirement_tombstone_history.json"
+    retired_capability_index_path = tombstone_dir / "retired_capability_index.json"
+    resurrection_candidate_registry_path = tombstone_dir / "resurrection_candidate_registry.json"
+    resurrection_decision_audit_path = tombstone_dir / "resurrection_decision_audit.json"
+    guardrails_path = tombstone_dir / "retirement_reactivation_guardrails.json"
+    governance_state_path = tombstone_dir / "retirement_tombstone_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    def _coarse(value: float) -> float:
+        return round(value, 1)
+
+    knowledge_retirement_and_pruning_governance_layer = (
+        knowledge_retirement_and_pruning_governance_layer
+        if isinstance(knowledge_retirement_and_pruning_governance_layer, dict)
+        else {}
+    )
+    capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
+    self_suggestion_governor = self_suggestion_governor if isinstance(self_suggestion_governor, dict) else {}
+    capability_lineage_and_genealogy_intelligence_layer = (
+        capability_lineage_and_genealogy_intelligence_layer
+        if isinstance(capability_lineage_and_genealogy_intelligence_layer, dict)
+        else {}
+    )
+    rollback_orchestration_and_safe_reversion_layer = (
+        rollback_orchestration_and_safe_reversion_layer
+        if isinstance(rollback_orchestration_and_safe_reversion_layer, dict)
+        else {}
+    )
+    hypothesis_falsification_and_experiment_design_layer = (
+        hypothesis_falsification_and_experiment_design_layer
+        if isinstance(hypothesis_falsification_and_experiment_design_layer, dict)
+        else {}
+    )
+
+    previous_index = read_json_safe(retired_capability_index_path, default={"retired_capability_ids": []})
+    if not isinstance(previous_index, dict):
+        previous_index = {"retired_capability_ids": []}
+    existing_retired = previous_index.get("retired_capability_ids", [])
+    if not isinstance(existing_retired, list):
+        existing_retired = []
+    retired_ids = [str(item) for item in existing_retired if str(item).strip()]
+
+    ladder_candidates = capability_evolution_ladder.get("capability_candidates", [])
+    if not isinstance(ladder_candidates, list):
+        ladder_candidates = []
+    ladder_candidates = [item for item in ladder_candidates if isinstance(item, dict)]
+
+    promoted_improvements = self_suggestion_governor.get("promoted_improvements", [])
+    if not isinstance(promoted_improvements, list):
+        promoted_improvements = []
+    promoted_improvements = [item for item in promoted_improvements if isinstance(item, dict)]
+    candidate_fingerprints = [
+        f"{str(item.get('capability_id', 'unknown'))}|{str(item.get('gap_type', 'unknown'))}"
+        for item in ladder_candidates[:20]
+    ]
+    input_signature = {
+        "replay_scope": replay_scope,
+        "retirement_reason_cluster": str(
+            knowledge_retirement_and_pruning_governance_layer.get(
+                "retirement_reason_cluster",
+                "balanced_retirement_governance",
+            )
+        ),
+        "candidate_fingerprints": candidate_fingerprints,
+        "existing_retired_capability_ids": retired_ids[-200:],
+        "promoted_improvement_count": len(promoted_improvements),
+    }
+    previous_payload = read_json_safe(latest_path, default={})
+    if isinstance(previous_payload, dict) and previous_payload.get("input_signature") == input_signature:
+        return previous_payload
+
+    retirement_pressure_score = _bounded(
+        _coarse(float(knowledge_retirement_and_pruning_governance_layer.get("retirement_pressure_score", 0.0) or 0.0))
+    )
+    retirement_safety_score = _bounded(
+        _coarse(float(knowledge_retirement_and_pruning_governance_layer.get("retirement_safety_score", 1.0) or 1.0))
+    )
+    rollback_dependency_risk = _bounded(
+        _coarse(float(knowledge_retirement_and_pruning_governance_layer.get("rollback_dependency_risk", 0.0) or 0.0))
+    )
+    lineage_fragmentation_risk = _bounded(
+        _coarse(float(capability_lineage_and_genealogy_intelligence_layer.get("lineage_fragmentation_risk", 0.0) or 0.0))
+    )
+    rollback_reversion_reliability = _bounded(
+        _coarse(float(rollback_orchestration_and_safe_reversion_layer.get("rollback_reversion_reliability", 0.5) or 0.5))
+    )
+    falsification_reliability = _bounded(
+        _coarse(float(hypothesis_falsification_and_experiment_design_layer.get("falsification_reliability", 0.5) or 0.5))
+    )
+
+    retired_capability_count = len(retired_ids)
+    if retirement_pressure_score >= 0.55 and ladder_candidates:
+        additions = max(1, min(len(ladder_candidates), int(round(retirement_pressure_score * 3))))
+        for candidate in ladder_candidates[:additions]:
+            capability_id = str(candidate.get("capability_id", "")).strip()
+            if capability_id and capability_id not in retired_ids:
+                retired_ids.append(capability_id)
+    retired_capability_count = len(retired_ids)
+
+    candidate_limit = 5
+    resurrection_candidates = ladder_candidates[:candidate_limit] if retired_ids else []
+    resurrection_candidate_count = len(resurrection_candidates)
+    reactivation_pressure = _bounded(
+        (resurrection_candidate_count / max(1, retired_capability_count + 1)) * 0.5
+        + (retirement_pressure_score * 0.3)
+        + ((1.0 - retirement_safety_score) * 0.2)
+    )
+    unsafe_resurrection_risk = _bounded(
+        (reactivation_pressure * 0.6)
+        + ((1.0 - retirement_safety_score) * 0.25)
+        + (rollback_dependency_risk * 0.15)
+    )
+    lineage_reactivation_contamination_risk = _bounded(
+        (unsafe_resurrection_risk * 0.65) + (lineage_fragmentation_risk * 0.35)
+    )
+    tombstone_enforcement_reliability = _bounded(
+        ((1.0 - retirement_pressure_score) * 0.25)
+        + (retirement_safety_score * 0.45)
+        + ((1.0 - rollback_dependency_risk) * 0.3)
+    )
+    resurrection_safety_score = _bounded(
+        (tombstone_enforcement_reliability * 0.5)
+        + (retirement_safety_score * 0.25)
+        + ((1.0 - unsafe_resurrection_risk) * 0.25)
+    )
+
+    requalification_required = bool(
+        resurrection_candidate_count > 0
+        and (
+            falsification_reliability < 0.6
+            or rollback_reversion_reliability < 0.6
+            or resurrection_safety_score < 0.62
+            or tombstone_enforcement_reliability < 0.62
+        )
+    )
+
+    if tombstone_enforcement_reliability <= 0.45:
+        retirement_tombstone_state = "deficit"
+        resurrection_reason_cluster = "tombstone_enforcement_deficit"
+    elif unsafe_resurrection_risk >= 0.62:
+        retirement_tombstone_state = "critical"
+        resurrection_reason_cluster = "unsafe_resurrection_pressure"
+    elif requalification_required:
+        retirement_tombstone_state = "guarded"
+        resurrection_reason_cluster = "requalification_gate_required"
+    elif resurrection_candidate_count == 0:
+        retirement_tombstone_state = "stable"
+        resurrection_reason_cluster = "no_reactivation_pressure"
+    else:
+        retirement_tombstone_state = "controlled"
+        resurrection_reason_cluster = "qualified_resurrection_ready"
+
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "resurrection_gate_enforced": True,
+        "requalification_required": requalification_required,
+    }
+
+    payload = {
+        "input_signature": input_signature,
+        "retirement_tombstone_state": retirement_tombstone_state,
+        "resurrection_safety_score": resurrection_safety_score,
+        "tombstone_enforcement_reliability": tombstone_enforcement_reliability,
+        "reactivation_pressure": reactivation_pressure,
+        "retired_capability_count": retired_capability_count,
+        "resurrection_candidate_count": resurrection_candidate_count,
+        "unsafe_resurrection_risk": unsafe_resurrection_risk,
+        "lineage_reactivation_contamination_risk": lineage_reactivation_contamination_risk,
+        "resurrection_reason_cluster": resurrection_reason_cluster,
+        "requalification_required": requalification_required,
+        "governance_flags": governance_flags,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "retired_capability_index": str(retired_capability_index_path),
+            "resurrection_candidate_registry": str(resurrection_candidate_registry_path),
+            "resurrection_decision_audit": str(resurrection_decision_audit_path),
+            "retirement_reactivation_guardrails": str(guardrails_path),
+            "retirement_tombstone_governance_state": str(governance_state_path),
+        },
+    }
+
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+    write_json_atomic(
+        retired_capability_index_path,
+        {
+            "retired_capability_ids": retired_ids[-500:],
+            "retired_capability_count": retired_capability_count,
+            "replay_scope": replay_scope,
+        },
+    )
+    write_json_atomic(
+        resurrection_candidate_registry_path,
+        {
+            "resurrection_candidate_count": resurrection_candidate_count,
+            "candidates": [
+                {
+                    "capability_id": str(item.get("capability_id", "unknown")),
+                    "gap_type": str(item.get("gap_type", "unknown")),
+                    "requalification_required": requalification_required,
+                }
+                for item in resurrection_candidates
+            ],
+        },
+    )
+    write_json_atomic(
+        resurrection_decision_audit_path,
+        {
+            "resurrection_reason_cluster": resurrection_reason_cluster,
+            "resurrection_safety_score": resurrection_safety_score,
+            "unsafe_resurrection_risk": unsafe_resurrection_risk,
+            "lineage_reactivation_contamination_risk": lineage_reactivation_contamination_risk,
+            "requalification_required": requalification_required,
+        },
+    )
+    write_json_atomic(
+        guardrails_path,
+        {
+            "tombstone_enforcement_reliability": tombstone_enforcement_reliability,
+            "reactivation_pressure": reactivation_pressure,
+            "rollback_reversion_reliability": rollback_reversion_reliability,
+            "falsification_reliability": falsification_reliability,
+            "resurrection_gate_enforced": True,
         },
     )
     write_json_atomic(governance_state_path, {**governance_flags, "replay_scope": replay_scope})
@@ -12228,6 +12654,133 @@ def run_self_evolving_indicator_layer(
     )
     decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
     unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    retirement_tombstone_and_resurrection_safety_engine = _retirement_tombstone_and_resurrection_safety_layer(
+        memory_root=memory_root,
+        replay_scope=replay_scope,
+        knowledge_retirement_and_pruning_governance_layer=knowledge_retirement_and_pruning_governance_engine,
+        capability_evolution_ladder=capability_evolution_ladder,
+        self_suggestion_governor=self_suggestion_governor,
+        capability_lineage_and_genealogy_intelligence_layer=capability_lineage_engine,
+        rollback_orchestration_and_safe_reversion_layer=rollback_orchestration_engine,
+        hypothesis_falsification_and_experiment_design_layer=hypothesis_falsification_engine,
+    )
+    self_suggestion_governor["retirement_tombstone_and_resurrection_safety_layer"] = {
+        "resurrection_safety_score": float(
+            retirement_tombstone_and_resurrection_safety_engine.get("resurrection_safety_score", 0.0) or 0.0
+        ),
+        "tombstone_enforcement_reliability": float(
+            retirement_tombstone_and_resurrection_safety_engine.get("tombstone_enforcement_reliability", 0.0) or 0.0
+        ),
+        "reactivation_pressure": float(
+            retirement_tombstone_and_resurrection_safety_engine.get("reactivation_pressure", 0.0) or 0.0
+        ),
+    }
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["retirement_tombstone_state"] = {
+        "state": str(retirement_tombstone_and_resurrection_safety_engine.get("retirement_tombstone_state", "unknown")),
+        "resurrection_reason_cluster": str(
+            retirement_tombstone_and_resurrection_safety_engine.get(
+                "resurrection_reason_cluster",
+                "no_reactivation_pressure",
+            )
+        ),
+        "requalification_required": bool(
+            retirement_tombstone_and_resurrection_safety_engine.get("requalification_required", False)
+        ),
+    }
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["resurrection_safety_score"] = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                float(retirement_tombstone_and_resurrection_safety_engine.get("resurrection_safety_score", 0.0) or 0.0),
+            ),
+        ),
+        4,
+    )
+    confidence_structure["tombstone_enforcement_reliability"] = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                float(
+                    retirement_tombstone_and_resurrection_safety_engine.get(
+                        "tombstone_enforcement_reliability",
+                        0.0,
+                    )
+                    or 0.0
+                ),
+            ),
+        ),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["retirement_resurrection"] = {
+        "retirement_tombstone_state": retirement_tombstone_and_resurrection_safety_engine.get(
+            "retirement_tombstone_state",
+            "unknown",
+        ),
+        "resurrection_safety_score": round(
+            float(retirement_tombstone_and_resurrection_safety_engine.get("resurrection_safety_score", 0.0) or 0.0),
+            4,
+        ),
+        "tombstone_enforcement_reliability": round(
+            float(
+                retirement_tombstone_and_resurrection_safety_engine.get("tombstone_enforcement_reliability", 0.0)
+                or 0.0
+            ),
+            4,
+        ),
+        "reactivation_pressure": round(
+            float(retirement_tombstone_and_resurrection_safety_engine.get("reactivation_pressure", 0.0) or 0.0),
+            4,
+        ),
+        "unsafe_resurrection_risk": round(
+            float(retirement_tombstone_and_resurrection_safety_engine.get("unsafe_resurrection_risk", 0.0) or 0.0),
+            4,
+        ),
+        "requalification_required": bool(
+            retirement_tombstone_and_resurrection_safety_engine.get("requalification_required", False)
+        ),
+    }
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    if (
+        float(retirement_tombstone_and_resurrection_safety_engine.get("reactivation_pressure", 0.0) or 0.0) >= 0.5
+        and "retirement_tombstone_pause_guard" not in pause_reasons
+    ):
+        pause_reasons.append("retirement_tombstone_pause_guard")
+    if (
+        float(retirement_tombstone_and_resurrection_safety_engine.get("resurrection_safety_score", 1.0) or 1.0) <= 0.45
+        or float(retirement_tombstone_and_resurrection_safety_engine.get("unsafe_resurrection_risk", 0.0) or 0.0) >= 0.62
+    ) and "retirement_tombstone_refusal_guard" not in refusal_reasons:
+        refusal_reasons.append("retirement_tombstone_refusal_guard")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        "retirement_tombstone_pause_guard" in pause_reasons
+    )
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        "retirement_tombstone_refusal_guard" in refusal_reasons
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
     survival_intelligence = {
         "capital_survival_engine": autonomous_behavior.get("capital_survival_engine", {}),
         "pain_memory_survival_layer": pain_memory_survival,
@@ -12262,6 +12815,7 @@ def run_self_evolving_indicator_layer(
         "hypothesis_falsification_and_experiment_design_layer": hypothesis_falsification_engine,
         "capability_lineage_and_genealogy_intelligence_layer": capability_lineage_engine,
         "knowledge_retirement_and_pruning_governance_layer": knowledge_retirement_and_pruning_governance_engine,
+        "retirement_tombstone_and_resurrection_safety_layer": retirement_tombstone_and_resurrection_safety_engine,
     }
     meta_learning_loop = _meta_learning_loop(
         memory_root=memory_root,
@@ -12309,5 +12863,6 @@ def run_self_evolving_indicator_layer(
         "hypothesis_falsification_and_experiment_design_layer": hypothesis_falsification_engine,
         "capability_lineage_and_genealogy_intelligence_layer": capability_lineage_engine,
         "knowledge_retirement_and_pruning_governance_layer": knowledge_retirement_and_pruning_governance_engine,
+        "retirement_tombstone_and_resurrection_safety_layer": retirement_tombstone_and_resurrection_safety_engine,
         "meta_learning_loop": meta_learning_loop,
     }
