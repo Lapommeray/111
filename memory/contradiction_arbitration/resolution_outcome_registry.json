@@ -1,0 +1,88 @@
+{
+  "resolutions": [
+    {
+      "contradiction_type": "directional_opposition",
+      "arbitration_outcome": "reduce_size",
+      "severity": 0.3871,
+      "context_signature": {
+        "replay_scope": "evaluation_replay",
+        "structure_state": "range",
+        "volatility_ratio": 1.0,
+        "spread_ratio": 1.0,
+        "slippage_ratio": 1.0,
+        "regime_state": "range",
+        "execution_state": "insufficient_data"
+      }
+    },
+    {
+      "contradiction_type": "directional_opposition",
+      "arbitration_outcome": "reduce_size",
+      "severity": 0.212,
+      "context_signature": {
+        "replay_scope": "evaluation_replay",
+        "structure_state": "range",
+        "volatility_ratio": 1.0,
+        "spread_ratio": 1.0,
+        "slippage_ratio": 1.0,
+        "regime_state": "range",
+        "execution_state": "insufficient_data"
+      }
+    },
+    {
+      "contradiction_type": "directional_opposition",
+      "arbitration_outcome": "reduce_size",
+      "severity": 0.437,
+      "context_signature": {
+        "replay_scope": "evaluation_replay",
+        "structure_state": "range",
+        "volatility_ratio": 1.0,
+        "spread_ratio": 1.0,
+        "slippage_ratio": 1.0,
+        "regime_state": "range",
+        "execution_state": "insufficient_data"
+      }
+    },
+    {
+      "contradiction_type": "directional_opposition",
+      "arbitration_outcome": "reduce_size",
+      "severity": 0.212,
+      "context_signature": {
+        "replay_scope": "evaluation_replay",
+        "structure_state": "range",
+        "volatility_ratio": 1.0,
+        "spread_ratio": 1.0,
+        "slippage_ratio": 1.0,
+        "regime_state": "range",
+        "execution_state": "insufficient_data"
+      }
+    },
+    {
+      "contradiction_type": "directional_opposition",
+      "arbitration_outcome": "reduce_size",
+      "severity": 0.212,
+      "context_signature": {
+        "replay_scope": "evaluation_replay",
+        "structure_state": "range",
+        "volatility_ratio": 1.0,
+        "spread_ratio": 1.0,
+        "slippage_ratio": 1.0,
+        "regime_state": "range",
+        "execution_state": "insufficient_data"
+      }
+    },
+    {
+      "contradiction_type": "directional_opposition",
+      "arbitration_outcome": "reduce_size",
+      "severity": 0.2452,
+      "context_signature": {
+        "replay_scope": "evaluation_replay",
+        "structure_state": "range",
+        "volatility_ratio": 1.0,
+        "spread_ratio": 1.0,
+        "slippage_ratio": 1.0,
+        "regime_state": "range",
+        "execution_state": "insufficient_data"
+      }
+    }
+  ]
+}
