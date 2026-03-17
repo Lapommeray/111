@@ -7716,6 +7716,347 @@ def _self_expansion_quality_layer(
     return payload
 
 
+def _system_coherence_and_drift_integrity_layer(
+    *,
+    memory_root: Path,
+    replay_scope: str,
+    unified_market_intelligence_field: dict[str, Any],
+    calibration_uncertainty_engine: dict[str, Any] | None = None,
+    contradiction_arbitration_engine: dict[str, Any] | None = None,
+    structural_memory_graph_engine: dict[str, Any] | None = None,
+    latent_transition_hazard_engine: dict[str, Any] | None = None,
+    cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
+    causal_intervention_counterfactual_robustness_layer: dict[str, Any] | None = None,
+    hierarchical_decision_policy_layer: dict[str, Any] | None = None,
+    portfolio_multi_context_capital_allocation_layer: dict[str, Any] | None = None,
+    temporal_execution_sequencing_layer: dict[str, Any] | None = None,
+    self_expansion_quality_layer: dict[str, Any] | None = None,
+    execution_microstructure_engine: dict[str, Any] | None = None,
+    adversarial_execution_engine: dict[str, Any] | None = None,
+    deception_inference_engine: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    coherence_dir = memory_root / "system_coherence"
+    coherence_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = coherence_dir / "system_coherence_latest.json"
+    history_path = coherence_dir / "system_coherence_history.json"
+    drift_registry_path = coherence_dir / "drift_integrity_registry.json"
+    disagreement_trace_path = coherence_dir / "disagreement_trace.json"
+    fragmentation_watchlist_path = coherence_dir / "fragmentation_watchlist.json"
+    governance_path = coherence_dir / "system_coherence_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    unified_market_intelligence_field = (
+        unified_market_intelligence_field if isinstance(unified_market_intelligence_field, dict) else {}
+    )
+    calibration_uncertainty_engine = calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
+    contradiction_arbitration_engine = contradiction_arbitration_engine if isinstance(contradiction_arbitration_engine, dict) else {}
+    structural_memory_graph_engine = structural_memory_graph_engine if isinstance(structural_memory_graph_engine, dict) else {}
+    latent_transition_hazard_engine = latent_transition_hazard_engine if isinstance(latent_transition_hazard_engine, dict) else {}
+    cross_regime_transfer_robustness_layer = (
+        cross_regime_transfer_robustness_layer if isinstance(cross_regime_transfer_robustness_layer, dict) else {}
+    )
+    causal_intervention_counterfactual_robustness_layer = (
+        causal_intervention_counterfactual_robustness_layer
+        if isinstance(causal_intervention_counterfactual_robustness_layer, dict)
+        else {}
+    )
+    hierarchical_decision_policy_layer = (
+        hierarchical_decision_policy_layer if isinstance(hierarchical_decision_policy_layer, dict) else {}
+    )
+    portfolio_multi_context_capital_allocation_layer = (
+        portfolio_multi_context_capital_allocation_layer
+        if isinstance(portfolio_multi_context_capital_allocation_layer, dict)
+        else {}
+    )
+    temporal_execution_sequencing_layer = (
+        temporal_execution_sequencing_layer if isinstance(temporal_execution_sequencing_layer, dict) else {}
+    )
+    self_expansion_quality_layer = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+    execution_microstructure_engine = execution_microstructure_engine if isinstance(execution_microstructure_engine, dict) else {}
+    adversarial_execution_engine = adversarial_execution_engine if isinstance(adversarial_execution_engine, dict) else {}
+    deception_inference_engine = deception_inference_engine if isinstance(deception_inference_engine, dict) else {}
+
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    calibration_state = calibration_uncertainty_engine.get("calibration_state", {})
+    if not isinstance(calibration_state, dict):
+        calibration_state = {}
+    contradiction_state = contradiction_arbitration_engine.get("arbitration", {})
+    if not isinstance(contradiction_state, dict):
+        contradiction_state = {}
+    structural_state = structural_memory_graph_engine.get("structural_memory_state", {})
+    if not isinstance(structural_state, dict):
+        structural_state = {}
+    latent_state = latent_transition_hazard_engine.get("latent_transition_hazard_state", {})
+    if not isinstance(latent_state, dict):
+        latent_state = {}
+    adversarial_state = adversarial_execution_engine.get("adversarial_execution_state", {})
+    if not isinstance(adversarial_state, dict):
+        adversarial_state = {}
+    deception_state = deception_inference_engine.get("deception_state", {})
+    if not isinstance(deception_state, dict):
+        deception_state = {}
+
+    calibration_drift = _bounded(float(calibration_state.get("calibration_drift", 0.0) or 0.0))
+    contradiction_severity = _bounded(float(contradiction_state.get("max_contradiction_severity", 0.0) or 0.0))
+    contradiction_outcome = str(contradiction_state.get("outcome", "allow"))
+    memory_reliability = _bounded(float(structural_state.get("memory_reliability", 0.5) or 0.5))
+    regime_memory_alignment = _bounded(
+        float(structural_memory_graph_engine.get("structural_memory_state", {}).get("regime_memory_alignment", 0.5) or 0.5)
+        if isinstance(structural_memory_graph_engine.get("structural_memory_state"), dict)
+        else 0.5
+    )
+    transition_hazard_score = _bounded(float(latent_state.get("transition_hazard_score", 0.0) or 0.0))
+    transfer_score = _bounded(
+        float(cross_regime_transfer_robustness_layer.get("cross_regime_transfer_score", 0.5) or 0.5)
+    )
+    transfer_reliability = _bounded(
+        float(cross_regime_transfer_robustness_layer.get("robustness_reliability", 0.5) or 0.5)
+    )
+    overfit_risk = _bounded(float(cross_regime_transfer_robustness_layer.get("overfit_risk", 0.0) or 0.0))
+    intervention_reliability = _bounded(
+        float(causal_intervention_counterfactual_robustness_layer.get("intervention_reliability", 0.5) or 0.5)
+    )
+    false_improvement_risk = _bounded(
+        float(causal_intervention_counterfactual_robustness_layer.get("false_improvement_risk", 0.0) or 0.0)
+    )
+    policy_conflict_score = _bounded(
+        float(hierarchical_decision_policy_layer.get("policy_conflict_score", 0.0) or 0.0)
+    )
+    policy_reliability = _bounded(
+        float(hierarchical_decision_policy_layer.get("policy_reliability", 0.5) or 0.5)
+    )
+    allocation_reliability = _bounded(
+        float(portfolio_multi_context_capital_allocation_layer.get("allocation_reliability", 0.5) or 0.5)
+    )
+    context_competition_score = _bounded(
+        float(portfolio_multi_context_capital_allocation_layer.get("context_competition_score", 0.0) or 0.0)
+    )
+    sequencing_reliability = _bounded(
+        float(temporal_execution_sequencing_layer.get("sequencing_reliability", 0.5) or 0.5)
+    )
+    execution_window_quality = _bounded(
+        float(temporal_execution_sequencing_layer.get("execution_window_quality", 0.5) or 0.5)
+    )
+    timing_priority_score = _bounded(
+        float(temporal_execution_sequencing_layer.get("timing_priority_score", 0.0) or 0.0)
+    )
+    expansion_quality_score = _bounded(
+        float(self_expansion_quality_layer.get("expansion_quality_score", 0.5) or 0.5)
+    )
+    expansion_state = str(self_expansion_quality_layer.get("self_expansion_quality_state", "unknown"))
+    composite_confidence = _bounded(float(confidence_structure.get("composite_confidence", 0.5) or 0.5))
+    execution_penalty = _bounded(float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0))
+    hostile_execution_score = _bounded(float(adversarial_state.get("hostile_execution_score", 0.0) or 0.0))
+    deception_score = _bounded(float(deception_state.get("deception_score", 0.0) or 0.0))
+
+    confidence_alignment_score = _bounded(
+        1.0
+        - min(
+            1.0,
+            (calibration_drift * 0.3)
+            + (abs(composite_confidence - policy_reliability) * 0.25)
+            + (abs(composite_confidence - allocation_reliability) * 0.2)
+            + (abs(composite_confidence - sequencing_reliability) * 0.15)
+            + (abs(composite_confidence - intervention_reliability) * 0.1),
+        )
+    )
+
+    policy_alignment_score = _bounded(
+        1.0
+        - min(
+            1.0,
+            (policy_conflict_score * 0.35)
+            + (abs(policy_reliability - allocation_reliability) * 0.2)
+            + (abs(policy_reliability - sequencing_reliability) * 0.15)
+            + (contradiction_severity * 0.15)
+            + ((1.0 - regime_memory_alignment) * 0.15),
+        )
+    )
+
+    drift_integrity_score = _bounded(
+        1.0
+        - min(
+            1.0,
+            (calibration_drift * 0.25)
+            + ((1.0 - transfer_reliability) * 0.2)
+            + (overfit_risk * 0.15)
+            + (false_improvement_risk * 0.15)
+            + (transition_hazard_score * 0.15)
+            + ((1.0 - memory_reliability) * 0.1),
+        )
+    )
+
+    disagreement_load = _bounded(
+        (contradiction_severity * 0.25)
+        + (policy_conflict_score * 0.2)
+        + (abs(policy_reliability - allocation_reliability) * 0.15)
+        + (abs(sequencing_reliability - allocation_reliability) * 0.1)
+        + (context_competition_score * 0.1)
+        + (calibration_drift * 0.1)
+        + (0.1 if contradiction_outcome in {"pause", "refuse"} else 0.0)
+    )
+
+    expansion_stability_score = _bounded(
+        (expansion_quality_score * 0.35)
+        + (transfer_score * 0.2)
+        + (intervention_reliability * 0.15)
+        + ((1.0 - false_improvement_risk) * 0.15)
+        + ((1.0 - overfit_risk) * 0.15)
+    )
+
+    fragmentation_risk = _bounded(
+        (disagreement_load * 0.25)
+        + ((1.0 - confidence_alignment_score) * 0.2)
+        + ((1.0 - policy_alignment_score) * 0.15)
+        + ((1.0 - drift_integrity_score) * 0.15)
+        + ((1.0 - expansion_stability_score) * 0.15)
+        + (hostile_execution_score * 0.05)
+        + (deception_score * 0.05)
+    )
+
+    coherence_score = _bounded(
+        (confidence_alignment_score * 0.2)
+        + (policy_alignment_score * 0.2)
+        + (drift_integrity_score * 0.2)
+        + ((1.0 - disagreement_load) * 0.15)
+        + (expansion_stability_score * 0.15)
+        + ((1.0 - fragmentation_risk) * 0.1)
+    )
+
+    coherence_reliability = _bounded(
+        (memory_reliability * 0.2)
+        + (policy_reliability * 0.15)
+        + (allocation_reliability * 0.15)
+        + (sequencing_reliability * 0.15)
+        + (transfer_reliability * 0.15)
+        + (intervention_reliability * 0.1)
+        + (execution_window_quality * 0.1)
+    )
+
+    system_coherence_state = (
+        "coherent"
+        if coherence_score >= 0.65 and fragmentation_risk < 0.35
+        else "degraded"
+        if coherence_score >= 0.45 or fragmentation_risk < 0.55
+        else "fragmented"
+    )
+
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+    }
+
+    payload: dict[str, Any] = {
+        "system_coherence_state": system_coherence_state,
+        "coherence_score": coherence_score,
+        "drift_integrity_score": drift_integrity_score,
+        "disagreement_load": disagreement_load,
+        "policy_alignment_score": policy_alignment_score,
+        "confidence_alignment_score": confidence_alignment_score,
+        "expansion_stability_score": expansion_stability_score,
+        "fragmentation_risk": fragmentation_risk,
+        "coherence_reliability": coherence_reliability,
+        "governance_flags": governance_flags,
+    }
+
+    previous_payload = read_json_safe(latest_path, default={})
+    if not isinstance(previous_payload, dict):
+        previous_payload = {}
+    write_json_atomic(latest_path, payload)
+
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+
+    drift_registry = read_json_safe(drift_registry_path, default={"entries": []})
+    if not isinstance(drift_registry, dict):
+        drift_registry = {"entries": []}
+    drift_entries = drift_registry.get("entries", [])
+    if not isinstance(drift_entries, list):
+        drift_entries = []
+    drift_entries.append(
+        {
+            "replay_scope": replay_scope,
+            "calibration_drift": calibration_drift,
+            "drift_integrity_score": drift_integrity_score,
+            "transfer_reliability": transfer_reliability,
+            "overfit_risk": overfit_risk,
+            "false_improvement_risk": false_improvement_risk,
+        }
+    )
+    write_json_atomic(drift_registry_path, {"entries": drift_entries[-400:]})
+
+    disagreement_trace = read_json_safe(disagreement_trace_path, default={"entries": []})
+    if not isinstance(disagreement_trace, dict):
+        disagreement_trace = {"entries": []}
+    disagreement_entries = disagreement_trace.get("entries", [])
+    if not isinstance(disagreement_entries, list):
+        disagreement_entries = []
+    disagreement_entries.append(
+        {
+            "replay_scope": replay_scope,
+            "disagreement_load": disagreement_load,
+            "contradiction_severity": contradiction_severity,
+            "policy_conflict_score": policy_conflict_score,
+            "confidence_alignment_score": confidence_alignment_score,
+            "policy_alignment_score": policy_alignment_score,
+        }
+    )
+    write_json_atomic(disagreement_trace_path, {"entries": disagreement_entries[-400:]})
+
+    fragmentation_watchlist = read_json_safe(fragmentation_watchlist_path, default={"entries": []})
+    if not isinstance(fragmentation_watchlist, dict):
+        fragmentation_watchlist = {"entries": []}
+    frag_entries = fragmentation_watchlist.get("entries", [])
+    if not isinstance(frag_entries, list):
+        frag_entries = []
+    if fragmentation_risk >= 0.45:
+        frag_entries.append(
+            {
+                "replay_scope": replay_scope,
+                "fragmentation_risk": fragmentation_risk,
+                "system_coherence_state": system_coherence_state,
+                "coherence_score": coherence_score,
+                "disagreement_load": disagreement_load,
+            }
+        )
+    write_json_atomic(fragmentation_watchlist_path, {"entries": frag_entries[-200:]})
+
+    write_json_atomic(
+        governance_path,
+        {
+            "sandbox_only": True,
+            "replay_validation_required": True,
+            "live_deployment_allowed": False,
+            "no_blind_live_self_rewrites": True,
+            "replay_scope": replay_scope,
+        },
+    )
+
+    return {
+        **payload,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "drift_integrity_registry": str(drift_registry_path),
+            "disagreement_trace": str(disagreement_trace_path),
+            "fragmentation_watchlist": str(fragmentation_watchlist_path),
+            "system_coherence_governance_state": str(governance_path),
+        },
+    }
+
+
 def run_self_evolving_indicator_layer(
     *,
     memory_root: Path,
@@ -8738,6 +9079,93 @@ def run_self_evolving_indicator_layer(
         4,
     )
     unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    system_coherence_drift_integrity_engine = _system_coherence_and_drift_integrity_layer(
+        memory_root=memory_root,
+        replay_scope=replay_scope,
+        unified_market_intelligence_field=unified_market_intelligence_field,
+        calibration_uncertainty_engine=calibration_uncertainty_engine,
+        contradiction_arbitration_engine=contradiction_arbitration_engine,
+        structural_memory_graph_engine=structural_memory_graph_engine,
+        latent_transition_hazard_engine=latent_transition_hazard_engine,
+        cross_regime_transfer_robustness_layer=cross_regime_transfer_robustness_engine,
+        causal_intervention_counterfactual_robustness_layer=causal_intervention_robustness_engine,
+        hierarchical_decision_policy_layer=hierarchical_decision_policy_engine,
+        portfolio_multi_context_capital_allocation_layer=portfolio_multi_context_capital_allocation_engine,
+        temporal_execution_sequencing_layer=temporal_execution_sequencing_engine,
+        self_expansion_quality_layer=self_expansion_quality_engine,
+        execution_microstructure_engine=execution_microstructure_engine,
+        adversarial_execution_engine=adversarial_execution_engine,
+        deception_inference_engine=deception_inference_engine,
+    )
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["system_coherence_state"] = {
+        "state": str(system_coherence_drift_integrity_engine.get("system_coherence_state", "unknown")),
+        "coherence_score": round(
+            float(system_coherence_drift_integrity_engine.get("coherence_score", 0.0) or 0.0), 4
+        ),
+        "fragmentation_risk": round(
+            float(system_coherence_drift_integrity_engine.get("fragmentation_risk", 0.0) or 0.0), 4
+        ),
+    }
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["coherence_score"] = round(
+        max(0.0, min(1.0, float(system_coherence_drift_integrity_engine.get("coherence_score", 0.0) or 0.0))),
+        4,
+    )
+    confidence_structure["drift_integrity_score"] = round(
+        max(0.0, min(1.0, float(system_coherence_drift_integrity_engine.get("drift_integrity_score", 0.0) or 0.0))),
+        4,
+    )
+    confidence_structure["coherence_reliability"] = round(
+        max(0.0, min(1.0, float(system_coherence_drift_integrity_engine.get("coherence_reliability", 0.0) or 0.0))),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["system_coherence"] = {
+        "system_coherence_state": system_coherence_drift_integrity_engine.get("system_coherence_state", "unknown"),
+        "coherence_score": round(float(system_coherence_drift_integrity_engine.get("coherence_score", 0.0) or 0.0), 4),
+        "drift_integrity_score": round(float(system_coherence_drift_integrity_engine.get("drift_integrity_score", 0.0) or 0.0), 4),
+        "disagreement_load": round(float(system_coherence_drift_integrity_engine.get("disagreement_load", 0.0) or 0.0), 4),
+        "fragmentation_risk": round(float(system_coherence_drift_integrity_engine.get("fragmentation_risk", 0.0) or 0.0), 4),
+    }
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    coherence_fragmentation_risk = float(system_coherence_drift_integrity_engine.get("fragmentation_risk", 0.0) or 0.0)
+    coherence_disagreement_load = float(system_coherence_drift_integrity_engine.get("disagreement_load", 0.0) or 0.0)
+    if coherence_fragmentation_risk >= 0.65:
+        if "system_coherence_fragmentation_guard" not in refusal_reasons:
+            refusal_reasons.append("system_coherence_fragmentation_guard")
+    if coherence_fragmentation_risk >= 0.5:
+        if "system_coherence_fragmentation_pause_guard" not in pause_reasons:
+            pause_reasons.append("system_coherence_fragmentation_pause_guard")
+    if coherence_disagreement_load >= 0.6:
+        if "system_coherence_disagreement_load_guard" not in pause_reasons:
+            pause_reasons.append("system_coherence_disagreement_load_guard")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        coherence_fragmentation_risk >= 0.72
+    )
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        coherence_fragmentation_risk >= 0.5 or coherence_disagreement_load >= 0.6
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
     survival_intelligence = {
         "capital_survival_engine": autonomous_behavior.get("capital_survival_engine", {}),
         "pain_memory_survival_layer": pain_memory_survival,
@@ -8764,6 +9192,7 @@ def run_self_evolving_indicator_layer(
         "discovery_state_tags": discovery_state_tags,
         "unified_market_intelligence_field": unified_market_intelligence_field,
         "self_expansion_quality_layer": self_expansion_quality_engine,
+        "system_coherence_and_drift_integrity_layer": system_coherence_drift_integrity_engine,
     }
     meta_learning_loop = _meta_learning_loop(
         memory_root=memory_root,
@@ -8803,5 +9232,6 @@ def run_self_evolving_indicator_layer(
         "discovery_state_tags": discovery_state_tags,
         "unified_market_intelligence_field": unified_market_intelligence_field,
         "self_expansion_quality_layer": self_expansion_quality_engine,
+        "system_coherence_and_drift_integrity_layer": system_coherence_drift_integrity_engine,
         "meta_learning_loop": meta_learning_loop,
     }
