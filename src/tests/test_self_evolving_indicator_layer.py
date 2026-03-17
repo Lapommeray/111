@@ -422,6 +422,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "latent_transition_hazard_state",
         "transfer_robustness_state",
         "causal_intervention_robustness_state",
+        "temporal_execution_state",
         "decision_policy_state",
         "capital_allocation_state",
         "self_expansion_quality_state",
@@ -731,6 +732,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "latent_transition_hazard_state",
         "transfer_robustness_state",
         "causal_intervention_robustness_state",
+        "temporal_execution_state",
         "decision_policy_state",
         "capital_allocation_state",
         "self_expansion_quality_state",
@@ -3159,3 +3161,226 @@ def test_portfolio_multi_context_capital_allocation_layer_nonbreaking_with_missi
     assert allocation["governance_flags"]["sandbox_only"] is True
     assert allocation["governance_flags"]["replay_validation_required"] is True
     assert allocation["governance_flags"]["live_deployment_allowed"] is False
+
+
+def test_temporal_execution_sequencing_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {
+                "trade_id": "tesp1",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -1.1,
+                "failure_cause": "execution_failure",
+                "signal_time": 10,
+                "first_fill_time": 95,
+                "intended_entry_price": 2010.0,
+                "average_fill_price": 2018.0,
+                "mae_after_fill": 4.2,
+                "mfe_after_fill": 0.2,
+            },
+            {"trade_id": "tesp2", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 3.0, "slippage_ratio": 2.8},
+        replay_scope="full_replay",
+    )
+    temporal = result["temporal_execution_sequencing_layer"]
+    assert Path(temporal["paths"]["latest"]).exists()
+    assert Path(temporal["paths"]["history"]).exists()
+    assert Path(temporal["paths"]["sequencing_reason_registry"]).exists()
+    assert Path(temporal["paths"]["execution_window_quality_registry"]).exists()
+    assert Path(temporal["paths"]["temporal_sequence_transition_trace"]).exists()
+    assert Path(temporal["paths"]["temporal_execution_governance_state"]).exists()
+
+
+def test_temporal_execution_sequencing_layer_returns_expected_schema(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "tess1", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "execution_failure"},
+            {"trade_id": "tess2", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.2, "slippage_ratio": 2.0},
+        replay_scope="focused_replay",
+    )
+    temporal = result["temporal_execution_sequencing_layer"]
+    expected_keys = {
+        "temporal_execution_state",
+        "timing_priority_score",
+        "sequencing_reliability",
+        "entry_now_bias",
+        "delay_bias",
+        "stagger_bias",
+        "abandon_bias",
+        "phase_maturity_score",
+        "execution_window_quality",
+        "sequencing_reason_cluster",
+        "recommended_sequence_mode",
+        "sequence_actions",
+        "timing_controls",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(temporal))
+    for key in (
+        "timing_priority_score",
+        "sequencing_reliability",
+        "entry_now_bias",
+        "delay_bias",
+        "stagger_bias",
+        "abandon_bias",
+        "phase_maturity_score",
+        "execution_window_quality",
+    ):
+        assert 0.0 <= float(temporal[key]) <= 1.0
+
+
+def test_temporal_execution_sequencing_layer_adds_unified_field_components_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "tesu1", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "execution_failure"},
+            {"trade_id": "tesu2", "status": "closed", "result": "win", "pnl_points": 0.6, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.4, "slippage_ratio": 2.1},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "unified_field_score" in unified
+    assert "composite_confidence" in unified["confidence_structure"]
+    assert "temporal_execution_state" in unified["components"]
+    assert "timing_priority_score" in unified["confidence_structure"]
+    assert "sequencing_reliability" in unified["confidence_structure"]
+    assert "execution_window_quality" in unified["confidence_structure"]
+    assert "temporal_execution" in unified["decision_refinements"]
+    assert "strategy_selection" in unified["decision_refinements"]
+    assert "risk_sizing" in unified["decision_refinements"]
+
+
+def test_temporal_execution_sequencing_layer_additively_influences_hierarchical_decision_policy_nonbreaking(
+    tmp_path: Path,
+) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "tesh1", "status": "closed", "result": "loss", "pnl_points": -1.2, "failure_cause": "execution_failure"},
+            {"trade_id": "tesh2", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "execution_failure"},
+            {"trade_id": "tesh3", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.1, "spread_ratio": 3.2, "slippage_ratio": 3.0},
+        replay_scope="full_replay",
+    )
+    policy = result["hierarchical_decision_policy_layer"]
+    assert "temporal_sequencing_pressure" in policy
+    assert 0.0 <= float(policy["temporal_sequencing_pressure"]) <= 1.0
+    assert "decision_policy_state" in policy
+    assert "dominant_policy_mode" in policy
+
+
+def test_temporal_execution_sequencing_layer_additively_influences_capital_allocation_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "tesc1", "status": "closed", "result": "loss", "pnl_points": -1.1, "failure_cause": "execution_failure"},
+            {"trade_id": "tesc2", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "execution_failure"},
+            {"trade_id": "tesc3", "status": "closed", "result": "win", "pnl_points": 0.3, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 3.1, "slippage_ratio": 2.9},
+        replay_scope="full_replay",
+    )
+    allocation = result["portfolio_multi_context_capital_allocation_layer"]
+    assert "temporal_pacing_pressure" in allocation
+    assert "staged_deployment_bias" in allocation
+    assert 0.0 <= float(allocation["temporal_pacing_pressure"]) <= 1.0
+    assert 0.0 <= float(allocation["staged_deployment_bias"]) <= 1.0
+    assert 0.05 <= float(allocation["recommended_capital_fraction"]) <= 0.95
+
+
+def test_temporal_execution_sequencing_layer_feeds_refusal_pause_behavior_with_timing_reasons(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {
+                "trade_id": "tesr1",
+                "status": "closed",
+                "result": "loss",
+                "pnl_points": -1.3,
+                "failure_cause": "execution_failure",
+                "signal_time": 10,
+                "first_fill_time": 110,
+                "intended_entry_price": 2010.0,
+                "average_fill_price": 2020.0,
+                "mae_after_fill": 5.0,
+                "mfe_after_fill": 0.2,
+            },
+            {"trade_id": "tesr2", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.3, "spread_ratio": 3.4, "slippage_ratio": 3.3},
+        replay_scope="full_replay",
+    )
+    behavior = result["unified_market_intelligence_field"]["decision_refinements"]["refusal_pause_behavior"]
+    reasons = set(behavior.get("pause_reasons", [])) | set(behavior.get("refusal_reasons", []))
+    assert any(reason.startswith("temporal_execution_") for reason in reasons)
+
+
+def test_temporal_execution_sequencing_layer_feeds_self_suggestion_governor_gap_detection_nonbreaking(
+    tmp_path: Path,
+) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "tesg1", "status": "closed", "result": "loss", "pnl_points": -1.2, "failure_cause": "execution_failure"},
+            {"trade_id": "tesg2", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "execution_failure"},
+            {"trade_id": "tesg3", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.2, "spread_ratio": 3.3, "slippage_ratio": 3.2},
+        replay_scope="full_replay",
+    )
+    governor = result["self_suggestion_governor"]
+    gap_types = {str(item.get("gap_type", "")) for item in governor.get("detected_gaps", []) if isinstance(item, dict)}
+    assert (
+        "temporal_sequencing_instability" in gap_types
+        or "execution_window_quality_degradation" in gap_types
+        or "temporal_abandonment_pressure" in gap_types
+    )
+    assert "anti_noise_controls" in governor
+
+
+def test_temporal_execution_sequencing_layer_feeds_self_expansion_quality_components_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "tese1", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "execution_failure"},
+            {"trade_id": "tese2", "status": "closed", "result": "win", "pnl_points": 0.6, "failure_cause": "none"},
+            {"trade_id": "tese3", "status": "closed", "result": "loss", "pnl_points": -0.4, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.9, "spread_ratio": 2.5, "slippage_ratio": 2.2},
+        replay_scope="full_replay",
+    )
+    components = result["self_expansion_quality_layer"]["quality_components"]
+    assert "temporal_execution_state_context" in components
+    assert "temporal_sequencing_reliability_context" in components
+    assert "temporal_delay_abandon_pressure" in components
+    assert "temporal_execution_window_quality_context" in components
+    assert "temporal_timing_priority_context" in components
+    assert "temporal_sequencing_pressure_context" in components
+
+
+def test_temporal_execution_sequencing_layer_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "tesn1", "status": "closed", "result": "loss", "pnl_points": -0.2},
+            {"trade_id": "tesn2", "status": "closed", "result": "flat", "pnl_points": 0.0},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    temporal = result["temporal_execution_sequencing_layer"]
+    assert temporal["temporal_execution_state"] in {"ready", "deferential", "unstable"}
+    assert temporal["recommended_sequence_mode"] in {"enter_now", "delay", "stagger", "hold", "abandon"}
+    assert isinstance(temporal["sequence_actions"], list)
+    assert temporal["governance_flags"]["sandbox_only"] is True
+    assert temporal["governance_flags"]["replay_validation_required"] is True
+    assert temporal["governance_flags"]["live_deployment_allowed"] is False
