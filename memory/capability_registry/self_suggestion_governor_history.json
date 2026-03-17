@@ -309,7 +309,7 @@
         "contradiction_severity": 0.437,
         "calibration_drift": 0.6786,
         "confidence_reliability_band": "low",
-        "execution_adjusted_uncertainty": 0.446,
+        "execution_adjusted_uncertainty": 0.5055,
         "hostile_execution_score": 0.0663,
         "predatory_liquidity_state": "normal"
       },
@@ -459,7 +459,7 @@
       "calibration_and_uncertainty_governance_layer": {
         "calibration_state": {
           "raw_confidence": 0.4241,
-          "calibrated_confidence": 0.0818,
+          "calibrated_confidence": 0.0669,
           "calibration_drift": 0.6786,
           "confidence_reliability_band": "low",
           "epistemic_uncertainty": 1.0,
@@ -470,7 +470,7 @@
             "reliability_score": 0.5759,
             "observations": 1
           },
-          "execution_adjusted_uncertainty": 0.446,
+          "execution_adjusted_uncertainty": 0.5055,
           "governance_flags": {
             "sandbox_only": true,
             "replay_validation_required": true,
@@ -481,8 +481,8 @@
           }
         },
         "confidence_adjustments": {
-          "confidence_delta": 0.3423,
-          "risk_multiplier": 0.5541,
+          "confidence_delta": 0.3572,
+          "risk_multiplier": 0.5266,
           "should_pause": true,
           "should_refuse": false,
           "pause_reasons": [

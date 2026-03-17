@@ -1086,7 +1086,7 @@
           "contradiction_severity": 0.437,
           "calibration_drift": 0.6786,
           "confidence_reliability_band": "low",
-          "execution_adjusted_uncertainty": 0.446,
+          "execution_adjusted_uncertainty": 0.5055,
           "hostile_execution_score": 0.0663,
           "predatory_liquidity_state": "normal"
         },
@@ -1236,7 +1236,7 @@
         "calibration_and_uncertainty_governance_layer": {
           "calibration_state": {
             "raw_confidence": 0.4241,
-            "calibrated_confidence": 0.0818,
+            "calibrated_confidence": 0.0669,
             "calibration_drift": 0.6786,
             "confidence_reliability_band": "low",
             "epistemic_uncertainty": 1.0,
@@ -1247,7 +1247,7 @@
               "reliability_score": 0.5759,
               "observations": 1
             },
-            "execution_adjusted_uncertainty": 0.446,
+            "execution_adjusted_uncertainty": 0.5055,
             "governance_flags": {
               "sandbox_only": true,
               "replay_validation_required": true,
@@ -1258,8 +1258,8 @@
             }
           },
           "confidence_adjustments": {
-            "confidence_delta": 0.3423,
-            "risk_multiplier": 0.5541,
+            "confidence_delta": 0.3572,
+            "risk_multiplier": 0.5266,
             "should_pause": true,
             "should_refuse": false,
             "pause_reasons": [
@@ -1590,7 +1590,7 @@
       "calibration_and_uncertainty_governance_layer": {
         "calibration_state": {
           "raw_confidence": 0.4241,
-          "calibrated_confidence": 0.0818,
+          "calibrated_confidence": 0.0669,
           "calibration_drift": 0.6786,
           "confidence_reliability_band": "low",
           "epistemic_uncertainty": 1.0,
@@ -1601,7 +1601,7 @@
             "reliability_score": 0.5759,
             "observations": 1
           },
-          "execution_adjusted_uncertainty": 0.446,
+          "execution_adjusted_uncertainty": 0.5055,
           "governance_flags": {
             "sandbox_only": true,
             "replay_validation_required": true,
@@ -1612,8 +1612,8 @@
           }
         },
         "confidence_adjustments": {
-          "confidence_delta": 0.3423,
-          "risk_multiplier": 0.5541,
+          "confidence_delta": 0.3572,
+          "risk_multiplier": 0.5266,
           "should_pause": true,
           "should_refuse": false,
           "pause_reasons": [
@@ -2226,11 +2226,11 @@
           "composite_confidence": 0.4241,
           "confidence_band": "low",
           "hostility_adjusted_confidence": 0.402,
-          "calibrated_confidence": 0.0818,
+          "calibrated_confidence": 0.0669,
           "calibration_drift": 0.6786,
           "confidence_reliability_band": "low",
           "historical_confidence_error": 0.4241,
-          "execution_adjusted_uncertainty": 0.446,
+          "execution_adjusted_uncertainty": 0.5055,
           "contradiction_adjusted_confidence": 0.2711
         },
         "decision_refinements": {
@@ -2244,8 +2244,8 @@
             "refined": 0.8588,
             "multiplier": 1.0103,
             "adversarial_execution_multiplier": 0.9569,
-            "calibration_multiplier": 0.5541,
-            "calibration_adjusted_refined": 0.4759,
+            "calibration_multiplier": 0.5266,
+            "calibration_adjusted_refined": 0.4522,
             "contradiction_multiplier": 0.7596
           },
           "refusal_pause_behavior": {
@@ -2325,7 +2325,7 @@
         "contradiction_severity": 0.437,
         "calibration_drift": 0.6786,
         "confidence_reliability_band": "low",
-        "execution_adjusted_uncertainty": 0.446,
+        "execution_adjusted_uncertainty": 0.5055,
         "hostile_execution_score": 0.0663,
         "predatory_liquidity_state": "normal"
       },
@@ -2475,7 +2475,7 @@
       "calibration_and_uncertainty_governance_layer": {
         "calibration_state": {
           "raw_confidence": 0.4241,
-          "calibrated_confidence": 0.0818,
+          "calibrated_confidence": 0.0669,
           "calibration_drift": 0.6786,
           "confidence_reliability_band": "low",
           "epistemic_uncertainty": 1.0,
@@ -2486,7 +2486,7 @@
             "reliability_score": 0.5759,
             "observations": 1
           },
-          "execution_adjusted_uncertainty": 0.446,
+          "execution_adjusted_uncertainty": 0.5055,
           "governance_flags": {
             "sandbox_only": true,
             "replay_validation_required": true,
@@ -2497,8 +2497,8 @@
           }
         },
         "confidence_adjustments": {
-          "confidence_delta": 0.3423,
-          "risk_multiplier": 0.5541,
+          "confidence_delta": 0.3572,
+          "risk_multiplier": 0.5266,
           "should_pause": true,
           "should_refuse": false,
           "pause_reasons": [
@@ -2829,7 +2829,7 @@
     "calibration_and_uncertainty_governance_layer": {
       "calibration_state": {
         "raw_confidence": 0.4241,
-        "calibrated_confidence": 0.0818,
+        "calibrated_confidence": 0.0669,
         "calibration_drift": 0.6786,
         "confidence_reliability_band": "low",
         "epistemic_uncertainty": 1.0,
@@ -2840,7 +2840,7 @@
           "reliability_score": 0.5759,
           "observations": 1
         },
-        "execution_adjusted_uncertainty": 0.446,
+        "execution_adjusted_uncertainty": 0.5055,
         "governance_flags": {
           "sandbox_only": true,
           "replay_validation_required": true,
@@ -2851,8 +2851,8 @@
         }
       },
       "confidence_adjustments": {
-        "confidence_delta": 0.3423,
-        "risk_multiplier": 0.5541,
+        "confidence_delta": 0.3572,
+        "risk_multiplier": 0.5266,
         "should_pause": true,
         "should_refuse": false,
         "pause_reasons": [
@@ -3465,11 +3465,11 @@
         "composite_confidence": 0.4241,
         "confidence_band": "low",
         "hostility_adjusted_confidence": 0.402,
-        "calibrated_confidence": 0.0818,
+        "calibrated_confidence": 0.0669,
         "calibration_drift": 0.6786,
         "confidence_reliability_band": "low",
         "historical_confidence_error": 0.4241,
-        "execution_adjusted_uncertainty": 0.446,
+        "execution_adjusted_uncertainty": 0.5055,
         "contradiction_adjusted_confidence": 0.2711
       },
       "decision_refinements": {
@@ -3483,8 +3483,8 @@
           "refined": 0.8588,
           "multiplier": 1.0103,
           "adversarial_execution_multiplier": 0.9569,
-          "calibration_multiplier": 0.5541,
-          "calibration_adjusted_refined": 0.4759,
+          "calibration_multiplier": 0.5266,
+          "calibration_adjusted_refined": 0.4522,
           "contradiction_multiplier": 0.7596
         },
         "refusal_pause_behavior": {

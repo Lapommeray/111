@@ -2241,9 +2241,9 @@ def _calibration_and_uncertainty_governance_layer(
     aleatoric_proxy = _bounded((execution_penalty * 0.5) + (failure_cluster_risk * 0.35) + ((spread_stress + slippage_stress) * 0.075))
     epistemic_uncertainty = _bounded((1.0 - detector_confidence) * 0.6 + min(1.0, 1.0 / max(1, len(outcome_proxy))) * 0.4)
     execution_adjusted_uncertainty = _bounded(
-        (epistemic_uncertainty * 0.36)
-        + (aleatoric_proxy * 0.4)
-        + ((1.0 - execution_confidence) * 0.12)
+        (epistemic_uncertainty * 0.4)
+        + (aleatoric_proxy * 0.45)
+        + ((1.0 - execution_confidence) * 0.15)
         + (hostile_execution_score * 0.08)
         + (historical_execution_hostility * 0.04)
     )
@@ -2681,7 +2681,8 @@ def _contradiction_arbitration_and_belief_resolution_layer(
                     historical_outcome_bias=_historical_bias("directional_opposition"),
                 )
 
-    confidence_execution_severity = _bounded((unified_confidence * 0.5) + (execution_penalty * 0.38) + (hostile_execution_score * 0.12))
+    confidence_execution_severity = _bounded((unified_confidence * 0.55) + (execution_penalty * 0.45))
+    confidence_execution_severity = _bounded(confidence_execution_severity + (hostile_execution_score * 0.12))
     if unified_confidence >= 0.12 and execution_penalty >= 0.35:
         _push_contradiction(
             contradiction_type="confidence_execution_conflict",
@@ -2712,7 +2713,8 @@ def _contradiction_arbitration_and_belief_resolution_layer(
     risk_enable_signal = _bounded(
         float(unified_market_intelligence_field.get("decision_refinements", {}).get("risk_sizing", {}).get("refined", 0.0) or 0.0)
     )
-    risk_disable_signal = _bounded(max(pain_risk, execution_penalty, liquidity_vulnerability, hostile_execution_score))
+    risk_disable_signal = _bounded(max(pain_risk, execution_penalty, liquidity_vulnerability))
+    risk_disable_signal = _bounded(max(risk_disable_signal, hostile_execution_score))
     if risk_enable_signal >= 0.55 and (should_reduce or should_refuse_execution or pain_risk >= 0.6 or liquidity_vulnerability >= 0.6):
         _push_contradiction(
             contradiction_type="risk_enable_vs_risk_disable",
