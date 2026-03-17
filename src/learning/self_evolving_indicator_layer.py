@@ -1320,6 +1320,319 @@ def _adversarial_execution_intelligence_layer(
     }
 
 
+def _dynamic_market_maker_deception_inference_layer(
+    *,
+    memory_root: Path,
+    closed: list[dict[str, Any]],
+    market_state: dict[str, Any],
+    execution_microstructure_engine: dict[str, Any],
+    adversarial_execution_engine: dict[str, Any],
+    negative_space_engine: dict[str, Any],
+    liquidity_decay_engine: dict[str, Any],
+    contradiction_arbitration_engine: dict[str, Any] | None = None,
+    latent_transition_hazard_engine: dict[str, Any] | None = None,
+    replay_scope: str,
+) -> dict[str, Any]:
+    deception_dir = memory_root / "deception_inference"
+    deception_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = deception_dir / "deception_inference_latest.json"
+    history_path = deception_dir / "deception_inference_history.json"
+    event_registry_path = deception_dir / "deception_event_registry.json"
+    context_registry_path = deception_dir / "deception_context_registry.json"
+    reliability_registry_path = deception_dir / "deception_reliability_registry.json"
+    governance_path = deception_dir / "deception_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    def _state_score(state: str, *, elevated: str, severe: str) -> float:
+        if state == severe:
+            return 1.0
+        if state == elevated:
+            return 0.6
+        return 0.2 if state == "normal" else 0.4
+
+    adversarial_execution_engine = adversarial_execution_engine if isinstance(adversarial_execution_engine, dict) else {}
+    adversarial_state = adversarial_execution_engine.get("adversarial_execution_state", {})
+    if not isinstance(adversarial_state, dict):
+        adversarial_state = {}
+    contradiction_arbitration_engine = contradiction_arbitration_engine if isinstance(contradiction_arbitration_engine, dict) else {}
+    latent_transition_hazard_engine = latent_transition_hazard_engine if isinstance(latent_transition_hazard_engine, dict) else {}
+    latent_transition_state = latent_transition_hazard_engine.get("latent_transition_hazard_state", {})
+    if not isinstance(latent_transition_state, dict):
+        latent_transition_state = {}
+
+    spread_stress = _bounded(max(0.0, float(market_state.get("spread_ratio", 1.0) or 1.0) - 1.0))
+    slippage_stress = _bounded(max(0.0, float(market_state.get("slippage_ratio", 1.0) or 1.0) - 1.0))
+    failure_cluster_risk = _bounded(float(execution_microstructure_engine.get("failure_cluster_risk", 0.0) or 0.0))
+    partial_fill_state = str(execution_microstructure_engine.get("partial_fill_state", "normal"))
+    partial_fill_proxy = _state_score(partial_fill_state, elevated="elevated", severe="degraded")
+    execution_state = str(execution_microstructure_engine.get("execution_state", "insufficient_data"))
+    hostile_execution_score = _bounded(float(adversarial_state.get("hostile_execution_score", 0.0) or 0.0))
+    quote_fade_proxy = _bounded(float(adversarial_state.get("quote_fade_proxy", 0.0) or 0.0))
+    sweep_aftermath_risk = _bounded(float(adversarial_state.get("sweep_aftermath_risk", 0.0) or 0.0))
+    fill_collapse_risk = _bounded(float(adversarial_state.get("fill_collapse_risk", 0.0) or 0.0))
+    historical_execution_hostility = _bounded(float(adversarial_state.get("historical_execution_hostility", 0.0) or 0.0))
+    transition_hazard_score = _bounded(float(latent_transition_state.get("transition_hazard_score", 0.0) or 0.0))
+
+    negative_signal = bool(negative_space_engine.get("signal", {}).get("negative_space_signal", False))
+    negative_deviation = _bounded(float(negative_space_engine.get("signal", {}).get("deviation_score", 0.0) or 0.0))
+    liquidity_models = liquidity_decay_engine.get("liquidity_decay_models", [])
+    if not isinstance(liquidity_models, list):
+        liquidity_models = []
+    liquidity_vulnerability = _bounded(
+        sum(
+            float(item.get("liquidity_decay_function", {}).get("vulnerability_score", 0.0) or 0.0)
+            for item in liquidity_models
+            if isinstance(item, dict)
+        )
+        / max(1, len(liquidity_models))
+    )
+    trap_probability = _bounded(
+        (negative_deviation * 0.4)
+        + (0.3 if negative_signal else 0.0)
+        + (sweep_aftermath_risk * 0.15)
+        + (failure_cluster_risk * 0.15)
+    )
+    liquidity_bait_risk = _bounded(
+        (quote_fade_proxy * 0.35)
+        + (spread_stress * 0.15)
+        + (slippage_stress * 0.15)
+        + (liquidity_vulnerability * 0.2)
+        + (fill_collapse_risk * 0.15)
+    )
+    engineered_move_probability = _bounded(
+        (hostile_execution_score * 0.32)
+        + (sweep_aftermath_risk * 0.2)
+        + (trap_probability * 0.2)
+        + (liquidity_bait_risk * 0.18)
+        + (transition_hazard_score * 0.1)
+    )
+    inventory_defense_proxy = _bounded(
+        (quote_fade_proxy * 0.35)
+        + (partial_fill_proxy * 0.2)
+        + (fill_collapse_risk * 0.2)
+        + (historical_execution_hostility * 0.15)
+        + (failure_cluster_risk * 0.1)
+    )
+    sweep_trap_bias = _bounded((sweep_aftermath_risk * 0.45) + (trap_probability * 0.35) + (0.2 if negative_signal else 0.0))
+    continuation_confidence_proxy = _bounded(
+        float(
+            contradiction_arbitration_engine.get("confidence_adjustments", {}).get(
+                "base_composite_confidence",
+                adversarial_execution_engine.get("confidence_adjustments", {}).get("hostility_adjusted_confidence", 0.5),
+            )
+            or 0.5
+        )
+    )
+    continuation_deception_conflict = _bounded(
+        (continuation_confidence_proxy * 0.45)
+        + (engineered_move_probability * 0.35)
+        + (trap_probability * 0.2)
+    )
+    deception_score = _bounded(
+        (engineered_move_probability * 0.33)
+        + (liquidity_bait_risk * 0.22)
+        + (inventory_defense_proxy * 0.2)
+        + (sweep_trap_bias * 0.15)
+        + (continuation_deception_conflict * 0.1)
+    )
+    if not closed:
+        deception_state_label = "insufficient_data"
+    elif deception_score >= 0.72:
+        deception_state_label = "hostile"
+    elif deception_score >= 0.46:
+        deception_state_label = "elevated"
+    else:
+        deception_state_label = "normal"
+
+    context_signature = {
+        "replay_scope": replay_scope,
+        "structure_state": str(market_state.get("structure_state", "unknown")),
+        "execution_state": execution_state,
+        "predatory_liquidity_state": str(adversarial_state.get("predatory_liquidity_state", "normal")),
+    }
+    input_signature = {
+        "context_signature": context_signature,
+        "closed_count": len(closed),
+        "hostile_execution_score": hostile_execution_score,
+        "quote_fade_proxy": quote_fade_proxy,
+        "sweep_aftermath_risk": sweep_aftermath_risk,
+        "negative_signal": negative_signal,
+        "negative_deviation": negative_deviation,
+        "liquidity_vulnerability": liquidity_vulnerability,
+        "trap_probability": trap_probability,
+        "liquidity_bait_risk": liquidity_bait_risk,
+        "engineered_move_probability": engineered_move_probability,
+        "inventory_defense_proxy": inventory_defense_proxy,
+        "sweep_trap_bias": sweep_trap_bias,
+        "continuation_deception_conflict": continuation_deception_conflict,
+        "deception_score": deception_score,
+    }
+    previous_latest = read_json_safe(latest_path, default={})
+    if isinstance(previous_latest, dict) and previous_latest.get("_signature") == input_signature:
+        returned = dict(previous_latest)
+        returned.pop("_signature", None)
+        return {
+            **returned,
+            "paths": {
+                "latest": str(latest_path),
+                "history": str(history_path),
+                "deception_event_registry": str(event_registry_path),
+                "deception_context_registry": str(context_registry_path),
+                "deception_reliability_registry": str(reliability_registry_path),
+                "deception_governance_state": str(governance_path),
+            },
+        }
+    context_key = (
+        f"{context_signature['replay_scope']}|{context_signature['structure_state']}|"
+        f"{context_signature['execution_state']}|{context_signature['predatory_liquidity_state']}"
+    )
+    context_registry = read_json_safe(context_registry_path, default={"contexts": {}})
+    if not isinstance(context_registry, dict):
+        context_registry = {"contexts": {}}
+    contexts = context_registry.get("contexts", {})
+    if not isinstance(contexts, dict):
+        contexts = {}
+    prior_context = contexts.get(context_key, {})
+    if not isinstance(prior_context, dict):
+        prior_context = {}
+    prior_deception = _bounded(float(prior_context.get("rolling_deception_score", 0.0) or 0.0))
+    prior_observations = int(prior_context.get("observations", 0) or 0)
+    observations = prior_observations + 1
+    rolling_deception_score = _bounded(((prior_deception * prior_observations) + deception_score) / max(1, observations))
+    contexts[context_key] = {
+        "rolling_deception_score": rolling_deception_score,
+        "observations": observations,
+        "deception_state": deception_state_label,
+        "engineered_move_probability": engineered_move_probability,
+        "liquidity_bait_risk": liquidity_bait_risk,
+    }
+    write_json_atomic(context_registry_path, {"contexts": contexts})
+
+    reliability_registry = read_json_safe(reliability_registry_path, default={"contexts": {}})
+    if not isinstance(reliability_registry, dict):
+        reliability_registry = {"contexts": {}}
+    reliability_contexts = reliability_registry.get("contexts", {})
+    if not isinstance(reliability_contexts, dict):
+        reliability_contexts = {}
+    prior_reliability_state = reliability_contexts.get(context_key, {})
+    if not isinstance(prior_reliability_state, dict):
+        prior_reliability_state = {}
+    prior_reliability = _bounded(float(prior_reliability_state.get("deception_reliability", 0.5) or 0.5))
+    reliability_observations = int(prior_reliability_state.get("observations", 0) or 0)
+    current_reliability = _bounded(1.0 - abs(deception_score - prior_deception))
+    deception_reliability = _bounded(
+        ((prior_reliability * reliability_observations) + current_reliability) / max(1, reliability_observations + 1)
+    )
+    reliability_contexts[context_key] = {
+        "deception_reliability": deception_reliability,
+        "observations": reliability_observations + 1,
+        "rolling_deception_score": rolling_deception_score,
+    }
+    write_json_atomic(reliability_registry_path, {"contexts": reliability_contexts})
+
+    should_pause = deception_score >= 0.58 or liquidity_bait_risk >= 0.62 or sweep_trap_bias >= 0.62
+    should_refuse = deception_score >= 0.78 or (engineered_move_probability >= 0.82 and trap_probability >= 0.7)
+    pause_reasons: list[str] = []
+    refusal_reasons: list[str] = []
+    if liquidity_bait_risk >= 0.55:
+        pause_reasons.append("deception_liquidity_bait_risk")
+    if sweep_trap_bias >= 0.55:
+        pause_reasons.append("deception_sweep_trap_bias")
+    if should_refuse:
+        refusal_reasons.append("deception_engineered_move_refuse_guard")
+
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+    }
+    deception_state = {
+        "deception_state": deception_state_label,
+        "deception_score": deception_score,
+        "trap_probability": trap_probability,
+        "liquidity_bait_risk": liquidity_bait_risk,
+        "engineered_move_probability": engineered_move_probability,
+        "inventory_defense_proxy": inventory_defense_proxy,
+        "sweep_trap_bias": sweep_trap_bias,
+        "continuation_deception_conflict": continuation_deception_conflict,
+        "deception_reliability": deception_reliability,
+        "governance_flags": governance_flags,
+    }
+    confidence_adjustments = {
+        "deception_penalty": _bounded((deception_score * 0.55) + ((1.0 - deception_reliability) * 0.2) + (sweep_trap_bias * 0.25)),
+        "deception_adjusted_confidence": _bounded(
+            1.0 - ((deception_score * 0.65) + (liquidity_bait_risk * 0.2) + (sweep_trap_bias * 0.15))
+        ),
+    }
+    risk_adjustments = {
+        "deception_multiplier": _bounded(1.0 - (deception_score * 0.6), low=0.25, high=1.0),
+        "should_reduce_size": deception_score >= 0.45 or liquidity_bait_risk >= 0.5,
+        "should_pause": should_pause,
+        "should_refuse": should_refuse,
+        "pause_reasons": pause_reasons,
+        "refusal_reasons": refusal_reasons,
+    }
+    governance = {
+        **governance_flags,
+        "pause_guard_triggered": should_pause,
+        "refuse_guard_triggered": should_refuse,
+    }
+    event_payload = read_json_safe(event_registry_path, default={"events": []})
+    if not isinstance(event_payload, dict):
+        event_payload = {"events": []}
+    events = event_payload.get("events", [])
+    if not isinstance(events, list):
+        events = []
+    cycle_events: list[dict[str, Any]] = []
+    for event_type, severity in (
+        ("engineered_move_probability", engineered_move_probability),
+        ("liquidity_bait_risk", liquidity_bait_risk),
+        ("sweep_trap_bias", sweep_trap_bias),
+    ):
+        if severity >= 0.55:
+            cycle_events.append(
+                {
+                    "event_type": event_type,
+                    "severity": severity,
+                    "context_signature": context_signature,
+                    "deception_state": deception_state_label,
+                }
+            )
+    events.extend(cycle_events)
+    write_json_atomic(event_registry_path, {"events": events[-600:]})
+
+    payload = {
+        "deception_state": deception_state,
+        "confidence_adjustments": confidence_adjustments,
+        "risk_adjustments": risk_adjustments,
+        "governance": governance,
+    }
+    write_json_atomic(latest_path, {**payload, "_signature": input_signature})
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+    write_json_atomic(governance_path, governance)
+    return {
+        **payload,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "deception_event_registry": str(event_registry_path),
+            "deception_context_registry": str(context_registry_path),
+            "deception_reliability_registry": str(reliability_registry_path),
+            "deception_governance_state": str(governance_path),
+        },
+    }
+
+
 def _intelligence_gap_discovery_engine(
     *,
     memory_root: Path,
@@ -1705,6 +2018,43 @@ def _capability_evolution_governance_ladder(
         4,
     )
     latent_transition_context_coverage = round(min(1.0, len(latent_transition_items) / 25.0), 4)
+    deception_reliability_registry = read_json_safe(
+        memory_root / "deception_inference" / "deception_reliability_registry.json",
+        default={"contexts": {}},
+    )
+    if not isinstance(deception_reliability_registry, dict):
+        deception_reliability_registry = {"contexts": {}}
+    deception_reliability_items = deception_reliability_registry.get("contexts", {})
+    if not isinstance(deception_reliability_items, dict):
+        deception_reliability_items = {}
+    deception_reliability_scores = [
+        float(item.get("deception_reliability", 0.5) or 0.5)
+        for item in deception_reliability_items.values()
+        if isinstance(item, dict)
+    ]
+    prior_deception_reliability = round(
+        max(0.0, min(1.0, sum(deception_reliability_scores) / max(1, len(deception_reliability_scores)))),
+        4,
+    )
+    deception_context_registry = read_json_safe(
+        memory_root / "deception_inference" / "deception_context_registry.json",
+        default={"contexts": {}},
+    )
+    if not isinstance(deception_context_registry, dict):
+        deception_context_registry = {"contexts": {}}
+    deception_context_items = deception_context_registry.get("contexts", {})
+    if not isinstance(deception_context_items, dict):
+        deception_context_items = {}
+    deception_scores = [
+        float(item.get("rolling_deception_score", 0.0) or 0.0)
+        for item in deception_context_items.values()
+        if isinstance(item, dict)
+    ]
+    prior_deception_score = round(
+        max(0.0, min(1.0, sum(deception_scores) / max(1, len(deception_scores)))),
+        4,
+    )
+    deception_context_coverage = round(min(1.0, len(deception_context_items) / 25.0), 4)
     quality_layer_context = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
     promotion_confidence_multiplier = round(
         max(
@@ -1742,7 +2092,12 @@ def _capability_evolution_governance_ladder(
         prototype_plane = str(best_plane.get("synthetic_plane_name", "none"))
         prototype_predictive = float(best_plane.get("predictive_value", 0.0) or 0.0)
         replay_score = round(min(1.0, (evidence_strength * 0.5) + (prototype_predictive * 0.3) + (unified_confidence * 0.2)), 4)
-        quality_adjusted_replay_score = round(max(0.0, min(1.0, replay_score * promotion_confidence_multiplier)), 4)
+        deception_pressure = round(prior_deception_score * (1.0 - prior_deception_reliability), 4)
+        deception_penalty = round(min(0.08, deception_pressure * 0.08), 4)
+        quality_adjusted_replay_score = round(
+            max(0.0, min(1.0, (replay_score * promotion_confidence_multiplier) - deception_penalty)),
+            4,
+        )
         comparative_advantage = round(min(1.0, (quality_adjusted_replay_score * 0.55) + (prototype_predictive * 0.45)), 4)
         conflict_with_unified = round(min(1.0, max(0.0, quality_adjusted_replay_score - unified_score + 0.2 + quarantine_pressure)), 4)
         if quality_adjusted_replay_score < (0.42 + quarantine_pressure):
@@ -1804,6 +2159,12 @@ def _capability_evolution_governance_ladder(
                 "prior_cycle_transition_hazard_score": prior_transition_hazard_score,
                 "context_coverage": latent_transition_context_coverage,
                 "source": "memory/latent_transition_hazard/transition_hazard_registry.json",
+            },
+            "deception_inference_context": {
+                "prior_cycle_deception_score": prior_deception_score,
+                "prior_cycle_deception_reliability": prior_deception_reliability,
+                "context_coverage": deception_context_coverage,
+                "source": "memory/deception_inference/deception_reliability_registry.json",
             },
             "governance": {
                 "sandbox_only": True,
@@ -2974,6 +3335,7 @@ def _calibration_and_uncertainty_governance_layer(
     adversarial_execution_engine: dict[str, Any] | None = None,
     contradiction_arbitration_engine: dict[str, Any] | None = None,
     latent_transition_hazard_engine: dict[str, Any] | None = None,
+    deception_inference_engine: dict[str, Any] | None = None,
     replay_scope: str,
 ) -> dict[str, Any]:
     calibration_dir = memory_root / "calibration_uncertainty"
@@ -3016,6 +3378,12 @@ def _calibration_and_uncertainty_governance_layer(
     transition_confidence_suppression = _bounded(
         float(latent_transition_state.get("transition_confidence_suppression", 0.0) or 0.0)
     )
+    deception_inference_engine = deception_inference_engine if isinstance(deception_inference_engine, dict) else {}
+    deception_state = deception_inference_engine.get("deception_state", {})
+    if not isinstance(deception_state, dict):
+        deception_state = {}
+    deception_score = _bounded(float(deception_state.get("deception_score", 0.0) or 0.0))
+    deception_reliability = _bounded(float(deception_state.get("deception_reliability", 0.5) or 0.5))
 
     settled = [
         item
@@ -3046,6 +3414,8 @@ def _calibration_and_uncertainty_governance_layer(
         "execution_confidence": execution_confidence,
         "failure_cluster_risk": failure_cluster_risk,
         "transition_hazard_score": transition_hazard_score,
+        "deception_score": deception_score,
+        "deception_reliability": deception_reliability,
         "settled_count": len(outcome_proxy),
     }
     previous_latest = read_json_safe(latest_path, default={})
@@ -3119,6 +3489,8 @@ def _calibration_and_uncertainty_governance_layer(
         + (hostile_execution_score * 0.08)
         + (historical_execution_hostility * 0.04)
         + (transition_hazard_score * 0.06)
+        + (deception_score * 0.05)
+        + ((1.0 - deception_reliability) * 0.03)
     )
 
     reliability_signal = _bounded(
@@ -3191,6 +3563,11 @@ def _calibration_and_uncertainty_governance_layer(
             "transition_confidence_suppression": transition_confidence_suppression,
             "transition_hazard_state": str(latent_transition_state.get("transition_hazard_state", "stable")),
         },
+        "deception_context": {
+            "deception_score": deception_score,
+            "deception_reliability": deception_reliability,
+            "deception_state": str(deception_state.get("deception_state", "normal")),
+        },
         "governance_flags": governance_flags,
     }
     confidence_adjustments = {
@@ -3249,6 +3626,7 @@ def _contradiction_arbitration_and_belief_resolution_layer(
     detector_generator: dict[str, Any],
     replay_scope: str,
     adversarial_execution_engine: dict[str, Any] | None = None,
+    deception_inference_engine: dict[str, Any] | None = None,
     structural_memory_graph_engine: dict[str, Any] | None = None,
     latent_transition_hazard_engine: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -3286,6 +3664,13 @@ def _contradiction_arbitration_and_belief_resolution_layer(
         adversarial_state = {}
     hostile_execution_score = _bounded(float(adversarial_state.get("hostile_execution_score", 0.0) or 0.0))
     historical_execution_hostility = _bounded(float(adversarial_state.get("historical_execution_hostility", 0.0) or 0.0))
+    deception_inference_engine = deception_inference_engine if isinstance(deception_inference_engine, dict) else {}
+    deception_state = deception_inference_engine.get("deception_state", {})
+    if not isinstance(deception_state, dict):
+        deception_state = {}
+    deception_score = _bounded(float(deception_state.get("deception_score", 0.0) or 0.0))
+    engineered_move_probability = _bounded(float(deception_state.get("engineered_move_probability", 0.0) or 0.0))
+    deception_reliability = _bounded(float(deception_state.get("deception_reliability", 0.5) or 0.5))
     structural_memory_graph_engine = structural_memory_graph_engine if isinstance(structural_memory_graph_engine, dict) else {}
     structural_memory_state = structural_memory_graph_engine.get("structural_memory_state", {})
     if not isinstance(structural_memory_state, dict):
@@ -3365,6 +3750,9 @@ def _contradiction_arbitration_and_belief_resolution_layer(
         "pain_risk": pain_risk,
         "counterfactual_advantage": counterfactual_advantage,
         "liquidity_vulnerability": liquidity_vulnerability,
+        "deception_score": deception_score,
+        "engineered_move_probability": engineered_move_probability,
+        "deception_reliability": deception_reliability,
         "long_horizon_context_match": long_horizon_context_match,
         "structural_reversal_bias": structural_reversal_bias,
         "structural_memory_reliability": structural_memory_reliability,
@@ -3507,6 +3895,15 @@ def _contradiction_arbitration_and_belief_resolution_layer(
         belief_intent="precursor_transition_hazard",
         historical_reliability=transition_hazard_reliability,
         execution_adjusted_trust=_bounded(transition_hazard_score * (1.0 - (execution_penalty * 0.2))),
+    )
+    deception_direction = "risk_off" if deception_score >= 0.65 else "wait" if deception_score >= 0.45 else "continuation"
+    _belief(
+        source_layer="dynamic_market_maker_deception_inference_layer",
+        belief_direction=deception_direction,
+        belief_confidence=deception_score,
+        belief_intent="engineered_move_deception_guard",
+        historical_reliability=deception_reliability,
+        execution_adjusted_trust=_bounded(deception_score * (1.0 - (execution_penalty * 0.2))),
     )
 
     contradictions: list[dict[str, Any]] = []
@@ -3656,6 +4053,17 @@ def _contradiction_arbitration_and_belief_resolution_layer(
             resolution_rationale=["continuation_signal_conflicts_with_latent_hazard_buildup"],
             historical_recurrence=_historical_recurrence("continuation_vs_hazard_buildup"),
             historical_outcome_bias=_historical_bias("continuation_vs_hazard_buildup"),
+        )
+    if beliefs[0]["belief_direction"] == "continuation" and deception_direction == "risk_off" and engineered_move_probability >= 0.55:
+        _push_contradiction(
+            contradiction_type="continuation_vs_engineered_move",
+            contradiction_severity=_bounded((beliefs[0]["belief_confidence"] * 0.45) + (engineered_move_probability * 0.55)),
+            partners=[beliefs[0], beliefs[-1]],
+            dominance_candidate="dynamic_market_maker_deception_inference_layer",
+            arbitration_outcome="pause" if engineered_move_probability < 0.78 else "refuse",
+            resolution_rationale=["continuation_signal_conflicts_with_engineered_move_deception_inference"],
+            historical_recurrence=_historical_recurrence("continuation_vs_engineered_move"),
+            historical_outcome_bias=_historical_bias("continuation_vs_engineered_move"),
         )
 
     type_counts: dict[str, int] = {}
@@ -3829,6 +4237,7 @@ def _detect_improvement_gaps(
     contradiction_arbitration_engine: dict[str, Any] | None = None,
     calibration_uncertainty_engine: dict[str, Any] | None = None,
     adversarial_execution_engine: dict[str, Any] | None = None,
+    deception_inference_engine: dict[str, Any] | None = None,
     structural_memory_graph_engine: dict[str, Any] | None = None,
     latent_transition_hazard_engine: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
@@ -3970,6 +4379,51 @@ def _detect_improvement_gaps(
                 "detail": "sweep_aftermath_fill_collapse",
                 "frequency": max(1, int(round((sweep_aftermath_risk + fill_collapse_risk) * 3))),
                 "severity": round(min(1.0, max(sweep_aftermath_risk, fill_collapse_risk)), 4),
+            }
+        )
+    deception_inference_engine = deception_inference_engine if isinstance(deception_inference_engine, dict) else {}
+    deception_state = deception_inference_engine.get("deception_state", {})
+    if not isinstance(deception_state, dict):
+        deception_state = {}
+    deception_score = float(deception_state.get("deception_score", 0.0) or 0.0)
+    engineered_move_probability = float(deception_state.get("engineered_move_probability", 0.0) or 0.0)
+    liquidity_bait_risk = float(deception_state.get("liquidity_bait_risk", 0.0) or 0.0)
+    sweep_trap_bias = float(deception_state.get("sweep_trap_bias", 0.0) or 0.0)
+    deception_reliability = float(deception_state.get("deception_reliability", 0.5) or 0.5)
+    if deception_score >= 0.62 and engineered_move_probability >= 0.6:
+        gaps.append(
+            {
+                "gap_type": "persistent_engineered_move_deception_cluster",
+                "detail": "engineered_move_deception_cluster",
+                "frequency": max(1, int(round((deception_score + engineered_move_probability) * 4))),
+                "severity": round(min(1.0, max(deception_score, engineered_move_probability)), 4),
+            }
+        )
+    if liquidity_bait_risk >= 0.55 and sweep_trap_bias >= 0.5:
+        gaps.append(
+            {
+                "gap_type": "liquidity_bait_recurrence_gap",
+                "detail": "liquidity_bait_recurrence",
+                "frequency": max(1, int(round((liquidity_bait_risk + sweep_trap_bias) * 3))),
+                "severity": round(min(1.0, max(liquidity_bait_risk, sweep_trap_bias)), 4),
+            }
+        )
+    if sweep_trap_bias >= 0.55 and deception_score >= 0.55:
+        gaps.append(
+            {
+                "gap_type": "sweep_trap_deception_under_modeled",
+                "detail": "sweep_trap_deception_under_modeled",
+                "frequency": max(1, int(round(sweep_trap_bias * 4))),
+                "severity": round(min(1.0, max(sweep_trap_bias, deception_score)), 4),
+            }
+        )
+    if deception_reliability <= 0.45:
+        gaps.append(
+            {
+                "gap_type": "deception_reliability_decay",
+                "detail": "deception_reliability_decay",
+                "frequency": 1,
+                "severity": round(min(1.0, 1.0 - deception_reliability), 4),
             }
         )
 
@@ -4255,6 +4709,19 @@ def _suggestion_templates(gap_type: str) -> list[dict[str, str]]:
         "sweep_aftermath_fill_collapse_pattern": [
             {"suggestion_type": "new_execution_refinement", "target": "sweep_aftermath_fill_collapse_guard"},
         ],
+        "persistent_engineered_move_deception_cluster": [
+            {"suggestion_type": "new_detector_idea", "target": "engineered_move_deception_cluster_detector"},
+            {"suggestion_type": "new_survival_rule", "target": "engineered_move_deception_guard"},
+        ],
+        "liquidity_bait_recurrence_gap": [
+            {"suggestion_type": "new_execution_refinement", "target": "liquidity_bait_recurrence_filter"},
+        ],
+        "sweep_trap_deception_under_modeled": [
+            {"suggestion_type": "new_detector_idea", "target": "sweep_trap_deception_detector"},
+        ],
+        "deception_reliability_decay": [
+            {"suggestion_type": "new_detector_idea", "target": "deception_reliability_recovery_detector"},
+        ],
         "low_structural_memory_reliability": [
             {"suggestion_type": "new_detector_idea", "target": "structural_memory_reliability_recovery_detector"},
         ],
@@ -4362,6 +4829,10 @@ def _component_for_gap(gap_type: str) -> str:
         "chronic_adverse_selection_risk": "adversarial_execution_intelligence_layer",
         "quote_fade_execution_fragility": "adversarial_execution_intelligence_layer",
         "sweep_aftermath_fill_collapse_pattern": "adversarial_execution_intelligence_layer",
+        "persistent_engineered_move_deception_cluster": "dynamic_market_maker_deception_inference_layer",
+        "liquidity_bait_recurrence_gap": "dynamic_market_maker_deception_inference_layer",
+        "sweep_trap_deception_under_modeled": "dynamic_market_maker_deception_inference_layer",
+        "deception_reliability_decay": "dynamic_market_maker_deception_inference_layer",
         "low_structural_memory_reliability": "structural_memory_graph_layer",
         "recurrent_structural_reversal_not_captured": "structural_memory_graph_layer",
         "regime_memory_misalignment": "structural_memory_graph_layer",
@@ -4428,6 +4899,7 @@ def _self_suggestion_governor(
     capability_evolution_ladder: dict[str, Any] | None = None,
     replay_scope: str,
     adversarial_execution_engine: dict[str, Any] | None = None,
+    deception_inference_engine: dict[str, Any] | None = None,
     structural_memory_graph_engine: dict[str, Any] | None = None,
     latent_transition_hazard_engine: dict[str, Any] | None = None,
     self_expansion_quality_layer: dict[str, Any] | None = None,
@@ -4474,6 +4946,7 @@ def _self_suggestion_governor(
         contradiction_arbitration_engine=contradiction_arbitration_engine,
         calibration_uncertainty_engine=calibration_uncertainty_engine,
         adversarial_execution_engine=adversarial_execution_engine,
+        deception_inference_engine=deception_inference_engine,
         structural_memory_graph_engine=structural_memory_graph_engine,
         latent_transition_hazard_engine=latent_transition_hazard_engine,
     )
@@ -4487,6 +4960,10 @@ def _self_suggestion_governor(
     adversarial_state = adversarial_execution_engine.get("adversarial_execution_state", {})
     if not isinstance(adversarial_state, dict):
         adversarial_state = {}
+    deception_inference_engine = deception_inference_engine if isinstance(deception_inference_engine, dict) else {}
+    deception_state = deception_inference_engine.get("deception_state", {})
+    if not isinstance(deception_state, dict):
+        deception_state = {}
     structural_memory_graph_engine = structural_memory_graph_engine if isinstance(structural_memory_graph_engine, dict) else {}
     structural_memory_state = structural_memory_graph_engine.get("structural_memory_state", {})
     if not isinstance(structural_memory_state, dict):
@@ -4540,6 +5017,9 @@ def _self_suggestion_governor(
         ),
         "hostile_execution_score": round(float(adversarial_state.get("hostile_execution_score", 0.0) or 0.0), 4),
         "predatory_liquidity_state": str(adversarial_state.get("predatory_liquidity_state", "normal")),
+        "deception_score": round(float(deception_state.get("deception_score", 0.0) or 0.0), 4),
+        "engineered_move_probability": round(float(deception_state.get("engineered_move_probability", 0.0) or 0.0), 4),
+        "deception_reliability": round(float(deception_state.get("deception_reliability", 0.5) or 0.5), 4),
         "structural_memory_reliability": round(float(structural_memory_state.get("memory_reliability", 0.0) or 0.0), 4),
         "structural_reversal_bias": round(float(structural_memory_state.get("structural_reversal_bias", 0.0) or 0.0), 4),
         "long_horizon_context_match": round(float(structural_memory_state.get("long_horizon_context_match", 0.0) or 0.0), 4),
@@ -5257,6 +5737,16 @@ def run_self_evolving_indicator_layer(
         counterfactual_engine=counterfactual_engine,
         replay_scope=replay_scope,
     )
+    deception_inference_engine = _dynamic_market_maker_deception_inference_layer(
+        memory_root=memory_root,
+        closed=closed,
+        market_state=market_state,
+        execution_microstructure_engine=execution_microstructure_engine,
+        adversarial_execution_engine=adversarial_execution_engine,
+        negative_space_engine=negative_space_engine,
+        liquidity_decay_engine=liquidity_decay_engine,
+        replay_scope=replay_scope,
+    )
     provisional_unified_market_intelligence = {
         "unified_field_score": round(
             float(_detector_reliability_state(detector_generator).get("reliability_score", 0.0) or 0.0),
@@ -5356,6 +5846,7 @@ def run_self_evolving_indicator_layer(
     if not isinstance(components, dict):
         components = {}
     components["adversarial_execution_state"] = adversarial_execution_engine.get("adversarial_execution_state", {})
+    components["deception_inference_state"] = deception_inference_engine.get("deception_state", {})
     unified_market_intelligence_field["components"] = components
     confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
     if not isinstance(confidence_structure, dict):
@@ -5367,6 +5858,17 @@ def run_self_evolving_indicator_layer(
                 1.0,
                 float(confidence_structure.get("composite_confidence", 0.0) or 0.0)
                 * float(adversarial_execution_engine.get("confidence_adjustments", {}).get("hostility_adjusted_confidence", 1.0) or 1.0),
+            ),
+        ),
+        4,
+    )
+    confidence_structure["deception_adjusted_confidence"] = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                float(confidence_structure.get("composite_confidence", 0.0) or 0.0)
+                * float(deception_inference_engine.get("confidence_adjustments", {}).get("deception_adjusted_confidence", 1.0) or 1.0),
             ),
         ),
         4,
@@ -5388,6 +5890,16 @@ def run_self_evolving_indicator_layer(
         ),
         4,
     )
+    risk_sizing["deception_multiplier"] = round(
+        max(
+            0.25,
+            min(
+                1.0,
+                float(deception_inference_engine.get("risk_adjustments", {}).get("deception_multiplier", 1.0) or 1.0),
+            ),
+        ),
+        4,
+    )
     decision_refinements["risk_sizing"] = risk_sizing
     refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
     if not isinstance(refusal_pause_behavior, dict):
@@ -5404,13 +5916,23 @@ def run_self_evolving_indicator_layer(
     for reason in adversarial_execution_engine.get("risk_adjustments", {}).get("pause_reasons", []):
         if reason not in pause_reasons:
             pause_reasons.append(str(reason))
+    for reason in deception_inference_engine.get("risk_adjustments", {}).get("refusal_reasons", []):
+        if reason not in refusal_reasons:
+            refusal_reasons.append(str(reason))
+    for reason in deception_inference_engine.get("risk_adjustments", {}).get("pause_reasons", []):
+        if reason not in pause_reasons:
+            pause_reasons.append(str(reason))
     refusal_pause_behavior["refusal_reasons"] = refusal_reasons
     refusal_pause_behavior["pause_reasons"] = pause_reasons
     refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
         adversarial_execution_engine.get("risk_adjustments", {}).get("should_refuse", False)
+    ) or bool(
+        deception_inference_engine.get("risk_adjustments", {}).get("should_refuse", False)
     )
     refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
         adversarial_execution_engine.get("risk_adjustments", {}).get("should_pause", False)
+    ) or bool(
+        deception_inference_engine.get("risk_adjustments", {}).get("should_pause", False)
     )
     decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
     unified_market_intelligence_field["decision_refinements"] = decision_refinements
@@ -5569,6 +6091,7 @@ def run_self_evolving_indicator_layer(
         execution_microstructure_engine=execution_microstructure_engine,
         adversarial_execution_engine=adversarial_execution_engine,
         latent_transition_hazard_engine=latent_transition_hazard_engine,
+        deception_inference_engine=deception_inference_engine,
         replay_scope=replay_scope,
     )
     calibration_state = calibration_uncertainty_engine.get("calibration_state", {})
@@ -5639,6 +6162,7 @@ def run_self_evolving_indicator_layer(
         liquidity_decay_engine=liquidity_decay_engine,
         execution_microstructure_engine=execution_microstructure_engine,
         adversarial_execution_engine=adversarial_execution_engine,
+        deception_inference_engine=deception_inference_engine,
         strategy_evolution=strategy_evolution,
         detector_generator=detector_generator,
         replay_scope=replay_scope,
@@ -5700,6 +6224,7 @@ def run_self_evolving_indicator_layer(
         unified_market_intelligence_field=unified_market_intelligence_field,
         execution_microstructure_engine=execution_microstructure_engine,
         adversarial_execution_engine=adversarial_execution_engine,
+        deception_inference_engine=deception_inference_engine,
         contradiction_arbitration_engine=contradiction_arbitration_engine,
         calibration_uncertainty_engine=calibration_uncertainty_engine,
         mutation_candidates=mutation_candidates,
@@ -5754,6 +6279,7 @@ def run_self_evolving_indicator_layer(
         "fractal_liquidity_decay_functions": liquidity_decay_engine,
         "execution_microstructure_intelligence_layer": execution_microstructure_engine,
         "adversarial_execution_intelligence_layer": adversarial_execution_engine,
+        "dynamic_market_maker_deception_inference_layer": deception_inference_engine,
         "structural_memory_graph_layer": structural_memory_graph_engine,
         "latent_transition_hazard_layer": latent_transition_hazard_engine,
         "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
@@ -5787,6 +6313,7 @@ def run_self_evolving_indicator_layer(
         "fractal_liquidity_decay_functions": liquidity_decay_engine,
         "execution_microstructure_intelligence_layer": execution_microstructure_engine,
         "adversarial_execution_intelligence_layer": adversarial_execution_engine,
+        "dynamic_market_maker_deception_inference_layer": deception_inference_engine,
         "structural_memory_graph_layer": structural_memory_graph_engine,
         "latent_transition_hazard_layer": latent_transition_hazard_engine,
         "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
