@@ -431,6 +431,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "system_coherence_state",
         "learning_stability_state",
         "rollback_orchestration_state",
+        "hypothesis_falsification_state",
     }
     assert 0.0 <= unified["unified_field_score"] <= 1.0
     assert 0.0 <= unified["confidence_structure"]["composite_confidence"] <= 1.0
@@ -746,6 +747,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "system_coherence_state",
         "learning_stability_state",
         "rollback_orchestration_state",
+        "hypothesis_falsification_state",
     }
 
 
@@ -4446,3 +4448,230 @@ def test_rollback_orchestration_layer_feeds_learning_stability_nonbreaking(tmp_p
     assert 0.0 <= float(learning["capability_expansion_pressure"]) <= 1.0
     assert 0.0 <= float(rollback["rollback_urgency"]) <= 1.0
     assert rollback["rollback_orchestration_state"] in {"stable", "watch", "urgent", "critical"}
+
+
+def test_hypothesis_falsification_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "hfp1", "status": "closed", "result": "loss", "pnl_points": -1.2, "failure_cause": "execution_failure"},
+            {"trade_id": "hfp2", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "slippage_spike"},
+            {"trade_id": "hfp3", "status": "closed", "result": "win", "pnl_points": 0.4, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.2, "spread_ratio": 3.0, "slippage_ratio": 2.7},
+        replay_scope="full_replay",
+    )
+    layer = result["hypothesis_falsification_and_experiment_design_layer"]
+    assert Path(layer["paths"]["latest"]).exists()
+    assert Path(layer["paths"]["history"]).exists()
+    assert Path(layer["paths"]["falsification_candidate_registry"]).exists()
+    assert Path(layer["paths"]["experiment_design_registry"]).exists()
+    assert Path(layer["paths"]["disconfirming_evidence_watchlist"]).exists()
+    assert Path(layer["paths"]["experiment_priority_trace"]).exists()
+    assert Path(layer["paths"]["hypothesis_falsification_governance_state"]).exists()
+
+
+def test_hypothesis_falsification_layer_returns_expected_schema(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "hfs1", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "execution_failure"},
+            {"trade_id": "hfs2", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "partial_fill"},
+            {"trade_id": "hfs3", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 2.8, "slippage_ratio": 2.5},
+        replay_scope="focused_replay",
+    )
+    layer = result["hypothesis_falsification_and_experiment_design_layer"]
+    expected_keys = {
+        "hypothesis_falsification_state",
+        "falsifiability_score",
+        "experiment_design_quality",
+        "disconfirming_evidence_pressure",
+        "experiment_priority_score",
+        "experiment_readiness_score",
+        "unresolved_hypothesis_count",
+        "dominant_experiment_axis",
+        "experiment_reason_cluster",
+        "promotion_freeze_recommended",
+        "falsification_reliability",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(layer))
+    assert layer["hypothesis_falsification_state"] in {"underdesigned", "testable", "stress_ready", "falsification_critical"}
+    assert layer["dominant_experiment_axis"] in {
+        "replay_diversification",
+        "contradiction_stress",
+        "transfer_stress",
+        "rollback_stress",
+        "timing_stress",
+        "execution_stress",
+        "expansion_quality_stress",
+    }
+    assert 0.0 <= float(layer["falsifiability_score"]) <= 1.0
+    assert 0.0 <= float(layer["experiment_design_quality"]) <= 1.0
+    assert 0.0 <= float(layer["disconfirming_evidence_pressure"]) <= 1.0
+    assert 0.0 <= float(layer["experiment_priority_score"]) <= 1.0
+    assert 0.0 <= float(layer["experiment_readiness_score"]) <= 1.0
+    assert 0.0 <= float(layer["falsification_reliability"]) <= 1.0
+    assert int(layer["unresolved_hypothesis_count"]) >= 0
+    assert isinstance(layer["promotion_freeze_recommended"], bool)
+
+
+def test_hypothesis_falsification_layer_adds_unified_field_components_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "hfu1", "status": "closed", "result": "loss", "pnl_points": -0.7, "failure_cause": "execution_failure"},
+            {"trade_id": "hfu2", "status": "closed", "result": "win", "pnl_points": 0.6, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.2, "slippage_ratio": 2.0},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "unified_field_score" in unified
+    assert "composite_confidence" in unified["confidence_structure"]
+    assert "hypothesis_falsification_state" in unified["components"]
+    assert "falsification_reliability" in unified["confidence_structure"]
+    assert "hypothesis_falsification" in unified["decision_refinements"]
+
+
+def test_hypothesis_falsification_layer_additively_influences_refusal_pause_behavior(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "hfb1", "status": "closed", "result": "loss", "pnl_points": -1.8, "failure_cause": "execution_failure"},
+            {"trade_id": "hfb2", "status": "closed", "result": "loss", "pnl_points": -1.5, "failure_cause": "partial_fill"},
+            {"trade_id": "hfb3", "status": "closed", "result": "loss", "pnl_points": -1.3, "failure_cause": "spread_spike"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.7, "spread_ratio": 3.7, "slippage_ratio": 3.5},
+        replay_scope="full_replay",
+    )
+    behavior = result["unified_market_intelligence_field"]["decision_refinements"]["refusal_pause_behavior"]
+    layer = result["hypothesis_falsification_and_experiment_design_layer"]
+    assert isinstance(behavior.get("pause_reasons"), list)
+    assert isinstance(behavior.get("refusal_reasons"), list)
+    if float(layer["falsifiability_score"]) <= 0.5 or float(layer["experiment_readiness_score"]) <= 0.5:
+        assert "hypothesis_falsification_pause_guard" in behavior["pause_reasons"]
+    if "hypothesis_falsification_pause_guard" in behavior["pause_reasons"]:
+        assert behavior["should_pause"] is True
+    if float(layer["falsifiability_score"]) <= 0.4 or float(layer["experiment_readiness_score"]) <= 0.4:
+        assert "hypothesis_falsification_refusal_guard" in behavior["refusal_reasons"]
+    if "hypothesis_falsification_refusal_guard" in behavior["refusal_reasons"]:
+        assert behavior["should_refuse"] is True
+
+
+def test_hypothesis_falsification_layer_detects_low_falsifiability_under_redundant_unstressed_expansion(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "hfd1", "status": "closed", "result": "flat", "pnl_points": 0.0, "failure_cause": "none"},
+            {"trade_id": "hfd2", "status": "closed", "result": "flat", "pnl_points": 0.0, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    layer = result["hypothesis_falsification_and_experiment_design_layer"]
+    assert layer["hypothesis_falsification_state"] in {"underdesigned", "testable", "falsification_critical"}
+    assert float(layer["falsifiability_score"]) <= 0.6
+
+
+def test_hypothesis_falsification_layer_history_rolls_and_governance_is_sandbox_replay_only(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    for i in range(3):
+        run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"hfh{i}a", "status": "closed", "result": "loss", "pnl_points": -0.8, "failure_cause": "execution_failure"},
+                {"trade_id": f"hfh{i}b", "status": "closed", "result": "win", "pnl_points": 0.4, "failure_cause": "none"},
+            ],
+            market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.3, "slippage_ratio": 2.0},
+            replay_scope="focused_replay",
+        )
+    history = json.loads((memory_root / "hypothesis_falsification" / "hypothesis_falsification_history.json").read_text(encoding="utf-8"))
+    assert history["snapshots"]
+    assert len(history["snapshots"]) <= 200
+    latest = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "hfhla", "status": "closed", "result": "loss", "pnl_points": -0.7, "failure_cause": "execution_failure"},
+            {"trade_id": "hfhlb", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 2.0, "slippage_ratio": 1.9},
+        replay_scope="focused_replay",
+    )
+    flags = latest["hypothesis_falsification_and_experiment_design_layer"]["governance_flags"]
+    assert flags["sandbox_only"] is True
+    assert flags["replay_validation_required"] is True
+    assert flags["live_deployment_allowed"] is False
+    assert flags["no_blind_live_self_rewrites"] is True
+
+
+def test_hypothesis_falsification_layer_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "hfn1", "status": "closed", "result": "loss", "pnl_points": -0.2},
+            {"trade_id": "hfn2", "status": "closed", "result": "flat", "pnl_points": 0.0},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    layer = result["hypothesis_falsification_and_experiment_design_layer"]
+    assert layer["hypothesis_falsification_state"] in {"underdesigned", "testable", "stress_ready", "falsification_critical"}
+    assert 0.0 <= float(layer["falsifiability_score"]) <= 1.0
+    assert 0.0 <= float(layer["experiment_design_quality"]) <= 1.0
+    assert 0.0 <= float(layer["experiment_readiness_score"]) <= 1.0
+    assert 0.0 <= float(layer["falsification_reliability"]) <= 1.0
+
+
+def test_hypothesis_falsification_layer_feeds_self_expansion_quality_components_nonbreaking(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "hfq1", "status": "closed", "result": "loss", "pnl_points": -1.1, "failure_cause": "execution_failure"},
+            {"trade_id": "hfq2", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "slippage_spike"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.3, "spread_ratio": 3.1, "slippage_ratio": 2.9},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "hfq3", "status": "closed", "result": "loss", "pnl_points": -0.7, "failure_cause": "execution_failure"},
+            {"trade_id": "hfq4", "status": "closed", "result": "win", "pnl_points": 0.4, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 2.6, "slippage_ratio": 2.3},
+        replay_scope="full_replay",
+    )
+    quality_components = second["self_expansion_quality_layer"]["quality_components"]
+    for key in (
+        "falsifiability_context",
+        "experiment_design_quality_context",
+        "disconfirming_evidence_pressure_context",
+        "experiment_readiness_context",
+        "falsification_reliability_context",
+    ):
+        assert key in quality_components
+        assert 0.0 <= float(quality_components[key]) <= 1.0
+
+
+def test_hypothesis_falsification_layer_feeds_learning_stability_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "hfl1", "status": "closed", "result": "loss", "pnl_points": -1.1, "failure_cause": "execution_failure"},
+            {"trade_id": "hfl2", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "partial_fill"},
+            {"trade_id": "hfl3", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.2, "spread_ratio": 2.9, "slippage_ratio": 2.6},
+        replay_scope="full_replay",
+    )
+    layer = result["hypothesis_falsification_and_experiment_design_layer"]
+    learning = result["learning_stability_and_catastrophic_drift_guard_layer"]
+    assert 0.0 <= float(layer["experiment_readiness_score"]) <= 1.0
+    assert 0.0 <= float(layer["falsification_reliability"]) <= 1.0
+    assert 0.0 <= float(learning["learning_stability_score"]) <= 1.0
+    assert 0.0 <= float(learning["catastrophic_drift_risk"]) <= 1.0
