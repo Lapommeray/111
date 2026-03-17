@@ -11,6 +11,12 @@
       "exposure_compression_score": 0.4047,
       "recommended_capital_fraction": 0.2489,
       "allocation_reliability": 0.3111
+    },
+    {
+      "replay_scope": "evaluation_replay",
+      "exposure_compression_score": 0.4047,
+      "recommended_capital_fraction": 0.2489,
+      "allocation_reliability": 0.3111
     }
   ]
 }

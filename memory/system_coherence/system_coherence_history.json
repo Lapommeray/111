@@ -16,6 +16,23 @@
         "live_deployment_allowed": false,
         "no_blind_live_self_rewrites": true
       }
+    },
+    {
+      "system_coherence_state": "coherent",
+      "coherence_score": 0.6635,
+      "drift_integrity_score": 0.6454,
+      "disagreement_load": 0.3328,
+      "policy_alignment_score": 0.7659,
+      "confidence_alignment_score": 0.6994,
+      "expansion_stability_score": 0.4863,
+      "fragmentation_risk": 0.3171,
+      "coherence_reliability": 0.5231,
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true
+      }
     }
   ]
 }

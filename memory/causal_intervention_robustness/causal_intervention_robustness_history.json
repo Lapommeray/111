@@ -37,6 +37,25 @@
         "causal_false_improvement_guard": false,
         "causal_intervention_reliability_guard": false
       }
+    },
+    {
+      "intervention_quality_state": "breakdown",
+      "intervention_priority_score": 0.1117,
+      "counterfactual_robustness_score": 0.284,
+      "primary_intervention_axis": "no_trade_taken",
+      "intervention_consistency": 0.0,
+      "intervention_reliability": 0.4631,
+      "context_sensitive_intervention_map": {},
+      "false_improvement_risk": 0.287,
+      "causal_confidence_proxy": 0.3374,
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true,
+        "causal_false_improvement_guard": false,
+        "causal_intervention_reliability_guard": false
+      }
     }
   ]
 }

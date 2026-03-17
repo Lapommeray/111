@@ -13,6 +13,13 @@
       "recommended_sequence_mode": "enter_now",
       "timing_priority_score": 0.1548,
       "sequencing_reliability": 0.607
+    },
+    {
+      "replay_scope": "evaluation_replay",
+      "sequencing_reason_cluster": "staggered_opportunity_cluster",
+      "recommended_sequence_mode": "enter_now",
+      "timing_priority_score": 0.1548,
+      "sequencing_reliability": 0.607
     }
   ]
 }

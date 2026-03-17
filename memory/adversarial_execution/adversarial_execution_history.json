@@ -77,6 +77,45 @@
         "pause_guard_triggered": false,
         "refuse_guard_triggered": false
       }
+    },
+    {
+      "adversarial_execution_state": {
+        "hostile_execution_score": 0.0663,
+        "toxicity_proxy": 0.036,
+        "quote_fade_proxy": 0.18,
+        "sweep_aftermath_risk": 0.0,
+        "fill_collapse_risk": 0.14,
+        "adverse_selection_risk": 0.05,
+        "predatory_liquidity_state": "normal",
+        "historical_execution_hostility": 0.0663,
+        "execution_survival_bias": 0.0298,
+        "governance_flags": {
+          "sandbox_only": true,
+          "replay_validation_required": true,
+          "live_deployment_allowed": false,
+          "no_blind_live_self_rewrites": true
+        }
+      },
+      "confidence_adjustments": {
+        "hostility_penalty": 0.0972,
+        "hostility_adjusted_confidence": 0.9479
+      },
+      "risk_adjustments": {
+        "adversarial_execution_multiplier": 0.9569,
+        "should_reduce_size": false,
+        "should_pause": false,
+        "should_refuse": false,
+        "pause_reasons": [],
+        "refusal_reasons": []
+      },
+      "governance": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true,
+        "pause_guard_triggered": false,
+        "refuse_guard_triggered": false
+      }
     }
   ]
 }
