@@ -35,3 +35,9 @@ memory/synthetic_features/
 memory/system_coherence/*.json
 memory/temporal_execution/
 memory/transfer_robustness/
+memory/learning_stability/
+memory/autonomous_behavior/*.json
+memory/capability_registry/*.json
+memory/generated_code_registry.json
+memory/knowledge_expansion/continuous_governed_improvement/cycle_replay_evaluation.json
+memory/knowledge_expansion/experimental_module_specs/cand_phase_a_*.json

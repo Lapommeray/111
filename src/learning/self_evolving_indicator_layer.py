@@ -8057,6 +8057,348 @@ def _system_coherence_and_drift_integrity_layer(
     }
 
 
+def _learning_stability_and_catastrophic_drift_guard_layer(
+    *,
+    memory_root: Path,
+    replay_scope: str,
+    unified_market_intelligence_field: dict[str, Any],
+    calibration_uncertainty_engine: dict[str, Any] | None = None,
+    contradiction_arbitration_engine: dict[str, Any] | None = None,
+    system_coherence_and_drift_integrity_layer: dict[str, Any] | None = None,
+    cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
+    causal_intervention_counterfactual_robustness_layer: dict[str, Any] | None = None,
+    self_expansion_quality_layer: dict[str, Any] | None = None,
+    structural_memory_graph_engine: dict[str, Any] | None = None,
+    latent_transition_hazard_engine: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    stability_dir = memory_root / "learning_stability"
+    stability_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = stability_dir / "learning_stability_latest.json"
+    history_path = stability_dir / "learning_stability_history.json"
+    drift_registry_path = stability_dir / "catastrophic_drift_registry.json"
+    pressure_registry_path = stability_dir / "expansion_pressure_registry.json"
+    transition_trace_path = stability_dir / "stability_transition_trace.json"
+    governance_path = stability_dir / "learning_stability_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    unified_market_intelligence_field = (
+        unified_market_intelligence_field if isinstance(unified_market_intelligence_field, dict) else {}
+    )
+    calibration_uncertainty_engine = calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
+    contradiction_arbitration_engine = contradiction_arbitration_engine if isinstance(contradiction_arbitration_engine, dict) else {}
+    system_coherence_and_drift_integrity_layer = (
+        system_coherence_and_drift_integrity_layer if isinstance(system_coherence_and_drift_integrity_layer, dict) else {}
+    )
+    cross_regime_transfer_robustness_layer = (
+        cross_regime_transfer_robustness_layer if isinstance(cross_regime_transfer_robustness_layer, dict) else {}
+    )
+    causal_intervention_counterfactual_robustness_layer = (
+        causal_intervention_counterfactual_robustness_layer
+        if isinstance(causal_intervention_counterfactual_robustness_layer, dict)
+        else {}
+    )
+    self_expansion_quality_layer = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+    structural_memory_graph_engine = structural_memory_graph_engine if isinstance(structural_memory_graph_engine, dict) else {}
+    latent_transition_hazard_engine = latent_transition_hazard_engine if isinstance(latent_transition_hazard_engine, dict) else {}
+
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    calibration_state = calibration_uncertainty_engine.get("calibration_state", {})
+    if not isinstance(calibration_state, dict):
+        calibration_state = {}
+    contradiction_state = contradiction_arbitration_engine.get("arbitration", {})
+    if not isinstance(contradiction_state, dict):
+        contradiction_state = {}
+    structural_state = structural_memory_graph_engine.get("structural_memory_state", {})
+    if not isinstance(structural_state, dict):
+        structural_state = {}
+    latent_state = latent_transition_hazard_engine.get("latent_transition_hazard_state", {})
+    if not isinstance(latent_state, dict):
+        latent_state = {}
+
+    coherence_score = _bounded(float(system_coherence_and_drift_integrity_layer.get("coherence_score", 0.5) or 0.5))
+    expansion_stability_score = _bounded(
+        float(system_coherence_and_drift_integrity_layer.get("expansion_stability_score", 0.5) or 0.5)
+    )
+    transfer_score = _bounded(
+        float(cross_regime_transfer_robustness_layer.get("cross_regime_transfer_score", 0.5) or 0.5)
+    )
+    intervention_reliability = _bounded(
+        float(causal_intervention_counterfactual_robustness_layer.get("intervention_reliability", 0.5) or 0.5)
+    )
+    memory_reliability = _bounded(float(structural_state.get("memory_reliability", 0.5) or 0.5))
+
+    calibration_drift = _bounded(float(calibration_state.get("calibration_drift", 0.0) or 0.0))
+    contradiction_severity = _bounded(float(contradiction_state.get("max_contradiction_severity", 0.0) or 0.0))
+    policy_conflict_score = _bounded(
+        float(system_coherence_and_drift_integrity_layer.get("policy_alignment_score", 0.5) or 0.5)
+    )
+    policy_conflict_score = _bounded(1.0 - policy_conflict_score)
+    expansion_quality_score = _bounded(
+        float(self_expansion_quality_layer.get("expansion_quality_score", 0.5) or 0.5)
+    )
+    expansion_quality_instability = _bounded(1.0 - expansion_quality_score)
+    false_improvement_risk = _bounded(
+        float(causal_intervention_counterfactual_robustness_layer.get("false_improvement_risk", 0.0) or 0.0)
+    )
+    overfit_risk = _bounded(float(cross_regime_transfer_robustness_layer.get("overfit_risk", 0.0) or 0.0))
+
+    suggestion_volume = _bounded(
+        float(
+            unified_market_intelligence_field.get("decision_refinements", {}).get(
+                "self_suggestion", {}
+            ).get("suggestion_volume", 0.0)
+            if isinstance(unified_market_intelligence_field.get("decision_refinements", {}).get("self_suggestion"), dict)
+            else 0.0
+        )
+    )
+    expansion_quality_pressure = _bounded(expansion_quality_instability * 0.6 + false_improvement_risk * 0.4)
+    feature_invention_rate = _bounded(
+        float(
+            unified_market_intelligence_field.get("components", {}).get(
+                "synthetic_feature_invention", {}
+            ).get("feature_invention_rate", 0.0)
+            if isinstance(unified_market_intelligence_field.get("components", {}).get("synthetic_feature_invention"), dict)
+            else 0.0
+        )
+    )
+    capability_ladder_pressure = _bounded(
+        float(
+            unified_market_intelligence_field.get("components", {}).get(
+                "capability_evolution_ladder", {}
+            ).get("evolution_pressure", 0.0)
+            if isinstance(unified_market_intelligence_field.get("components", {}).get("capability_evolution_ladder"), dict)
+            else 0.0
+        )
+    )
+
+    regime_memory_alignment = _bounded(
+        float(structural_state.get("regime_memory_alignment", 0.5) or 0.5)
+    )
+    transition_hazard_score = _bounded(float(latent_state.get("transition_hazard_score", 0.0) or 0.0))
+    transfer_reliability = _bounded(
+        float(cross_regime_transfer_robustness_layer.get("robustness_reliability", 0.5) or 0.5)
+    )
+
+    disagreement_load = _bounded(
+        float(system_coherence_and_drift_integrity_layer.get("disagreement_load", 0.0) or 0.0)
+    )
+    coherence_degradation = _bounded(1.0 - coherence_score)
+    fragmentation_risk = _bounded(
+        float(system_coherence_and_drift_integrity_layer.get("fragmentation_risk", 0.0) or 0.0)
+    )
+
+    sequencing_reliability = _bounded(
+        float(
+            unified_market_intelligence_field.get("confidence_structure", {}).get(
+                "sequencing_reliability", 0.5
+            )
+            if isinstance(unified_market_intelligence_field.get("confidence_structure"), dict)
+            else 0.5
+        )
+    )
+    policy_reliability = _bounded(
+        float(
+            unified_market_intelligence_field.get("confidence_structure", {}).get(
+                "policy_reliability", 0.5
+            )
+            if isinstance(unified_market_intelligence_field.get("confidence_structure"), dict)
+            else 0.5
+        )
+    )
+    allocation_reliability = _bounded(
+        float(
+            unified_market_intelligence_field.get("confidence_structure", {}).get(
+                "allocation_reliability", 0.5
+            )
+            if isinstance(unified_market_intelligence_field.get("confidence_structure"), dict)
+            else 0.5
+        )
+    )
+    policy_vs_allocation_divergence = _bounded(abs(policy_reliability - allocation_reliability))
+    sequencing_vs_policy_divergence = _bounded(abs(sequencing_reliability - policy_reliability))
+
+    # --- Metric 1: learning_stability_score ---
+    learning_stability_score = _bounded(
+        (coherence_score * 0.25)
+        + (expansion_stability_score * 0.2)
+        + (transfer_score * 0.2)
+        + (intervention_reliability * 0.15)
+        + (memory_reliability * 0.2)
+    )
+
+    # --- Metric 2: catastrophic_drift_risk ---
+    catastrophic_drift_risk = _bounded(
+        (calibration_drift * 0.2)
+        + (contradiction_severity * 0.15)
+        + (policy_conflict_score * 0.15)
+        + (expansion_quality_instability * 0.15)
+        + (false_improvement_risk * 0.15)
+        + (overfit_risk * 0.2)
+    )
+
+    # --- Metric 3: capability_expansion_pressure ---
+    capability_expansion_pressure = _bounded(
+        (suggestion_volume * 0.25)
+        + (expansion_quality_pressure * 0.25)
+        + (feature_invention_rate * 0.25)
+        + (capability_ladder_pressure * 0.25)
+    )
+
+    # --- Metric 4: regime_overfit_risk ---
+    regime_overfit_risk = _bounded(
+        ((1.0 - transfer_reliability) * 0.3)
+        + ((1.0 - regime_memory_alignment) * 0.25)
+        + (transition_hazard_score * 0.25)
+        + ((1.0 - intervention_reliability) * 0.2)
+    )
+
+    # --- Metric 5: learning_fragmentation_risk ---
+    learning_fragmentation_risk = _bounded(
+        (disagreement_load * 0.3)
+        + (coherence_degradation * 0.25)
+        + (policy_vs_allocation_divergence * 0.25)
+        + (sequencing_vs_policy_divergence * 0.2)
+    )
+
+    # --- Stability reliability ---
+    stability_reliability = _bounded(
+        (memory_reliability * 0.2)
+        + (transfer_reliability * 0.2)
+        + (intervention_reliability * 0.2)
+        + (coherence_score * 0.2)
+        + (expansion_stability_score * 0.2)
+    )
+
+    # --- State Classification ---
+    if learning_stability_score >= 0.65 and catastrophic_drift_risk < 0.3:
+        learning_stability_state = "stable"
+    elif learning_stability_score >= 0.5 and catastrophic_drift_risk < 0.5:
+        learning_stability_state = "strained"
+    elif catastrophic_drift_risk >= 0.65:
+        learning_stability_state = "catastrophic_drift_risk"
+    else:
+        learning_stability_state = "drifting"
+
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "catastrophic_drift_guard": catastrophic_drift_risk >= 0.55,
+        "expansion_pressure_guard": capability_expansion_pressure >= 0.6,
+        "regime_overfit_guard": regime_overfit_risk >= 0.55,
+        "learning_fragmentation_guard": learning_fragmentation_risk >= 0.5,
+    }
+
+    payload: dict[str, Any] = {
+        "learning_stability_state": learning_stability_state,
+        "learning_stability_score": learning_stability_score,
+        "catastrophic_drift_risk": catastrophic_drift_risk,
+        "capability_expansion_pressure": capability_expansion_pressure,
+        "regime_overfit_risk": regime_overfit_risk,
+        "learning_fragmentation_risk": learning_fragmentation_risk,
+        "stability_reliability": stability_reliability,
+        "governance_flags": governance_flags,
+    }
+
+    previous_payload = read_json_safe(latest_path, default={})
+    if not isinstance(previous_payload, dict):
+        previous_payload = {}
+    write_json_atomic(latest_path, payload)
+
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+
+    drift_registry = read_json_safe(drift_registry_path, default={"entries": []})
+    if not isinstance(drift_registry, dict):
+        drift_registry = {"entries": []}
+    drift_entries = drift_registry.get("entries", [])
+    if not isinstance(drift_entries, list):
+        drift_entries = []
+    drift_entries.append(
+        {
+            "replay_scope": replay_scope,
+            "catastrophic_drift_risk": catastrophic_drift_risk,
+            "calibration_drift": calibration_drift,
+            "contradiction_severity": contradiction_severity,
+            "false_improvement_risk": false_improvement_risk,
+            "overfit_risk": overfit_risk,
+            "learning_stability_state": learning_stability_state,
+        }
+    )
+    write_json_atomic(drift_registry_path, {"entries": drift_entries[-400:]})
+
+    pressure_registry = read_json_safe(pressure_registry_path, default={"entries": []})
+    if not isinstance(pressure_registry, dict):
+        pressure_registry = {"entries": []}
+    pressure_entries = pressure_registry.get("entries", [])
+    if not isinstance(pressure_entries, list):
+        pressure_entries = []
+    pressure_entries.append(
+        {
+            "replay_scope": replay_scope,
+            "capability_expansion_pressure": capability_expansion_pressure,
+            "suggestion_volume": suggestion_volume,
+            "feature_invention_rate": feature_invention_rate,
+            "expansion_quality_pressure": expansion_quality_pressure,
+            "capability_ladder_pressure": capability_ladder_pressure,
+        }
+    )
+    write_json_atomic(pressure_registry_path, {"entries": pressure_entries[-400:]})
+
+    transition_trace = read_json_safe(transition_trace_path, default={"entries": []})
+    if not isinstance(transition_trace, dict):
+        transition_trace = {"entries": []}
+    trace_entries = transition_trace.get("entries", [])
+    if not isinstance(trace_entries, list):
+        trace_entries = []
+    previous_state = str(previous_payload.get("learning_stability_state", "unknown"))
+    if previous_state != learning_stability_state:
+        trace_entries.append(
+            {
+                "replay_scope": replay_scope,
+                "from_state": previous_state,
+                "to_state": learning_stability_state,
+                "learning_stability_score": learning_stability_score,
+                "catastrophic_drift_risk": catastrophic_drift_risk,
+            }
+        )
+    write_json_atomic(transition_trace_path, {"entries": trace_entries[-200:]})
+
+    write_json_atomic(
+        governance_path,
+        {
+            "sandbox_only": True,
+            "replay_validation_required": True,
+            "live_deployment_allowed": False,
+            "no_blind_live_self_rewrites": True,
+            "replay_scope": replay_scope,
+        },
+    )
+
+    return {
+        **payload,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "catastrophic_drift_registry": str(drift_registry_path),
+            "expansion_pressure_registry": str(pressure_registry_path),
+            "stability_transition_trace": str(transition_trace_path),
+            "learning_stability_governance_state": str(governance_path),
+        },
+    }
+
+
 def run_self_evolving_indicator_layer(
     *,
     memory_root: Path,
