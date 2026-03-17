@@ -1,0 +1,46 @@
+{
+  "snapshots": [
+    {
+      "calibration_state": {
+        "raw_confidence": 0.4241,
+        "calibrated_confidence": 0.0689,
+        "calibration_drift": 0.6786,
+        "confidence_reliability_band": "low",
+        "epistemic_uncertainty": 1.0,
+        "aleatoric_proxy": 0.0,
+        "historical_confidence_error": 0.4241,
+        "regime_specific_reliability": {
+          "context_key": "evaluation_replay|range|insufficient_data",
+          "reliability_score": 0.5759,
+          "observations": 1
+        },
+        "execution_adjusted_uncertainty": 0.4975,
+        "governance_flags": {
+          "sandbox_only": true,
+          "replay_validation_required": true,
+          "live_deployment_allowed": false,
+          "no_blind_live_self_rewrites": true,
+          "pause_guard_triggered": true,
+          "refuse_guard_triggered": false
+        }
+      },
+      "confidence_adjustments": {
+        "confidence_delta": 0.3552,
+        "risk_multiplier": 0.5303,
+        "should_pause": true,
+        "should_refuse": false,
+        "pause_reasons": [
+          "calibration_drift_elevated",
+          "confidence_reliability_band_degraded"
+        ],
+        "refusal_reasons": []
+      },
+      "governance": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true
+      }
+    }
+  ]
+}

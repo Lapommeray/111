@@ -1,0 +1,22 @@
+{
+  "signals": [
+    {
+      "negative_space_signal": false,
+      "expectation_model": {
+        "context": "baseline",
+        "expected_direction": "flat",
+        "expected_distribution_center": 0.0
+      },
+      "actual_behavior": {
+        "direction": "flat",
+        "pnl_points": 0.0
+      },
+      "deviation_score": 0.0,
+      "validation": {
+        "scope": "evaluation_replay",
+        "sandbox_only": true,
+        "validation_passed": false
+      }
+    }
+  ]
+}
