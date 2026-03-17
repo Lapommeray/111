@@ -6,20 +6,6 @@
       "counterfactual_robustness_score": 0.284,
       "false_improvement_risk": 0.287,
       "primary_intervention_axis": "no_trade_taken"
-    },
-    {
-      "replay_scope": "evaluation_replay",
-      "intervention_priority_score": 0.1117,
-      "counterfactual_robustness_score": 0.284,
-      "false_improvement_risk": 0.287,
-      "primary_intervention_axis": "no_trade_taken"
-    },
-    {
-      "replay_scope": "evaluation_replay",
-      "intervention_priority_score": 0.1117,
-      "counterfactual_robustness_score": 0.284,
-      "false_improvement_risk": 0.287,
-      "primary_intervention_axis": "no_trade_taken"
     }
   ]
 }

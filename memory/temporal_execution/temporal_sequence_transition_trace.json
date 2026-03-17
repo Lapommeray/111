@@ -7,22 +7,6 @@
       "from_mode": "seed",
       "to_mode": "enter_now",
       "timing_priority_score": 0.1548
-    },
-    {
-      "replay_scope": "evaluation_replay",
-      "from_state": "ready",
-      "to_state": "ready",
-      "from_mode": "enter_now",
-      "to_mode": "enter_now",
-      "timing_priority_score": 0.1548
-    },
-    {
-      "replay_scope": "evaluation_replay",
-      "from_state": "ready",
-      "to_state": "ready",
-      "from_mode": "enter_now",
-      "to_mode": "enter_now",
-      "timing_priority_score": 0.1548
     }
   ]
 }

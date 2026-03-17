@@ -5,18 +5,6 @@
       "promotion_transfer_penalty": 0.168,
       "overfit_risk": 0.087,
       "cross_regime_transfer_score": 0.42
-    },
-    {
-      "replay_scope": "evaluation_replay",
-      "promotion_transfer_penalty": 0.168,
-      "overfit_risk": 0.087,
-      "cross_regime_transfer_score": 0.42
-    },
-    {
-      "replay_scope": "evaluation_replay",
-      "promotion_transfer_penalty": 0.168,
-      "overfit_risk": 0.087,
-      "cross_regime_transfer_score": 0.42
     }
   ]
 }

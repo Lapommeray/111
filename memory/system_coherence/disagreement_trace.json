@@ -7,14 +7,6 @@
       "policy_conflict_score": 0.2955,
       "confidence_alignment_score": 0.6994,
       "policy_alignment_score": 0.7659
-    },
-    {
-      "replay_scope": "evaluation_replay",
-      "disagreement_load": 0.3328,
-      "contradiction_severity": 0.437,
-      "policy_conflict_score": 0.2955,
-      "confidence_alignment_score": 0.6994,
-      "policy_alignment_score": 0.7659
     }
   ]
 }
