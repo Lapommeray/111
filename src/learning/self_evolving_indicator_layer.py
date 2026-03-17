@@ -4897,6 +4897,7 @@ def _detect_improvement_gaps(
     causal_intervention_counterfactual_robustness_layer: dict[str, Any] | None = None,
     governed_capability_invention_layer: dict[str, Any] | None = None,
     autonomous_capability_expansion_layer: dict[str, Any] | None = None,
+    rollback_orchestration_and_safe_reversion_layer: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
     repeated = autonomous_behavior.get("trade_review_engine", {}).get("repeated_failure_patterns", [])
@@ -5469,6 +5470,40 @@ def _detect_improvement_gaps(
                 "detail": str(autonomous_capability_expansion_layer.get("expansion_reason_cluster", "expansion_reliability_decay")),
                 "frequency": max(1, int(round((1.0 - expansion_reliability) * 4))),
                 "severity": round(min(1.0, 1.0 - expansion_reliability), 4),
+            }
+        )
+    rollback_orchestration_and_safe_reversion_layer = (
+        rollback_orchestration_and_safe_reversion_layer
+        if isinstance(rollback_orchestration_and_safe_reversion_layer, dict)
+        else {}
+    )
+    rollback_urgency = float(rollback_orchestration_and_safe_reversion_layer.get("rollback_urgency", 0.0) or 0.0)
+    safe_reversion_ready = bool(rollback_orchestration_and_safe_reversion_layer.get("safe_reversion_ready", False))
+    rollback_reliability = float(
+        rollback_orchestration_and_safe_reversion_layer.get("rollback_reversion_reliability", 0.0) or 0.0
+    )
+    rollback_state = str(rollback_orchestration_and_safe_reversion_layer.get("rollback_orchestration_state", "stable"))
+    if rollback_urgency >= 0.55:
+        gaps.append(
+            {
+                "gap_type": "rollback_orchestration_deficit",
+                "detail": rollback_state,
+                "frequency": max(1, int(round(rollback_urgency * 4))),
+                "severity": round(min(1.0, rollback_urgency), 4),
+            }
+        )
+    if (not safe_reversion_ready) and (rollback_urgency >= 0.45 or rollback_reliability <= 0.5):
+        gaps.append(
+            {
+                "gap_type": "safe_reversion_precondition_failure",
+                "detail": str(
+                    rollback_orchestration_and_safe_reversion_layer.get(
+                        "reversion_sequence_mode",
+                        "none",
+                    )
+                ),
+                "frequency": max(1, int(round((max(rollback_urgency, 1.0 - rollback_reliability)) * 3))),
+                "severity": round(min(1.0, max(rollback_urgency, 1.0 - rollback_reliability)), 4),
             }
         )
     return gaps
@@ -6704,6 +6739,7 @@ def _self_suggestion_governor(
     temporal_execution_sequencing_layer: dict[str, Any] | None = None,
     governed_capability_invention_layer: dict[str, Any] | None = None,
     autonomous_capability_expansion_layer: dict[str, Any] | None = None,
+    rollback_orchestration_and_safe_reversion_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     registry_dir = memory_root / "capability_registry"
     registry_dir.mkdir(parents=True, exist_ok=True)
@@ -6756,6 +6792,7 @@ def _self_suggestion_governor(
         causal_intervention_counterfactual_robustness_layer=causal_intervention_counterfactual_robustness_layer,
         governed_capability_invention_layer=governed_capability_invention_layer,
         autonomous_capability_expansion_layer=autonomous_capability_expansion_layer,
+        rollback_orchestration_and_safe_reversion_layer=rollback_orchestration_and_safe_reversion_layer,
     )
     calibration_uncertainty_engine = (
         calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
@@ -7781,6 +7818,7 @@ def _self_expansion_quality_layer(
     temporal_execution_sequencing_layer: dict[str, Any] | None = None,
     governed_capability_invention_layer: dict[str, Any] | None = None,
     autonomous_capability_expansion_layer: dict[str, Any] | None = None,
+    rollback_orchestration_and_safe_reversion_layer: dict[str, Any] | None = None,
     replay_scope: str,
 ) -> dict[str, Any]:
     quality_dir = memory_root / "self_expansion_quality"
@@ -7828,6 +7866,11 @@ def _self_expansion_quality_layer(
     )
     autonomous_capability_expansion_layer = (
         autonomous_capability_expansion_layer if isinstance(autonomous_capability_expansion_layer, dict) else {}
+    )
+    rollback_orchestration_and_safe_reversion_layer = (
+        rollback_orchestration_and_safe_reversion_layer
+        if isinstance(rollback_orchestration_and_safe_reversion_layer, dict)
+        else {}
     )
 
     candidates = capability_evolution_ladder.get("capability_candidates", [])
@@ -8204,6 +8247,32 @@ def _self_expansion_quality_layer(
         ),
         "expansion_reliability_context": round(
             max(0.0, min(1.0, float(autonomous_capability_expansion_layer.get("expansion_reliability", 0.0) or 0.0))),
+            4,
+        ),
+        "rollback_urgency_context": round(
+            max(
+                0.0,
+                min(1.0, float(rollback_orchestration_and_safe_reversion_layer.get("rollback_urgency", 0.0) or 0.0)),
+            ),
+            4,
+        ),
+        "safe_reversion_readiness_context": 1.0
+        if bool(rollback_orchestration_and_safe_reversion_layer.get("safe_reversion_ready", False))
+        else 0.0,
+        "rollback_reversion_reliability_context": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    float(
+                        rollback_orchestration_and_safe_reversion_layer.get(
+                            "rollback_reversion_reliability",
+                            0.0,
+                        )
+                        or 0.0
+                    ),
+                ),
+            ),
             4,
         ),
         "promotion_confidence_multiplier": promotion_confidence_multiplier,
@@ -8989,6 +9058,279 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
             "learning_stability_governance_state": str(governance_path),
         },
     }
+
+
+def _rollback_orchestration_and_safe_reversion_layer(
+    *,
+    memory_root: Path,
+    replay_scope: str,
+    governed_capability_invention_layer: dict[str, Any],
+    autonomous_capability_expansion_layer: dict[str, Any],
+    self_expansion_quality_layer: dict[str, Any],
+    system_coherence_and_drift_integrity_layer: dict[str, Any] | None = None,
+    learning_stability_and_catastrophic_drift_guard_layer: dict[str, Any] | None = None,
+    capability_evolution_ladder: dict[str, Any] | None = None,
+    self_suggestion_governor: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    rollback_dir = memory_root / "rollback_orchestration"
+    rollback_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = rollback_dir / "rollback_orchestration_latest.json"
+    history_path = rollback_dir / "rollback_orchestration_history.json"
+    safe_reversion_plan_registry_path = rollback_dir / "safe_reversion_plan_registry.json"
+    rollback_decision_trace_path = rollback_dir / "rollback_decision_trace.json"
+    rollback_candidate_registry_path = rollback_dir / "rollback_candidate_registry.json"
+    governance_state_path = rollback_dir / "rollback_orchestration_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    governed_capability_invention_layer = (
+        governed_capability_invention_layer if isinstance(governed_capability_invention_layer, dict) else {}
+    )
+    autonomous_capability_expansion_layer = (
+        autonomous_capability_expansion_layer if isinstance(autonomous_capability_expansion_layer, dict) else {}
+    )
+    self_expansion_quality_layer = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+    system_coherence_and_drift_integrity_layer = (
+        system_coherence_and_drift_integrity_layer
+        if isinstance(system_coherence_and_drift_integrity_layer, dict)
+        else {}
+    )
+    learning_stability_and_catastrophic_drift_guard_layer = (
+        learning_stability_and_catastrophic_drift_guard_layer
+        if isinstance(learning_stability_and_catastrophic_drift_guard_layer, dict)
+        else {}
+    )
+    capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
+    self_suggestion_governor = self_suggestion_governor if isinstance(self_suggestion_governor, dict) else {}
+
+    rollbackability_score = _bounded(float(autonomous_capability_expansion_layer.get("rollbackability_score", 0.0) or 0.0))
+    expansion_pressure_score = _bounded(
+        float(autonomous_capability_expansion_layer.get("expansion_pressure_score", 0.0) or 0.0)
+    )
+    expansion_reliability = _bounded(float(autonomous_capability_expansion_layer.get("expansion_reliability", 0.5) or 0.5))
+    redundancy_risk = _bounded(float(governed_capability_invention_layer.get("redundancy_risk", 0.0) or 0.0))
+    invention_reliability = _bounded(float(governed_capability_invention_layer.get("invention_reliability", 0.5) or 0.5))
+    quality_regression_risk = _bounded(float(self_expansion_quality_layer.get("regression_risk", 0.0) or 0.0))
+    expansion_quality_score = _bounded(float(self_expansion_quality_layer.get("expansion_quality_score", 0.5) or 0.5))
+    coherence_fragmentation_risk = _bounded(
+        float(system_coherence_and_drift_integrity_layer.get("fragmentation_risk", 0.0) or 0.0)
+    )
+    drift_integrity_score = _bounded(
+        float(system_coherence_and_drift_integrity_layer.get("drift_integrity_score", 0.5) or 0.5)
+    )
+    catastrophic_drift_risk = _bounded(
+        float(
+            learning_stability_and_catastrophic_drift_guard_layer.get(
+                "catastrophic_drift_risk",
+                0.0,
+            )
+            or 0.0
+        )
+    )
+    capability_expansion_pressure = _bounded(
+        float(
+            learning_stability_and_catastrophic_drift_guard_layer.get(
+                "capability_expansion_pressure",
+                0.0,
+            )
+            or 0.0
+        )
+    )
+    learning_fragmentation_risk = _bounded(
+        float(
+            learning_stability_and_catastrophic_drift_guard_layer.get(
+                "learning_fragmentation_risk",
+                0.0,
+            )
+            or 0.0
+        )
+    )
+    regime_overfit_risk = _bounded(
+        float(
+            learning_stability_and_catastrophic_drift_guard_layer.get(
+                "regime_overfit_risk",
+                0.0,
+            )
+            or 0.0
+        )
+    )
+    promotion_registry = capability_evolution_ladder.get("promotion_registry", {})
+    if not isinstance(promotion_registry, dict):
+        promotion_registry = {}
+    promotion_quarantined_count = len([item for item in promotion_registry.get("quarantined", []) if isinstance(item, dict)])
+    promotion_rejected_count = len([item for item in promotion_registry.get("rejected", []) if isinstance(item, dict)])
+    repeated_unresolved = self_suggestion_governor.get("repeated_unresolved_gaps", [])
+    if not isinstance(repeated_unresolved, list):
+        repeated_unresolved = []
+    repeated_unresolved_pressure = _bounded(len([item for item in repeated_unresolved if isinstance(item, dict)]) / 12.0)
+
+    rollback_urgency = _bounded(
+        ((1.0 - rollbackability_score) * 0.25)
+        + (expansion_pressure_score * 0.12)
+        + (quality_regression_risk * 0.12)
+        + (coherence_fragmentation_risk * 0.12)
+        + (catastrophic_drift_risk * 0.16)
+        + (capability_expansion_pressure * 0.1)
+        + (learning_fragmentation_risk * 0.08)
+        + (regime_overfit_risk * 0.05)
+    )
+    rollback_reversion_reliability = _bounded(
+        (rollbackability_score * 0.35)
+        + (expansion_reliability * 0.2)
+        + (invention_reliability * 0.1)
+        + ((1.0 - redundancy_risk) * 0.1)
+        + (drift_integrity_score * 0.15)
+        + (expansion_quality_score * 0.1)
+    )
+
+    pending_rollback_count = max(
+        promotion_quarantined_count + promotion_rejected_count,
+        int(round((rollback_urgency * 6) + (repeated_unresolved_pressure * 4))),
+    )
+    safe_reversion_ready = bool(
+        rollback_reversion_reliability >= 0.58
+        and drift_integrity_score >= 0.5
+        and catastrophic_drift_risk < 0.72
+    )
+    promotion_freeze = bool(
+        rollback_urgency >= 0.68
+        or catastrophic_drift_risk >= 0.65
+        or coherence_fragmentation_risk >= 0.65
+    )
+
+    if rollback_urgency >= 0.8 or catastrophic_drift_risk >= 0.75:
+        rollback_orchestration_state = "critical"
+        rollback_mode = "freeze_and_revert"
+        reversion_sequence_mode = "highest_risk_first"
+    elif rollback_urgency >= 0.65:
+        rollback_orchestration_state = "urgent"
+        rollback_mode = "freeze_only" if not safe_reversion_ready else "freeze_and_revert"
+        reversion_sequence_mode = "coherence_first" if coherence_fragmentation_risk >= 0.55 else "highest_risk_first"
+    elif rollback_urgency >= 0.45:
+        rollback_orchestration_state = "watch"
+        rollback_mode = "selective_revert" if safe_reversion_ready else "monitor_only"
+        reversion_sequence_mode = "staged" if rollback_mode == "selective_revert" else "none"
+    else:
+        rollback_orchestration_state = "stable"
+        rollback_mode = "monitor_only"
+        reversion_sequence_mode = "none"
+
+    rollback_reason_cluster = (
+        "catastrophic_drift_escalation"
+        if catastrophic_drift_risk >= 0.65
+        else "coherence_fragmentation_risk"
+        if coherence_fragmentation_risk >= 0.62
+        else "rollbackability_decay"
+        if rollbackability_score <= 0.45
+        else "expansion_pressure"
+        if capability_expansion_pressure >= 0.58
+        else "stable_rollback_monitoring"
+    )
+
+    rollback_candidates: list[dict[str, Any]] = []
+    if pending_rollback_count > 0:
+        rollback_candidates.append(
+            {
+                "candidate_id": "rollback_candidate_capability_expansion",
+                "candidate_type": "capability_expansion",
+                "risk_score": rollback_urgency,
+                "reversion_ready": safe_reversion_ready,
+                "rollback_mode": rollback_mode,
+            }
+        )
+    if coherence_fragmentation_risk >= 0.5:
+        rollback_candidates.append(
+            {
+                "candidate_id": "rollback_candidate_system_coherence",
+                "candidate_type": "system_coherence",
+                "risk_score": coherence_fragmentation_risk,
+                "reversion_ready": safe_reversion_ready,
+                "rollback_mode": rollback_mode,
+            }
+        )
+    if catastrophic_drift_risk >= 0.55:
+        rollback_candidates.append(
+            {
+                "candidate_id": "rollback_candidate_learning_stability",
+                "candidate_type": "learning_stability",
+                "risk_score": catastrophic_drift_risk,
+                "reversion_ready": safe_reversion_ready,
+                "rollback_mode": rollback_mode,
+            }
+        )
+
+    rollback_candidate_registry = {
+        "pending_rollback_count": pending_rollback_count,
+        "candidates": rollback_candidates,
+    }
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+    }
+    payload = {
+        "rollback_orchestration_state": rollback_orchestration_state,
+        "rollback_urgency": rollback_urgency,
+        "safe_reversion_ready": safe_reversion_ready,
+        "pending_rollback_count": pending_rollback_count,
+        "rollback_reversion_reliability": rollback_reversion_reliability,
+        "promotion_freeze": promotion_freeze,
+        "rollback_mode": rollback_mode,
+        "reversion_sequence_mode": reversion_sequence_mode,
+        "rollback_reason_cluster": rollback_reason_cluster,
+        "rollback_candidate_registry": rollback_candidate_registry,
+        "governance_flags": governance_flags,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "safe_reversion_plan_registry": str(safe_reversion_plan_registry_path),
+            "rollback_decision_trace": str(rollback_decision_trace_path),
+            "rollback_candidate_registry": str(rollback_candidate_registry_path),
+            "rollback_orchestration_governance_state": str(governance_state_path),
+        },
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+    write_json_atomic(
+        safe_reversion_plan_registry_path,
+        {
+            "entries": [
+                {
+                    "replay_scope": replay_scope,
+                    "rollback_mode": rollback_mode,
+                    "reversion_sequence_mode": reversion_sequence_mode,
+                    "safe_reversion_ready": safe_reversion_ready,
+                    "pending_rollback_count": pending_rollback_count,
+                }
+            ]
+        },
+    )
+    write_json_atomic(
+        rollback_decision_trace_path,
+        {
+            "entries": [
+                {
+                    "replay_scope": replay_scope,
+                    "rollback_orchestration_state": rollback_orchestration_state,
+                    "rollback_reason_cluster": rollback_reason_cluster,
+                    "rollback_urgency": rollback_urgency,
+                    "promotion_freeze": promotion_freeze,
+                }
+            ]
+        },
+    )
+    write_json_atomic(rollback_candidate_registry_path, rollback_candidate_registry)
+    write_json_atomic(governance_state_path, {**governance_flags, "replay_scope": replay_scope})
+    return payload
 
 
 def run_self_evolving_indicator_layer(
@@ -9948,6 +10290,12 @@ def run_self_evolving_indicator_layer(
     )
     decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
     unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    previous_rollback_orchestration = read_json_safe(
+        memory_root / "rollback_orchestration" / "rollback_orchestration_latest.json",
+        default={},
+    )
+    if not isinstance(previous_rollback_orchestration, dict):
+        previous_rollback_orchestration = {}
     self_suggestion_governor = _self_suggestion_governor(
         memory_root=memory_root,
         closed=closed,
@@ -9974,6 +10322,7 @@ def run_self_evolving_indicator_layer(
         hierarchical_decision_policy_layer=hierarchical_decision_policy_engine,
         portfolio_multi_context_capital_allocation_layer=portfolio_multi_context_capital_allocation_engine,
         temporal_execution_sequencing_layer=temporal_execution_sequencing_engine,
+        rollback_orchestration_and_safe_reversion_layer=previous_rollback_orchestration,
     )
     governed_capability_invention_engine = _governed_capability_invention_layer(
         memory_root=memory_root,
@@ -10109,6 +10458,7 @@ def run_self_evolving_indicator_layer(
         temporal_execution_sequencing_layer=temporal_execution_sequencing_engine,
         governed_capability_invention_layer=governed_capability_invention_engine,
         autonomous_capability_expansion_layer=autonomous_capability_expansion_engine,
+        rollback_orchestration_and_safe_reversion_layer=previous_rollback_orchestration,
         replay_scope=replay_scope,
     )
     components = unified_market_intelligence_field.get("components", {})
@@ -10268,6 +10618,70 @@ def run_self_evolving_indicator_layer(
         "learning_fragmentation_risk": round(float(learning_stability_guard_engine.get("learning_fragmentation_risk", 0.0) or 0.0), 4),
     }
     unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    rollback_orchestration_engine = _rollback_orchestration_and_safe_reversion_layer(
+        memory_root=memory_root,
+        replay_scope=replay_scope,
+        governed_capability_invention_layer=governed_capability_invention_engine,
+        autonomous_capability_expansion_layer=autonomous_capability_expansion_engine,
+        self_expansion_quality_layer=self_expansion_quality_engine,
+        system_coherence_and_drift_integrity_layer=system_coherence_drift_integrity_engine,
+        learning_stability_and_catastrophic_drift_guard_layer=learning_stability_guard_engine,
+        capability_evolution_ladder=capability_evolution_ladder,
+        self_suggestion_governor=self_suggestion_governor,
+    )
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["rollback_orchestration_state"] = {
+        "state": str(rollback_orchestration_engine.get("rollback_orchestration_state", "stable")),
+        "rollback_mode": str(rollback_orchestration_engine.get("rollback_mode", "monitor_only")),
+        "reversion_sequence_mode": str(rollback_orchestration_engine.get("reversion_sequence_mode", "none")),
+        "rollback_reason_cluster": str(rollback_orchestration_engine.get("rollback_reason_cluster", "stable_rollback_monitoring")),
+    }
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["rollback_reversion_reliability"] = round(
+        max(0.0, min(1.0, float(rollback_orchestration_engine.get("rollback_reversion_reliability", 0.0) or 0.0))),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["rollback_orchestration"] = {
+        "rollback_mode": rollback_orchestration_engine.get("rollback_mode", "monitor_only"),
+        "promotion_freeze": bool(rollback_orchestration_engine.get("promotion_freeze", False)),
+        "reversion_sequence_mode": rollback_orchestration_engine.get("reversion_sequence_mode", "none"),
+        "rollback_urgency": round(float(rollback_orchestration_engine.get("rollback_urgency", 0.0) or 0.0), 4),
+        "safe_reversion_ready": bool(rollback_orchestration_engine.get("safe_reversion_ready", False)),
+    }
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    rollback_urgency = float(rollback_orchestration_engine.get("rollback_urgency", 0.0) or 0.0)
+    rollback_mode = str(rollback_orchestration_engine.get("rollback_mode", "monitor_only"))
+    if rollback_urgency >= 0.55 and "rollback_orchestration_pause_guard" not in pause_reasons:
+        pause_reasons.append("rollback_orchestration_pause_guard")
+    if rollback_urgency >= 0.75 and "rollback_orchestration_refusal_guard" not in refusal_reasons:
+        refusal_reasons.append("rollback_orchestration_refusal_guard")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        rollback_urgency >= 0.55 or rollback_mode in {"selective_revert", "freeze_only", "freeze_and_revert"}
+    )
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        rollback_urgency >= 0.75 or rollback_mode == "freeze_and_revert"
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
     survival_intelligence = {
         "capital_survival_engine": autonomous_behavior.get("capital_survival_engine", {}),
         "pain_memory_survival_layer": pain_memory_survival,
@@ -10298,6 +10712,7 @@ def run_self_evolving_indicator_layer(
         "self_expansion_quality_layer": self_expansion_quality_engine,
         "system_coherence_and_drift_integrity_layer": system_coherence_drift_integrity_engine,
         "learning_stability_and_catastrophic_drift_guard_layer": learning_stability_guard_engine,
+        "rollback_orchestration_and_safe_reversion_layer": rollback_orchestration_engine,
     }
     meta_learning_loop = _meta_learning_loop(
         memory_root=memory_root,
@@ -10341,5 +10756,6 @@ def run_self_evolving_indicator_layer(
         "self_expansion_quality_layer": self_expansion_quality_engine,
         "system_coherence_and_drift_integrity_layer": system_coherence_drift_integrity_engine,
         "learning_stability_and_catastrophic_drift_guard_layer": learning_stability_guard_engine,
+        "rollback_orchestration_and_safe_reversion_layer": rollback_orchestration_engine,
         "meta_learning_loop": meta_learning_loop,
     }
