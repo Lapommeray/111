@@ -29,6 +29,8 @@ _PRICE_LEVEL_BUCKET_SIZE = 5.0
 _DEFAULT_RETEST_INTERVAL_PADDING = 1.0
 _PAIN_GEOMETRY_MAX_DISTANCE_SQ = 60.0
 _LIQUIDITY_REGEN_SCALE = 5.0
+_RETIREMENT_UNRESOLVED_PRESSURE_NORMALIZER = 4.0
+_RETIREMENT_CANDIDATE_STALENESS_NORMALIZER = 20.0
 
 
 def _closed_outcomes(trade_outcomes: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -10418,8 +10420,11 @@ def _knowledge_retirement_and_pruning_governance_layer(
     redundancy_retirement_overlap = _bounded(
         (invention_redundancy * 0.4) + (quality_redundancy * 0.35) + (lineage_redundancy * 0.25)
     )
-    unresolved_pressure = min(1.0, len(repeated_unresolved) / 4.0)
-    candidate_staleness_pressure = min(1.0, len([item for item in capability_candidates if isinstance(item, dict)]) / 20.0)
+    unresolved_pressure = min(1.0, len(repeated_unresolved) / _RETIREMENT_UNRESOLVED_PRESSURE_NORMALIZER)
+    candidate_staleness_pressure = min(
+        1.0,
+        len([item for item in capability_candidates if isinstance(item, dict)]) / _RETIREMENT_CANDIDATE_STALENESS_NORMALIZER,
+    )
     stale_capability_pressure = _bounded(
         (lineage_failure_recurrence * 0.3)
         + ((1.0 - falsification_readiness) * 0.2)
