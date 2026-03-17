@@ -5662,6 +5662,305 @@ def _is_vague_suggestion(suggestion: dict[str, Any]) -> bool:
     return False
 
 
+def _hierarchical_decision_policy_layer(
+    *,
+    memory_root: Path,
+    market_state: dict[str, Any],
+    replay_scope: str,
+    unified_market_intelligence_field: dict[str, Any],
+    execution_microstructure_engine: dict[str, Any],
+    adversarial_execution_engine: dict[str, Any] | None = None,
+    deception_inference_engine: dict[str, Any] | None = None,
+    structural_memory_graph_engine: dict[str, Any] | None = None,
+    latent_transition_hazard_engine: dict[str, Any] | None = None,
+    calibration_uncertainty_engine: dict[str, Any] | None = None,
+    contradiction_arbitration_engine: dict[str, Any] | None = None,
+    cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
+    causal_intervention_counterfactual_robustness_layer: dict[str, Any] | None = None,
+    self_expansion_quality_layer: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    policy_dir = memory_root / "decision_policy"
+    policy_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = policy_dir / "decision_policy_latest.json"
+    history_path = policy_dir / "decision_policy_history.json"
+    reason_registry_path = policy_dir / "policy_reason_registry.json"
+    conflict_registry_path = policy_dir / "policy_conflict_registry.json"
+    transition_trace_path = policy_dir / "policy_transition_trace.json"
+    governance_path = policy_dir / "decision_policy_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    unified_market_intelligence_field = (
+        unified_market_intelligence_field if isinstance(unified_market_intelligence_field, dict) else {}
+    )
+    execution_microstructure_engine = execution_microstructure_engine if isinstance(execution_microstructure_engine, dict) else {}
+    adversarial_execution_engine = adversarial_execution_engine if isinstance(adversarial_execution_engine, dict) else {}
+    deception_inference_engine = deception_inference_engine if isinstance(deception_inference_engine, dict) else {}
+    structural_memory_graph_engine = structural_memory_graph_engine if isinstance(structural_memory_graph_engine, dict) else {}
+    latent_transition_hazard_engine = latent_transition_hazard_engine if isinstance(latent_transition_hazard_engine, dict) else {}
+    calibration_uncertainty_engine = calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
+    contradiction_arbitration_engine = contradiction_arbitration_engine if isinstance(contradiction_arbitration_engine, dict) else {}
+    cross_regime_transfer_robustness_layer = (
+        cross_regime_transfer_robustness_layer if isinstance(cross_regime_transfer_robustness_layer, dict) else {}
+    )
+    causal_intervention_counterfactual_robustness_layer = (
+        causal_intervention_counterfactual_robustness_layer
+        if isinstance(causal_intervention_counterfactual_robustness_layer, dict)
+        else {}
+    )
+    self_expansion_quality_layer = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    calibration_state = calibration_uncertainty_engine.get("calibration_state", {})
+    if not isinstance(calibration_state, dict):
+        calibration_state = {}
+    contradiction_state = contradiction_arbitration_engine.get("arbitration", {})
+    if not isinstance(contradiction_state, dict):
+        contradiction_state = {}
+    structural_state = structural_memory_graph_engine.get("structural_memory_state", {})
+    if not isinstance(structural_state, dict):
+        structural_state = {}
+    latent_state = latent_transition_hazard_engine.get("latent_transition_hazard_state", {})
+    if not isinstance(latent_state, dict):
+        latent_state = {}
+    adversarial_state = adversarial_execution_engine.get("adversarial_execution_state", {})
+    if not isinstance(adversarial_state, dict):
+        adversarial_state = {}
+    deception_state = deception_inference_engine.get("deception_state", {})
+    if not isinstance(deception_state, dict):
+        deception_state = {}
+
+    contradiction_outcome = str(contradiction_state.get("outcome", "allow"))
+    contradiction_severity = _bounded(float(contradiction_state.get("max_contradiction_severity", 0.0) or 0.0))
+    calibrated_confidence = _bounded(
+        float(calibration_state.get("calibrated_confidence", confidence_structure.get("composite_confidence", 0.5)) or 0.5)
+    )
+    calibration_drift = _bounded(float(calibration_state.get("calibration_drift", 0.0) or 0.0))
+    execution_penalty = _bounded(float(execution_microstructure_engine.get("execution_penalty", 0.0) or 0.0))
+    hostile_execution_score = _bounded(float(adversarial_state.get("hostile_execution_score", 0.0) or 0.0))
+    deception_score = _bounded(float(deception_state.get("deception_score", 0.0) or 0.0))
+    transition_hazard_score = _bounded(float(latent_state.get("transition_hazard_score", 0.0) or 0.0))
+    transfer_overfit_risk = _bounded(float(cross_regime_transfer_robustness_layer.get("overfit_risk", 0.0) or 0.0))
+    false_improvement_risk = _bounded(
+        float(causal_intervention_counterfactual_robustness_layer.get("false_improvement_risk", 0.0) or 0.0)
+    )
+    intervention_reliability = _bounded(
+        float(causal_intervention_counterfactual_robustness_layer.get("intervention_reliability", 0.5) or 0.5)
+    )
+    transfer_score = _bounded(float(cross_regime_transfer_robustness_layer.get("cross_regime_transfer_score", 0.5) or 0.5))
+    memory_reliability = _bounded(float(structural_state.get("memory_reliability", 0.5) or 0.5))
+    expansion_quality = _bounded(float(self_expansion_quality_layer.get("expansion_quality_score", 0.5) or 0.5))
+    contradiction_pressure = 0.3 if contradiction_outcome == "refuse" else 0.2 if contradiction_outcome == "pause" else 0.0
+
+    survival_priority_score = _bounded(
+        (execution_penalty * 0.2)
+        + (hostile_execution_score * 0.15)
+        + (deception_score * 0.1)
+        + (transition_hazard_score * 0.15)
+        + (transfer_overfit_risk * 0.1)
+        + (false_improvement_risk * 0.1)
+        + (calibration_drift * 0.1)
+        + (contradiction_severity * 0.1)
+        + contradiction_pressure
+    )
+    opportunity_priority_score = _bounded(
+        (calibrated_confidence * 0.35)
+        + (transfer_score * 0.2)
+        + (memory_reliability * 0.15)
+        + (intervention_reliability * 0.2)
+        + (expansion_quality * 0.1)
+        - (execution_penalty * 0.2)
+        - (contradiction_severity * 0.15)
+        - (false_improvement_risk * 0.1)
+    )
+    refusal_priority_score = _bounded(
+        (survival_priority_score * 0.4)
+        + (contradiction_severity * 0.25)
+        + (false_improvement_risk * 0.15)
+        + (execution_penalty * 0.1)
+        + (calibration_drift * 0.1)
+        + (0.15 if contradiction_outcome == "refuse" else 0.0)
+    )
+    deferral_priority_score = _bounded(
+        (survival_priority_score * 0.3)
+        + (contradiction_severity * 0.15)
+        + (calibration_drift * 0.2)
+        + ((1.0 - intervention_reliability) * 0.2)
+        + (transition_hazard_score * 0.1)
+        + (0.15 if contradiction_outcome == "pause" else 0.0)
+    )
+
+    priorities = {
+        "survival_first": survival_priority_score,
+        "opportunity_first": opportunity_priority_score,
+        "refusal_first": refusal_priority_score,
+        "deferral_first": deferral_priority_score,
+    }
+    dominant_policy_mode = sorted(priorities.items(), key=lambda item: (item[1], item[0]), reverse=True)[0][0]
+    if dominant_policy_mode in {"refusal_first", "survival_first"}:
+        recommended_policy_posture = "capital_preservation"
+    elif dominant_policy_mode == "deferral_first":
+        recommended_policy_posture = "governed_deferral"
+    elif opportunity_priority_score >= 0.58 and calibrated_confidence >= 0.62 and contradiction_severity <= 0.45:
+        recommended_policy_posture = "opportunity_selective"
+    else:
+        recommended_policy_posture = "balanced_watch"
+
+    reason_candidates = {
+        "contradiction_pressure_cluster": contradiction_severity + contradiction_pressure,
+        "execution_hostility_cluster": execution_penalty + hostile_execution_score + deception_score,
+        "fragility_cluster": calibration_drift + transition_hazard_score + (1.0 - intervention_reliability),
+        "opportunity_alignment_cluster": opportunity_priority_score + calibrated_confidence + transfer_score,
+    }
+    dominant_reason_cluster = sorted(reason_candidates.items(), key=lambda item: (item[1], item[0]), reverse=True)[0][0]
+    mean_priority = (survival_priority_score + opportunity_priority_score + refusal_priority_score + deferral_priority_score) / 4.0
+    spread = max(priorities.values()) - min(priorities.values())
+    policy_conflict_score = _bounded(
+        (spread * 0.4)
+        + (abs(survival_priority_score - opportunity_priority_score) * 0.25)
+        + (contradiction_severity * 0.2)
+        + (calibration_drift * 0.15)
+    )
+    policy_reliability = _bounded(
+        (calibrated_confidence * 0.35)
+        + (memory_reliability * 0.2)
+        + (intervention_reliability * 0.2)
+        + (transfer_score * 0.15)
+        + (expansion_quality * 0.1)
+        - (policy_conflict_score * 0.25)
+        - (execution_penalty * 0.1)
+    )
+    policy_risk_multiplier = round(max(0.25, min(1.0, 1.0 - min(0.55, (survival_priority_score * 0.3) + (policy_conflict_score * 0.25)))), 4)
+    policy_confidence_adjustment = round(
+        max(0.5, min(1.0, 0.78 + (policy_reliability * 0.18) - (policy_conflict_score * 0.12))),
+        4,
+    )
+    if refusal_priority_score >= 0.72:
+        decision_policy_state = "restrictive"
+    elif deferral_priority_score >= 0.68:
+        decision_policy_state = "deferential"
+    elif opportunity_priority_score >= 0.62 and policy_reliability >= 0.6 and survival_priority_score < 0.6:
+        decision_policy_state = "opportunistic_guarded"
+    elif policy_reliability >= 0.55 and policy_conflict_score <= 0.5:
+        decision_policy_state = "balanced"
+    else:
+        decision_policy_state = "fragile"
+
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "policy_refusal_guard": refusal_priority_score >= 0.65,
+        "policy_deferral_guard": deferral_priority_score >= 0.62,
+    }
+    payload = {
+        "decision_policy_state": decision_policy_state,
+        "dominant_policy_mode": dominant_policy_mode,
+        "recommended_policy_posture": recommended_policy_posture,
+        "survival_priority_score": survival_priority_score,
+        "opportunity_priority_score": opportunity_priority_score,
+        "refusal_priority_score": refusal_priority_score,
+        "deferral_priority_score": deferral_priority_score,
+        "dominant_reason_cluster": dominant_reason_cluster,
+        "policy_conflict_score": policy_conflict_score,
+        "policy_reliability": policy_reliability,
+        "policy_risk_multiplier": policy_risk_multiplier,
+        "policy_confidence_adjustment": policy_confidence_adjustment,
+        "governance_flags": governance_flags,
+    }
+    previous_policy = read_json_safe(latest_path, default={})
+    if not isinstance(previous_policy, dict):
+        previous_policy = {}
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+
+    reason_registry = read_json_safe(reason_registry_path, default={"entries": []})
+    if not isinstance(reason_registry, dict):
+        reason_registry = {"entries": []}
+    reason_entries = reason_registry.get("entries", [])
+    if not isinstance(reason_entries, list):
+        reason_entries = []
+    reason_entries.append(
+        {
+            "replay_scope": replay_scope,
+            "dominant_reason_cluster": dominant_reason_cluster,
+            "dominant_policy_mode": dominant_policy_mode,
+            "recommended_policy_posture": recommended_policy_posture,
+            "mean_priority": round(mean_priority, 4),
+        }
+    )
+    write_json_atomic(reason_registry_path, {"entries": reason_entries[-400:]})
+
+    conflict_registry = read_json_safe(conflict_registry_path, default={"entries": []})
+    if not isinstance(conflict_registry, dict):
+        conflict_registry = {"entries": []}
+    conflict_entries = conflict_registry.get("entries", [])
+    if not isinstance(conflict_entries, list):
+        conflict_entries = []
+    conflict_entries.append(
+        {
+            "replay_scope": replay_scope,
+            "policy_conflict_score": policy_conflict_score,
+            "policy_reliability": policy_reliability,
+            "survival_priority_score": survival_priority_score,
+            "opportunity_priority_score": opportunity_priority_score,
+            "refusal_priority_score": refusal_priority_score,
+            "deferral_priority_score": deferral_priority_score,
+        }
+    )
+    write_json_atomic(conflict_registry_path, {"entries": conflict_entries[-400:]})
+
+    transition_trace = read_json_safe(transition_trace_path, default={"transitions": []})
+    if not isinstance(transition_trace, dict):
+        transition_trace = {"transitions": []}
+    transitions = transition_trace.get("transitions", [])
+    if not isinstance(transitions, list):
+        transitions = []
+    transitions.append(
+        {
+            "replay_scope": replay_scope,
+            "from_state": str(previous_policy.get("decision_policy_state", "seed")),
+            "to_state": decision_policy_state,
+            "from_mode": str(previous_policy.get("dominant_policy_mode", "seed")),
+            "to_mode": dominant_policy_mode,
+            "policy_conflict_score": policy_conflict_score,
+        }
+    )
+    write_json_atomic(transition_trace_path, {"transitions": transitions[-400:]})
+    write_json_atomic(
+        governance_path,
+        {
+            "sandbox_only": True,
+            "replay_validation_required": True,
+            "live_deployment_allowed": False,
+            "no_blind_live_self_rewrites": True,
+            "replay_scope": replay_scope,
+        },
+    )
+    return {
+        **payload,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "policy_reason_registry": str(reason_registry_path),
+            "policy_conflict_registry": str(conflict_registry_path),
+            "policy_transition_trace": str(transition_trace_path),
+            "decision_policy_governance_state": str(governance_path),
+        },
+    }
+
+
 def _self_suggestion_governor(
     *,
     memory_root: Path,
@@ -5686,6 +5985,7 @@ def _self_suggestion_governor(
     cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
     self_expansion_quality_layer: dict[str, Any] | None = None,
     causal_intervention_counterfactual_robustness_layer: dict[str, Any] | None = None,
+    hierarchical_decision_policy_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     registry_dir = memory_root / "capability_registry"
     registry_dir.mkdir(parents=True, exist_ok=True)
@@ -5765,6 +6065,9 @@ def _self_suggestion_governor(
         if isinstance(causal_intervention_counterfactual_robustness_layer, dict)
         else {}
     )
+    hierarchical_decision_policy_layer = (
+        hierarchical_decision_policy_layer if isinstance(hierarchical_decision_policy_layer, dict) else {}
+    )
     capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
     capability_candidates = capability_evolution_ladder.get("capability_candidates", [])
     if isinstance(capability_candidates, list):
@@ -5835,6 +6138,10 @@ def _self_suggestion_governor(
             float(causal_intervention_counterfactual_robustness_layer.get("false_improvement_risk", 0.0) or 0.0),
             4,
         ),
+        "decision_policy_state": str(hierarchical_decision_policy_layer.get("decision_policy_state", "unknown")),
+        "dominant_policy_mode": str(hierarchical_decision_policy_layer.get("dominant_policy_mode", "balanced")),
+        "policy_conflict_score": round(float(hierarchical_decision_policy_layer.get("policy_conflict_score", 0.0) or 0.0), 4),
+        "policy_reliability": round(float(hierarchical_decision_policy_layer.get("policy_reliability", 0.0) or 0.0), 4),
     }
     if previous_governor.get("input_signature") == input_signature:
         return previous_governor
@@ -5863,10 +6170,21 @@ def _self_suggestion_governor(
         4,
     )
     expansion_rate_limit = 1 if expansion_quality_score < 0.55 else 0
+    policy_mode = str(hierarchical_decision_policy_layer.get("dominant_policy_mode", "balanced"))
+    policy_conflict_score = float(hierarchical_decision_policy_layer.get("policy_conflict_score", 0.0) or 0.0)
+    policy_reliability = float(hierarchical_decision_policy_layer.get("policy_reliability", 0.5) or 0.5)
+    if policy_mode in {"refusal_first", "deferral_first"}:
+        quality_threshold_delta = round(min(0.2, quality_threshold_delta + 0.04), 4)
+    if policy_conflict_score >= 0.6:
+        quality_threshold_delta = round(min(0.2, quality_threshold_delta + 0.03), 4)
     min_threshold = _SUGGESTION_LOW_VALUE_THRESHOLD + (0.08 if noisy_cluster else 0.0)
     max_per_cycle = _SUGGESTION_MAX_PER_NOISY_CYCLE if noisy_cluster else _SUGGESTION_MAX_PER_CYCLE
     min_threshold = round(min(1.0, min_threshold + quality_threshold_delta), 4)
     max_per_cycle = max(1, max_per_cycle - expansion_rate_limit)
+    min_threshold = round(
+        min(1.0, max(0.0, min_threshold + min(0.08, (1.0 - max(0.0, min(1.0, policy_reliability))) * 0.08))),
+        4,
+    )
 
     previous_proposed = previous_registry.get("proposed_improvements", [])
     prior_signatures = {
@@ -6117,6 +6435,12 @@ def _self_suggestion_governor(
             "promotion_transfer_penalty": cross_regime_transfer_robustness_layer.get("promotion_transfer_penalty", 0.0),
             "overfit_risk": cross_regime_transfer_robustness_layer.get("overfit_risk", 0.0),
         },
+        "hierarchical_decision_policy_layer": {
+            "decision_policy_state": hierarchical_decision_policy_layer.get("decision_policy_state", "unknown"),
+            "dominant_policy_mode": hierarchical_decision_policy_layer.get("dominant_policy_mode", "balanced"),
+            "policy_conflict_score": round(float(hierarchical_decision_policy_layer.get("policy_conflict_score", 0.0) or 0.0), 4),
+            "policy_reliability": round(float(hierarchical_decision_policy_layer.get("policy_reliability", 0.0) or 0.0), 4),
+        },
         "paths": {
             "registry": str(registry_path),
             "governor": str(governor_path),
@@ -6149,6 +6473,7 @@ def _self_expansion_quality_layer(
     latent_transition_hazard_engine: dict[str, Any] | None = None,
     cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
     causal_intervention_counterfactual_robustness_layer: dict[str, Any] | None = None,
+    hierarchical_decision_policy_layer: dict[str, Any] | None = None,
     replay_scope: str,
 ) -> dict[str, Any]:
     quality_dir = memory_root / "self_expansion_quality"
@@ -6179,6 +6504,9 @@ def _self_expansion_quality_layer(
         causal_intervention_counterfactual_robustness_layer
         if isinstance(causal_intervention_counterfactual_robustness_layer, dict)
         else {}
+    )
+    hierarchical_decision_policy_layer = (
+        hierarchical_decision_policy_layer if isinstance(hierarchical_decision_policy_layer, dict) else {}
     )
 
     candidates = capability_evolution_ladder.get("capability_candidates", [])
@@ -6327,6 +6655,18 @@ def _self_expansion_quality_layer(
     low_value_pressure = min(1.0, float(anti_noise.get("low_value_pruned", 0) or 0) / 8.0)
     contradiction_pressure = 0.2 if str(contradiction_state.get("outcome", "allow")) in {"pause", "refuse"} else 0.0
     hazard_pressure = min(1.0, float(latent_state.get("transition_hazard_score", 0.0) or 0.0))
+    policy_conflict_pressure = min(
+        1.0,
+        float(hierarchical_decision_policy_layer.get("policy_conflict_score", 0.0) or 0.0),
+    )
+    policy_refusal_pressure = min(
+        1.0,
+        float(hierarchical_decision_policy_layer.get("refusal_priority_score", 0.0) or 0.0),
+    )
+    policy_deferral_pressure = min(
+        1.0,
+        float(hierarchical_decision_policy_layer.get("deferral_priority_score", 0.0) or 0.0),
+    )
     regression_risk = round(
         max(
             0.0,
@@ -6350,6 +6690,8 @@ def _self_expansion_quality_layer(
                     )
                     * 0.04
                 )
+                + (policy_conflict_pressure * 0.06)
+                + ((policy_refusal_pressure + policy_deferral_pressure) * 0.03)
                 + contradiction_pressure,
             ),
         ),
@@ -6443,6 +6785,10 @@ def _self_expansion_quality_layer(
             float(causal_intervention_counterfactual_robustness_layer.get("intervention_reliability", 0.5) or 0.5),
             4,
         ),
+        "decision_policy_state_context": str(hierarchical_decision_policy_layer.get("decision_policy_state", "unknown")),
+        "decision_policy_mode_context": str(hierarchical_decision_policy_layer.get("dominant_policy_mode", "balanced")),
+        "decision_policy_conflict_pressure": round(policy_conflict_pressure, 4),
+        "decision_policy_refusal_deferral_pressure": round(min(1.0, policy_refusal_pressure + policy_deferral_pressure), 4),
         "promotion_confidence_multiplier": promotion_confidence_multiplier,
         "quarantine_pressure_delta": quarantine_pressure_delta,
         "expansion_rate_limit": expansion_rate_limit,
@@ -7219,6 +7565,90 @@ def run_self_evolving_indicator_layer(
     decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
     unified_market_intelligence_field["decision_refinements"] = decision_refinements
     unified_market_intelligence_field["contradiction_arbitration"] = contradiction_arbitration_engine.get("arbitration", {})
+    hierarchical_decision_policy_engine = _hierarchical_decision_policy_layer(
+        memory_root=memory_root,
+        market_state=market_state,
+        replay_scope=replay_scope,
+        unified_market_intelligence_field=unified_market_intelligence_field,
+        execution_microstructure_engine=execution_microstructure_engine,
+        adversarial_execution_engine=adversarial_execution_engine,
+        deception_inference_engine=deception_inference_engine,
+        structural_memory_graph_engine=structural_memory_graph_engine,
+        latent_transition_hazard_engine=latent_transition_hazard_engine,
+        calibration_uncertainty_engine=calibration_uncertainty_engine,
+        contradiction_arbitration_engine=contradiction_arbitration_engine,
+        cross_regime_transfer_robustness_layer=cross_regime_transfer_robustness_engine,
+        causal_intervention_counterfactual_robustness_layer=causal_intervention_robustness_engine,
+        self_expansion_quality_layer=quality_integration_context,
+    )
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["decision_policy_state"] = {
+        "state": str(hierarchical_decision_policy_engine.get("decision_policy_state", "unknown")),
+        "dominant_policy_mode": str(hierarchical_decision_policy_engine.get("dominant_policy_mode", "balanced")),
+        "recommended_policy_posture": str(hierarchical_decision_policy_engine.get("recommended_policy_posture", "balanced_watch")),
+        "dominant_reason_cluster": str(hierarchical_decision_policy_engine.get("dominant_reason_cluster", "unknown")),
+    }
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["policy_reliability"] = round(
+        max(0.0, min(1.0, float(hierarchical_decision_policy_engine.get("policy_reliability", 0.0) or 0.0))),
+        4,
+    )
+    confidence_structure["policy_confidence_adjustment"] = round(
+        max(0.5, min(1.0, float(hierarchical_decision_policy_engine.get("policy_confidence_adjustment", 1.0) or 1.0))),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    risk_sizing = decision_refinements.get("risk_sizing", {})
+    if not isinstance(risk_sizing, dict):
+        risk_sizing = {}
+    risk_sizing["decision_policy_multiplier"] = round(
+        max(0.25, min(1.0, float(hierarchical_decision_policy_engine.get("policy_risk_multiplier", 1.0) or 1.0))),
+        4,
+    )
+    decision_refinements["risk_sizing"] = risk_sizing
+    decision_refinements["decision_policy"] = {
+        "decision_policy_state": hierarchical_decision_policy_engine.get("decision_policy_state", "unknown"),
+        "dominant_policy_mode": hierarchical_decision_policy_engine.get("dominant_policy_mode", "balanced"),
+        "recommended_policy_posture": hierarchical_decision_policy_engine.get("recommended_policy_posture", "balanced_watch"),
+        "policy_conflict_score": round(float(hierarchical_decision_policy_engine.get("policy_conflict_score", 0.0) or 0.0), 4),
+    }
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    if str(hierarchical_decision_policy_engine.get("dominant_policy_mode", "balanced")) == "refusal_first":
+        if "decision_policy_refusal_priority_guard" not in refusal_reasons:
+            refusal_reasons.append("decision_policy_refusal_priority_guard")
+    if str(hierarchical_decision_policy_engine.get("dominant_policy_mode", "balanced")) == "deferral_first":
+        if "decision_policy_deferral_priority_guard" not in pause_reasons:
+            pause_reasons.append("decision_policy_deferral_priority_guard")
+    if float(hierarchical_decision_policy_engine.get("policy_conflict_score", 0.0) or 0.0) >= 0.68:
+        if "decision_policy_conflict_pause_guard" not in pause_reasons:
+            pause_reasons.append("decision_policy_conflict_pause_guard")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        hierarchical_decision_policy_engine.get("dominant_policy_mode") == "refusal_first"
+        and float(hierarchical_decision_policy_engine.get("refusal_priority_score", 0.0) or 0.0) >= 0.72
+    )
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        hierarchical_decision_policy_engine.get("dominant_policy_mode") in {"deferral_first", "refusal_first"}
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
     self_suggestion_governor = _self_suggestion_governor(
         memory_root=memory_root,
         closed=closed,
@@ -7242,6 +7672,7 @@ def run_self_evolving_indicator_layer(
         cross_regime_transfer_robustness_layer=cross_regime_transfer_robustness_engine,
         self_expansion_quality_layer=quality_integration_context,
         causal_intervention_counterfactual_robustness_layer=causal_intervention_robustness_engine,
+        hierarchical_decision_policy_layer=hierarchical_decision_policy_engine,
     )
     self_expansion_quality_engine = _self_expansion_quality_layer(
         memory_root=memory_root,
@@ -7256,6 +7687,7 @@ def run_self_evolving_indicator_layer(
         latent_transition_hazard_engine=latent_transition_hazard_engine,
         cross_regime_transfer_robustness_layer=cross_regime_transfer_robustness_engine,
         causal_intervention_counterfactual_robustness_layer=causal_intervention_robustness_engine,
+        hierarchical_decision_policy_layer=hierarchical_decision_policy_engine,
         replay_scope=replay_scope,
     )
     components = unified_market_intelligence_field.get("components", {})
@@ -7295,6 +7727,7 @@ def run_self_evolving_indicator_layer(
         "latent_transition_hazard_layer": latent_transition_hazard_engine,
         "cross_regime_transfer_robustness_layer": cross_regime_transfer_robustness_engine,
         "causal_intervention_counterfactual_robustness_layer": causal_intervention_robustness_engine,
+        "hierarchical_decision_policy_layer": hierarchical_decision_policy_engine,
         "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
         "contradiction_arbitration_and_belief_resolution_layer": contradiction_arbitration_engine,
         "recursive_self_modeling": recursive_self_modeling,
@@ -7331,6 +7764,7 @@ def run_self_evolving_indicator_layer(
         "latent_transition_hazard_layer": latent_transition_hazard_engine,
         "cross_regime_transfer_robustness_layer": cross_regime_transfer_robustness_engine,
         "causal_intervention_counterfactual_robustness_layer": causal_intervention_robustness_engine,
+        "hierarchical_decision_policy_layer": hierarchical_decision_policy_engine,
         "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
         "contradiction_arbitration_and_belief_resolution_layer": contradiction_arbitration_engine,
         "recursive_self_modeling": recursive_self_modeling,
