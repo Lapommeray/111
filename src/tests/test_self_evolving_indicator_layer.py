@@ -420,6 +420,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "deception_inference_state",
         "structural_memory_state",
         "latent_transition_hazard_state",
+        "transfer_robustness_state",
         "self_expansion_quality_state",
     }
     assert 0.0 <= unified["unified_field_score"] <= 1.0
@@ -725,6 +726,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "deception_inference_state",
         "structural_memory_state",
         "latent_transition_hazard_state",
+        "transfer_robustness_state",
         "self_expansion_quality_state",
     }
 
@@ -2276,3 +2278,222 @@ def test_self_expansion_quality_history_rolls_bounded(tmp_path: Path) -> None:
     history_payload = json.loads((memory_root / "self_expansion_quality" / "self_expansion_quality_history.json").read_text(encoding="utf-8"))
     assert history_payload["snapshots"]
     assert len(history_payload["snapshots"]) <= 200
+
+
+def test_cross_regime_transfer_robustness_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "trp1", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "trp2", "status": "closed", "result": "win", "pnl_points": 0.6, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.4, "spread_ratio": 1.9, "slippage_ratio": 1.7},
+        replay_scope="focused_replay",
+    )
+    transfer = result["cross_regime_transfer_robustness_layer"]
+    assert Path(transfer["paths"]["latest"]).exists()
+    assert Path(transfer["paths"]["history"]).exists()
+    assert Path(transfer["paths"]["context_transfer_registry"]).exists()
+    assert Path(transfer["paths"]["context_failure_clusters"]).exists()
+    assert Path(transfer["paths"]["transfer_penalty_registry"]).exists()
+    assert Path(transfer["paths"]["overfit_watchlist"]).exists()
+    assert Path(transfer["paths"]["transfer_robustness_governance_state"]).exists()
+
+
+def test_cross_regime_transfer_robustness_layer_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "trn1", "status": "closed", "result": "loss", "pnl_points": -0.3},
+            {"trade_id": "trn2", "status": "closed", "result": "flat", "pnl_points": 0.0},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )
+    transfer = result["cross_regime_transfer_robustness_layer"]
+    assert 0.0 <= transfer["cross_regime_transfer_score"] <= 1.0
+    assert 0.0 <= transfer["overfit_risk"] <= 1.0
+    assert transfer["governance_flags"]["sandbox_only"] is True
+    assert transfer["governance_flags"]["replay_validation_required"] is True
+    assert transfer["governance_flags"]["live_deployment_allowed"] is False
+
+
+def test_cross_regime_transfer_robustness_layer_returns_expected_schema(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "trs1", "status": "closed", "result": "loss", "pnl_points": -0.4, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "trs2", "status": "closed", "result": "win", "pnl_points": 0.5, "session": "new_york", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.2, "spread_ratio": 1.6, "slippage_ratio": 1.5},
+        replay_scope="full_replay",
+    )
+    transfer = result["cross_regime_transfer_robustness_layer"]
+    expected_keys = {
+        "transfer_robustness_state",
+        "cross_regime_transfer_score",
+        "session_transfer_score",
+        "volatility_transfer_score",
+        "liquidity_transfer_score",
+        "overfit_risk",
+        "robustness_reliability",
+        "context_failure_clusters",
+        "promotion_transfer_penalty",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(transfer))
+
+
+def test_cross_regime_transfer_robustness_layer_adds_unified_field_components_without_overwriting_existing_fields(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "tru1", "status": "closed", "result": "loss", "pnl_points": -0.7, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "tru2", "status": "closed", "result": "win", "pnl_points": 0.8, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 2.0, "slippage_ratio": 1.8},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "unified_field_score" in unified
+    assert "composite_confidence" in unified["confidence_structure"]
+    assert "transfer_robustness_state" in unified["components"]
+    assert "cross_regime_transfer_score" in unified["confidence_structure"]
+
+
+def test_cross_regime_transfer_robustness_layer_additively_influences_risk_sizing_and_refusal_pause_behavior(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "trr1", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "trr2", "status": "closed", "result": "loss", "pnl_points": -0.7, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "trr3", "status": "closed", "result": "loss", "pnl_points": -0.6, "session": "asia", "failure_cause": "execution_failure"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.9, "spread_ratio": 3.0, "slippage_ratio": 3.0},
+        replay_scope="full_replay",
+    )
+    refinements = result["unified_market_intelligence_field"]["decision_refinements"]
+    assert "transfer_robustness_multiplier" in refinements["risk_sizing"]
+    assert 0.25 <= float(refinements["risk_sizing"]["transfer_robustness_multiplier"]) <= 1.0
+    behavior = refinements["refusal_pause_behavior"]
+    all_reasons = set(behavior.get("refusal_reasons", [])) | set(behavior.get("pause_reasons", []))
+    assert any(reason.startswith("transfer_") for reason in all_reasons)
+
+
+def test_cross_regime_transfer_robustness_layer_feeds_self_suggestion_governor_gap_detection(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    trade_outcomes = [
+        {"trade_id": "trg1", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia", "failure_cause": "execution_failure"},
+        {"trade_id": "trg2", "status": "closed", "result": "loss", "pnl_points": -0.7, "session": "asia", "failure_cause": "execution_failure"},
+        {"trade_id": "trg3", "status": "closed", "result": "loss", "pnl_points": -0.6, "session": "asia", "failure_cause": "execution_failure"},
+    ]
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.8, "slippage_ratio": 2.7},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=trade_outcomes,
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.8, "slippage_ratio": 2.7},
+        replay_scope="focused_replay",
+    )
+    gap_types = {item.get("gap_type") for item in second["self_suggestion_governor"]["detected_gaps"]}
+    expected = {
+        "cross_regime_transfer_breakdown",
+        "session_transfer_instability",
+        "volatility_transfer_failure",
+        "liquidity_transfer_failure",
+        "overfit_narrow_regime_dependency",
+    }
+    assert gap_types.intersection(expected)
+
+
+def test_cross_regime_transfer_robustness_layer_feeds_self_expansion_quality_transferability_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "tre1", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "tre2", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia", "failure_cause": "slippage_spike"},
+            {"trade_id": "tre3", "status": "closed", "result": "win", "pnl_points": 0.6, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.4, "slippage_ratio": 2.2},
+        replay_scope="full_replay",
+    )
+    quality = result["self_expansion_quality_layer"]
+    assert 0.0 <= quality["transferability_score"] <= 1.0
+    components = quality["quality_components"]
+    assert "cross_regime_transfer_score_context" in components
+    assert "transfer_overfit_risk_context" in components
+
+
+def test_capability_evolution_ladder_reads_prior_transfer_robustness_context_nonbreaking(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "trl1", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "trl2", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia", "failure_cause": "execution_failure"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 2.3, "slippage_ratio": 2.1},
+        replay_scope="full_replay",
+    )
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "trl3", "status": "closed", "result": "loss", "pnl_points": -0.7, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "trl4", "status": "closed", "result": "win", "pnl_points": 0.5, "session": "london", "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.5, "spread_ratio": 1.9, "slippage_ratio": 1.7},
+        replay_scope="focused_replay",
+    )
+    payload = json.loads((memory_root / "capability_evolution" / "capability_candidates.json").read_text(encoding="utf-8"))
+    candidates = payload.get("capability_candidates", [])
+    if candidates:
+        context = candidates[0].get("transfer_robustness_context", {})
+        assert "prior_cycle_transfer_score" in context
+        assert "prior_cycle_promotion_transfer_penalty" in context
+        assert "prior_cycle_overfit_risk" in context
+
+
+def test_cross_regime_transfer_robustness_history_rolls_and_governance_is_sandbox_replay_only(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    for index in range(3):
+        result = run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"trh{index}a", "status": "closed", "result": "loss", "pnl_points": -0.6, "session": "asia", "failure_cause": "execution_failure"},
+                {"trade_id": f"trh{index}b", "status": "closed", "result": "win", "pnl_points": 0.5, "session": "london", "failure_cause": "none"},
+            ],
+            market_state={"structure_state": "range", "volatility_ratio": 1.4, "spread_ratio": 2.0, "slippage_ratio": 1.8},
+            replay_scope="focused_replay",
+        )
+    transfer = result["cross_regime_transfer_robustness_layer"]
+    flags = transfer["governance_flags"]
+    assert flags["sandbox_only"] is True
+    assert flags["replay_validation_required"] is True
+    assert flags["live_deployment_allowed"] is False
+    history_payload = json.loads((memory_root / "transfer_robustness" / "transfer_robustness_history.json").read_text(encoding="utf-8"))
+    assert history_payload["snapshots"]
+    assert len(history_payload["snapshots"]) <= 200
+
+
+def test_cross_regime_transfer_robustness_penalizes_narrow_regime_overfit(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "tro1", "status": "closed", "result": "loss", "pnl_points": -1.0, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "tro2", "status": "closed", "result": "loss", "pnl_points": -0.9, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "tro3", "status": "closed", "result": "loss", "pnl_points": -0.8, "session": "asia", "failure_cause": "execution_failure"},
+            {"trade_id": "tro4", "status": "closed", "result": "loss", "pnl_points": -0.7, "session": "asia", "failure_cause": "execution_failure"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 3.2, "slippage_ratio": 3.1},
+        replay_scope="full_replay",
+    )
+    transfer = result["cross_regime_transfer_robustness_layer"]
+    assert transfer["overfit_risk"] >= 0.6
+    assert transfer["promotion_transfer_penalty"] > 0.0
+    watchlist = json.loads(Path(transfer["paths"]["overfit_watchlist"]).read_text(encoding="utf-8"))
+    assert watchlist["watchlist"]

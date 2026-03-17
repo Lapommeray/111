@@ -1929,6 +1929,7 @@ def _capability_evolution_governance_ladder(
     replay_scope: str,
     adversarial_execution_engine: dict[str, Any] | None = None,
     self_expansion_quality_layer: dict[str, Any] | None = None,
+    cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     evolution_dir = memory_root / "capability_evolution"
     evolution_dir.mkdir(parents=True, exist_ok=True)
@@ -2077,6 +2078,23 @@ def _capability_evolution_governance_ladder(
         4,
     )
     incoming_promotion_maturity = str(quality_layer_context.get("promotion_maturity", "seeded"))
+    prior_transfer_robustness = read_json_safe(
+        memory_root / "transfer_robustness" / "transfer_robustness_latest.json",
+        default={},
+    )
+    if not isinstance(prior_transfer_robustness, dict):
+        prior_transfer_robustness = {}
+    transfer_state = prior_transfer_robustness.get("transfer_robustness_state", {})
+    if not isinstance(transfer_state, dict):
+        transfer_state = {}
+    prior_transfer_score = round(float(prior_transfer_robustness.get("cross_regime_transfer_score", 0.5) or 0.5), 4)
+    prior_transfer_penalty = round(float(prior_transfer_robustness.get("promotion_transfer_penalty", 0.0) or 0.0), 4)
+    prior_overfit_risk = round(float(prior_transfer_robustness.get("overfit_risk", 0.0) or 0.0), 4)
+    incoming_transfer = (
+        cross_regime_transfer_robustness_layer if isinstance(cross_regime_transfer_robustness_layer, dict) else {}
+    )
+    incoming_transfer_penalty = round(float(incoming_transfer.get("promotion_transfer_penalty", 0.0) or 0.0), 4)
+    transfer_penalty = round(min(0.35, prior_transfer_penalty + min(0.1, incoming_transfer_penalty)), 4)
 
     candidates: list[dict[str, Any]] = []
     validation_records: list[dict[str, Any]] = []
@@ -2095,7 +2113,15 @@ def _capability_evolution_governance_ladder(
         deception_pressure = round(prior_deception_score * (1.0 - prior_deception_reliability), 4)
         deception_penalty = round(min(0.08, deception_pressure * 0.08), 4)
         quality_adjusted_replay_score = round(
-            max(0.0, min(1.0, (replay_score * promotion_confidence_multiplier) - deception_penalty)),
+            max(
+                0.0,
+                min(
+                    1.0,
+                    (replay_score * promotion_confidence_multiplier)
+                    - deception_penalty
+                    - min(0.12, transfer_penalty * 0.4),
+                ),
+            ),
             4,
         )
         comparative_advantage = round(min(1.0, (quality_adjusted_replay_score * 0.55) + (prototype_predictive * 0.45)), 4)
@@ -2165,6 +2191,13 @@ def _capability_evolution_governance_ladder(
                 "prior_cycle_deception_reliability": prior_deception_reliability,
                 "context_coverage": deception_context_coverage,
                 "source": "memory/deception_inference/deception_reliability_registry.json",
+            },
+            "transfer_robustness_context": {
+                "prior_cycle_transfer_score": prior_transfer_score,
+                "prior_cycle_promotion_transfer_penalty": transfer_penalty,
+                "prior_cycle_overfit_risk": prior_overfit_risk,
+                "prior_cycle_transfer_state": str(transfer_state.get("state", "unknown")),
+                "source": "memory/transfer_robustness/transfer_robustness_latest.json",
             },
             "governance": {
                 "sandbox_only": True,
@@ -3336,6 +3369,7 @@ def _calibration_and_uncertainty_governance_layer(
     contradiction_arbitration_engine: dict[str, Any] | None = None,
     latent_transition_hazard_engine: dict[str, Any] | None = None,
     deception_inference_engine: dict[str, Any] | None = None,
+    cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
     replay_scope: str,
 ) -> dict[str, Any]:
     calibration_dir = memory_root / "calibration_uncertainty"
@@ -3384,6 +3418,16 @@ def _calibration_and_uncertainty_governance_layer(
         deception_state = {}
     deception_score = _bounded(float(deception_state.get("deception_score", 0.0) or 0.0))
     deception_reliability = _bounded(float(deception_state.get("deception_reliability", 0.5) or 0.5))
+    cross_regime_transfer_robustness_layer = (
+        cross_regime_transfer_robustness_layer if isinstance(cross_regime_transfer_robustness_layer, dict) else {}
+    )
+    transfer_score = _bounded(
+        float(cross_regime_transfer_robustness_layer.get("cross_regime_transfer_score", 0.5) or 0.5)
+    )
+    transfer_overfit_risk = _bounded(float(cross_regime_transfer_robustness_layer.get("overfit_risk", 0.0) or 0.0))
+    transfer_penalty = _bounded(
+        float(cross_regime_transfer_robustness_layer.get("promotion_transfer_penalty", 0.0) or 0.0), high=0.35
+    )
 
     settled = [
         item
@@ -3416,6 +3460,8 @@ def _calibration_and_uncertainty_governance_layer(
         "transition_hazard_score": transition_hazard_score,
         "deception_score": deception_score,
         "deception_reliability": deception_reliability,
+        "transfer_score": transfer_score,
+        "transfer_overfit_risk": transfer_overfit_risk,
         "settled_count": len(outcome_proxy),
     }
     previous_latest = read_json_safe(latest_path, default={})
@@ -3491,6 +3537,9 @@ def _calibration_and_uncertainty_governance_layer(
         + (transition_hazard_score * 0.06)
         + (deception_score * 0.05)
         + ((1.0 - deception_reliability) * 0.03)
+        + ((1.0 - transfer_score) * 0.06)
+        + (transfer_overfit_risk * 0.05)
+        + (transfer_penalty * 0.03)
     )
 
     reliability_signal = _bounded(
@@ -3558,6 +3607,10 @@ def _calibration_and_uncertainty_governance_layer(
         "historical_confidence_error": historical_confidence_error,
         "regime_specific_reliability": regime_specific_reliability,
         "execution_adjusted_uncertainty": execution_adjusted_uncertainty,
+        "transfer_uncertainty_term": _bounded(
+            ((1.0 - transfer_score) * 0.45) + (transfer_overfit_risk * 0.35) + (transfer_penalty * 0.2),
+            high=0.4,
+        ),
         "latent_transition_context": {
             "transition_hazard_score": transition_hazard_score,
             "transition_confidence_suppression": transition_confidence_suppression,
@@ -4225,6 +4278,273 @@ def _suggestion_signature(suggestion: dict[str, Any]) -> str:
     return f"{suggestion.get('suggestion_type', 'unknown')}::{suggestion.get('target', 'n/a')}"
 
 
+def _cross_regime_transfer_robustness_layer(
+    *,
+    memory_root: Path,
+    closed: list[dict[str, Any]],
+    market_state: dict[str, Any],
+    replay_scope: str,
+    capability_evolution_ladder: dict[str, Any],
+    self_expansion_quality_layer: dict[str, Any] | None = None,
+    calibration_uncertainty_engine: dict[str, Any] | None = None,
+    structural_memory_graph_engine: dict[str, Any] | None = None,
+    latent_transition_hazard_engine: dict[str, Any] | None = None,
+    adversarial_execution_engine: dict[str, Any] | None = None,
+    deception_inference_engine: dict[str, Any] | None = None,
+    unified_market_intelligence_field: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    transfer_dir = memory_root / "transfer_robustness"
+    transfer_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = transfer_dir / "transfer_robustness_latest.json"
+    history_path = transfer_dir / "transfer_robustness_history.json"
+    context_registry_path = transfer_dir / "context_transfer_registry.json"
+    failure_clusters_path = transfer_dir / "context_failure_clusters.json"
+    penalty_registry_path = transfer_dir / "transfer_penalty_registry.json"
+    overfit_watchlist_path = transfer_dir / "overfit_watchlist.json"
+    governance_path = transfer_dir / "transfer_robustness_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    settled = [
+        item
+        for item in closed[-60:]
+        if isinstance(item, dict) and str(item.get("result", "")).lower() in {"win", "loss", "flat"}
+    ]
+    session_counts: dict[str, int] = {}
+    context_counts: dict[str, int] = {}
+    context_losses: dict[str, int] = {}
+    failure_by_context: dict[tuple[str, str], int] = {}
+    outcome_counts = {"win": 0, "loss": 0, "flat": 0}
+    for item in settled:
+        session = str(item.get("session", "unknown")).strip() or "unknown"
+        session_counts[session] = session_counts.get(session, 0) + 1
+        result = str(item.get("result", "flat")).lower()
+        if result not in outcome_counts:
+            result = "flat"
+        outcome_counts[result] += 1
+        volatility_ratio = float(item.get("volatility_ratio", market_state.get("volatility_ratio", 1.0)) or 1.0)
+        spread_ratio = float(item.get("spread_ratio", market_state.get("spread_ratio", 1.0)) or 1.0)
+        slippage_ratio = float(item.get("slippage_ratio", market_state.get("slippage_ratio", 1.0)) or 1.0)
+        volatility_bucket = "high" if volatility_ratio >= 1.45 else "mid" if volatility_ratio >= 1.1 else "low"
+        liquidity_bucket = "stressed" if max(spread_ratio, slippage_ratio) >= 1.85 else "normal"
+        context_key = f"{session}|{volatility_bucket}|{liquidity_bucket}"
+        context_counts[context_key] = context_counts.get(context_key, 0) + 1
+        if result == "loss":
+            context_losses[context_key] = context_losses.get(context_key, 0) + 1
+            failure_cause = str(item.get("failure_cause", "unknown")).strip() or "unknown"
+            failure_by_context[(context_key, failure_cause)] = failure_by_context.get((context_key, failure_cause), 0) + 1
+
+    total = len(settled)
+    unique_sessions = len(session_counts)
+    unique_contexts = len(context_counts)
+    dominant_context_ratio = _bounded(max(context_counts.values(), default=0) / max(1, total))
+    dominant_outcome_ratio = _bounded(max(outcome_counts.values()) / max(1, total))
+    session_transfer_score = _bounded((min(1.0, unique_sessions / 3.0) * 0.55) + ((1.0 - dominant_context_ratio) * 0.45))
+    volatility_diversity = min(1.0, len({key.split("|")[1] for key in context_counts}) / 3.0) if context_counts else 0.0
+    liquidity_diversity = min(1.0, len({key.split("|")[2] for key in context_counts}) / 2.0) if context_counts else 0.0
+    loss_concentration = _bounded(max(context_losses.values(), default=0) / max(1, sum(context_losses.values())))
+    volatility_transfer_score = _bounded((volatility_diversity * 0.6) + ((1.0 - loss_concentration) * 0.4))
+    liquidity_transfer_score = _bounded((liquidity_diversity * 0.6) + ((1.0 - loss_concentration) * 0.4))
+    cross_regime_transfer_score = _bounded(
+        (session_transfer_score * 0.4) + (volatility_transfer_score * 0.3) + (liquidity_transfer_score * 0.3)
+    )
+
+    capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
+    promotion_registry = capability_evolution_ladder.get("promotion_registry", {})
+    if not isinstance(promotion_registry, dict):
+        promotion_registry = {}
+    promoted_count = len([item for item in promotion_registry.get("promoted", []) if isinstance(item, dict)])
+    rejected_count = len([item for item in promotion_registry.get("rejected", []) if isinstance(item, dict)])
+    quarantined_count = len([item for item in promotion_registry.get("quarantined", []) if isinstance(item, dict)])
+    capability_pressure = _bounded((rejected_count + quarantined_count) / max(1, promoted_count + rejected_count + quarantined_count))
+
+    structural_memory_graph_engine = structural_memory_graph_engine if isinstance(structural_memory_graph_engine, dict) else {}
+    structural_state = structural_memory_graph_engine.get("structural_memory_state", {})
+    if not isinstance(structural_state, dict):
+        structural_state = {}
+    latent_transition_hazard_engine = latent_transition_hazard_engine if isinstance(latent_transition_hazard_engine, dict) else {}
+    latent_state = latent_transition_hazard_engine.get("latent_transition_hazard_state", {})
+    if not isinstance(latent_state, dict):
+        latent_state = {}
+    adversarial_execution_engine = adversarial_execution_engine if isinstance(adversarial_execution_engine, dict) else {}
+    adversarial_state = adversarial_execution_engine.get("adversarial_execution_state", {})
+    if not isinstance(adversarial_state, dict):
+        adversarial_state = {}
+    deception_inference_engine = deception_inference_engine if isinstance(deception_inference_engine, dict) else {}
+    deception_state = deception_inference_engine.get("deception_state", {})
+    if not isinstance(deception_state, dict):
+        deception_state = {}
+    calibration_uncertainty_engine = (
+        calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
+    )
+    calibration_state = calibration_uncertainty_engine.get("calibration_state", {})
+    if not isinstance(calibration_state, dict):
+        calibration_state = {}
+    self_expansion_quality_layer = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+    prior_transferability = _bounded(float(self_expansion_quality_layer.get("transferability_score", 0.5) or 0.5))
+    context_concentration = dominant_context_ratio
+    overfit_risk = _bounded(
+        (context_concentration * 0.5)
+        + (dominant_outcome_ratio * 0.3)
+        + ((1.0 - cross_regime_transfer_score) * 0.15)
+        + (capability_pressure * 0.05)
+    )
+    robustness_reliability = _bounded(
+        1.0
+        - (
+            ((1.0 - cross_regime_transfer_score) * 0.5)
+            + (overfit_risk * 0.25)
+            + (float(latent_state.get("transition_hazard_score", 0.0) or 0.0) * 0.1)
+            + (float(adversarial_state.get("hostile_execution_score", 0.0) or 0.0) * 0.08)
+            + (float(deception_state.get("deception_score", 0.0) or 0.0) * 0.07)
+        )
+    )
+    promotion_transfer_penalty = _bounded(
+        max(
+            0.0,
+            min(
+                0.35,
+                ((1.0 - cross_regime_transfer_score) * 0.22)
+                + (overfit_risk * 0.12)
+                + ((1.0 - prior_transferability) * 0.06),
+            ),
+        ),
+        high=0.35,
+    )
+    if cross_regime_transfer_score >= 0.72 and overfit_risk < 0.45:
+        transfer_state = "robust"
+    elif cross_regime_transfer_score >= 0.5 and overfit_risk < 0.62:
+        transfer_state = "watch"
+    elif cross_regime_transfer_score >= 0.35:
+        transfer_state = "fragile"
+    else:
+        transfer_state = "breakdown"
+
+    context_failure_clusters = [
+        {
+            "context_key": key[0],
+            "failure_cause": key[1],
+            "count": count,
+            "loss_ratio": _bounded(count / max(1, context_counts.get(key[0], 0))),
+        }
+        for key, count in sorted(failure_by_context.items(), key=lambda entry: (entry[1], entry[0]), reverse=True)[:8]
+    ]
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "transfer_breakdown_guard": transfer_state in {"fragile", "breakdown"},
+        "overfit_guard_triggered": overfit_risk >= 0.62,
+    }
+    payload = {
+        "transfer_robustness_state": {
+            "state": transfer_state,
+            "context_coverage": _bounded(unique_contexts / 8.0),
+            "context_concentration": context_concentration,
+            "dominant_outcome_ratio": dominant_outcome_ratio,
+            "sample_size": total,
+            "prior_calibration_drift": _bounded(float(calibration_state.get("calibration_drift", 0.0) or 0.0)),
+            "prior_structural_alignment": _bounded(float(structural_state.get("regime_memory_alignment", 0.0) or 0.0)),
+        },
+        "cross_regime_transfer_score": cross_regime_transfer_score,
+        "session_transfer_score": session_transfer_score,
+        "volatility_transfer_score": volatility_transfer_score,
+        "liquidity_transfer_score": liquidity_transfer_score,
+        "overfit_risk": overfit_risk,
+        "robustness_reliability": robustness_reliability,
+        "context_failure_clusters": context_failure_clusters,
+        "promotion_transfer_penalty": promotion_transfer_penalty,
+        "governance_flags": governance_flags,
+    }
+
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-200:]})
+    context_registry = read_json_safe(context_registry_path, default={"contexts": {}})
+    if not isinstance(context_registry, dict):
+        context_registry = {"contexts": {}}
+    contexts = context_registry.get("contexts", {})
+    if not isinstance(contexts, dict):
+        contexts = {}
+    for key, count in context_counts.items():
+        prior = contexts.get(key, {})
+        if not isinstance(prior, dict):
+            prior = {}
+        prior_seen = int(prior.get("seen_count", 0) or 0)
+        prior_transfer = float(prior.get("avg_transfer_score", 0.5) or 0.5)
+        seen = prior_seen + count
+        contexts[key] = {
+            "seen_count": seen,
+            "loss_count": int(prior.get("loss_count", 0) or 0) + int(context_losses.get(key, 0)),
+            "avg_transfer_score": _bounded(
+                ((prior_transfer * prior_seen) + (cross_regime_transfer_score * count)) / max(1, seen)
+            ),
+        }
+    write_json_atomic(context_registry_path, {"contexts": contexts})
+    write_json_atomic(failure_clusters_path, {"clusters": context_failure_clusters})
+    penalty_registry = read_json_safe(penalty_registry_path, default={"entries": []})
+    if not isinstance(penalty_registry, dict):
+        penalty_registry = {"entries": []}
+    penalty_entries = penalty_registry.get("entries", [])
+    if not isinstance(penalty_entries, list):
+        penalty_entries = []
+    penalty_entries.append(
+        {
+            "replay_scope": replay_scope,
+            "promotion_transfer_penalty": promotion_transfer_penalty,
+            "overfit_risk": overfit_risk,
+            "cross_regime_transfer_score": cross_regime_transfer_score,
+        }
+    )
+    write_json_atomic(penalty_registry_path, {"entries": penalty_entries[-400:]})
+    watchlist = read_json_safe(overfit_watchlist_path, default={"watchlist": []})
+    if not isinstance(watchlist, dict):
+        watchlist = {"watchlist": []}
+    watch_items = watchlist.get("watchlist", [])
+    if not isinstance(watch_items, list):
+        watch_items = []
+    if overfit_risk >= 0.62:
+        watch_items.append(
+            {
+                "replay_scope": replay_scope,
+                "reason": "narrow_regime_overfit_risk",
+                "overfit_risk": overfit_risk,
+                "context_concentration": context_concentration,
+            }
+        )
+    write_json_atomic(overfit_watchlist_path, {"watchlist": watch_items[-200:]})
+    write_json_atomic(
+        governance_path,
+        {
+            "sandbox_only": True,
+            "replay_validation_required": True,
+            "live_deployment_allowed": False,
+            "no_blind_live_self_rewrites": True,
+            "replay_scope": replay_scope,
+        },
+    )
+    return {
+        **payload,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "context_transfer_registry": str(context_registry_path),
+            "context_failure_clusters": str(failure_clusters_path),
+            "transfer_penalty_registry": str(penalty_registry_path),
+            "overfit_watchlist": str(overfit_watchlist_path),
+            "transfer_robustness_governance_state": str(governance_path),
+        },
+    }
+
+
 def _detect_improvement_gaps(
     *,
     closed: list[dict[str, Any]],
@@ -4240,6 +4560,7 @@ def _detect_improvement_gaps(
     deception_inference_engine: dict[str, Any] | None = None,
     structural_memory_graph_engine: dict[str, Any] | None = None,
     latent_transition_hazard_engine: dict[str, Any] | None = None,
+    cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
     repeated = autonomous_behavior.get("trade_review_engine", {}).get("repeated_failure_patterns", [])
@@ -4634,6 +4955,64 @@ def _detect_improvement_gaps(
                 "severity": round(min(1.0, precursor_instability_score), 4),
             }
         )
+    cross_regime_transfer_robustness_layer = (
+        cross_regime_transfer_robustness_layer if isinstance(cross_regime_transfer_robustness_layer, dict) else {}
+    )
+    transfer_state = cross_regime_transfer_robustness_layer.get("transfer_robustness_state", {})
+    if not isinstance(transfer_state, dict):
+        transfer_state = {}
+    transfer_score = float(cross_regime_transfer_robustness_layer.get("cross_regime_transfer_score", 0.5) or 0.5)
+    session_transfer_score = float(cross_regime_transfer_robustness_layer.get("session_transfer_score", 0.5) or 0.5)
+    volatility_transfer_score = float(
+        cross_regime_transfer_robustness_layer.get("volatility_transfer_score", 0.5) or 0.5
+    )
+    liquidity_transfer_score = float(cross_regime_transfer_robustness_layer.get("liquidity_transfer_score", 0.5) or 0.5)
+    overfit_risk = float(cross_regime_transfer_robustness_layer.get("overfit_risk", 0.0) or 0.0)
+    if transfer_score <= 0.45:
+        gaps.append(
+            {
+                "gap_type": "cross_regime_transfer_breakdown",
+                "detail": str(transfer_state.get("state", "fragile")),
+                "frequency": max(1, int(round((1.0 - transfer_score) * 5))),
+                "severity": round(min(1.0, 1.0 - transfer_score), 4),
+            }
+        )
+    if session_transfer_score <= 0.45:
+        gaps.append(
+            {
+                "gap_type": "session_transfer_instability",
+                "detail": "session_transfer_instability",
+                "frequency": max(1, int(round((1.0 - session_transfer_score) * 5))),
+                "severity": round(min(1.0, 1.0 - session_transfer_score), 4),
+            }
+        )
+    if volatility_transfer_score <= 0.45:
+        gaps.append(
+            {
+                "gap_type": "volatility_transfer_failure",
+                "detail": "volatility_transfer_failure",
+                "frequency": max(1, int(round((1.0 - volatility_transfer_score) * 5))),
+                "severity": round(min(1.0, 1.0 - volatility_transfer_score), 4),
+            }
+        )
+    if liquidity_transfer_score <= 0.45:
+        gaps.append(
+            {
+                "gap_type": "liquidity_transfer_failure",
+                "detail": "liquidity_transfer_failure",
+                "frequency": max(1, int(round((1.0 - liquidity_transfer_score) * 5))),
+                "severity": round(min(1.0, 1.0 - liquidity_transfer_score), 4),
+            }
+        )
+    if overfit_risk >= 0.62:
+        gaps.append(
+            {
+                "gap_type": "overfit_narrow_regime_dependency",
+                "detail": "narrow_regime_dependency",
+                "frequency": max(1, int(round(overfit_risk * 4))),
+                "severity": round(min(1.0, overfit_risk), 4),
+            }
+        )
     return gaps
 
 
@@ -4748,6 +5127,23 @@ def _suggestion_templates(gap_type: str) -> list[dict[str, str]]:
         "precursor_instability_not_captured": [
             {"suggestion_type": "new_execution_refinement", "target": "precursor_instability_capture_guard"},
         ],
+        "cross_regime_transfer_breakdown": [
+            {"suggestion_type": "new_detector_idea", "target": "cross_regime_transfer_breakdown_detector"},
+            {"suggestion_type": "new_survival_rule", "target": "cross_regime_transfer_quarantine_guard"},
+        ],
+        "session_transfer_instability": [
+            {"suggestion_type": "new_detector_idea", "target": "session_transfer_stability_detector"},
+        ],
+        "volatility_transfer_failure": [
+            {"suggestion_type": "new_strategy_mutation", "target": "volatility_transfer_aware_adaptation"},
+        ],
+        "liquidity_transfer_failure": [
+            {"suggestion_type": "new_execution_refinement", "target": "liquidity_transfer_failure_guard"},
+        ],
+        "overfit_narrow_regime_dependency": [
+            {"suggestion_type": "new_survival_rule", "target": "narrow_regime_overfit_guard"},
+            {"suggestion_type": "new_feature_combination", "target": "cross_regime_generalization_features"},
+        ],
         "autonomous_capability_proposal": [
             {"suggestion_type": "new_capability_hypothesis", "target": "autonomous_capability_discovery"},
         ],
@@ -4841,6 +5237,11 @@ def _component_for_gap(gap_type: str) -> str:
         "hazard_directional_bias_mismatch": "latent_transition_hazard_layer",
         "hazard_reliability_decay": "latent_transition_hazard_layer",
         "precursor_instability_not_captured": "latent_transition_hazard_layer",
+        "cross_regime_transfer_breakdown": "cross_regime_transfer_robustness_layer",
+        "session_transfer_instability": "cross_regime_transfer_robustness_layer",
+        "volatility_transfer_failure": "cross_regime_transfer_robustness_layer",
+        "liquidity_transfer_failure": "cross_regime_transfer_robustness_layer",
+        "overfit_narrow_regime_dependency": "cross_regime_transfer_robustness_layer",
         "autonomous_capability_proposal": "capability_evolution_governance_ladder",
     }
     return mapping.get(gap_type, "self_evolving_indicator_layer")
@@ -4902,6 +5303,7 @@ def _self_suggestion_governor(
     deception_inference_engine: dict[str, Any] | None = None,
     structural_memory_graph_engine: dict[str, Any] | None = None,
     latent_transition_hazard_engine: dict[str, Any] | None = None,
+    cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
     self_expansion_quality_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     registry_dir = memory_root / "capability_registry"
@@ -4949,6 +5351,7 @@ def _self_suggestion_governor(
         deception_inference_engine=deception_inference_engine,
         structural_memory_graph_engine=structural_memory_graph_engine,
         latent_transition_hazard_engine=latent_transition_hazard_engine,
+        cross_regime_transfer_robustness_layer=cross_regime_transfer_robustness_layer,
     )
     calibration_uncertainty_engine = (
         calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
@@ -4972,6 +5375,9 @@ def _self_suggestion_governor(
     latent_transition_state = latent_transition_hazard_engine.get("latent_transition_hazard_state", {})
     if not isinstance(latent_transition_state, dict):
         latent_transition_state = {}
+    cross_regime_transfer_robustness_layer = (
+        cross_regime_transfer_robustness_layer if isinstance(cross_regime_transfer_robustness_layer, dict) else {}
+    )
     capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
     capability_candidates = capability_evolution_ladder.get("capability_candidates", [])
     if isinstance(capability_candidates, list):
@@ -5026,6 +5432,10 @@ def _self_suggestion_governor(
         "transition_hazard_score": round(float(latent_transition_state.get("transition_hazard_score", 0.0) or 0.0), 4),
         "precursor_instability_score": round(float(latent_transition_state.get("precursor_instability_score", 0.0) or 0.0), 4),
         "transition_directional_bias": str(latent_transition_state.get("transition_directional_bias", "neutral")),
+        "cross_regime_transfer_score": round(
+            float(cross_regime_transfer_robustness_layer.get("cross_regime_transfer_score", 0.0) or 0.0), 4
+        ),
+        "transfer_overfit_risk": round(float(cross_regime_transfer_robustness_layer.get("overfit_risk", 0.0) or 0.0), 4),
     }
     if previous_governor.get("input_signature") == input_signature:
         return previous_governor
@@ -5302,6 +5712,12 @@ def _self_suggestion_governor(
             "confidence_adjustments": latent_transition_hazard_engine.get("confidence_adjustments", {}),
             "risk_adjustments": latent_transition_hazard_engine.get("risk_adjustments", {}),
         },
+        "cross_regime_transfer_robustness_layer": {
+            "transfer_robustness_state": cross_regime_transfer_robustness_layer.get("transfer_robustness_state", {}),
+            "cross_regime_transfer_score": cross_regime_transfer_robustness_layer.get("cross_regime_transfer_score", 0.0),
+            "promotion_transfer_penalty": cross_regime_transfer_robustness_layer.get("promotion_transfer_penalty", 0.0),
+            "overfit_risk": cross_regime_transfer_robustness_layer.get("overfit_risk", 0.0),
+        },
         "paths": {
             "registry": str(registry_path),
             "governor": str(governor_path),
@@ -5332,6 +5748,7 @@ def _self_expansion_quality_layer(
     contradiction_arbitration_engine: dict[str, Any] | None = None,
     structural_memory_graph_engine: dict[str, Any] | None = None,
     latent_transition_hazard_engine: dict[str, Any] | None = None,
+    cross_regime_transfer_robustness_layer: dict[str, Any] | None = None,
     replay_scope: str,
 ) -> dict[str, Any]:
     quality_dir = memory_root / "self_expansion_quality"
@@ -5355,6 +5772,9 @@ def _self_expansion_quality_layer(
     contradiction_arbitration_engine = contradiction_arbitration_engine if isinstance(contradiction_arbitration_engine, dict) else {}
     structural_memory_graph_engine = structural_memory_graph_engine if isinstance(structural_memory_graph_engine, dict) else {}
     latent_transition_hazard_engine = latent_transition_hazard_engine if isinstance(latent_transition_hazard_engine, dict) else {}
+    cross_regime_transfer_robustness_layer = (
+        cross_regime_transfer_robustness_layer if isinstance(cross_regime_transfer_robustness_layer, dict) else {}
+    )
 
     candidates = capability_evolution_ladder.get("capability_candidates", [])
     if not isinstance(candidates, list):
@@ -5466,6 +5886,18 @@ def _self_expansion_quality_layer(
         ),
         4,
     )
+    transferability_score = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                (transferability_score * 0.75)
+                + (float(cross_regime_transfer_robustness_layer.get("cross_regime_transfer_score", 0.5) or 0.5) * 0.25)
+                - min(0.06, float(cross_regime_transfer_robustness_layer.get("promotion_transfer_penalty", 0.0) or 0.0) * 0.15),
+            ),
+        ),
+        4,
+    )
     unresolved_pressure = min(1.0, len(repeated_unresolved) / 8.0)
     low_value_pressure = min(1.0, float(anti_noise.get("low_value_pruned", 0) or 0) / 8.0)
     contradiction_pressure = 0.2 if str(contradiction_state.get("outcome", "allow")) in {"pause", "refuse"} else 0.0
@@ -5479,6 +5911,7 @@ def _self_expansion_quality_layer(
                 + (low_value_pressure * 0.15)
                 + (unresolved_pressure * 0.15)
                 + (hazard_pressure * 0.1)
+                + (float(cross_regime_transfer_robustness_layer.get("overfit_risk", 0.0) or 0.0) * 0.08)
                 + contradiction_pressure,
             ),
         ),
@@ -5551,6 +5984,15 @@ def _self_expansion_quality_layer(
         ),
         "structural_alignment_context": round(float(structural_state.get("regime_memory_alignment", 0.5) or 0.5), 4),
         "transition_hazard_context": round(hazard_pressure, 4),
+        "cross_regime_transfer_score_context": round(
+            float(cross_regime_transfer_robustness_layer.get("cross_regime_transfer_score", 0.5) or 0.5),
+            4,
+        ),
+        "transfer_overfit_risk_context": round(float(cross_regime_transfer_robustness_layer.get("overfit_risk", 0.0) or 0.0), 4),
+        "transfer_penalty_context": round(
+            float(cross_regime_transfer_robustness_layer.get("promotion_transfer_penalty", 0.0) or 0.0),
+            4,
+        ),
         "promotion_confidence_multiplier": promotion_confidence_multiplier,
         "quarantine_pressure_delta": quarantine_pressure_delta,
         "expansion_rate_limit": expansion_rate_limit,
@@ -5807,6 +6249,20 @@ def run_self_evolving_indicator_layer(
         self_expansion_quality_layer=quality_integration_context,
         replay_scope=replay_scope,
     )
+    cross_regime_transfer_robustness_engine = _cross_regime_transfer_robustness_layer(
+        memory_root=memory_root,
+        closed=closed,
+        market_state=market_state,
+        replay_scope=replay_scope,
+        capability_evolution_ladder=capability_evolution_ladder,
+        self_expansion_quality_layer=quality_integration_context,
+        calibration_uncertainty_engine=None,
+        structural_memory_graph_engine=None,
+        latent_transition_hazard_engine=None,
+        adversarial_execution_engine=adversarial_execution_engine,
+        deception_inference_engine=deception_inference_engine,
+        unified_market_intelligence_field=provisional_unified_market_intelligence,
+    )
     discovery_state_tags = _discovery_state_tags(
         synthetic_feature_engine=synthetic_feature_engine,
         negative_space_engine=negative_space_engine,
@@ -5934,6 +6390,42 @@ def run_self_evolving_indicator_layer(
     ) or bool(
         deception_inference_engine.get("risk_adjustments", {}).get("should_pause", False)
     )
+    transfer_state = cross_regime_transfer_robustness_engine.get("transfer_robustness_state", {})
+    if not isinstance(transfer_state, dict):
+        transfer_state = {}
+    components["transfer_robustness_state"] = transfer_state
+    confidence_structure["cross_regime_transfer_score"] = round(
+        max(
+            0.0,
+            min(1.0, float(cross_regime_transfer_robustness_engine.get("cross_regime_transfer_score", 0.0) or 0.0)),
+        ),
+        4,
+    )
+    confidence_structure["transfer_robustness_reliability"] = round(
+        max(
+            0.0,
+            min(1.0, float(cross_regime_transfer_robustness_engine.get("robustness_reliability", 0.0) or 0.0)),
+        ),
+        4,
+    )
+    risk_sizing["transfer_robustness_multiplier"] = round(
+        max(
+            0.25,
+            min(
+                1.0,
+                1.0 - float(cross_regime_transfer_robustness_engine.get("promotion_transfer_penalty", 0.0) or 0.0),
+            ),
+        ),
+        4,
+    )
+    if transfer_state.get("state") in {"fragile", "breakdown"}:
+        if "transfer_robustness_breakdown_guard" not in pause_reasons:
+            pause_reasons.append("transfer_robustness_breakdown_guard")
+    if float(cross_regime_transfer_robustness_engine.get("overfit_risk", 0.0) or 0.0) >= 0.72:
+        if "transfer_overfit_narrow_regime_guard" not in refusal_reasons:
+            refusal_reasons.append("transfer_overfit_narrow_regime_guard")
+    unified_market_intelligence_field["components"] = components
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
     decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
     unified_market_intelligence_field["decision_refinements"] = decision_refinements
     structural_memory_graph_engine = _structural_memory_graph_layer(
@@ -6092,6 +6584,7 @@ def run_self_evolving_indicator_layer(
         adversarial_execution_engine=adversarial_execution_engine,
         latent_transition_hazard_engine=latent_transition_hazard_engine,
         deception_inference_engine=deception_inference_engine,
+        cross_regime_transfer_robustness_layer=cross_regime_transfer_robustness_engine,
         replay_scope=replay_scope,
     )
     calibration_state = calibration_uncertainty_engine.get("calibration_state", {})
@@ -6232,6 +6725,7 @@ def run_self_evolving_indicator_layer(
         replay_scope=replay_scope,
         structural_memory_graph_engine=structural_memory_graph_engine,
         latent_transition_hazard_engine=latent_transition_hazard_engine,
+        cross_regime_transfer_robustness_layer=cross_regime_transfer_robustness_engine,
         self_expansion_quality_layer=quality_integration_context,
     )
     self_expansion_quality_engine = _self_expansion_quality_layer(
@@ -6245,6 +6739,7 @@ def run_self_evolving_indicator_layer(
         contradiction_arbitration_engine=contradiction_arbitration_engine,
         structural_memory_graph_engine=structural_memory_graph_engine,
         latent_transition_hazard_engine=latent_transition_hazard_engine,
+        cross_regime_transfer_robustness_layer=cross_regime_transfer_robustness_engine,
         replay_scope=replay_scope,
     )
     components = unified_market_intelligence_field.get("components", {})
@@ -6282,6 +6777,7 @@ def run_self_evolving_indicator_layer(
         "dynamic_market_maker_deception_inference_layer": deception_inference_engine,
         "structural_memory_graph_layer": structural_memory_graph_engine,
         "latent_transition_hazard_layer": latent_transition_hazard_engine,
+        "cross_regime_transfer_robustness_layer": cross_regime_transfer_robustness_engine,
         "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
         "contradiction_arbitration_and_belief_resolution_layer": contradiction_arbitration_engine,
         "recursive_self_modeling": recursive_self_modeling,
@@ -6316,6 +6812,7 @@ def run_self_evolving_indicator_layer(
         "dynamic_market_maker_deception_inference_layer": deception_inference_engine,
         "structural_memory_graph_layer": structural_memory_graph_engine,
         "latent_transition_hazard_layer": latent_transition_hazard_engine,
+        "cross_regime_transfer_robustness_layer": cross_regime_transfer_robustness_engine,
         "calibration_and_uncertainty_governance_layer": calibration_uncertainty_engine,
         "contradiction_arbitration_and_belief_resolution_layer": contradiction_arbitration_engine,
         "recursive_self_modeling": recursive_self_modeling,
