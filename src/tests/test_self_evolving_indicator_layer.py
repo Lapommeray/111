@@ -439,6 +439,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "layer_discovery_state",
         "temporal_context_memory_state",
         "temporal_context_state",
+        "promotion_activation_state",
     }
     assert 0.0 <= unified["unified_field_score"] <= 1.0
     assert 0.0 <= unified["confidence_structure"]["composite_confidence"] <= 1.0
@@ -762,6 +763,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "layer_discovery_state",
         "temporal_context_memory_state",
         "temporal_context_state",
+        "promotion_activation_state",
     }
 
 
@@ -5931,3 +5933,212 @@ def test_temporal_context_memory_feeds_learning_stability_nonbreaking(tmp_path: 
     learning = second["learning_stability_and_catastrophic_drift_guard_layer"]
     assert 0.0 <= float(learning["catastrophic_drift_risk"]) <= 1.0
     assert 0.0 <= float(learning["capability_expansion_pressure"]) <= 1.0
+
+
+def test_promotion_activation_gating_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    layer = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "pagp1", "status": "closed", "result": "loss", "pnl_points": -1.1, "failure_cause": "execution_failure"},
+            {"trade_id": "pagp2", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "partial_fill"},
+            {"trade_id": "pagp3", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.2, "spread_ratio": 3.0, "slippage_ratio": 2.7},
+        replay_scope="full_replay",
+    )["promotion_readiness_and_activation_gating_layer"]
+    assert Path(layer["paths"]["latest"]).exists()
+    assert Path(layer["paths"]["history"]).exists()
+    assert Path(layer["paths"]["activation_candidate_registry"]).exists()
+    assert Path(layer["paths"]["activation_decision_audit"]).exists()
+    assert Path(layer["paths"]["activation_quarantine_registry"]).exists()
+    assert Path(layer["paths"]["activation_budget_registry"]).exists()
+    assert Path(layer["paths"]["promotion_activation_governance_state"]).exists()
+
+
+def test_promotion_activation_gating_layer_returns_expected_schema(tmp_path: Path) -> None:
+    layer = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "pags1", "status": "closed", "result": "loss", "pnl_points": -0.8},
+            {"trade_id": "pags2", "status": "closed", "result": "win", "pnl_points": 0.6},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.2, "slippage_ratio": 1.9},
+        replay_scope="focused_replay",
+    )["promotion_readiness_and_activation_gating_layer"]
+    expected_keys = {
+        "promotion_activation_state",
+        "activation_readiness_score",
+        "activation_gate_reliability",
+        "activation_block_pressure",
+        "quarantine_required",
+        "allowed_activation_count",
+        "rejected_activation_count",
+        "promotion_freeze_recommended",
+        "activation_mode",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(layer))
+    for key in ("activation_readiness_score", "activation_gate_reliability", "activation_block_pressure"):
+        assert 0.0 <= float(layer[key]) <= 1.0
+    assert int(layer["allowed_activation_count"]) >= 0
+    assert int(layer["rejected_activation_count"]) >= 0
+    assert isinstance(layer["quarantine_required"], bool)
+
+
+def test_promotion_activation_gating_layer_adds_unified_field_components_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "pagu1", "status": "closed", "result": "loss", "pnl_points": -0.9},
+            {"trade_id": "pagu2", "status": "closed", "result": "win", "pnl_points": 0.5},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.1, "slippage_ratio": 1.9},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "promotion_activation_state" in unified["components"]
+    assert "activation_gate_reliability" in unified["confidence_structure"]
+    assert "activation_readiness_score" in unified["confidence_structure"]
+    assert "promotion_activation" in unified["decision_refinements"]
+
+
+def test_promotion_activation_gating_layer_additively_influences_refusal_pause_behavior(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "pagr1", "status": "closed", "result": "loss", "pnl_points": -1.8, "failure_cause": "execution_failure"},
+            {"trade_id": "pagr2", "status": "closed", "result": "loss", "pnl_points": -1.5, "failure_cause": "spread_spike"},
+            {"trade_id": "pagr3", "status": "closed", "result": "loss", "pnl_points": -1.2, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 3.1, "spread_ratio": 4.2, "slippage_ratio": 3.9},
+        replay_scope="full_replay",
+    )
+    behavior = result["unified_market_intelligence_field"]["decision_refinements"]["refusal_pause_behavior"]
+    layer = result["promotion_readiness_and_activation_gating_layer"]
+    if float(layer["activation_block_pressure"]) >= 0.5:
+        assert "promotion_activation_pause_guard" in behavior["pause_reasons"]
+    if float(layer["activation_block_pressure"]) >= 0.65 or float(layer["activation_gate_reliability"]) <= 0.42:
+        assert "promotion_activation_refusal_guard" in behavior["refusal_reasons"]
+
+
+def test_promotion_activation_gating_layer_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    layer = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "pagm1", "status": "closed", "result": "loss", "pnl_points": -0.1},
+            {"trade_id": "pagm2", "status": "closed", "result": "flat", "pnl_points": 0.0},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )["promotion_readiness_and_activation_gating_layer"]
+    assert isinstance(layer["promotion_activation_state"], str)
+    assert 0.0 <= float(layer["activation_gate_reliability"]) <= 1.0
+    assert layer["paths"]["latest"]
+
+
+def test_promotion_activation_gating_layer_history_rolls_and_governance_is_sandbox_replay_only(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    for i in range(3):
+        run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"pagg{i}a", "status": "closed", "result": "loss", "pnl_points": -0.8},
+                {"trade_id": f"pagg{i}b", "status": "closed", "result": "win", "pnl_points": 0.4},
+            ],
+            market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 2.6, "slippage_ratio": 2.3},
+            replay_scope="focused_replay",
+        )
+    history = json.loads(
+        (memory_root / "promotion_activation_gate" / "promotion_activation_history.json").read_text(encoding="utf-8")
+    )
+    assert history["snapshots"]
+    assert len(history["snapshots"]) <= 200
+    flags = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "paggla", "status": "closed", "result": "loss", "pnl_points": -0.6},
+            {"trade_id": "pagglb", "status": "closed", "result": "win", "pnl_points": 0.4},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 2.0, "slippage_ratio": 1.8},
+        replay_scope="focused_replay",
+    )["promotion_readiness_and_activation_gating_layer"]["governance_flags"]
+    assert flags["sandbox_only"] is True
+    assert flags["replay_validation_required"] is True
+    assert flags["live_deployment_allowed"] is False
+    assert flags["no_blind_live_self_rewrites"] is True
+
+
+def test_promotion_activation_gating_feeds_self_suggestion_governor_nonbreaking(tmp_path: Path) -> None:
+    governor = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "pagsg1", "status": "closed", "result": "loss", "pnl_points": -1.0},
+            {"trade_id": "pagsg2", "status": "closed", "result": "loss", "pnl_points": -0.8},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.3, "spread_ratio": 2.9, "slippage_ratio": 2.6},
+        replay_scope="full_replay",
+    )["self_suggestion_governor"]
+    block = governor["promotion_readiness_and_activation_gating_layer"]
+    assert {
+        "promotion_activation_state",
+        "activation_readiness_score",
+        "activation_gate_reliability",
+        "activation_block_pressure",
+        "promotion_freeze_recommended",
+    }.issubset(set(block))
+
+
+def test_promotion_activation_gating_feeds_learning_stability_nonbreaking(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "pagl1", "status": "closed", "result": "loss", "pnl_points": -1.1},
+            {"trade_id": "pagl2", "status": "closed", "result": "loss", "pnl_points": -0.9},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.4, "spread_ratio": 3.0, "slippage_ratio": 2.8},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "pagl3", "status": "closed", "result": "loss", "pnl_points": -0.8},
+            {"trade_id": "pagl4", "status": "closed", "result": "win", "pnl_points": 0.4},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 2.6, "slippage_ratio": 2.4},
+        replay_scope="full_replay",
+    )
+    learning = second["learning_stability_and_catastrophic_drift_guard_layer"]
+    assert "activation_churn_pressure" in learning
+    assert 0.0 <= float(learning["activation_churn_pressure"]) <= 1.0
+
+
+def test_promotion_activation_gating_feeds_capability_lineage_nonbreaking(tmp_path: Path) -> None:
+    lineage = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "pagc1", "status": "closed", "result": "loss", "pnl_points": -1.0},
+            {"trade_id": "pagc2", "status": "closed", "result": "win", "pnl_points": 0.5},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.9, "spread_ratio": 2.4, "slippage_ratio": 2.1},
+        replay_scope="full_replay",
+    )["capability_lineage_and_genealogy_intelligence_layer"]
+    assert "lineage_activation_consistency" in lineage
+    assert "activation_lineage_conflict_risk" in lineage
+    assert 0.0 <= float(lineage["lineage_activation_consistency"]) <= 1.0
+    assert 0.0 <= float(lineage["activation_lineage_conflict_risk"]) <= 1.0
+
+
+def test_promotion_activation_gating_is_exposed_in_survival_intelligence_and_top_level_return(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "page1", "status": "closed", "result": "loss", "pnl_points": -0.9},
+            {"trade_id": "page2", "status": "closed", "result": "win", "pnl_points": 0.6},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.3, "slippage_ratio": 2.0},
+        replay_scope="focused_replay",
+    )
+    assert "promotion_readiness_and_activation_gating_layer" in result
+    assert "promotion_readiness_and_activation_gating_layer" in result["survival_intelligence_layer"]

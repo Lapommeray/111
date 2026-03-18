@@ -263,7 +263,13 @@ def _meta_learning_loop(
     capability_generator: dict[str, Any],
     detector_generator: dict[str, Any],
     strategy_evolution: dict[str, Any],
+    promotion_readiness_and_activation_gating_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    promotion_readiness_and_activation_gating_layer = (
+        promotion_readiness_and_activation_gating_layer
+        if isinstance(promotion_readiness_and_activation_gating_layer, dict)
+        else {}
+    )
     loop = [
         "trade",
         "review_outcome",
@@ -287,6 +293,16 @@ def _meta_learning_loop(
             "promoted_capabilities": len(capability_generator.get("promoted_capabilities", [])),
             "detector_candidates": len(detector_generator.get("detector_candidates", [])),
             "active_strategy_branch": strategy_evolution.get("strongest_branch", {}).get("branch_id", "current_strategy"),
+            "promotion_activation_state": promotion_readiness_and_activation_gating_layer.get(
+                "promotion_activation_state",
+                "unknown",
+            ),
+            "allowed_activation_count": int(
+                promotion_readiness_and_activation_gating_layer.get("allowed_activation_count", 0) or 0
+            ),
+            "rejected_activation_count": int(
+                promotion_readiness_and_activation_gating_layer.get("rejected_activation_count", 0) or 0
+            ),
         }
     )
     write_json_atomic(history_path, {"cycles": cycles[-100:]})
@@ -8331,6 +8347,7 @@ def _self_expansion_quality_layer(
     cross_layer_integration_intelligence_layer: dict[str, Any] | None = None,
     layer_discovery_and_combination_mining_layer: dict[str, Any] | None = None,
     temporal_context_memory_layer: dict[str, Any] | None = None,
+    promotion_readiness_and_activation_gating_layer: dict[str, Any] | None = None,
     replay_scope: str,
 ) -> dict[str, Any]:
     quality_dir = memory_root / "self_expansion_quality"
@@ -8416,6 +8433,11 @@ def _self_expansion_quality_layer(
     )
     temporal_context_memory_layer = (
         temporal_context_memory_layer if isinstance(temporal_context_memory_layer, dict) else {}
+    )
+    promotion_readiness_and_activation_gating_layer = (
+        promotion_readiness_and_activation_gating_layer
+        if isinstance(promotion_readiness_and_activation_gating_layer, dict)
+        else {}
     )
 
     candidates = capability_evolution_ladder.get("capability_candidates", [])
@@ -8754,6 +8776,38 @@ def _self_expansion_quality_layer(
         "temporal_execution_window_quality_context": round(temporal_execution_window_quality, 4),
         "temporal_timing_priority_context": round(temporal_timing_priority, 4),
         "temporal_sequencing_pressure_context": round(temporal_sequencing_pressure, 4),
+        "activation_gate_reliability_context": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    float(
+                        promotion_readiness_and_activation_gating_layer.get(
+                            "activation_gate_reliability",
+                            0.5,
+                        )
+                        or 0.5
+                    ),
+                ),
+            ),
+            4,
+        ),
+        "activation_block_pressure_context": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    float(
+                        promotion_readiness_and_activation_gating_layer.get(
+                            "activation_block_pressure",
+                            0.0,
+                        )
+                        or 0.0
+                    ),
+                ),
+            ),
+            4,
+        ),
         "invention_pressure_context": round(
             max(0.0, min(1.0, float(governed_capability_invention_layer.get("invention_pressure_score", 0.0) or 0.0))),
             4,
@@ -9523,6 +9577,7 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
     cross_layer_integration_intelligence_layer: dict[str, Any] | None = None,
     layer_discovery_and_combination_mining_layer: dict[str, Any] | None = None,
     temporal_context_memory_layer: dict[str, Any] | None = None,
+    promotion_readiness_and_activation_gating_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     stability_dir = memory_root / "learning_stability"
     stability_dir.mkdir(parents=True, exist_ok=True)
@@ -9577,6 +9632,11 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
     )
     temporal_context_memory_layer = (
         temporal_context_memory_layer if isinstance(temporal_context_memory_layer, dict) else {}
+    )
+    promotion_readiness_and_activation_gating_layer = (
+        promotion_readiness_and_activation_gating_layer
+        if isinstance(promotion_readiness_and_activation_gating_layer, dict)
+        else {}
     )
 
     confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
@@ -9672,6 +9732,22 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
     temporal_interaction_pressure = _bounded(
         float(temporal_context_memory_layer.get("temporal_interaction_pressure", 0.0) or 0.0)
     )
+    activation_churn_pressure = _bounded(
+        (
+            float(promotion_readiness_and_activation_gating_layer.get("activation_block_pressure", 0.0) or 0.0) * 0.45
+            + min(
+                1.0,
+                float(promotion_readiness_and_activation_gating_layer.get("rejected_activation_count", 0) or 0) / 6.0,
+            )
+            * 0.35
+            + (
+                0.2
+                if bool(promotion_readiness_and_activation_gating_layer.get("quarantine_required", False))
+                else 0.0
+            )
+            * 0.2
+        )
+    )
 
     regime_memory_alignment = _bounded(
         float(structural_state.get("regime_memory_alignment", 0.5) or 0.5)
@@ -9759,6 +9835,7 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
         capability_expansion_pressure
         + (reactivation_instability_pressure * 0.03)
         + (combination_discovery_pressure * 0.03)
+        + (activation_churn_pressure * 0.04)
     )
 
     # --- Metric 4: regime_overfit_risk ---
@@ -9815,6 +9892,7 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
         "regime_overfit_risk": regime_overfit_risk,
         "learning_fragmentation_risk": learning_fragmentation_risk,
         "reactivation_instability_pressure": reactivation_instability_pressure,
+        "activation_churn_pressure": activation_churn_pressure,
         "stability_reliability": stability_reliability,
         "governance_flags": governance_flags,
     }
@@ -9866,6 +9944,7 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
             "feature_invention_rate": feature_invention_rate,
             "expansion_quality_pressure": expansion_quality_pressure,
             "capability_ladder_pressure": capability_ladder_pressure,
+            "activation_churn_pressure": activation_churn_pressure,
         }
     )
     write_json_atomic(pressure_registry_path, {"entries": pressure_entries[-400:]})
@@ -10476,6 +10555,7 @@ def _capability_lineage_and_genealogy_intelligence_layer(
     cross_layer_integration_intelligence_layer: dict[str, Any] | None = None,
     layer_discovery_and_combination_mining_layer: dict[str, Any] | None = None,
     temporal_context_memory_layer: dict[str, Any] | None = None,
+    promotion_readiness_and_activation_gating_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     lineage_dir = memory_root / "capability_lineage"
     lineage_dir.mkdir(parents=True, exist_ok=True)
@@ -10541,6 +10621,11 @@ def _capability_lineage_and_genealogy_intelligence_layer(
     )
     temporal_context_memory_layer = (
         temporal_context_memory_layer if isinstance(temporal_context_memory_layer, dict) else {}
+    )
+    promotion_readiness_and_activation_gating_layer = (
+        promotion_readiness_and_activation_gating_layer
+        if isinstance(promotion_readiness_and_activation_gating_layer, dict)
+        else {}
     )
 
     invention_reliability = _bounded(float(governed_capability_invention_layer.get("invention_reliability", 0.5) or 0.5))
@@ -10656,6 +10741,15 @@ def _capability_lineage_and_genealogy_intelligence_layer(
         + ((1.0 - lineage_fragmentation_risk) * 0.15)
         + ((1.0 - lineage_failure_recurrence) * 0.1)
     )
+    lineage_activation_consistency = _bounded(
+        (lineage_reliability * 0.5)
+        + (_bounded(float(promotion_readiness_and_activation_gating_layer.get("activation_readiness_score", 0.5) or 0.5)) * 0.3)
+        + (_bounded(float(promotion_readiness_and_activation_gating_layer.get("activation_gate_reliability", 0.5) or 0.5)) * 0.2)
+    )
+    activation_lineage_conflict_risk = _bounded(
+        (_bounded(float(promotion_readiness_and_activation_gating_layer.get("activation_block_pressure", 0.0) or 0.0)) * 0.6)
+        + ((1.0 - lineage_activation_consistency) * 0.4)
+    )
     promotion_freeze_recommended = bool(
         lineage_fragmentation_risk >= 0.62
         or ancestry_clarity_score <= 0.42
@@ -10714,6 +10808,8 @@ def _capability_lineage_and_genealogy_intelligence_layer(
         "dominant_lineage_axis": dominant_lineage_axis,
         "genealogy_reason_cluster": genealogy_reason_cluster,
         "lineage_reliability": lineage_reliability,
+        "lineage_activation_consistency": lineage_activation_consistency,
+        "activation_lineage_conflict_risk": activation_lineage_conflict_risk,
         "promotion_freeze_recommended": promotion_freeze_recommended,
         "governance_flags": governance_flags,
         "paths": {
@@ -10802,6 +10898,7 @@ def _knowledge_retirement_and_pruning_governance_layer(
     cross_layer_integration_intelligence_layer: dict[str, Any] | None = None,
     layer_discovery_and_combination_mining_layer: dict[str, Any] | None = None,
     temporal_context_memory_layer: dict[str, Any] | None = None,
+    promotion_readiness_and_activation_gating_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     retirement_dir = memory_root / "knowledge_retirement"
     retirement_dir.mkdir(parents=True, exist_ok=True)
@@ -10861,6 +10958,11 @@ def _knowledge_retirement_and_pruning_governance_layer(
     )
     temporal_context_memory_layer = (
         temporal_context_memory_layer if isinstance(temporal_context_memory_layer, dict) else {}
+    )
+    promotion_readiness_and_activation_gating_layer = (
+        promotion_readiness_and_activation_gating_layer
+        if isinstance(promotion_readiness_and_activation_gating_layer, dict)
+        else {}
     )
 
     invention_redundancy = _bounded(float(governed_capability_invention_layer.get("redundancy_risk", 0.0) or 0.0))
@@ -11326,6 +11428,7 @@ def _cross_layer_integration_intelligence_layer(
     temporal_execution_sequencing_layer: dict[str, Any] | None = None,
     portfolio_multi_context_capital_allocation_layer: dict[str, Any] | None = None,
     hierarchical_decision_policy_layer: dict[str, Any] | None = None,
+    promotion_readiness_and_activation_gating_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     integration_dir = memory_root / "cross_layer_integration"
     integration_dir.mkdir(parents=True, exist_ok=True)
@@ -11387,6 +11490,11 @@ def _cross_layer_integration_intelligence_layer(
     )
     hierarchical_decision_policy_layer = (
         hierarchical_decision_policy_layer if isinstance(hierarchical_decision_policy_layer, dict) else {}
+    )
+    promotion_readiness_and_activation_gating_layer = (
+        promotion_readiness_and_activation_gating_layer
+        if isinstance(promotion_readiness_and_activation_gating_layer, dict)
+        else {}
     )
 
     layer_metrics = {
@@ -11517,6 +11625,7 @@ def _layer_discovery_and_combination_mining_layer(
     retirement_tombstone_and_resurrection_safety_layer: dict[str, Any],
     hypothesis_falsification_and_experiment_design_layer: dict[str, Any],
     rollback_orchestration_and_safe_reversion_layer: dict[str, Any],
+    promotion_readiness_and_activation_gating_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     discovery_dir = memory_root / "layer_discovery"
     discovery_dir.mkdir(parents=True, exist_ok=True)
@@ -11561,6 +11670,11 @@ def _layer_discovery_and_combination_mining_layer(
     rollback_orchestration_and_safe_reversion_layer = (
         rollback_orchestration_and_safe_reversion_layer
         if isinstance(rollback_orchestration_and_safe_reversion_layer, dict)
+        else {}
+    )
+    promotion_readiness_and_activation_gating_layer = (
+        promotion_readiness_and_activation_gating_layer
+        if isinstance(promotion_readiness_and_activation_gating_layer, dict)
         else {}
     )
     repeated_unresolved = self_suggestion_governor.get("repeated_unresolved_gaps", [])
@@ -11721,6 +11835,7 @@ def _temporal_context_memory_layer(
     learning_stability_and_catastrophic_drift_guard_layer: dict[str, Any],
     capability_lineage_and_genealogy_intelligence_layer: dict[str, Any],
     knowledge_retirement_and_pruning_governance_layer: dict[str, Any],
+    promotion_readiness_and_activation_gating_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     temporal_dir = memory_root / "temporal_context_memory"
     temporal_dir.mkdir(parents=True, exist_ok=True)
@@ -11761,6 +11876,11 @@ def _temporal_context_memory_layer(
     knowledge_retirement_and_pruning_governance_layer = (
         knowledge_retirement_and_pruning_governance_layer
         if isinstance(knowledge_retirement_and_pruning_governance_layer, dict)
+        else {}
+    )
+    promotion_readiness_and_activation_gating_layer = (
+        promotion_readiness_and_activation_gating_layer
+        if isinstance(promotion_readiness_and_activation_gating_layer, dict)
         else {}
     )
     confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
@@ -11912,6 +12032,302 @@ def _temporal_context_memory_layer(
     return payload
 
 
+def _promotion_readiness_and_activation_gating_layer(
+    *,
+    memory_root: Path,
+    replay_scope: str,
+    self_suggestion_governor: dict[str, Any],
+    unified_market_intelligence_field: dict[str, Any],
+    governed_capability_invention_layer: dict[str, Any],
+    autonomous_capability_expansion_layer: dict[str, Any],
+    self_expansion_quality_layer: dict[str, Any],
+    system_coherence_and_drift_integrity_layer: dict[str, Any],
+    learning_stability_and_catastrophic_drift_guard_layer: dict[str, Any],
+    rollback_orchestration_and_safe_reversion_layer: dict[str, Any],
+    hypothesis_falsification_and_experiment_design_layer: dict[str, Any],
+    capability_lineage_and_genealogy_intelligence_layer: dict[str, Any],
+    knowledge_retirement_and_pruning_governance_layer: dict[str, Any],
+    retirement_tombstone_and_resurrection_safety_layer: dict[str, Any],
+    cross_layer_integration_intelligence_layer: dict[str, Any],
+    layer_discovery_and_combination_mining_layer: dict[str, Any],
+    temporal_context_memory_layer: dict[str, Any],
+) -> dict[str, Any]:
+    gate_dir = memory_root / "promotion_activation_gate"
+    gate_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = gate_dir / "promotion_activation_latest.json"
+    history_path = gate_dir / "promotion_activation_history.json"
+    candidate_registry_path = gate_dir / "activation_candidate_registry.json"
+    decision_audit_path = gate_dir / "activation_decision_audit.json"
+    quarantine_registry_path = gate_dir / "activation_quarantine_registry.json"
+    budget_registry_path = gate_dir / "activation_budget_registry.json"
+    governance_state_path = gate_dir / "promotion_activation_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    self_suggestion_governor = self_suggestion_governor if isinstance(self_suggestion_governor, dict) else {}
+    unified_market_intelligence_field = (
+        unified_market_intelligence_field if isinstance(unified_market_intelligence_field, dict) else {}
+    )
+    governed_capability_invention_layer = (
+        governed_capability_invention_layer if isinstance(governed_capability_invention_layer, dict) else {}
+    )
+    autonomous_capability_expansion_layer = (
+        autonomous_capability_expansion_layer if isinstance(autonomous_capability_expansion_layer, dict) else {}
+    )
+    self_expansion_quality_layer = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+    system_coherence_and_drift_integrity_layer = (
+        system_coherence_and_drift_integrity_layer if isinstance(system_coherence_and_drift_integrity_layer, dict) else {}
+    )
+    learning_stability_and_catastrophic_drift_guard_layer = (
+        learning_stability_and_catastrophic_drift_guard_layer
+        if isinstance(learning_stability_and_catastrophic_drift_guard_layer, dict)
+        else {}
+    )
+    rollback_orchestration_and_safe_reversion_layer = (
+        rollback_orchestration_and_safe_reversion_layer
+        if isinstance(rollback_orchestration_and_safe_reversion_layer, dict)
+        else {}
+    )
+    hypothesis_falsification_and_experiment_design_layer = (
+        hypothesis_falsification_and_experiment_design_layer
+        if isinstance(hypothesis_falsification_and_experiment_design_layer, dict)
+        else {}
+    )
+    capability_lineage_and_genealogy_intelligence_layer = (
+        capability_lineage_and_genealogy_intelligence_layer
+        if isinstance(capability_lineage_and_genealogy_intelligence_layer, dict)
+        else {}
+    )
+    knowledge_retirement_and_pruning_governance_layer = (
+        knowledge_retirement_and_pruning_governance_layer
+        if isinstance(knowledge_retirement_and_pruning_governance_layer, dict)
+        else {}
+    )
+    retirement_tombstone_and_resurrection_safety_layer = (
+        retirement_tombstone_and_resurrection_safety_layer
+        if isinstance(retirement_tombstone_and_resurrection_safety_layer, dict)
+        else {}
+    )
+    cross_layer_integration_intelligence_layer = (
+        cross_layer_integration_intelligence_layer
+        if isinstance(cross_layer_integration_intelligence_layer, dict)
+        else {}
+    )
+    layer_discovery_and_combination_mining_layer = (
+        layer_discovery_and_combination_mining_layer
+        if isinstance(layer_discovery_and_combination_mining_layer, dict)
+        else {}
+    )
+    temporal_context_memory_layer = (
+        temporal_context_memory_layer if isinstance(temporal_context_memory_layer, dict) else {}
+    )
+
+    candidate_budget = max(
+        1,
+        int(
+            autonomous_capability_expansion_layer.get(
+                "candidate_expansion_count",
+                governed_capability_invention_layer.get("candidate_invention_count", 1),
+            )
+            or 1
+        ),
+    )
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    repeated_unresolved = self_suggestion_governor.get("repeated_unresolved_gaps", [])
+    if not isinstance(repeated_unresolved, list):
+        repeated_unresolved = []
+    unresolved_pressure = _bounded(len([item for item in repeated_unresolved if isinstance(item, dict)]) / 8.0)
+
+    expansion_readiness = _bounded(float(autonomous_capability_expansion_layer.get("expansion_readiness_score", 0.5) or 0.5))
+    expansion_reliability = _bounded(float(autonomous_capability_expansion_layer.get("expansion_reliability", 0.5) or 0.5))
+    expansion_quality = _bounded(float(self_expansion_quality_layer.get("expansion_quality_score", 0.5) or 0.5))
+    coherence_score = _bounded(float(system_coherence_and_drift_integrity_layer.get("coherence_score", 0.5) or 0.5))
+    stability_score = _bounded(
+        float(learning_stability_and_catastrophic_drift_guard_layer.get("learning_stability_score", 0.5) or 0.5)
+    )
+    gate_falsification_reliability = _bounded(
+        float(hypothesis_falsification_and_experiment_design_layer.get("falsification_reliability", 0.5) or 0.5)
+    )
+    lineage_reliability = _bounded(
+        float(capability_lineage_and_genealogy_intelligence_layer.get("lineage_reliability", 0.5) or 0.5)
+    )
+    rollback_reliability = _bounded(
+        float(rollback_orchestration_and_safe_reversion_layer.get("rollback_reversion_reliability", 0.5) or 0.5)
+    )
+    interaction_reliability = _bounded(
+        float(cross_layer_integration_intelligence_layer.get("interaction_reliability", 0.5) or 0.5)
+    )
+    combination_reliability = _bounded(
+        float(layer_discovery_and_combination_mining_layer.get("combination_reliability", 0.5) or 0.5)
+    )
+    sequence_reliability = _bounded(float(temporal_context_memory_layer.get("sequence_reliability", 0.5) or 0.5))
+    retirement_safety = _bounded(
+        float(knowledge_retirement_and_pruning_governance_layer.get("retirement_safety_score", 0.5) or 0.5)
+    )
+    resurrection_safety = _bounded(
+        float(retirement_tombstone_and_resurrection_safety_layer.get("resurrection_safety_score", 0.5) or 0.5)
+    )
+
+    activation_gate_reliability = _bounded(
+        (rollback_reliability * 0.22)
+        + (lineage_reliability * 0.18)
+        + (gate_falsification_reliability * 0.18)
+        + (interaction_reliability * 0.15)
+        + (combination_reliability * 0.1)
+        + (sequence_reliability * 0.09)
+        + (retirement_safety * 0.04)
+        + (resurrection_safety * 0.04)
+    )
+    activation_readiness_score = _bounded(
+        (expansion_readiness * 0.24)
+        + (expansion_quality * 0.2)
+        + (expansion_reliability * 0.14)
+        + (coherence_score * 0.12)
+        + (stability_score * 0.12)
+        + (gate_falsification_reliability * 0.09)
+        + (lineage_reliability * 0.09)
+    )
+    activation_block_pressure = _bounded(
+        (_bounded(float(rollback_orchestration_and_safe_reversion_layer.get("rollback_urgency", 0.0) or 0.0)) * 0.2)
+        + (_bounded(float(system_coherence_and_drift_integrity_layer.get("fragmentation_risk", 0.0) or 0.0)) * 0.18)
+        + (
+            _bounded(
+                float(
+                    learning_stability_and_catastrophic_drift_guard_layer.get("catastrophic_drift_risk", 0.0) or 0.0
+                )
+            )
+            * 0.16
+        )
+        + (_bounded(float(cross_layer_integration_intelligence_layer.get("conflict_score", 0.0) or 0.0)) * 0.14)
+        + (_bounded(float(layer_discovery_and_combination_mining_layer.get("discovery_pressure_score", 0.0) or 0.0)) * 0.12)
+        + (_bounded(float(temporal_context_memory_layer.get("temporal_interaction_pressure", 0.0) or 0.0)) * 0.08)
+        + ((1.0 - activation_gate_reliability) * 0.06)
+        + ((1.0 - activation_readiness_score) * 0.04)
+        + (unresolved_pressure * 0.02)
+    )
+
+    quarantine_required = bool(
+        activation_block_pressure >= 0.6 or activation_gate_reliability <= 0.45 or activation_readiness_score <= 0.42
+    )
+    promotion_freeze_recommended = bool(
+        activation_block_pressure >= 0.68
+        or activation_gate_reliability <= 0.4
+        or bool(rollback_orchestration_and_safe_reversion_layer.get("promotion_freeze", False))
+    )
+    allowed_ratio = _bounded(
+        max(
+            0.0,
+            min(
+                1.0,
+                (activation_readiness_score * 0.55)
+                + (activation_gate_reliability * 0.35)
+                - (activation_block_pressure * 0.45),
+            ),
+        )
+    )
+    allowed_activation_count = max(0, min(candidate_budget, int(round(candidate_budget * allowed_ratio))))
+    rejected_activation_count = max(0, candidate_budget - allowed_activation_count)
+
+    if promotion_freeze_recommended:
+        promotion_activation_state = "frozen"
+        activation_mode = "hold"
+    elif quarantine_required:
+        promotion_activation_state = "quarantined"
+        activation_mode = "guarded_release"
+    elif allowed_activation_count <= 0:
+        promotion_activation_state = "blocked"
+        activation_mode = "hold"
+    elif activation_readiness_score >= 0.62 and activation_gate_reliability >= 0.6:
+        promotion_activation_state = "ready"
+        activation_mode = "selective_release"
+    else:
+        promotion_activation_state = "watch"
+        activation_mode = "watch_only"
+
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "promotion_activation_pause_guard": activation_block_pressure >= 0.5,
+        "promotion_activation_refusal_guard": activation_block_pressure >= 0.65 or activation_gate_reliability <= 0.42,
+    }
+
+    payload: dict[str, Any] = {
+        "promotion_activation_state": promotion_activation_state,
+        "activation_readiness_score": activation_readiness_score,
+        "activation_gate_reliability": activation_gate_reliability,
+        "activation_block_pressure": activation_block_pressure,
+        "quarantine_required": quarantine_required,
+        "allowed_activation_count": allowed_activation_count,
+        "rejected_activation_count": rejected_activation_count,
+        "promotion_freeze_recommended": promotion_freeze_recommended,
+        "activation_mode": activation_mode,
+        "governance_flags": governance_flags,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "activation_candidate_registry": str(candidate_registry_path),
+            "activation_decision_audit": str(decision_audit_path),
+            "activation_quarantine_registry": str(quarantine_registry_path),
+            "activation_budget_registry": str(budget_registry_path),
+            "promotion_activation_governance_state": str(governance_state_path),
+        },
+    }
+
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-_RETIREMENT_HISTORY_LIMIT:]})
+    write_json_atomic(
+        candidate_registry_path,
+        {
+            "candidate_budget": candidate_budget,
+            "allowed_activation_count": allowed_activation_count,
+            "rejected_activation_count": rejected_activation_count,
+            "activation_readiness_score": activation_readiness_score,
+            "activation_gate_reliability": activation_gate_reliability,
+        },
+    )
+    write_json_atomic(
+        decision_audit_path,
+        {
+            "promotion_activation_state": promotion_activation_state,
+            "activation_mode": activation_mode,
+            "promotion_freeze_recommended": promotion_freeze_recommended,
+            "quarantine_required": quarantine_required,
+            "activation_block_pressure": activation_block_pressure,
+        },
+    )
+    write_json_atomic(
+        quarantine_registry_path,
+        {
+            "quarantine_required": quarantine_required,
+            "rejected_activation_count": rejected_activation_count,
+            "activation_block_pressure": activation_block_pressure,
+        },
+    )
+    write_json_atomic(
+        budget_registry_path,
+        {
+            "candidate_budget": candidate_budget,
+            "allowed_activation_count": allowed_activation_count,
+            "rejected_activation_count": rejected_activation_count,
+            "allowed_ratio": allowed_ratio,
+        },
+    )
+    write_json_atomic(governance_state_path, {**governance_flags, "replay_scope": replay_scope})
+    return payload
+
+
 def run_self_evolving_indicator_layer(
     *,
     memory_root: Path,
@@ -11928,6 +12344,7 @@ def run_self_evolving_indicator_layer(
     cross_layer_integration_context: dict[str, Any] = {}
     layer_discovery_context: dict[str, Any] = {}
     temporal_context_memory_context: dict[str, Any] = {}
+    promotion_activation_context: dict[str, Any] = {}
 
     autonomous_behavior = run_autonomous_behavior_layer(
         memory_root=memory_root,
@@ -13039,6 +13456,7 @@ def run_self_evolving_indicator_layer(
         cross_layer_integration_intelligence_layer=cross_layer_integration_context,
         layer_discovery_and_combination_mining_layer=layer_discovery_context,
         temporal_context_memory_layer=temporal_context_memory_context,
+        promotion_readiness_and_activation_gating_layer=promotion_activation_context,
         replay_scope=replay_scope,
     )
     components = unified_market_intelligence_field.get("components", {})
@@ -13163,6 +13581,7 @@ def run_self_evolving_indicator_layer(
         cross_layer_integration_intelligence_layer=cross_layer_integration_context,
         layer_discovery_and_combination_mining_layer=layer_discovery_context,
         temporal_context_memory_layer=temporal_context_memory_context,
+        promotion_readiness_and_activation_gating_layer=promotion_activation_context,
     )
     components = unified_market_intelligence_field.get("components", {})
     if not isinstance(components, dict):
@@ -13469,6 +13888,7 @@ def run_self_evolving_indicator_layer(
         cross_layer_integration_intelligence_layer=cross_layer_integration_context,
         layer_discovery_and_combination_mining_layer=layer_discovery_context,
         temporal_context_memory_layer=temporal_context_memory_context,
+        promotion_readiness_and_activation_gating_layer=promotion_activation_context,
     )
     self_suggestion_governor["knowledge_retirement_and_pruning_governance_layer"] = {
         "retirement_pressure_score": knowledge_retirement_and_pruning_governance_engine.get("retirement_pressure_score", 0.0),
@@ -13740,6 +14160,7 @@ def run_self_evolving_indicator_layer(
         temporal_execution_sequencing_layer=temporal_execution_sequencing_engine,
         portfolio_multi_context_capital_allocation_layer=portfolio_multi_context_capital_allocation_engine,
         hierarchical_decision_policy_layer=hierarchical_decision_policy_engine,
+        promotion_readiness_and_activation_gating_layer=promotion_activation_context,
     )
     self_suggestion_governor["cross_layer_integration_intelligence_layer"] = {
         "cross_layer_integration_state": cross_layer_integration_intelligence_engine.get(
@@ -13851,6 +14272,7 @@ def run_self_evolving_indicator_layer(
         retirement_tombstone_and_resurrection_safety_layer=retirement_tombstone_and_resurrection_safety_engine,
         hypothesis_falsification_and_experiment_design_layer=hypothesis_falsification_engine,
         rollback_orchestration_and_safe_reversion_layer=rollback_orchestration_engine,
+        promotion_readiness_and_activation_gating_layer=promotion_activation_context,
     )
     self_suggestion_governor["layer_discovery_and_combination_mining_layer"] = {
         "layer_discovery_state": layer_discovery_and_combination_mining_engine.get("layer_discovery_state", "unknown"),
@@ -13951,6 +14373,7 @@ def run_self_evolving_indicator_layer(
         learning_stability_and_catastrophic_drift_guard_layer=learning_stability_guard_engine,
         capability_lineage_and_genealogy_intelligence_layer=capability_lineage_engine,
         knowledge_retirement_and_pruning_governance_layer=knowledge_retirement_and_pruning_governance_engine,
+        promotion_readiness_and_activation_gating_layer=promotion_activation_context,
     )
     self_suggestion_governor["temporal_context_memory_layer"] = {
         "temporal_context_memory_state": temporal_context_memory_engine.get("temporal_context_memory_state", "unknown"),
@@ -14032,6 +14455,135 @@ def run_self_evolving_indicator_layer(
     )
     decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
     unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    promotion_readiness_and_activation_gating_engine = _promotion_readiness_and_activation_gating_layer(
+        memory_root=memory_root,
+        replay_scope=replay_scope,
+        self_suggestion_governor=self_suggestion_governor,
+        unified_market_intelligence_field=unified_market_intelligence_field,
+        governed_capability_invention_layer=governed_capability_invention_engine,
+        autonomous_capability_expansion_layer=autonomous_capability_expansion_engine,
+        self_expansion_quality_layer=self_expansion_quality_engine,
+        system_coherence_and_drift_integrity_layer=system_coherence_drift_integrity_engine,
+        learning_stability_and_catastrophic_drift_guard_layer=learning_stability_guard_engine,
+        rollback_orchestration_and_safe_reversion_layer=rollback_orchestration_engine,
+        hypothesis_falsification_and_experiment_design_layer=hypothesis_falsification_engine,
+        capability_lineage_and_genealogy_intelligence_layer=capability_lineage_engine,
+        knowledge_retirement_and_pruning_governance_layer=knowledge_retirement_and_pruning_governance_engine,
+        retirement_tombstone_and_resurrection_safety_layer=retirement_tombstone_and_resurrection_safety_engine,
+        cross_layer_integration_intelligence_layer=cross_layer_integration_intelligence_engine,
+        layer_discovery_and_combination_mining_layer=layer_discovery_and_combination_mining_engine,
+        temporal_context_memory_layer=temporal_context_memory_engine,
+    )
+    promotion_activation_context = promotion_readiness_and_activation_gating_engine
+    self_suggestion_governor["promotion_readiness_and_activation_gating_layer"] = {
+        "promotion_activation_state": promotion_readiness_and_activation_gating_engine.get(
+            "promotion_activation_state",
+            "unknown",
+        ),
+        "activation_readiness_score": float(
+            promotion_readiness_and_activation_gating_engine.get("activation_readiness_score", 0.0) or 0.0
+        ),
+        "activation_gate_reliability": float(
+            promotion_readiness_and_activation_gating_engine.get("activation_gate_reliability", 0.0) or 0.0
+        ),
+        "activation_block_pressure": float(
+            promotion_readiness_and_activation_gating_engine.get("activation_block_pressure", 0.0) or 0.0
+        ),
+        "promotion_freeze_recommended": bool(
+            promotion_readiness_and_activation_gating_engine.get("promotion_freeze_recommended", False)
+        ),
+    }
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["promotion_activation_state"] = {
+        "state": str(promotion_readiness_and_activation_gating_engine.get("promotion_activation_state", "unknown")),
+        "activation_mode": str(promotion_readiness_and_activation_gating_engine.get("activation_mode", "watch_only")),
+        "quarantine_required": bool(promotion_readiness_and_activation_gating_engine.get("quarantine_required", False)),
+    }
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["activation_gate_reliability"] = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                float(promotion_readiness_and_activation_gating_engine.get("activation_gate_reliability", 0.0) or 0.0),
+            ),
+        ),
+        4,
+    )
+    confidence_structure["activation_readiness_score"] = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                float(promotion_readiness_and_activation_gating_engine.get("activation_readiness_score", 0.0) or 0.0),
+            ),
+        ),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["promotion_activation"] = {
+        "promotion_activation_state": promotion_readiness_and_activation_gating_engine.get(
+            "promotion_activation_state",
+            "unknown",
+        ),
+        "activation_readiness_score": round(
+            float(promotion_readiness_and_activation_gating_engine.get("activation_readiness_score", 0.0) or 0.0),
+            4,
+        ),
+        "activation_block_pressure": round(
+            float(promotion_readiness_and_activation_gating_engine.get("activation_block_pressure", 0.0) or 0.0),
+            4,
+        ),
+        "quarantine_required": bool(promotion_readiness_and_activation_gating_engine.get("quarantine_required", False)),
+        "allowed_activation_count": int(
+            promotion_readiness_and_activation_gating_engine.get("allowed_activation_count", 0) or 0
+        ),
+        "rejected_activation_count": int(
+            promotion_readiness_and_activation_gating_engine.get("rejected_activation_count", 0) or 0
+        ),
+        "promotion_freeze_recommended": bool(
+            promotion_readiness_and_activation_gating_engine.get("promotion_freeze_recommended", False)
+        ),
+    }
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    activation_block_pressure = float(
+        promotion_readiness_and_activation_gating_engine.get("activation_block_pressure", 0.0) or 0.0
+    )
+    activation_gate_reliability = float(
+        promotion_readiness_and_activation_gating_engine.get("activation_gate_reliability", 1.0) or 1.0
+    )
+    if activation_block_pressure >= 0.5 and "promotion_activation_pause_guard" not in pause_reasons:
+        pause_reasons.append("promotion_activation_pause_guard")
+    if (
+        activation_block_pressure >= 0.65 or activation_gate_reliability <= 0.42
+    ) and "promotion_activation_refusal_guard" not in refusal_reasons:
+        refusal_reasons.append("promotion_activation_refusal_guard")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        "promotion_activation_pause_guard" in pause_reasons
+    )
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        "promotion_activation_refusal_guard" in refusal_reasons
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
     survival_intelligence = {
         "capital_survival_engine": autonomous_behavior.get("capital_survival_engine", {}),
         "pain_memory_survival_layer": pain_memory_survival,
@@ -14070,12 +14622,14 @@ def run_self_evolving_indicator_layer(
         "cross_layer_integration_intelligence_layer": cross_layer_integration_intelligence_engine,
         "layer_discovery_and_combination_mining_layer": layer_discovery_and_combination_mining_engine,
         "temporal_context_memory_layer": temporal_context_memory_engine,
+        "promotion_readiness_and_activation_gating_layer": promotion_readiness_and_activation_gating_engine,
     }
     meta_learning_loop = _meta_learning_loop(
         memory_root=memory_root,
         capability_generator=capability_generator,
         detector_generator=detector_generator,
         strategy_evolution=strategy_evolution,
+        promotion_readiness_and_activation_gating_layer=promotion_readiness_and_activation_gating_engine,
     )
     return {
         "autonomous_behavior_layer": autonomous_behavior,
@@ -14121,5 +14675,6 @@ def run_self_evolving_indicator_layer(
         "cross_layer_integration_intelligence_layer": cross_layer_integration_intelligence_engine,
         "layer_discovery_and_combination_mining_layer": layer_discovery_and_combination_mining_engine,
         "temporal_context_memory_layer": temporal_context_memory_engine,
+        "promotion_readiness_and_activation_gating_layer": promotion_readiness_and_activation_gating_engine,
         "meta_learning_loop": meta_learning_loop,
     }
