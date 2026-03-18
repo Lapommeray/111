@@ -439,6 +439,12 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "layer_discovery_state",
         "temporal_context_memory_state",
         "temporal_context_state",
+        "market_regime_state",
+        "capability_competition_state",
+        "resource_allocation_state",
+        "external_data_validation_state",
+        "strategic_focus_state",
+        "capability_arbitration_state",
         "promotion_activation_state",
         "activation_outcome_state",
     }
@@ -764,6 +770,12 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "layer_discovery_state",
         "temporal_context_memory_state",
         "temporal_context_state",
+        "market_regime_state",
+        "capability_competition_state",
+        "resource_allocation_state",
+        "external_data_validation_state",
+        "strategic_focus_state",
+        "capability_arbitration_state",
         "promotion_activation_state",
         "activation_outcome_state",
     }
@@ -6322,3 +6334,221 @@ def test_unified_market_intelligence_field_non_regression_with_activation_outcom
     assert "activation_outcome_reliability" in unified["confidence_structure"]
     assert "safe_demotion_reliability" in unified["confidence_structure"]
     assert "activation_outcome_governance" in unified["decision_refinements"]
+
+
+def test_market_regime_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "mrap1", "status": "closed", "result": "loss", "pnl_points": -0.9},
+            {"trade_id": "mrap2", "status": "closed", "result": "win", "pnl_points": 0.6},
+        ],
+        market_state={"structure_state": "trend", "volatility_ratio": 1.8, "spread_ratio": 1.5, "slippage_ratio": 1.4},
+        replay_scope="full_replay",
+    )
+    layer = result["market_regime_detection_and_context_layer"]
+    assert Path(layer["paths"]["latest"]).exists()
+    assert Path(layer["paths"]["history"]).exists()
+    assert Path(layer["paths"]["market_regime_transition_registry"]).exists()
+    assert Path(layer["paths"]["market_regime_governance_state"]).exists()
+
+
+def test_capability_competition_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "ccap1", "status": "closed", "result": "loss", "pnl_points": -1.0},
+            {"trade_id": "ccap2", "status": "closed", "result": "loss", "pnl_points": -0.8},
+            {"trade_id": "ccap3", "status": "closed", "result": "win", "pnl_points": 0.5},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.0, "slippage_ratio": 1.9},
+        replay_scope="full_replay",
+    )
+    layer = result["capability_competition_and_selection_layer"]
+    assert Path(layer["paths"]["latest"]).exists()
+    assert Path(layer["paths"]["history"]).exists()
+    assert Path(layer["paths"]["capability_rank_registry"]).exists()
+    assert Path(layer["paths"]["capability_competition_governance_state"]).exists()
+
+
+def test_resource_allocation_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "raap1", "status": "closed", "result": "loss", "pnl_points": -0.7},
+            {"trade_id": "raap2", "status": "closed", "result": "win", "pnl_points": 0.5},
+        ],
+        market_state={"structure_state": "compression", "volatility_ratio": 0.9, "spread_ratio": 1.4, "slippage_ratio": 1.3},
+        replay_scope="full_replay",
+    )
+    layer = result["capability_resource_allocation_layer"]
+    assert Path(layer["paths"]["latest"]).exists()
+    assert Path(layer["paths"]["history"]).exists()
+    assert Path(layer["paths"]["resource_budget_registry"]).exists()
+    assert Path(layer["paths"]["resource_allocation_governance_state"]).exists()
+
+
+def test_external_data_validation_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "edap1", "status": "closed", "result": "loss", "pnl_points": -0.8},
+            {"trade_id": "edap2", "status": "closed", "result": "win", "pnl_points": 0.4},
+        ],
+        market_state={
+            "structure_state": "range",
+            "volatility_ratio": 2.0,
+            "spread_ratio": 2.4,
+            "slippage_ratio": 2.1,
+            "stale_price_data": False,
+            "mt5_ready": True,
+        },
+        replay_scope="full_replay",
+    )
+    layer = result["external_data_truth_validation_layer"]
+    assert Path(layer["paths"]["latest"]).exists()
+    assert Path(layer["paths"]["history"]).exists()
+    assert Path(layer["paths"]["data_source_registry"]).exists()
+    assert Path(layer["paths"]["external_data_validation_governance_state"]).exists()
+
+
+def test_strategic_focus_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "sfap1", "status": "closed", "result": "loss", "pnl_points": -0.9},
+            {"trade_id": "sfap2", "status": "closed", "result": "win", "pnl_points": 0.7},
+        ],
+        market_state={"structure_state": "trend", "volatility_ratio": 1.5, "spread_ratio": 1.2, "slippage_ratio": 1.1},
+        replay_scope="full_replay",
+    )
+    layer = result["strategic_focus_and_priority_layer"]
+    assert Path(layer["paths"]["latest"]).exists()
+    assert Path(layer["paths"]["history"]).exists()
+    assert Path(layer["paths"]["priority_registry"]).exists()
+    assert Path(layer["paths"]["strategic_focus_governance_state"]).exists()
+
+
+def test_capability_arbitration_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "caap1", "status": "closed", "result": "loss", "pnl_points": -1.2},
+            {"trade_id": "caap2", "status": "closed", "result": "loss", "pnl_points": -1.0},
+            {"trade_id": "caap3", "status": "closed", "result": "loss", "pnl_points": -0.8},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.2, "spread_ratio": 3.0, "slippage_ratio": 2.7},
+        replay_scope="full_replay",
+    )
+    layer = result["capability_arbitration_and_conflict_suppression_layer"]
+    assert Path(layer["paths"]["latest"]).exists()
+    assert Path(layer["paths"]["history"]).exists()
+    assert Path(layer["paths"]["conflict_registry"]).exists()
+    assert Path(layer["paths"]["arbitration_governance_state"]).exists()
+
+
+def test_market_regime_layer_returns_expected_schema(tmp_path: Path) -> None:
+    layer = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[{"trade_id": "mras1", "status": "closed", "result": "win", "pnl_points": 0.6}],
+        market_state={"structure_state": "trend", "volatility_ratio": 1.4, "spread_ratio": 1.2, "slippage_ratio": 1.1},
+        replay_scope="focused_replay",
+    )["market_regime_detection_and_context_layer"]
+    expected_keys = {"market_regime_state", "market_regime_reliability", "market_regime_context", "governance_flags", "paths"}
+    assert expected_keys.issubset(set(layer))
+
+
+def test_capability_competition_layer_returns_expected_schema(tmp_path: Path) -> None:
+    layer = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "ccas1", "status": "closed", "result": "loss", "pnl_points": -0.9},
+            {"trade_id": "ccas2", "status": "closed", "result": "win", "pnl_points": 0.6},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 2.0, "slippage_ratio": 1.8},
+        replay_scope="focused_replay",
+    )["capability_competition_and_selection_layer"]
+    expected_keys = {
+        "capability_competition_state",
+        "capability_competition_reliability",
+        "capability_competition",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(layer))
+
+
+def test_resource_allocation_layer_returns_expected_schema(tmp_path: Path) -> None:
+    layer = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "raas1", "status": "closed", "result": "loss", "pnl_points": -0.6},
+            {"trade_id": "raas2", "status": "closed", "result": "win", "pnl_points": 0.5},
+        ],
+        market_state={"structure_state": "compression", "volatility_ratio": 0.95, "spread_ratio": 1.4, "slippage_ratio": 1.3},
+        replay_scope="focused_replay",
+    )["capability_resource_allocation_layer"]
+    expected_keys = {"resource_allocation_state", "resource_allocation_reliability", "resource_allocation", "governance_flags", "paths"}
+    assert expected_keys.issubset(set(layer))
+
+
+def test_external_data_validation_layer_returns_expected_schema(tmp_path: Path) -> None:
+    layer = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "edas1", "status": "closed", "result": "loss", "pnl_points": -0.8},
+            {"trade_id": "edas2", "status": "closed", "result": "win", "pnl_points": 0.3},
+        ],
+        market_state={
+            "structure_state": "range",
+            "volatility_ratio": 1.9,
+            "spread_ratio": 2.2,
+            "slippage_ratio": 2.0,
+            "stale_price_data": True,
+            "mt5_ready": False,
+        },
+        replay_scope="focused_replay",
+    )["external_data_truth_validation_layer"]
+    expected_keys = {
+        "external_data_validation_state",
+        "external_data_reliability",
+        "external_data_validation",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(layer))
+
+
+def test_strategic_focus_layer_returns_expected_schema(tmp_path: Path) -> None:
+    layer = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "sfas1", "status": "closed", "result": "loss", "pnl_points": -0.7},
+            {"trade_id": "sfas2", "status": "closed", "result": "win", "pnl_points": 0.6},
+        ],
+        market_state={"structure_state": "trend", "volatility_ratio": 1.5, "spread_ratio": 1.3, "slippage_ratio": 1.2},
+        replay_scope="focused_replay",
+    )["strategic_focus_and_priority_layer"]
+    expected_keys = {"strategic_focus_state", "strategic_focus_reliability", "strategic_focus", "governance_flags", "paths"}
+    assert expected_keys.issubset(set(layer))
+
+
+def test_capability_arbitration_layer_returns_expected_schema(tmp_path: Path) -> None:
+    layer = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "caas1", "status": "closed", "result": "loss", "pnl_points": -1.0},
+            {"trade_id": "caas2", "status": "closed", "result": "loss", "pnl_points": -0.9},
+            {"trade_id": "caas3", "status": "closed", "result": "win", "pnl_points": 0.5},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.1, "spread_ratio": 2.9, "slippage_ratio": 2.6},
+        replay_scope="focused_replay",
+    )["capability_arbitration_and_conflict_suppression_layer"]
+    expected_keys = {
+        "capability_arbitration_state",
+        "capability_arbitration_reliability",
+        "capability_arbitration",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(layer))

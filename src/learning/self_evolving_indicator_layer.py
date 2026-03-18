@@ -14788,6 +14788,386 @@ def run_self_evolving_indicator_layer(
     )
     decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
     unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    market_regime_detection_and_context_engine = _market_regime_detection_and_context_layer(
+        memory_root=memory_root,
+        replay_scope=replay_scope,
+        market_state=market_state,
+        unified_market_intelligence_field=unified_market_intelligence_field,
+        temporal_context_memory_layer=temporal_context_memory_engine,
+    )
+    self_suggestion_governor["market_regime_detection_and_context_layer"] = {
+        "market_regime_state": market_regime_detection_and_context_engine.get("market_regime_state", {}),
+        "market_regime_reliability": float(market_regime_detection_and_context_engine.get("market_regime_reliability", 0.0) or 0.0),
+    }
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["market_regime_state"] = market_regime_detection_and_context_engine.get("market_regime_state", {})
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["market_regime_reliability"] = round(
+        max(0.0, min(1.0, float(market_regime_detection_and_context_engine.get("market_regime_reliability", 0.0) or 0.0))),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["market_regime_context"] = market_regime_detection_and_context_engine.get("market_regime_context", {})
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    if bool(market_regime_detection_and_context_engine.get("governance_flags", {}).get("market_regime_pause_guard", False)):
+        if "market_regime_pause_guard" not in pause_reasons:
+            pause_reasons.append("market_regime_pause_guard")
+    if bool(market_regime_detection_and_context_engine.get("governance_flags", {}).get("market_regime_refusal_guard", False)):
+        if "market_regime_refusal_guard" not in refusal_reasons:
+            refusal_reasons.append("market_regime_refusal_guard")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        "market_regime_pause_guard" in pause_reasons
+    )
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        "market_regime_refusal_guard" in refusal_reasons
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    capability_competition_and_selection_engine = _capability_competition_and_selection_layer(
+        memory_root=memory_root,
+        replay_scope=replay_scope,
+        self_suggestion_governor=self_suggestion_governor,
+        governed_capability_invention_layer=governed_capability_invention_engine,
+        autonomous_capability_expansion_layer=autonomous_capability_expansion_engine,
+        self_expansion_quality_layer=self_expansion_quality_engine,
+        market_regime_detection_and_context_layer=market_regime_detection_and_context_engine,
+    )
+    self_suggestion_governor["capability_competition_and_selection_layer"] = {
+        "capability_competition_state": capability_competition_and_selection_engine.get("capability_competition_state", {}),
+        "capability_competition_reliability": float(
+            capability_competition_and_selection_engine.get("capability_competition_reliability", 0.0) or 0.0
+        ),
+    }
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["capability_competition_state"] = capability_competition_and_selection_engine.get(
+        "capability_competition_state",
+        {},
+    )
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["capability_competition_reliability"] = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                float(capability_competition_and_selection_engine.get("capability_competition_reliability", 0.0) or 0.0),
+            ),
+        ),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["capability_competition"] = capability_competition_and_selection_engine.get("capability_competition", {})
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    if bool(capability_competition_and_selection_engine.get("governance_flags", {}).get("competition_pause_guard", False)):
+        if "competition_pause_guard" not in pause_reasons:
+            pause_reasons.append("competition_pause_guard")
+    if bool(capability_competition_and_selection_engine.get("governance_flags", {}).get("competition_refusal_guard", False)):
+        if "competition_refusal_guard" not in refusal_reasons:
+            refusal_reasons.append("competition_refusal_guard")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        "competition_pause_guard" in pause_reasons
+    )
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        "competition_refusal_guard" in refusal_reasons
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    capability_resource_allocation_engine = _capability_resource_allocation_layer(
+        memory_root=memory_root,
+        replay_scope=replay_scope,
+        capability_competition_and_selection_layer=capability_competition_and_selection_engine,
+        market_regime_detection_and_context_layer=market_regime_detection_and_context_engine,
+        temporal_context_memory_layer=temporal_context_memory_engine,
+    )
+    self_suggestion_governor["capability_resource_allocation_layer"] = {
+        "resource_allocation_state": capability_resource_allocation_engine.get("resource_allocation_state", {}),
+        "resource_allocation_reliability": float(
+            capability_resource_allocation_engine.get("resource_allocation_reliability", 0.0) or 0.0
+        ),
+    }
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["resource_allocation_state"] = capability_resource_allocation_engine.get("resource_allocation_state", {})
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["resource_allocation_reliability"] = round(
+        max(0.0, min(1.0, float(capability_resource_allocation_engine.get("resource_allocation_reliability", 0.0) or 0.0))),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["resource_allocation"] = capability_resource_allocation_engine.get("resource_allocation", {})
+    risk_sizing = decision_refinements.get("risk_sizing", {})
+    if not isinstance(risk_sizing, dict):
+        risk_sizing = {}
+    risk_sizing["resource_allocation_multiplier"] = round(
+        max(
+            0.25,
+            min(
+                1.0,
+                float(capability_resource_allocation_engine.get("resource_allocation", {}).get("activation_budget", 1.0) or 1.0),
+            ),
+        ),
+        4,
+    )
+    decision_refinements["risk_sizing"] = risk_sizing
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    if bool(capability_resource_allocation_engine.get("governance_flags", {}).get("resource_allocation_pause_guard", False)):
+        if "resource_allocation_pause_guard" not in pause_reasons:
+            pause_reasons.append("resource_allocation_pause_guard")
+    if bool(capability_resource_allocation_engine.get("governance_flags", {}).get("resource_allocation_refusal_guard", False)):
+        if "resource_allocation_refusal_guard" not in refusal_reasons:
+            refusal_reasons.append("resource_allocation_refusal_guard")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        "resource_allocation_pause_guard" in pause_reasons
+    )
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        "resource_allocation_refusal_guard" in refusal_reasons
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    external_data_truth_validation_engine = _external_data_truth_validation_layer(
+        memory_root=memory_root,
+        replay_scope=replay_scope,
+        market_state=market_state,
+        temporal_context_memory_layer=temporal_context_memory_engine,
+        learning_stability_and_catastrophic_drift_guard_layer=learning_stability_guard_engine,
+    )
+    self_suggestion_governor["external_data_truth_validation_layer"] = {
+        "external_data_validation_state": external_data_truth_validation_engine.get("external_data_validation_state", {}),
+        "external_data_reliability": float(external_data_truth_validation_engine.get("external_data_reliability", 0.0) or 0.0),
+    }
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["external_data_validation_state"] = external_data_truth_validation_engine.get("external_data_validation_state", {})
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["external_data_reliability"] = round(
+        max(0.0, min(1.0, float(external_data_truth_validation_engine.get("external_data_reliability", 0.0) or 0.0))),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["external_data_validation"] = external_data_truth_validation_engine.get("external_data_validation", {})
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    if bool(external_data_truth_validation_engine.get("governance_flags", {}).get("external_data_pause_guard", False)):
+        if "external_data_pause_guard" not in pause_reasons:
+            pause_reasons.append("external_data_pause_guard")
+    if bool(external_data_truth_validation_engine.get("governance_flags", {}).get("external_data_refusal_guard", False)):
+        if "external_data_refusal_guard" not in refusal_reasons:
+            refusal_reasons.append("external_data_refusal_guard")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        "external_data_pause_guard" in pause_reasons
+    )
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        "external_data_refusal_guard" in refusal_reasons
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    strategic_focus_and_priority_engine = _strategic_focus_and_priority_layer(
+        memory_root=memory_root,
+        replay_scope=replay_scope,
+        market_regime_detection_and_context_layer=market_regime_detection_and_context_engine,
+        capability_competition_and_selection_layer=capability_competition_and_selection_engine,
+        capability_resource_allocation_layer=capability_resource_allocation_engine,
+        external_data_truth_validation_layer=external_data_truth_validation_engine,
+    )
+    self_suggestion_governor["strategic_focus_and_priority_layer"] = {
+        "strategic_focus_state": strategic_focus_and_priority_engine.get("strategic_focus_state", {}),
+        "strategic_focus_reliability": float(strategic_focus_and_priority_engine.get("strategic_focus_reliability", 0.0) or 0.0),
+    }
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["strategic_focus_state"] = strategic_focus_and_priority_engine.get("strategic_focus_state", {})
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["strategic_focus_reliability"] = round(
+        max(0.0, min(1.0, float(strategic_focus_and_priority_engine.get("strategic_focus_reliability", 0.0) or 0.0))),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["strategic_focus"] = strategic_focus_and_priority_engine.get("strategic_focus", {})
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    if bool(strategic_focus_and_priority_engine.get("governance_flags", {}).get("strategic_focus_pause_guard", False)):
+        if "strategic_focus_pause_guard" not in pause_reasons:
+            pause_reasons.append("strategic_focus_pause_guard")
+    if bool(strategic_focus_and_priority_engine.get("governance_flags", {}).get("strategic_focus_refusal_guard", False)):
+        if "strategic_focus_refusal_guard" not in refusal_reasons:
+            refusal_reasons.append("strategic_focus_refusal_guard")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        "strategic_focus_pause_guard" in pause_reasons
+    )
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        "strategic_focus_refusal_guard" in refusal_reasons
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    capability_arbitration_and_conflict_suppression_engine = _capability_arbitration_and_conflict_suppression_layer(
+        memory_root=memory_root,
+        replay_scope=replay_scope,
+        capability_competition_and_selection_layer=capability_competition_and_selection_engine,
+        capability_resource_allocation_layer=capability_resource_allocation_engine,
+        strategic_focus_and_priority_layer=strategic_focus_and_priority_engine,
+        cross_layer_integration_intelligence_layer=cross_layer_integration_intelligence_engine,
+        temporal_context_memory_layer=temporal_context_memory_engine,
+    )
+    self_suggestion_governor["capability_arbitration_and_conflict_suppression_layer"] = {
+        "capability_arbitration_state": capability_arbitration_and_conflict_suppression_engine.get(
+            "capability_arbitration_state",
+            {},
+        ),
+        "capability_arbitration_reliability": float(
+            capability_arbitration_and_conflict_suppression_engine.get("capability_arbitration_reliability", 0.0) or 0.0
+        ),
+    }
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["capability_arbitration_state"] = capability_arbitration_and_conflict_suppression_engine.get(
+        "capability_arbitration_state",
+        {},
+    )
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["capability_arbitration_reliability"] = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                float(
+                    capability_arbitration_and_conflict_suppression_engine.get("capability_arbitration_reliability", 0.0)
+                    or 0.0
+                ),
+            ),
+        ),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["capability_arbitration"] = capability_arbitration_and_conflict_suppression_engine.get(
+        "capability_arbitration",
+        {},
+    )
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    if bool(
+        capability_arbitration_and_conflict_suppression_engine.get("governance_flags", {}).get(
+            "capability_arbitration_pause_guard",
+            False,
+        )
+    ):
+        if "capability_arbitration_pause_guard" not in pause_reasons:
+            pause_reasons.append("capability_arbitration_pause_guard")
+    if bool(
+        capability_arbitration_and_conflict_suppression_engine.get("governance_flags", {}).get(
+            "capability_arbitration_refusal_guard",
+            False,
+        )
+    ):
+        if "capability_arbitration_refusal_guard" not in refusal_reasons:
+            refusal_reasons.append("capability_arbitration_refusal_guard")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        "capability_arbitration_pause_guard" in pause_reasons
+    )
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        "capability_arbitration_refusal_guard" in refusal_reasons
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
     promotion_readiness_and_activation_gating_engine = _promotion_readiness_and_activation_gating_layer(
         memory_root=memory_root,
         replay_scope=replay_scope,
@@ -15081,6 +15461,10 @@ def run_self_evolving_indicator_layer(
     )
     decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
     unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    governor_unified_market_intelligence = self_suggestion_governor.get("unified_market_intelligence_field", {})
+    if isinstance(governor_unified_market_intelligence, dict):
+        governor_unified_market_intelligence["refusal_pause_behavior"] = refusal_pause_behavior
+        self_suggestion_governor["unified_market_intelligence_field"] = governor_unified_market_intelligence
     survival_intelligence = {
         "capital_survival_engine": autonomous_behavior.get("capital_survival_engine", {}),
         "pain_memory_survival_layer": pain_memory_survival,
@@ -15119,6 +15503,12 @@ def run_self_evolving_indicator_layer(
         "cross_layer_integration_intelligence_layer": cross_layer_integration_intelligence_engine,
         "layer_discovery_and_combination_mining_layer": layer_discovery_and_combination_mining_engine,
         "temporal_context_memory_layer": temporal_context_memory_engine,
+        "market_regime_detection_and_context_layer": market_regime_detection_and_context_engine,
+        "capability_competition_and_selection_layer": capability_competition_and_selection_engine,
+        "capability_resource_allocation_layer": capability_resource_allocation_engine,
+        "external_data_truth_validation_layer": external_data_truth_validation_engine,
+        "strategic_focus_and_priority_layer": strategic_focus_and_priority_engine,
+        "capability_arbitration_and_conflict_suppression_layer": capability_arbitration_and_conflict_suppression_engine,
         "promotion_readiness_and_activation_gating_layer": promotion_readiness_and_activation_gating_engine,
         "activation_outcome_revalidation_and_safe_demotion_layer": activation_outcome_revalidation_and_safe_demotion_engine,
     }
@@ -15174,7 +15564,769 @@ def run_self_evolving_indicator_layer(
         "cross_layer_integration_intelligence_layer": cross_layer_integration_intelligence_engine,
         "layer_discovery_and_combination_mining_layer": layer_discovery_and_combination_mining_engine,
         "temporal_context_memory_layer": temporal_context_memory_engine,
+        "market_regime_detection_and_context_layer": market_regime_detection_and_context_engine,
+        "capability_competition_and_selection_layer": capability_competition_and_selection_engine,
+        "capability_resource_allocation_layer": capability_resource_allocation_engine,
+        "external_data_truth_validation_layer": external_data_truth_validation_engine,
+        "strategic_focus_and_priority_layer": strategic_focus_and_priority_engine,
+        "capability_arbitration_and_conflict_suppression_layer": capability_arbitration_and_conflict_suppression_engine,
         "promotion_readiness_and_activation_gating_layer": promotion_readiness_and_activation_gating_engine,
         "activation_outcome_revalidation_and_safe_demotion_layer": activation_outcome_revalidation_and_safe_demotion_engine,
         "meta_learning_loop": meta_learning_loop,
     }
+
+
+def _market_regime_detection_and_context_layer(
+    *,
+    memory_root: Path,
+    replay_scope: str,
+    market_state: dict[str, Any],
+    unified_market_intelligence_field: dict[str, Any],
+    temporal_context_memory_layer: dict[str, Any],
+) -> dict[str, Any]:
+    regime_dir = memory_root / "market_regime_context"
+    regime_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = regime_dir / "market_regime_latest.json"
+    history_path = regime_dir / "market_regime_history.json"
+    transition_registry_path = regime_dir / "market_regime_transition_registry.json"
+    governance_state_path = regime_dir / "market_regime_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    market_state = market_state if isinstance(market_state, dict) else {}
+    unified_market_intelligence_field = (
+        unified_market_intelligence_field if isinstance(unified_market_intelligence_field, dict) else {}
+    )
+    temporal_context_memory_layer = temporal_context_memory_layer if isinstance(temporal_context_memory_layer, dict) else {}
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+
+    volatility_ratio = float(market_state.get("volatility_ratio", 1.0) or 1.0)
+    spread_ratio = float(market_state.get("spread_ratio", 1.0) or 1.0)
+    slippage_ratio = float(market_state.get("slippage_ratio", 1.0) or 1.0)
+    structure_state = str(market_state.get("structure_state", "range")).lower()
+    temporal_interaction_pressure = _bounded(float(temporal_context_memory_layer.get("temporal_interaction_pressure", 0.0) or 0.0))
+    sequence_reliability = _bounded(float(temporal_context_memory_layer.get("sequence_reliability", 0.5) or 0.5))
+
+    if volatility_ratio >= 1.9:
+        regime_label = "volatility_expansion_regime"
+    elif spread_ratio >= 2.0 or slippage_ratio >= 1.95:
+        regime_label = "liquidity_sweep_regime"
+    elif structure_state in {"trend", "breakout"}:
+        regime_label = "trend_regime"
+    elif structure_state in {"compression", "squeeze"} or (volatility_ratio <= 0.9 and spread_ratio <= 1.2):
+        regime_label = "compression_regime"
+    else:
+        regime_label = "mean_reversion_regime"
+
+    regime_transition_intensity = _bounded(
+        max(0.0, abs(volatility_ratio - 1.0) * 0.25 + abs(spread_ratio - 1.0) * 0.2 + temporal_interaction_pressure * 0.55)
+    )
+    market_regime_reliability = _bounded(
+        (confidence_structure.get("composite_confidence", 0.5) or 0.5) * 0.35
+        + (1.0 - min(1.0, abs(volatility_ratio - 1.0))) * 0.15
+        + (1.0 - min(1.0, abs(spread_ratio - 1.0))) * 0.15
+        + sequence_reliability * 0.2
+        + (1.0 - temporal_interaction_pressure) * 0.15
+    )
+    if market_regime_reliability >= 0.68 and regime_transition_intensity <= 0.45:
+        market_regime_state = "stable"
+    elif regime_transition_intensity >= 0.65:
+        market_regime_state = "transitioning"
+    elif market_regime_reliability <= 0.45:
+        market_regime_state = "uncertain"
+    else:
+        market_regime_state = "watch"
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "market_regime_pause_guard": regime_transition_intensity >= 0.5,
+        "market_regime_refusal_guard": market_regime_reliability <= 0.4 and regime_transition_intensity >= 0.65,
+    }
+    payload = {
+        "market_regime_state": {
+            "state": market_regime_state,
+            "regime_label": regime_label,
+            "regime_transition_intensity": regime_transition_intensity,
+        },
+        "market_regime_reliability": market_regime_reliability,
+        "market_regime_context": {
+            "regime_label": regime_label,
+            "regime_transition_intensity": regime_transition_intensity,
+            "volatility_ratio": round(volatility_ratio, 4),
+            "spread_ratio": round(spread_ratio, 4),
+            "slippage_ratio": round(slippage_ratio, 4),
+            "structure_state": structure_state,
+        },
+        "governance_flags": governance_flags,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "market_regime_transition_registry": str(transition_registry_path),
+            "market_regime_governance_state": str(governance_state_path),
+        },
+    }
+    previous_payload = read_json_safe(latest_path, default={})
+    previous_regime_label = ""
+    if isinstance(previous_payload, dict):
+        previous_state = previous_payload.get("market_regime_context", {})
+        if isinstance(previous_state, dict):
+            previous_regime_label = str(previous_state.get("regime_label", ""))
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-_RETIREMENT_HISTORY_LIMIT:]})
+    write_json_atomic(
+        transition_registry_path,
+        {
+            "previous_regime_label": previous_regime_label or regime_label,
+            "current_regime_label": regime_label,
+            "regime_transition_intensity": regime_transition_intensity,
+            "transition_detected": bool(previous_regime_label and previous_regime_label != regime_label),
+        },
+    )
+    write_json_atomic(governance_state_path, {**governance_flags, "replay_scope": replay_scope})
+    return payload
+
+
+def _capability_competition_and_selection_layer(
+    *,
+    memory_root: Path,
+    replay_scope: str,
+    self_suggestion_governor: dict[str, Any],
+    governed_capability_invention_layer: dict[str, Any],
+    autonomous_capability_expansion_layer: dict[str, Any],
+    self_expansion_quality_layer: dict[str, Any],
+    market_regime_detection_and_context_layer: dict[str, Any],
+) -> dict[str, Any]:
+    competition_dir = memory_root / "capability_competition"
+    competition_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = competition_dir / "capability_competition_latest.json"
+    history_path = competition_dir / "capability_competition_history.json"
+    rank_registry_path = competition_dir / "capability_rank_registry.json"
+    governance_state_path = competition_dir / "capability_competition_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    self_suggestion_governor = self_suggestion_governor if isinstance(self_suggestion_governor, dict) else {}
+    governed_capability_invention_layer = (
+        governed_capability_invention_layer if isinstance(governed_capability_invention_layer, dict) else {}
+    )
+    autonomous_capability_expansion_layer = (
+        autonomous_capability_expansion_layer if isinstance(autonomous_capability_expansion_layer, dict) else {}
+    )
+    self_expansion_quality_layer = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+    market_regime_detection_and_context_layer = (
+        market_regime_detection_and_context_layer
+        if isinstance(market_regime_detection_and_context_layer, dict)
+        else {}
+    )
+
+    expansion_reliability = _bounded(float(autonomous_capability_expansion_layer.get("expansion_reliability", 0.5) or 0.5))
+    invention_reliability = _bounded(float(governed_capability_invention_layer.get("invention_reliability", 0.5) or 0.5))
+    quality_score = _bounded(float(self_expansion_quality_layer.get("expansion_quality_score", 0.5) or 0.5))
+    regime_context = market_regime_detection_and_context_layer.get("market_regime_context", {})
+    if not isinstance(regime_context, dict):
+        regime_context = {}
+    regime_transition_intensity = _bounded(float(regime_context.get("regime_transition_intensity", 0.0) or 0.0))
+    regime_label = str(regime_context.get("regime_label", "mean_reversion_regime"))
+    competition_pressure = _bounded(regime_transition_intensity)
+
+    capability_candidates = [
+        {
+            "capability_id": "governed_capability_invention",
+            "performance": invention_reliability,
+            "stability": quality_score,
+            "risk": _bounded(0.42 + (competition_pressure * 0.35)),
+            "novelty": _bounded(float(governed_capability_invention_layer.get("novelty_score", 0.5) or 0.5)),
+            "regime_compatibility": _bounded(0.78 if "trend" in regime_label else 0.64),
+        },
+        {
+            "capability_id": "autonomous_capability_expansion",
+            "performance": expansion_reliability,
+            "stability": _bounded(float(autonomous_capability_expansion_layer.get("rollbackability_score", 0.5) or 0.5)),
+            "risk": _bounded(float(autonomous_capability_expansion_layer.get("expansion_pressure_score", 0.0) or 0.0) * 0.75 + 0.25),
+            "novelty": _bounded(float(autonomous_capability_expansion_layer.get("expansion_maturity_score", 0.5) or 0.5)),
+            "regime_compatibility": _bounded(0.72 if "volatility" not in regime_label else 0.56),
+        },
+        {
+            "capability_id": "coherence_stability_guard",
+            "performance": _bounded(quality_score * 0.9 + (1.0 - regime_transition_intensity) * 0.1),
+            "stability": _bounded((1.0 - competition_pressure) * 0.5 + quality_score * 0.5),
+            "risk": _bounded(0.35 + regime_transition_intensity * 0.45),
+            "novelty": _bounded(0.45 + quality_score * 0.25),
+            "regime_compatibility": _bounded(0.82 if "mean_reversion" in regime_label else 0.66),
+        },
+    ]
+    ranked_capabilities: list[dict[str, Any]] = []
+    for candidate in capability_candidates:
+        competition_score = _bounded(
+            candidate["performance"] * 0.28
+            + candidate["stability"] * 0.24
+            + (1.0 - candidate["risk"]) * 0.2
+            + candidate["novelty"] * 0.14
+            + candidate["regime_compatibility"] * 0.14
+        )
+        ranked_capabilities.append({**candidate, "competition_score": competition_score})
+    ranked_capabilities.sort(key=lambda item: float(item.get("competition_score", 0.0)), reverse=True)
+    top_capability = ranked_capabilities[0]["capability_id"] if ranked_capabilities else "none"
+    capability_competition_reliability = _bounded(
+        sum(float(item.get("competition_score", 0.0) or 0.0) for item in ranked_capabilities) / max(1, len(ranked_capabilities))
+    )
+    competition_spread = _bounded(
+        (float(ranked_capabilities[0].get("competition_score", 0.0) or 0.0) - float(ranked_capabilities[-1].get("competition_score", 0.0) or 0.0))
+        if len(ranked_capabilities) >= 2
+        else 0.0
+    )
+    if capability_competition_reliability >= 0.64 and competition_spread >= 0.06:
+        competition_state = "competitive_stable"
+    elif competition_pressure >= 0.6:
+        competition_state = "competitive_pressure"
+    elif capability_competition_reliability <= 0.45:
+        competition_state = "underpowered"
+    else:
+        competition_state = "balanced"
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "competition_pause_guard": competition_pressure >= 0.55,
+        "competition_refusal_guard": capability_competition_reliability <= 0.4 and competition_pressure >= 0.65,
+    }
+    payload = {
+        "capability_competition_state": {
+            "state": competition_state,
+            "top_capability": top_capability,
+            "competition_spread": competition_spread,
+        },
+        "capability_competition_reliability": capability_competition_reliability,
+        "capability_competition": {
+            "ranked_capabilities": ranked_capabilities,
+            "competition_pressure": competition_pressure,
+            "selection_limit": 2,
+        },
+        "governance_flags": governance_flags,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "capability_rank_registry": str(rank_registry_path),
+            "capability_competition_governance_state": str(governance_state_path),
+        },
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-_RETIREMENT_HISTORY_LIMIT:]})
+    write_json_atomic(rank_registry_path, {"ranked_capabilities": ranked_capabilities, "top_capability": top_capability})
+    write_json_atomic(governance_state_path, {**governance_flags, "replay_scope": replay_scope})
+    return payload
+
+
+def _capability_resource_allocation_layer(
+    *,
+    memory_root: Path,
+    replay_scope: str,
+    capability_competition_and_selection_layer: dict[str, Any],
+    market_regime_detection_and_context_layer: dict[str, Any],
+    temporal_context_memory_layer: dict[str, Any],
+) -> dict[str, Any]:
+    allocation_dir = memory_root / "resource_allocation"
+    allocation_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = allocation_dir / "resource_allocation_latest.json"
+    history_path = allocation_dir / "resource_allocation_history.json"
+    budget_registry_path = allocation_dir / "resource_budget_registry.json"
+    governance_state_path = allocation_dir / "resource_allocation_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    capability_competition_and_selection_layer = (
+        capability_competition_and_selection_layer
+        if isinstance(capability_competition_and_selection_layer, dict)
+        else {}
+    )
+    market_regime_detection_and_context_layer = (
+        market_regime_detection_and_context_layer if isinstance(market_regime_detection_and_context_layer, dict) else {}
+    )
+    temporal_context_memory_layer = temporal_context_memory_layer if isinstance(temporal_context_memory_layer, dict) else {}
+    competition = capability_competition_and_selection_layer.get("capability_competition", {})
+    if not isinstance(competition, dict):
+        competition = {}
+    ranked_capabilities = competition.get("ranked_capabilities", [])
+    if not isinstance(ranked_capabilities, list):
+        ranked_capabilities = []
+    market_regime_context = market_regime_detection_and_context_layer.get("market_regime_context", {})
+    if not isinstance(market_regime_context, dict):
+        market_regime_context = {}
+    regime_transition_intensity = _bounded(float(market_regime_context.get("regime_transition_intensity", 0.0) or 0.0))
+    temporal_interaction_pressure = _bounded(float(temporal_context_memory_layer.get("temporal_interaction_pressure", 0.0) or 0.0))
+    selection_limit = int(competition.get("selection_limit", 2) or 2)
+    selected = [item for item in ranked_capabilities[: max(1, selection_limit)] if isinstance(item, dict)]
+    total_weight = sum(max(0.0, float(item.get("competition_score", 0.0) or 0.0)) for item in selected)
+    if total_weight <= 0.0:
+        total_weight = float(max(1, len(selected)))
+    resource_share: dict[str, float] = {}
+    priority_weight: dict[str, float] = {}
+    for item in selected:
+        capability_id = str(item.get("capability_id", "unknown_capability"))
+        score = max(0.0, float(item.get("competition_score", 0.0) or 0.0))
+        share = _bounded(score / total_weight)
+        resource_share[capability_id] = share
+        priority_weight[capability_id] = _bounded(min(1.0, (share * 0.65) + 0.35))
+
+    activation_budget = _bounded(0.85 - (regime_transition_intensity * 0.25) - (temporal_interaction_pressure * 0.2), low=0.15)
+    resource_allocation_reliability = _bounded(
+        capability_competition_and_selection_layer.get("capability_competition_reliability", 0.5) or 0.5
+    )
+    concurrency_budget = max(1, min(3, int(round(activation_budget * 3))))
+    if activation_budget >= 0.62 and resource_allocation_reliability >= 0.6:
+        resource_allocation_state = "balanced_allocation"
+    elif activation_budget <= 0.4:
+        resource_allocation_state = "constrained_allocation"
+    elif regime_transition_intensity >= 0.6:
+        resource_allocation_state = "guarded_allocation"
+    else:
+        resource_allocation_state = "watch"
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "resource_allocation_pause_guard": activation_budget <= 0.45 or regime_transition_intensity >= 0.6,
+        "resource_allocation_refusal_guard": activation_budget <= 0.3 and resource_allocation_reliability <= 0.45,
+    }
+    payload = {
+        "resource_allocation_state": {
+            "state": resource_allocation_state,
+            "activation_budget": activation_budget,
+            "concurrency_budget": concurrency_budget,
+        },
+        "resource_allocation_reliability": resource_allocation_reliability,
+        "resource_allocation": {
+            "activation_budget": activation_budget,
+            "priority_weight": priority_weight,
+            "resource_share": resource_share,
+            "concurrency_budget": concurrency_budget,
+        },
+        "governance_flags": governance_flags,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "resource_budget_registry": str(budget_registry_path),
+            "resource_allocation_governance_state": str(governance_state_path),
+        },
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-_RETIREMENT_HISTORY_LIMIT:]})
+    write_json_atomic(
+        budget_registry_path,
+        {
+            "activation_budget": activation_budget,
+            "concurrency_budget": concurrency_budget,
+            "priority_weight": priority_weight,
+            "resource_share": resource_share,
+        },
+    )
+    write_json_atomic(governance_state_path, {**governance_flags, "replay_scope": replay_scope})
+    return payload
+
+
+def _external_data_truth_validation_layer(
+    *,
+    memory_root: Path,
+    replay_scope: str,
+    market_state: dict[str, Any],
+    temporal_context_memory_layer: dict[str, Any],
+    learning_stability_and_catastrophic_drift_guard_layer: dict[str, Any],
+) -> dict[str, Any]:
+    validation_dir = memory_root / "external_data_validation"
+    validation_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = validation_dir / "external_data_validation_latest.json"
+    history_path = validation_dir / "external_data_validation_history.json"
+    source_registry_path = validation_dir / "data_source_registry.json"
+    governance_state_path = validation_dir / "external_data_validation_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    market_state = market_state if isinstance(market_state, dict) else {}
+    temporal_context_memory_layer = temporal_context_memory_layer if isinstance(temporal_context_memory_layer, dict) else {}
+    learning_stability_and_catastrophic_drift_guard_layer = (
+        learning_stability_and_catastrophic_drift_guard_layer
+        if isinstance(learning_stability_and_catastrophic_drift_guard_layer, dict)
+        else {}
+    )
+
+    stale_price_data = bool(market_state.get("stale_price_data", False))
+    data_feed_ready = bool(market_state.get("mt5_ready", True))
+    volatility_ratio = float(market_state.get("volatility_ratio", 1.0) or 1.0)
+    spread_ratio = float(market_state.get("spread_ratio", 1.0) or 1.0)
+    slippage_ratio = float(market_state.get("slippage_ratio", 1.0) or 1.0)
+    temporal_interaction_pressure = _bounded(float(temporal_context_memory_layer.get("temporal_interaction_pressure", 0.0) or 0.0))
+    catastrophic_drift_risk = _bounded(
+        float(learning_stability_and_catastrophic_drift_guard_layer.get("catastrophic_drift_risk", 0.0) or 0.0)
+    )
+
+    consistency_score = _bounded(1.0 - min(1.0, abs(spread_ratio - slippage_ratio) / 2.0))
+    feed_reliability = _bounded((1.0 if data_feed_ready else 0.2) * 0.7 + (0.0 if stale_price_data else 0.3))
+    anomaly_score = _bounded(
+        max(0.0, min(1.0, (max(0.0, volatility_ratio - 1.0) * 0.35) + (max(0.0, spread_ratio - 1.0) * 0.2) + (max(0.0, slippage_ratio - 1.0) * 0.2)))
+    )
+    data_drift_score = _bounded((catastrophic_drift_risk * 0.6) + (temporal_interaction_pressure * 0.4))
+    external_data_reliability = _bounded(
+        consistency_score * 0.3
+        + feed_reliability * 0.3
+        + (1.0 - anomaly_score) * 0.2
+        + (1.0 - data_drift_score) * 0.2
+    )
+    if external_data_reliability >= 0.68:
+        validation_state = "trusted"
+    elif anomaly_score >= 0.65 or data_drift_score >= 0.62:
+        validation_state = "degraded"
+    elif not data_feed_ready or stale_price_data:
+        validation_state = "untrusted"
+    else:
+        validation_state = "watch"
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "external_data_pause_guard": anomaly_score >= 0.5 or data_drift_score >= 0.55,
+        "external_data_refusal_guard": external_data_reliability <= 0.4 or (not data_feed_ready and stale_price_data),
+    }
+    payload = {
+        "external_data_validation_state": {
+            "state": validation_state,
+            "consistency_score": consistency_score,
+            "feed_reliability": feed_reliability,
+        },
+        "external_data_reliability": external_data_reliability,
+        "external_data_validation": {
+            "anomaly_score": anomaly_score,
+            "data_drift_score": data_drift_score,
+            "stale_price_data": stale_price_data,
+            "data_feed_ready": data_feed_ready,
+        },
+        "governance_flags": governance_flags,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "data_source_registry": str(source_registry_path),
+            "external_data_validation_governance_state": str(governance_state_path),
+        },
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-_RETIREMENT_HISTORY_LIMIT:]})
+    write_json_atomic(
+        source_registry_path,
+        {
+            "consistency_score": consistency_score,
+            "feed_reliability": feed_reliability,
+            "anomaly_score": anomaly_score,
+            "data_drift_score": data_drift_score,
+            "validation_state": validation_state,
+        },
+    )
+    write_json_atomic(governance_state_path, {**governance_flags, "replay_scope": replay_scope})
+    return payload
+
+
+def _strategic_focus_and_priority_layer(
+    *,
+    memory_root: Path,
+    replay_scope: str,
+    market_regime_detection_and_context_layer: dict[str, Any],
+    capability_competition_and_selection_layer: dict[str, Any],
+    capability_resource_allocation_layer: dict[str, Any],
+    external_data_truth_validation_layer: dict[str, Any],
+) -> dict[str, Any]:
+    strategic_dir = memory_root / "strategic_focus"
+    strategic_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = strategic_dir / "strategic_focus_latest.json"
+    history_path = strategic_dir / "strategic_focus_history.json"
+    priority_registry_path = strategic_dir / "priority_registry.json"
+    governance_state_path = strategic_dir / "strategic_focus_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    market_regime_detection_and_context_layer = (
+        market_regime_detection_and_context_layer if isinstance(market_regime_detection_and_context_layer, dict) else {}
+    )
+    capability_competition_and_selection_layer = (
+        capability_competition_and_selection_layer
+        if isinstance(capability_competition_and_selection_layer, dict)
+        else {}
+    )
+    capability_resource_allocation_layer = (
+        capability_resource_allocation_layer if isinstance(capability_resource_allocation_layer, dict) else {}
+    )
+    external_data_truth_validation_layer = (
+        external_data_truth_validation_layer if isinstance(external_data_truth_validation_layer, dict) else {}
+    )
+
+    market_regime_context = market_regime_detection_and_context_layer.get("market_regime_context", {})
+    if not isinstance(market_regime_context, dict):
+        market_regime_context = {}
+    regime_label = str(market_regime_context.get("regime_label", "mean_reversion_regime"))
+    regime_transition_intensity = _bounded(float(market_regime_context.get("regime_transition_intensity", 0.0) or 0.0))
+    capability_competition_reliability = _bounded(
+        float(capability_competition_and_selection_layer.get("capability_competition_reliability", 0.5) or 0.5)
+    )
+    activation_budget = _bounded(
+        float(
+            capability_resource_allocation_layer.get("resource_allocation", {}).get("activation_budget", 0.5) or 0.5
+        )
+    )
+    external_data_reliability = _bounded(float(external_data_truth_validation_layer.get("external_data_reliability", 0.5) or 0.5))
+
+    if "trend" in regime_label:
+        strategy_family_emphasis = "trend_following"
+        regime_preference = "trend_regime"
+    elif "compression" in regime_label:
+        strategy_family_emphasis = "breakout_timing"
+        regime_preference = "compression_regime"
+    elif "volatility" in regime_label:
+        strategy_family_emphasis = "volatility_control"
+        regime_preference = "volatility_expansion_regime"
+    else:
+        strategy_family_emphasis = "mean_reversion"
+        regime_preference = "mean_reversion_regime"
+    if external_data_reliability <= 0.45 or regime_transition_intensity >= 0.62:
+        instrument_focus = "capital_preservation_basket"
+    elif strategy_family_emphasis == "trend_following":
+        instrument_focus = "momentum_primary"
+    else:
+        instrument_focus = "balanced_primary_secondary"
+    evolution_throttling = _bounded(
+        max(0.0, (1.0 - capability_competition_reliability) * 0.35 + regime_transition_intensity * 0.35 + (1.0 - activation_budget) * 0.3)
+    )
+    strategic_focus_reliability = _bounded(
+        external_data_reliability * 0.35
+        + capability_competition_reliability * 0.25
+        + activation_budget * 0.2
+        + (1.0 - regime_transition_intensity) * 0.2
+    )
+    if strategic_focus_reliability >= 0.66 and evolution_throttling <= 0.45:
+        strategic_focus_state = "focused"
+    elif evolution_throttling >= 0.62:
+        strategic_focus_state = "throttled"
+    elif strategic_focus_reliability <= 0.45:
+        strategic_focus_state = "uncertain"
+    else:
+        strategic_focus_state = "watch"
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "strategic_focus_pause_guard": evolution_throttling >= 0.5,
+        "strategic_focus_refusal_guard": strategic_focus_reliability <= 0.4 and evolution_throttling >= 0.65,
+    }
+    payload = {
+        "strategic_focus_state": {
+            "state": strategic_focus_state,
+            "instrument_focus": instrument_focus,
+            "strategy_family_emphasis": strategy_family_emphasis,
+        },
+        "strategic_focus_reliability": strategic_focus_reliability,
+        "strategic_focus": {
+            "instrument_focus": instrument_focus,
+            "strategy_family_emphasis": strategy_family_emphasis,
+            "regime_preferences": regime_preference,
+            "evolution_throttling": evolution_throttling,
+        },
+        "governance_flags": governance_flags,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "priority_registry": str(priority_registry_path),
+            "strategic_focus_governance_state": str(governance_state_path),
+        },
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-_RETIREMENT_HISTORY_LIMIT:]})
+    write_json_atomic(
+        priority_registry_path,
+        {
+            "instrument_focus": instrument_focus,
+            "strategy_family_emphasis": strategy_family_emphasis,
+            "regime_preferences": regime_preference,
+            "evolution_throttling": evolution_throttling,
+            "strategic_focus_state": strategic_focus_state,
+        },
+    )
+    write_json_atomic(governance_state_path, {**governance_flags, "replay_scope": replay_scope})
+    return payload
+
+
+def _capability_arbitration_and_conflict_suppression_layer(
+    *,
+    memory_root: Path,
+    replay_scope: str,
+    capability_competition_and_selection_layer: dict[str, Any],
+    capability_resource_allocation_layer: dict[str, Any],
+    strategic_focus_and_priority_layer: dict[str, Any],
+    cross_layer_integration_intelligence_layer: dict[str, Any],
+    temporal_context_memory_layer: dict[str, Any],
+) -> dict[str, Any]:
+    arbitration_dir = memory_root / "capability_arbitration"
+    arbitration_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = arbitration_dir / "capability_arbitration_latest.json"
+    history_path = arbitration_dir / "capability_arbitration_history.json"
+    conflict_registry_path = arbitration_dir / "conflict_registry.json"
+    governance_state_path = arbitration_dir / "arbitration_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    capability_competition_and_selection_layer = (
+        capability_competition_and_selection_layer
+        if isinstance(capability_competition_and_selection_layer, dict)
+        else {}
+    )
+    capability_resource_allocation_layer = (
+        capability_resource_allocation_layer if isinstance(capability_resource_allocation_layer, dict) else {}
+    )
+    strategic_focus_and_priority_layer = (
+        strategic_focus_and_priority_layer if isinstance(strategic_focus_and_priority_layer, dict) else {}
+    )
+    cross_layer_integration_intelligence_layer = (
+        cross_layer_integration_intelligence_layer
+        if isinstance(cross_layer_integration_intelligence_layer, dict)
+        else {}
+    )
+    temporal_context_memory_layer = temporal_context_memory_layer if isinstance(temporal_context_memory_layer, dict) else {}
+
+    competition_state = capability_competition_and_selection_layer.get("capability_competition_state", {})
+    if not isinstance(competition_state, dict):
+        competition_state = {}
+    competition_spread = _bounded(float(competition_state.get("competition_spread", 0.0) or 0.0))
+    resource_allocation = capability_resource_allocation_layer.get("resource_allocation", {})
+    if not isinstance(resource_allocation, dict):
+        resource_allocation = {}
+    concurrency_budget = int(resource_allocation.get("concurrency_budget", 1) or 1)
+    conflict_score = _bounded(float(cross_layer_integration_intelligence_layer.get("conflict_score", 0.0) or 0.0))
+    temporal_pressure = _bounded(float(temporal_context_memory_layer.get("temporal_interaction_pressure", 0.0) or 0.0))
+    strategic_focus = strategic_focus_and_priority_layer.get("strategic_focus", {})
+    if not isinstance(strategic_focus, dict):
+        strategic_focus = {}
+    evolution_throttling = _bounded(float(strategic_focus.get("evolution_throttling", 0.0) or 0.0))
+    strategic_focus_reliability = _bounded(float(strategic_focus_and_priority_layer.get("strategic_focus_reliability", 0.5) or 0.5))
+
+    activation_churn_risk = _bounded((1.0 - competition_spread) * 0.35 + temporal_pressure * 0.35 + conflict_score * 0.3)
+    strategy_oscillation_risk = _bounded(conflict_score * 0.45 + evolution_throttling * 0.35 + (1.0 - strategic_focus_reliability) * 0.2)
+    competing_loop_risk = _bounded(temporal_pressure * 0.35 + (1.0 - competition_spread) * 0.35 + conflict_score * 0.3)
+    conflicting_signal_load = _bounded(conflict_score * 0.5 + temporal_pressure * 0.3 + evolution_throttling * 0.2)
+
+    limit_concurrent_activation = 1 if activation_churn_risk >= 0.62 else max(1, min(2, concurrency_budget))
+    arbitration_mode = "priority_suppression" if strategy_oscillation_risk >= 0.6 else "weighted_arbitration"
+    cooldown_window = 3 if activation_churn_risk >= 0.62 else 1
+    priority_suppression = _bounded(max(strategy_oscillation_risk, conflicting_signal_load))
+    capability_arbitration_reliability = _bounded(
+        (1.0 - activation_churn_risk) * 0.3
+        + (1.0 - strategy_oscillation_risk) * 0.3
+        + (1.0 - competing_loop_risk) * 0.2
+        + (1.0 - conflicting_signal_load) * 0.2
+    )
+    if capability_arbitration_reliability >= 0.66 and activation_churn_risk <= 0.42:
+        arbitration_state = "stable"
+    elif activation_churn_risk >= 0.65 or strategy_oscillation_risk >= 0.65:
+        arbitration_state = "suppressed"
+    elif capability_arbitration_reliability <= 0.45:
+        arbitration_state = "conflicted"
+    else:
+        arbitration_state = "watch"
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "capability_arbitration_pause_guard": activation_churn_risk >= 0.5 or strategy_oscillation_risk >= 0.5,
+        "capability_arbitration_refusal_guard": strategy_oscillation_risk >= 0.65 and conflicting_signal_load >= 0.62,
+    }
+    payload = {
+        "capability_arbitration_state": {
+            "state": arbitration_state,
+            "arbitration_mode": arbitration_mode,
+            "limit_concurrent_activation": limit_concurrent_activation,
+        },
+        "capability_arbitration_reliability": capability_arbitration_reliability,
+        "capability_arbitration": {
+            "activation_churn_risk": activation_churn_risk,
+            "strategy_oscillation_risk": strategy_oscillation_risk,
+            "competing_loop_risk": competing_loop_risk,
+            "conflicting_signal_load": conflicting_signal_load,
+            "cooldown_window": cooldown_window,
+            "priority_suppression": priority_suppression,
+            "limit_concurrent_activation": limit_concurrent_activation,
+        },
+        "governance_flags": governance_flags,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "conflict_registry": str(conflict_registry_path),
+            "arbitration_governance_state": str(governance_state_path),
+        },
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-_RETIREMENT_HISTORY_LIMIT:]})
+    write_json_atomic(
+        conflict_registry_path,
+        {
+            "activation_churn_risk": activation_churn_risk,
+            "strategy_oscillation_risk": strategy_oscillation_risk,
+            "competing_loop_risk": competing_loop_risk,
+            "conflicting_signal_load": conflicting_signal_load,
+            "arbitration_mode": arbitration_mode,
+            "limit_concurrent_activation": limit_concurrent_activation,
+            "cooldown_window": cooldown_window,
+        },
+    )
+    write_json_atomic(governance_state_path, {**governance_flags, "replay_scope": replay_scope})
+    return payload
