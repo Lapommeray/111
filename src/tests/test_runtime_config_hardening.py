@@ -73,6 +73,17 @@ def test_runtime_config_invalid_range_fails_clearly() -> None:
     validate_runtime_config(RuntimeConfig(bars=21))
 
 
+def test_runtime_config_negative_execution_cost_fails_clearly() -> None:
+    with pytest.raises(ValueError, match="execution_spread_cost_points must be >= 0"):
+        validate_runtime_config(RuntimeConfig(execution_spread_cost_points=-0.01))
+
+    with pytest.raises(ValueError, match="execution_commission_cost_points must be >= 0"):
+        validate_runtime_config(RuntimeConfig(execution_commission_cost_points=-0.01))
+
+    with pytest.raises(ValueError, match="execution_slippage_cost_points must be >= 0"):
+        validate_runtime_config(RuntimeConfig(execution_slippage_cost_points=-0.01))
+
+
 def test_runtime_config_invalid_mode_and_replay_source_fail_clearly() -> None:
     with pytest.raises(ValueError, match="Unsupported mode: paper\\. Supported modes: live, replay"):
         validate_runtime_config(RuntimeConfig(mode="paper"))

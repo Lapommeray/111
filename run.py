@@ -70,6 +70,9 @@ class RuntimeConfig:
     evaluation_steps: int = 30
     evaluation_stride: int = 5
     evaluation_output_path: str = "memory/replay_evaluation_report.json"
+    execution_spread_cost_points: float = 0.0
+    execution_commission_cost_points: float = 0.0
+    execution_slippage_cost_points: float = 0.0
     knowledge_expansion_enabled: bool = False
     knowledge_expansion_root: str = "memory/knowledge_expansion"
     knowledge_candidate_limit: int = 6
@@ -124,6 +127,9 @@ RUNTIME_CONFIG_TYPES: dict[str, str] = {
     "evaluation_steps": "int",
     "evaluation_stride": "int",
     "evaluation_output_path": "str",
+    "execution_spread_cost_points": "float",
+    "execution_commission_cost_points": "float",
+    "execution_slippage_cost_points": "float",
     "knowledge_expansion_enabled": "bool",
     "knowledge_expansion_root": "str",
     "knowledge_candidate_limit": "int",
@@ -314,6 +320,12 @@ def validate_runtime_config(config: RuntimeConfig) -> None:
         raise ValueError("evaluation_stride must be > 0")
     if config.live_order_volume <= 0:
         raise ValueError("live_order_volume must be > 0")
+    if config.execution_spread_cost_points < 0:
+        raise ValueError("execution_spread_cost_points must be >= 0")
+    if config.execution_commission_cost_points < 0:
+        raise ValueError("execution_commission_cost_points must be >= 0")
+    if config.execution_slippage_cost_points < 0:
+        raise ValueError("execution_slippage_cost_points must be >= 0")
     if config.max_daily_loss_points <= 0:
         raise ValueError("max_daily_loss_points must be > 0")
     if config.max_total_drawdown_points <= 0:
@@ -1629,6 +1641,9 @@ def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
         compact_output=config.compact_output,
         evaluation_steps=config.evaluation_steps,
         evaluation_stride=config.evaluation_stride,
+        execution_spread_cost_points=config.execution_spread_cost_points,
+        execution_commission_cost_points=config.execution_commission_cost_points,
+        execution_slippage_cost_points=config.execution_slippage_cost_points,
         knowledge_expansion_enabled=config.knowledge_expansion_enabled,
         knowledge_expansion_root=config.knowledge_expansion_root,
         knowledge_candidate_limit=config.knowledge_candidate_limit,

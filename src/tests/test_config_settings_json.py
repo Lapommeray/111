@@ -15,6 +15,9 @@ def test_settings_json_is_valid_and_has_required_keys() -> None:
         "sample_path",
         "memory_root",
         "evaluation_output_path",
+        "execution_spread_cost_points",
+        "execution_commission_cost_points",
+        "execution_slippage_cost_points",
         "knowledge_candidate_limit",
     ):
         assert key in payload
