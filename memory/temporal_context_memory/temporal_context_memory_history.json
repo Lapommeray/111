@@ -1,0 +1,34 @@
+{
+  "snapshots": [
+    {
+      "input_signature": {
+        "replay_scope": "evaluation_replay",
+        "dominant_sequence_signature": "watch->novelty_constrained->strained->coherent->balanced_retirement_governance"
+      },
+      "temporal_context_memory_state": "learning",
+      "sequence_reliability": 0.5319,
+      "sequence_recurrence_score": 0.0,
+      "temporal_interaction_pressure": 0.4257,
+      "dominant_sequence_signature": "watch->novelty_constrained->strained->coherent->balanced_retirement_governance",
+      "sequence_failure_recurrence": 0.246,
+      "context_horizon_quality": 0.6318,
+      "temporal_reason_cluster": "temporal_sequence_watch",
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true,
+        "temporal_context_pause_guard": false,
+        "temporal_context_refusal_guard": false
+      },
+      "paths": {
+        "latest": "memory/temporal_context_memory/temporal_context_memory_latest.json",
+        "history": "memory/temporal_context_memory/temporal_context_memory_history.json",
+        "sequence_signature_registry": "memory/temporal_context_memory/sequence_signature_registry.json",
+        "temporal_recurrence_registry": "memory/temporal_context_memory/temporal_recurrence_registry.json",
+        "sequence_failure_trace": "memory/temporal_context_memory/sequence_failure_trace.json",
+        "temporal_context_governance_state": "memory/temporal_context_memory/temporal_context_governance_state.json"
+      }
+    }
+  ]
+}
