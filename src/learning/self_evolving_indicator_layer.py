@@ -264,10 +264,16 @@ def _meta_learning_loop(
     detector_generator: dict[str, Any],
     strategy_evolution: dict[str, Any],
     promotion_readiness_and_activation_gating_layer: dict[str, Any] | None = None,
+    activation_outcome_revalidation_and_safe_demotion_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     promotion_readiness_and_activation_gating_layer = (
         promotion_readiness_and_activation_gating_layer
         if isinstance(promotion_readiness_and_activation_gating_layer, dict)
+        else {}
+    )
+    activation_outcome_revalidation_and_safe_demotion_layer = (
+        activation_outcome_revalidation_and_safe_demotion_layer
+        if isinstance(activation_outcome_revalidation_and_safe_demotion_layer, dict)
         else {}
     )
     loop = [
@@ -302,6 +308,16 @@ def _meta_learning_loop(
             ),
             "rejected_activation_count": int(
                 promotion_readiness_and_activation_gating_layer.get("rejected_activation_count", 0) or 0
+            ),
+            "activation_outcome_state": activation_outcome_revalidation_and_safe_demotion_layer.get(
+                "activation_outcome_state",
+                "unknown",
+            ),
+            "safe_demotion_required": bool(
+                activation_outcome_revalidation_and_safe_demotion_layer.get("safe_demotion_required", False)
+            ),
+            "demotion_candidate_count": int(
+                activation_outcome_revalidation_and_safe_demotion_layer.get("demotion_candidate_count", 0) or 0
             ),
         }
     )
@@ -8348,6 +8364,7 @@ def _self_expansion_quality_layer(
     layer_discovery_and_combination_mining_layer: dict[str, Any] | None = None,
     temporal_context_memory_layer: dict[str, Any] | None = None,
     promotion_readiness_and_activation_gating_layer: dict[str, Any] | None = None,
+    activation_outcome_revalidation_and_safe_demotion_layer: dict[str, Any] | None = None,
     replay_scope: str,
 ) -> dict[str, Any]:
     quality_dir = memory_root / "self_expansion_quality"
@@ -8437,6 +8454,11 @@ def _self_expansion_quality_layer(
     promotion_readiness_and_activation_gating_layer = (
         promotion_readiness_and_activation_gating_layer
         if isinstance(promotion_readiness_and_activation_gating_layer, dict)
+        else {}
+    )
+    activation_outcome_revalidation_and_safe_demotion_layer = (
+        activation_outcome_revalidation_and_safe_demotion_layer
+        if isinstance(activation_outcome_revalidation_and_safe_demotion_layer, dict)
         else {}
     )
 
@@ -8807,6 +8829,44 @@ def _self_expansion_quality_layer(
                 ),
             ),
             4,
+        ),
+        "activation_outcome_state_context": str(
+            activation_outcome_revalidation_and_safe_demotion_layer.get("activation_outcome_state", "unknown")
+        ),
+        "activation_outcome_reliability_context": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    float(
+                        activation_outcome_revalidation_and_safe_demotion_layer.get(
+                            "activation_outcome_reliability",
+                            0.5,
+                        )
+                        or 0.5
+                    ),
+                ),
+            ),
+            4,
+        ),
+        "post_activation_regression_risk_context": round(
+            max(
+                0.0,
+                min(
+                    1.0,
+                    float(
+                        activation_outcome_revalidation_and_safe_demotion_layer.get(
+                            "post_activation_regression_risk",
+                            0.0,
+                        )
+                        or 0.0
+                    ),
+                ),
+            ),
+            4,
+        ),
+        "safe_demotion_required_context": bool(
+            activation_outcome_revalidation_and_safe_demotion_layer.get("safe_demotion_required", False)
         ),
         "invention_pressure_context": round(
             max(0.0, min(1.0, float(governed_capability_invention_layer.get("invention_pressure_score", 0.0) or 0.0))),
@@ -9578,6 +9638,7 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
     layer_discovery_and_combination_mining_layer: dict[str, Any] | None = None,
     temporal_context_memory_layer: dict[str, Any] | None = None,
     promotion_readiness_and_activation_gating_layer: dict[str, Any] | None = None,
+    activation_outcome_revalidation_and_safe_demotion_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     stability_dir = memory_root / "learning_stability"
     stability_dir.mkdir(parents=True, exist_ok=True)
@@ -9636,6 +9697,11 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
     promotion_readiness_and_activation_gating_layer = (
         promotion_readiness_and_activation_gating_layer
         if isinstance(promotion_readiness_and_activation_gating_layer, dict)
+        else {}
+    )
+    activation_outcome_revalidation_and_safe_demotion_layer = (
+        activation_outcome_revalidation_and_safe_demotion_layer
+        if isinstance(activation_outcome_revalidation_and_safe_demotion_layer, dict)
         else {}
     )
 
@@ -9748,6 +9814,40 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
             * 0.2
         )
     )
+    activation_outcome_regression_pressure = _bounded(
+        (
+            float(
+                activation_outcome_revalidation_and_safe_demotion_layer.get(
+                    "post_activation_regression_risk",
+                    0.0,
+                )
+                or 0.0
+            )
+            * 0.6
+            + (
+                0.25
+                if bool(
+                    activation_outcome_revalidation_and_safe_demotion_layer.get(
+                        "safe_demotion_required",
+                        False,
+                    )
+                )
+                else 0.0
+            )
+            + min(
+                1.0,
+                float(
+                    activation_outcome_revalidation_and_safe_demotion_layer.get(
+                        "demotion_candidate_count",
+                        0,
+                    )
+                    or 0
+                )
+                / 6.0,
+            )
+            * 0.15
+        )
+    )
 
     regime_memory_alignment = _bounded(
         float(structural_state.get("regime_memory_alignment", 0.5) or 0.5)
@@ -9820,6 +9920,7 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
         + (reactivation_instability_pressure * 0.04)
         + (interaction_conflict_score * 0.03)
         + (temporal_interaction_pressure * 0.02)
+        + (activation_outcome_regression_pressure * 0.03)
     )
 
     # --- Metric 3: capability_expansion_pressure ---
@@ -9836,6 +9937,7 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
         + (reactivation_instability_pressure * 0.03)
         + (combination_discovery_pressure * 0.03)
         + (activation_churn_pressure * 0.04)
+        + (activation_outcome_regression_pressure * 0.03)
     )
 
     # --- Metric 4: regime_overfit_risk ---
@@ -9893,6 +9995,7 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
         "learning_fragmentation_risk": learning_fragmentation_risk,
         "reactivation_instability_pressure": reactivation_instability_pressure,
         "activation_churn_pressure": activation_churn_pressure,
+        "activation_outcome_regression_pressure": activation_outcome_regression_pressure,
         "stability_reliability": stability_reliability,
         "governance_flags": governance_flags,
     }
@@ -11836,6 +11939,7 @@ def _temporal_context_memory_layer(
     capability_lineage_and_genealogy_intelligence_layer: dict[str, Any],
     knowledge_retirement_and_pruning_governance_layer: dict[str, Any],
     promotion_readiness_and_activation_gating_layer: dict[str, Any] | None = None,
+    activation_outcome_revalidation_and_safe_demotion_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     temporal_dir = memory_root / "temporal_context_memory"
     temporal_dir.mkdir(parents=True, exist_ok=True)
@@ -11881,6 +11985,11 @@ def _temporal_context_memory_layer(
     promotion_readiness_and_activation_gating_layer = (
         promotion_readiness_and_activation_gating_layer
         if isinstance(promotion_readiness_and_activation_gating_layer, dict)
+        else {}
+    )
+    activation_outcome_revalidation_and_safe_demotion_layer = (
+        activation_outcome_revalidation_and_safe_demotion_layer
+        if isinstance(activation_outcome_revalidation_and_safe_demotion_layer, dict)
         else {}
     )
     confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
@@ -12328,6 +12437,226 @@ def _promotion_readiness_and_activation_gating_layer(
     return payload
 
 
+def _activation_outcome_revalidation_and_safe_demotion_layer(
+    *,
+    memory_root: Path,
+    replay_scope: str,
+    self_suggestion_governor: dict[str, Any],
+    unified_market_intelligence_field: dict[str, Any],
+    promotion_readiness_and_activation_gating_layer: dict[str, Any],
+    learning_stability_and_catastrophic_drift_guard_layer: dict[str, Any],
+    rollback_orchestration_and_safe_reversion_layer: dict[str, Any],
+    system_coherence_and_drift_integrity_layer: dict[str, Any],
+    temporal_context_memory_layer: dict[str, Any],
+    capability_lineage_and_genealogy_intelligence_layer: dict[str, Any],
+) -> dict[str, Any]:
+    outcome_dir = memory_root / "activation_outcome_governance"
+    outcome_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = outcome_dir / "activation_outcome_latest.json"
+    history_path = outcome_dir / "activation_outcome_history.json"
+    outcome_registry_path = outcome_dir / "activation_outcome_registry.json"
+    safe_demotion_registry_path = outcome_dir / "safe_demotion_registry.json"
+    activation_regression_trace_path = outcome_dir / "activation_regression_trace.json"
+    governance_state_path = outcome_dir / "activation_outcome_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    self_suggestion_governor = self_suggestion_governor if isinstance(self_suggestion_governor, dict) else {}
+    unified_market_intelligence_field = (
+        unified_market_intelligence_field if isinstance(unified_market_intelligence_field, dict) else {}
+    )
+    promotion_readiness_and_activation_gating_layer = (
+        promotion_readiness_and_activation_gating_layer
+        if isinstance(promotion_readiness_and_activation_gating_layer, dict)
+        else {}
+    )
+    learning_stability_and_catastrophic_drift_guard_layer = (
+        learning_stability_and_catastrophic_drift_guard_layer
+        if isinstance(learning_stability_and_catastrophic_drift_guard_layer, dict)
+        else {}
+    )
+    rollback_orchestration_and_safe_reversion_layer = (
+        rollback_orchestration_and_safe_reversion_layer
+        if isinstance(rollback_orchestration_and_safe_reversion_layer, dict)
+        else {}
+    )
+    system_coherence_and_drift_integrity_layer = (
+        system_coherence_and_drift_integrity_layer
+        if isinstance(system_coherence_and_drift_integrity_layer, dict)
+        else {}
+    )
+    temporal_context_memory_layer = (
+        temporal_context_memory_layer if isinstance(temporal_context_memory_layer, dict) else {}
+    )
+    capability_lineage_and_genealogy_intelligence_layer = (
+        capability_lineage_and_genealogy_intelligence_layer
+        if isinstance(capability_lineage_and_genealogy_intelligence_layer, dict)
+        else {}
+    )
+    repeated_unresolved = self_suggestion_governor.get("repeated_unresolved_gaps", [])
+    if not isinstance(repeated_unresolved, list):
+        repeated_unresolved = []
+    unresolved_pressure = _bounded(len([item for item in repeated_unresolved if isinstance(item, dict)]) / 8.0)
+
+    activation_block_pressure = _bounded(
+        float(promotion_readiness_and_activation_gating_layer.get("activation_block_pressure", 0.0) or 0.0)
+    )
+    activation_gate_reliability = _bounded(
+        float(promotion_readiness_and_activation_gating_layer.get("activation_gate_reliability", 0.5) or 0.5)
+    )
+    rejected_activation_count = int(
+        promotion_readiness_and_activation_gating_layer.get("rejected_activation_count", 0) or 0
+    )
+    quarantine_required = bool(
+        promotion_readiness_and_activation_gating_layer.get("quarantine_required", False)
+    )
+    catastrophic_drift_risk = _bounded(
+        float(
+            learning_stability_and_catastrophic_drift_guard_layer.get(
+                "catastrophic_drift_risk",
+                0.0,
+            )
+            or 0.0
+        )
+    )
+    rollback_urgency = _bounded(float(rollback_orchestration_and_safe_reversion_layer.get("rollback_urgency", 0.0) or 0.0))
+    rollback_reliability = _bounded(
+        float(rollback_orchestration_and_safe_reversion_layer.get("rollback_reversion_reliability", 0.5) or 0.5)
+    )
+    fragmentation_risk = _bounded(float(system_coherence_and_drift_integrity_layer.get("fragmentation_risk", 0.0) or 0.0))
+    coherence_score = _bounded(float(system_coherence_and_drift_integrity_layer.get("coherence_score", 0.5) or 0.5))
+    temporal_interaction_pressure = _bounded(
+        float(temporal_context_memory_layer.get("temporal_interaction_pressure", 0.0) or 0.0)
+    )
+    lineage_fragmentation_risk = _bounded(
+        float(capability_lineage_and_genealogy_intelligence_layer.get("lineage_fragmentation_risk", 0.0) or 0.0)
+    )
+    lineage_reliability = _bounded(
+        float(capability_lineage_and_genealogy_intelligence_layer.get("lineage_reliability", 0.5) or 0.5)
+    )
+
+    post_activation_regression_risk = _bounded(
+        (activation_block_pressure * 0.28)
+        + (catastrophic_drift_risk * 0.22)
+        + (fragmentation_risk * 0.18)
+        + (rollback_urgency * 0.12)
+        + (temporal_interaction_pressure * 0.1)
+        + (lineage_fragmentation_risk * 0.06)
+        + (unresolved_pressure * 0.04)
+    )
+    activation_outcome_reliability = _bounded(
+        (activation_gate_reliability * 0.28)
+        + ((1.0 - post_activation_regression_risk) * 0.22)
+        + (rollback_reliability * 0.2)
+        + (lineage_reliability * 0.16)
+        + (coherence_score * 0.14)
+    )
+    safe_demotion_reliability = _bounded(
+        (rollback_reliability * 0.45)
+        + (lineage_reliability * 0.25)
+        + ((1.0 - fragmentation_risk) * 0.15)
+        + ((1.0 - temporal_interaction_pressure) * 0.15)
+    )
+    demotion_candidate_count = max(
+        0,
+        min(
+            max(1, rejected_activation_count),
+            int(
+                round(
+                    max(
+                        0.0,
+                        (post_activation_regression_risk * 4.0)
+                        + (float(rejected_activation_count) * 0.35)
+                        + (0.8 if quarantine_required else 0.0),
+                    )
+                )
+            ),
+        ),
+    )
+    safe_demotion_required = bool(
+        post_activation_regression_risk >= 0.6
+        or activation_outcome_reliability <= 0.45
+        or quarantine_required
+    )
+    canary_validation_mode = "quarantine_replay" if safe_demotion_required else "guarded_replay"
+    if post_activation_regression_risk >= 0.72:
+        activation_outcome_state = "critical"
+    elif safe_demotion_required:
+        activation_outcome_state = "demotion_required"
+    elif activation_outcome_reliability >= 0.64 and post_activation_regression_risk <= 0.42:
+        activation_outcome_state = "validated"
+    else:
+        activation_outcome_state = "watch"
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "activation_outcome_pause_guard": post_activation_regression_risk >= 0.5,
+        "activation_outcome_refusal_guard": post_activation_regression_risk >= 0.65
+        or activation_outcome_reliability <= 0.42,
+    }
+    payload = {
+        "activation_outcome_state": activation_outcome_state,
+        "post_activation_regression_risk": post_activation_regression_risk,
+        "activation_outcome_reliability": activation_outcome_reliability,
+        "safe_demotion_reliability": safe_demotion_reliability,
+        "safe_demotion_required": safe_demotion_required,
+        "demotion_candidate_count": demotion_candidate_count,
+        "canary_validation_mode": canary_validation_mode,
+        "governance_flags": governance_flags,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "activation_outcome_registry": str(outcome_registry_path),
+            "safe_demotion_registry": str(safe_demotion_registry_path),
+            "activation_regression_trace": str(activation_regression_trace_path),
+            "activation_outcome_governance_state": str(governance_state_path),
+        },
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-_RETIREMENT_HISTORY_LIMIT:]})
+    write_json_atomic(
+        outcome_registry_path,
+        {
+            "activation_outcome_state": activation_outcome_state,
+            "post_activation_regression_risk": post_activation_regression_risk,
+            "activation_outcome_reliability": activation_outcome_reliability,
+            "canary_validation_mode": canary_validation_mode,
+        },
+    )
+    write_json_atomic(
+        safe_demotion_registry_path,
+        {
+            "safe_demotion_required": safe_demotion_required,
+            "demotion_candidate_count": demotion_candidate_count,
+            "safe_demotion_reliability": safe_demotion_reliability,
+        },
+    )
+    write_json_atomic(
+        activation_regression_trace_path,
+        {
+            "post_activation_regression_risk": post_activation_regression_risk,
+            "activation_block_pressure": activation_block_pressure,
+            "catastrophic_drift_risk": catastrophic_drift_risk,
+            "fragmentation_risk": fragmentation_risk,
+            "rollback_urgency": rollback_urgency,
+            "temporal_interaction_pressure": temporal_interaction_pressure,
+            "lineage_fragmentation_risk": lineage_fragmentation_risk,
+        },
+    )
+    write_json_atomic(governance_state_path, {**governance_flags, "replay_scope": replay_scope})
+    return payload
+
+
 def run_self_evolving_indicator_layer(
     *,
     memory_root: Path,
@@ -12345,6 +12674,7 @@ def run_self_evolving_indicator_layer(
     layer_discovery_context: dict[str, Any] = {}
     temporal_context_memory_context: dict[str, Any] = {}
     promotion_activation_context: dict[str, Any] = {}
+    activation_outcome_governance_context: dict[str, Any] = {}
 
     autonomous_behavior = run_autonomous_behavior_layer(
         memory_root=memory_root,
@@ -13457,6 +13787,7 @@ def run_self_evolving_indicator_layer(
         layer_discovery_and_combination_mining_layer=layer_discovery_context,
         temporal_context_memory_layer=temporal_context_memory_context,
         promotion_readiness_and_activation_gating_layer=promotion_activation_context,
+        activation_outcome_revalidation_and_safe_demotion_layer=activation_outcome_governance_context,
         replay_scope=replay_scope,
     )
     components = unified_market_intelligence_field.get("components", {})
@@ -13582,6 +13913,7 @@ def run_self_evolving_indicator_layer(
         layer_discovery_and_combination_mining_layer=layer_discovery_context,
         temporal_context_memory_layer=temporal_context_memory_context,
         promotion_readiness_and_activation_gating_layer=promotion_activation_context,
+        activation_outcome_revalidation_and_safe_demotion_layer=activation_outcome_governance_context,
     )
     components = unified_market_intelligence_field.get("components", {})
     if not isinstance(components, dict):
@@ -14374,6 +14706,7 @@ def run_self_evolving_indicator_layer(
         capability_lineage_and_genealogy_intelligence_layer=capability_lineage_engine,
         knowledge_retirement_and_pruning_governance_layer=knowledge_retirement_and_pruning_governance_engine,
         promotion_readiness_and_activation_gating_layer=promotion_activation_context,
+        activation_outcome_revalidation_and_safe_demotion_layer=activation_outcome_governance_context,
     )
     self_suggestion_governor["temporal_context_memory_layer"] = {
         "temporal_context_memory_state": temporal_context_memory_engine.get("temporal_context_memory_state", "unknown"),
@@ -14584,6 +14917,170 @@ def run_self_evolving_indicator_layer(
     )
     decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
     unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    activation_outcome_revalidation_and_safe_demotion_engine = _activation_outcome_revalidation_and_safe_demotion_layer(
+        memory_root=memory_root,
+        replay_scope=replay_scope,
+        self_suggestion_governor=self_suggestion_governor,
+        unified_market_intelligence_field=unified_market_intelligence_field,
+        promotion_readiness_and_activation_gating_layer=promotion_readiness_and_activation_gating_engine,
+        learning_stability_and_catastrophic_drift_guard_layer=learning_stability_guard_engine,
+        rollback_orchestration_and_safe_reversion_layer=rollback_orchestration_engine,
+        system_coherence_and_drift_integrity_layer=system_coherence_drift_integrity_engine,
+        temporal_context_memory_layer=temporal_context_memory_engine,
+        capability_lineage_and_genealogy_intelligence_layer=capability_lineage_engine,
+    )
+    activation_outcome_governance_context = activation_outcome_revalidation_and_safe_demotion_engine
+    self_suggestion_governor["activation_outcome_revalidation_and_safe_demotion_layer"] = {
+        "activation_outcome_state": activation_outcome_revalidation_and_safe_demotion_engine.get(
+            "activation_outcome_state",
+            "unknown",
+        ),
+        "post_activation_regression_risk": float(
+            activation_outcome_revalidation_and_safe_demotion_engine.get("post_activation_regression_risk", 0.0) or 0.0
+        ),
+        "safe_demotion_required": bool(
+            activation_outcome_revalidation_and_safe_demotion_engine.get("safe_demotion_required", False)
+        ),
+        "demotion_candidate_count": int(
+            activation_outcome_revalidation_and_safe_demotion_engine.get("demotion_candidate_count", 0) or 0
+        ),
+        "activation_outcome_reliability": float(
+            activation_outcome_revalidation_and_safe_demotion_engine.get("activation_outcome_reliability", 0.0) or 0.0
+        ),
+    }
+    learning_stability_guard_engine["activation_outcome_regression_pressure"] = float(
+        activation_outcome_revalidation_and_safe_demotion_engine.get("post_activation_regression_risk", 0.0) or 0.0
+    )
+    quality_components = self_expansion_quality_engine.get("quality_components", {})
+    if not isinstance(quality_components, dict):
+        quality_components = {}
+    quality_components["activation_outcome_reliability_context"] = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                float(
+                    activation_outcome_revalidation_and_safe_demotion_engine.get(
+                        "activation_outcome_reliability",
+                        0.0,
+                    )
+                    or 0.0
+                ),
+            ),
+        ),
+        4,
+    )
+    quality_components["post_activation_regression_risk_context"] = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                float(
+                    activation_outcome_revalidation_and_safe_demotion_engine.get(
+                        "post_activation_regression_risk",
+                        0.0,
+                    )
+                    or 0.0
+                ),
+            ),
+        ),
+        4,
+    )
+    self_expansion_quality_engine["quality_components"] = quality_components
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["activation_outcome_state"] = {
+        "state": str(activation_outcome_revalidation_and_safe_demotion_engine.get("activation_outcome_state", "unknown")),
+        "safe_demotion_required": bool(
+            activation_outcome_revalidation_and_safe_demotion_engine.get("safe_demotion_required", False)
+        ),
+        "canary_validation_mode": str(
+            activation_outcome_revalidation_and_safe_demotion_engine.get("canary_validation_mode", "guarded_replay")
+        ),
+    }
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["activation_outcome_reliability"] = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                float(
+                    activation_outcome_revalidation_and_safe_demotion_engine.get("activation_outcome_reliability", 0.0)
+                    or 0.0
+                ),
+            ),
+        ),
+        4,
+    )
+    confidence_structure["safe_demotion_reliability"] = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                float(activation_outcome_revalidation_and_safe_demotion_engine.get("safe_demotion_reliability", 0.0) or 0.0),
+            ),
+        ),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["activation_outcome_governance"] = {
+        "activation_outcome_state": activation_outcome_revalidation_and_safe_demotion_engine.get(
+            "activation_outcome_state",
+            "unknown",
+        ),
+        "post_activation_regression_risk": round(
+            float(activation_outcome_revalidation_and_safe_demotion_engine.get("post_activation_regression_risk", 0.0) or 0.0),
+            4,
+        ),
+        "safe_demotion_required": bool(
+            activation_outcome_revalidation_and_safe_demotion_engine.get("safe_demotion_required", False)
+        ),
+        "demotion_candidate_count": int(
+            activation_outcome_revalidation_and_safe_demotion_engine.get("demotion_candidate_count", 0) or 0
+        ),
+        "activation_outcome_reliability": round(
+            float(activation_outcome_revalidation_and_safe_demotion_engine.get("activation_outcome_reliability", 0.0) or 0.0),
+            4,
+        ),
+    }
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    post_activation_regression_risk = float(
+        activation_outcome_revalidation_and_safe_demotion_engine.get("post_activation_regression_risk", 0.0) or 0.0
+    )
+    activation_outcome_reliability = float(
+        activation_outcome_revalidation_and_safe_demotion_engine.get("activation_outcome_reliability", 1.0) or 1.0
+    )
+    if post_activation_regression_risk >= 0.5 and "activation_outcome_pause_guard" not in pause_reasons:
+        pause_reasons.append("activation_outcome_pause_guard")
+    if (
+        post_activation_regression_risk >= 0.65 or activation_outcome_reliability <= 0.42
+    ) and "activation_outcome_refusal_guard" not in refusal_reasons:
+        refusal_reasons.append("activation_outcome_refusal_guard")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        "activation_outcome_pause_guard" in pause_reasons
+    )
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        "activation_outcome_refusal_guard" in refusal_reasons
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
     survival_intelligence = {
         "capital_survival_engine": autonomous_behavior.get("capital_survival_engine", {}),
         "pain_memory_survival_layer": pain_memory_survival,
@@ -14623,6 +15120,7 @@ def run_self_evolving_indicator_layer(
         "layer_discovery_and_combination_mining_layer": layer_discovery_and_combination_mining_engine,
         "temporal_context_memory_layer": temporal_context_memory_engine,
         "promotion_readiness_and_activation_gating_layer": promotion_readiness_and_activation_gating_engine,
+        "activation_outcome_revalidation_and_safe_demotion_layer": activation_outcome_revalidation_and_safe_demotion_engine,
     }
     meta_learning_loop = _meta_learning_loop(
         memory_root=memory_root,
@@ -14630,6 +15128,7 @@ def run_self_evolving_indicator_layer(
         detector_generator=detector_generator,
         strategy_evolution=strategy_evolution,
         promotion_readiness_and_activation_gating_layer=promotion_readiness_and_activation_gating_engine,
+        activation_outcome_revalidation_and_safe_demotion_layer=activation_outcome_revalidation_and_safe_demotion_engine,
     )
     return {
         "autonomous_behavior_layer": autonomous_behavior,
@@ -14676,5 +15175,6 @@ def run_self_evolving_indicator_layer(
         "layer_discovery_and_combination_mining_layer": layer_discovery_and_combination_mining_engine,
         "temporal_context_memory_layer": temporal_context_memory_engine,
         "promotion_readiness_and_activation_gating_layer": promotion_readiness_and_activation_gating_engine,
+        "activation_outcome_revalidation_and_safe_demotion_layer": activation_outcome_revalidation_and_safe_demotion_engine,
         "meta_learning_loop": meta_learning_loop,
     }

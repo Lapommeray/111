@@ -440,6 +440,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "temporal_context_memory_state",
         "temporal_context_state",
         "promotion_activation_state",
+        "activation_outcome_state",
     }
     assert 0.0 <= unified["unified_field_score"] <= 1.0
     assert 0.0 <= unified["confidence_structure"]["composite_confidence"] <= 1.0
@@ -764,6 +765,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "temporal_context_memory_state",
         "temporal_context_state",
         "promotion_activation_state",
+        "activation_outcome_state",
     }
 
 
@@ -6142,3 +6144,181 @@ def test_promotion_activation_gating_is_exposed_in_survival_intelligence_and_top
     )
     assert "promotion_readiness_and_activation_gating_layer" in result
     assert "promotion_readiness_and_activation_gating_layer" in result["survival_intelligence_layer"]
+
+
+def test_activation_outcome_governance_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    layer = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "aogp1", "status": "closed", "result": "loss", "pnl_points": -1.3, "failure_cause": "execution_failure"},
+            {"trade_id": "aogp2", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "spread_spike"},
+            {"trade_id": "aogp3", "status": "closed", "result": "win", "pnl_points": 0.4, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.4, "spread_ratio": 3.3, "slippage_ratio": 3.0},
+        replay_scope="full_replay",
+    )["activation_outcome_revalidation_and_safe_demotion_layer"]
+    assert Path(layer["paths"]["latest"]).exists()
+    assert Path(layer["paths"]["history"]).exists()
+    assert Path(layer["paths"]["activation_outcome_registry"]).exists()
+    assert Path(layer["paths"]["safe_demotion_registry"]).exists()
+    assert Path(layer["paths"]["activation_regression_trace"]).exists()
+    assert Path(layer["paths"]["activation_outcome_governance_state"]).exists()
+
+
+def test_activation_outcome_governance_layer_returns_expected_schema(tmp_path: Path) -> None:
+    layer = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "aogs1", "status": "closed", "result": "loss", "pnl_points": -0.9},
+            {"trade_id": "aogs2", "status": "closed", "result": "win", "pnl_points": 0.5},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.3, "slippage_ratio": 2.1},
+        replay_scope="focused_replay",
+    )["activation_outcome_revalidation_and_safe_demotion_layer"]
+    expected_keys = {
+        "activation_outcome_state",
+        "post_activation_regression_risk",
+        "activation_outcome_reliability",
+        "safe_demotion_reliability",
+        "safe_demotion_required",
+        "demotion_candidate_count",
+        "canary_validation_mode",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(layer))
+    for key in ("post_activation_regression_risk", "activation_outcome_reliability", "safe_demotion_reliability"):
+        assert 0.0 <= float(layer[key]) <= 1.0
+    assert isinstance(layer["safe_demotion_required"], bool)
+    assert int(layer["demotion_candidate_count"]) >= 0
+
+
+def test_activation_outcome_governance_layer_adds_unified_field_components_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "aogu1", "status": "closed", "result": "loss", "pnl_points": -1.0},
+            {"trade_id": "aogu2", "status": "closed", "result": "win", "pnl_points": 0.6},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 2.4, "slippage_ratio": 2.2},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "activation_outcome_state" in unified["components"]
+    assert "activation_outcome_reliability" in unified["confidence_structure"]
+    assert "safe_demotion_reliability" in unified["confidence_structure"]
+    assert "activation_outcome_governance" in unified["decision_refinements"]
+
+
+def test_activation_outcome_governance_layer_additively_influences_refusal_pause_behavior(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "aogr1", "status": "closed", "result": "loss", "pnl_points": -2.0, "failure_cause": "execution_failure"},
+            {"trade_id": "aogr2", "status": "closed", "result": "loss", "pnl_points": -1.7, "failure_cause": "spread_spike"},
+            {"trade_id": "aogr3", "status": "closed", "result": "loss", "pnl_points": -1.5, "failure_cause": "partial_fill"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 3.2, "spread_ratio": 4.3, "slippage_ratio": 4.0},
+        replay_scope="full_replay",
+    )
+    behavior = result["unified_market_intelligence_field"]["decision_refinements"]["refusal_pause_behavior"]
+    layer = result["activation_outcome_revalidation_and_safe_demotion_layer"]
+    if float(layer["post_activation_regression_risk"]) >= 0.5:
+        assert "activation_outcome_pause_guard" in behavior["pause_reasons"]
+    if float(layer["post_activation_regression_risk"]) >= 0.65 or float(layer["activation_outcome_reliability"]) <= 0.42:
+        assert "activation_outcome_refusal_guard" in behavior["refusal_reasons"]
+
+
+def test_activation_outcome_governance_feeds_self_suggestion_governor_nonbreaking(tmp_path: Path) -> None:
+    governor = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "aogsg1", "status": "closed", "result": "loss", "pnl_points": -1.2},
+            {"trade_id": "aogsg2", "status": "closed", "result": "loss", "pnl_points": -0.9},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.5, "spread_ratio": 3.1, "slippage_ratio": 2.9},
+        replay_scope="full_replay",
+    )["self_suggestion_governor"]
+    block = governor["activation_outcome_revalidation_and_safe_demotion_layer"]
+    assert {
+        "activation_outcome_state",
+        "post_activation_regression_risk",
+        "safe_demotion_required",
+        "demotion_candidate_count",
+        "activation_outcome_reliability",
+    }.issubset(set(block))
+
+
+def test_activation_outcome_governance_feeds_learning_stability_nonbreaking(tmp_path: Path) -> None:
+    learning = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "aogl1", "status": "closed", "result": "loss", "pnl_points": -1.1},
+            {"trade_id": "aogl2", "status": "closed", "result": "win", "pnl_points": 0.4},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.1, "spread_ratio": 2.8, "slippage_ratio": 2.5},
+        replay_scope="full_replay",
+    )["learning_stability_and_catastrophic_drift_guard_layer"]
+    assert "activation_outcome_regression_pressure" in learning
+    assert 0.0 <= float(learning["activation_outcome_regression_pressure"]) <= 1.0
+
+
+def test_activation_outcome_governance_feeds_self_expansion_quality_nonbreaking(tmp_path: Path) -> None:
+    quality = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "aogq1", "status": "closed", "result": "loss", "pnl_points": -1.0},
+            {"trade_id": "aogq2", "status": "closed", "result": "win", "pnl_points": 0.5},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.9, "spread_ratio": 2.5, "slippage_ratio": 2.2},
+        replay_scope="full_replay",
+    )["self_expansion_quality_layer"]["quality_components"]
+    assert "activation_outcome_reliability_context" in quality
+    assert "post_activation_regression_risk_context" in quality
+    assert 0.0 <= float(quality["activation_outcome_reliability_context"]) <= 1.0
+    assert 0.0 <= float(quality["post_activation_regression_risk_context"]) <= 1.0
+
+
+def test_activation_outcome_governance_is_exposed_in_survival_intelligence_and_top_level_return(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "aoge1", "status": "closed", "result": "loss", "pnl_points": -0.9},
+            {"trade_id": "aoge2", "status": "closed", "result": "win", "pnl_points": 0.6},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.3, "slippage_ratio": 2.0},
+        replay_scope="focused_replay",
+    )
+    assert "activation_outcome_revalidation_and_safe_demotion_layer" in result
+    assert "activation_outcome_revalidation_and_safe_demotion_layer" in result["survival_intelligence_layer"]
+
+
+def test_meta_learning_loop_records_activation_outcome_governance_fields_nonbreaking(tmp_path: Path) -> None:
+    meta = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "aogm1", "status": "closed", "result": "loss", "pnl_points": -1.0},
+            {"trade_id": "aogm2", "status": "closed", "result": "win", "pnl_points": 0.4},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 2.6, "slippage_ratio": 2.3},
+        replay_scope="full_replay",
+    )["meta_learning_loop"]["latest_cycle"]
+    assert "activation_outcome_state" in meta
+    assert "safe_demotion_required" in meta
+    assert "demotion_candidate_count" in meta
+
+
+def test_unified_market_intelligence_field_non_regression_with_activation_outcome_governance_layer(tmp_path: Path) -> None:
+    unified = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "aogn1", "status": "closed", "result": "loss", "pnl_points": -0.8},
+            {"trade_id": "aogn2", "status": "closed", "result": "win", "pnl_points": 0.5},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.1, "slippage_ratio": 1.9},
+        replay_scope="focused_replay",
+    )["unified_market_intelligence_field"]
+    assert "activation_outcome_state" in unified["components"]
+    assert "activation_outcome_reliability" in unified["confidence_structure"]
+    assert "safe_demotion_reliability" in unified["confidence_structure"]
+    assert "activation_outcome_governance" in unified["decision_refinements"]
