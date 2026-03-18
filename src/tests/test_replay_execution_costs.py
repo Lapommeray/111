@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import json
 from pathlib import Path
 from typing import Any
 
@@ -58,6 +59,34 @@ def _pipeline_runner_from_pnls(pnl_values: list[float]):
 def _identity_config_factory(**kwargs: Any) -> dict[str, Any]:
     """Return replay config kwargs unchanged for evaluate_replay test doubles."""
     return kwargs
+
+
+def _memory_sensitive_pipeline_runner(config: dict[str, Any]) -> dict[str, Any]:
+    memory_root = Path(config["memory_root"])
+    counter_path = memory_root / "counter.json"
+    if counter_path.exists():
+        payload = json.loads(counter_path.read_text(encoding="utf-8"))
+        counter = int(payload.get("counter", 0))
+    else:
+        counter = 0
+    counter += 1
+    counter_path.parent.mkdir(parents=True, exist_ok=True)
+    counter_path.write_text(json.dumps({"counter": counter}), encoding="utf-8")
+    action = "BUY" if counter % 2 == 1 else "SELL"
+    return {
+        "signal": {"action": action, "confidence": 0.8, "blocked": False},
+        "status_panel": {
+            "memory_result": {
+                "latest_trade_outcome": {
+                    "trade_id": f"trade_{counter}",
+                    "status": "closed",
+                    "direction": action,
+                    "result": "win",
+                    "pnl_points": 1.0,
+                }
+            }
+        },
+    }
 
 
 def _evaluate_with_costs(
@@ -245,3 +274,149 @@ def test_walk_forward_remains_compatible_with_execution_cost_model(tmp_path: Pat
         3,
     )
     assert realized_total_cost == expected_total_cost
+
+
+def test_replay_isolation_keeps_repeated_runs_deterministic(tmp_path: Path) -> None:
+    csv_path = tmp_path / "replay.csv"
+    _write_replay_csv(csv_path, rows=14)
+    kwargs = dict(
+        pipeline_runner=_memory_sensitive_pipeline_runner,
+        config_factory=_identity_config_factory,
+        symbol="XAUUSD",
+        timeframe="M5",
+        bars=5,
+        replay_csv_path=str(csv_path),
+        sample_path=str(csv_path),
+        memory_root=str(tmp_path / "memory"),
+        generated_registry_path=str(tmp_path / "memory" / "generated_code_registry.json"),
+        meta_adaptive_profile_path=str(tmp_path / "memory" / "meta_adaptive_profile.json"),
+        evolution_enabled=False,
+        evolution_registry_path=str(tmp_path / "memory" / "evolution_registry.json"),
+        evolution_artifact_root=str(tmp_path / "memory" / "evolution_artifacts"),
+        evolution_max_proposals=1,
+        compact_output=False,
+        evaluation_steps=4,
+        evaluation_stride=2,
+    )
+    report_a = evaluate_replay(**kwargs)
+    report_b = evaluate_replay(**kwargs)
+
+    keys = (
+        "action_distribution",
+        "confidence_distribution",
+        "signal_counts",
+        "execution_cost_impact",
+    )
+    assert {key: report_a[key] for key in keys} == {key: report_b[key] for key in keys}
+    assert report_a["replay_isolated"] is True
+    assert Path(report_a["replay_memory_root"]).exists()
+    assert report_a["action_distribution"]["BUY"] == report_a["steps"]
+    assert report_a["action_distribution"]["SELL"] == 0
+
+
+def test_walk_forward_isolation_keeps_repeated_oos_summary_deterministic(tmp_path: Path) -> None:
+    csv_path = tmp_path / "replay.csv"
+    _write_replay_csv(csv_path, rows=20)
+    kwargs = dict(
+        pipeline_runner=_memory_sensitive_pipeline_runner,
+        config_factory=_identity_config_factory,
+        symbol="XAUUSD",
+        timeframe="M5",
+        bars=5,
+        replay_csv_path=str(csv_path),
+        sample_path=str(csv_path),
+        memory_root=str(tmp_path / "memory"),
+        generated_registry_path=str(tmp_path / "memory" / "generated_code_registry.json"),
+        meta_adaptive_profile_path=str(tmp_path / "memory" / "meta_adaptive_profile.json"),
+        evolution_enabled=False,
+        evolution_registry_path=str(tmp_path / "memory" / "evolution_registry.json"),
+        evolution_artifact_root=str(tmp_path / "memory" / "evolution_artifacts"),
+        evolution_max_proposals=1,
+        compact_output=False,
+        evaluation_steps=20,
+        evaluation_stride=2,
+        walk_forward_enabled=True,
+        walk_forward_context_bars=6,
+        walk_forward_test_bars=4,
+        walk_forward_step_bars=3,
+    )
+    report_a = evaluate_replay(**kwargs)
+    report_b = evaluate_replay(**kwargs)
+
+    oos_keys = (
+        "total_oos_closed_trades",
+        "total_oos_gross_pnl_points",
+        "total_oos_net_pnl_points",
+        "oos_win_rate",
+        "oos_max_drawdown",
+    )
+    assert {key: report_a[key] for key in oos_keys} == {key: report_b[key] for key in oos_keys}
+    assert report_a["per_cycle_summary"] == report_b["per_cycle_summary"]
+
+
+def test_replay_isolation_avoids_mutating_shared_memory_root(tmp_path: Path) -> None:
+    csv_path = tmp_path / "replay.csv"
+    _write_replay_csv(csv_path, rows=12)
+    shared_memory_root = tmp_path / "memory"
+    shared_memory_root.mkdir(parents=True, exist_ok=True)
+    sentinel = shared_memory_root / "sentinel.json"
+    sentinel.write_text("{}", encoding="utf-8")
+
+    report = evaluate_replay(
+        pipeline_runner=_memory_sensitive_pipeline_runner,
+        config_factory=_identity_config_factory,
+        symbol="XAUUSD",
+        timeframe="M5",
+        bars=5,
+        replay_csv_path=str(csv_path),
+        sample_path=str(csv_path),
+        memory_root=str(shared_memory_root),
+        generated_registry_path=str(shared_memory_root / "generated_code_registry.json"),
+        meta_adaptive_profile_path=str(shared_memory_root / "meta_adaptive_profile.json"),
+        evolution_enabled=False,
+        evolution_registry_path=str(shared_memory_root / "evolution_registry.json"),
+        evolution_artifact_root=str(shared_memory_root / "evolution_artifacts"),
+        evolution_max_proposals=1,
+        compact_output=False,
+        evaluation_steps=3,
+        evaluation_stride=1,
+    )
+
+    assert report["replay_isolated"] is True
+    assert Path(report["replay_memory_root"]).name == "memory__replay_isolation"
+    assert {path.name for path in shared_memory_root.iterdir()} == {"sentinel.json"}
+
+
+def test_replay_isolation_cleans_existing_sandbox_deterministically(tmp_path: Path) -> None:
+    csv_path = tmp_path / "replay.csv"
+    _write_replay_csv(csv_path, rows=12)
+    kwargs = dict(
+        pipeline_runner=_memory_sensitive_pipeline_runner,
+        config_factory=_identity_config_factory,
+        symbol="XAUUSD",
+        timeframe="M5",
+        bars=5,
+        replay_csv_path=str(csv_path),
+        sample_path=str(csv_path),
+        memory_root=str(tmp_path / "memory"),
+        generated_registry_path=str(tmp_path / "memory" / "generated_code_registry.json"),
+        meta_adaptive_profile_path=str(tmp_path / "memory" / "meta_adaptive_profile.json"),
+        evolution_enabled=False,
+        evolution_registry_path=str(tmp_path / "memory" / "evolution_registry.json"),
+        evolution_artifact_root=str(tmp_path / "memory" / "evolution_artifacts"),
+        evolution_max_proposals=1,
+        compact_output=False,
+        evaluation_steps=2,
+        evaluation_stride=1,
+    )
+    first_report = evaluate_replay(**kwargs)
+    sandbox_root = Path(first_report["replay_memory_root"])
+    stale_artifact = sandbox_root / "stale.txt"
+    stale_artifact.write_text("stale", encoding="utf-8")
+    assert stale_artifact.exists()
+
+    second_report = evaluate_replay(**kwargs)
+
+    assert second_report["replay_memory_root"] == first_report["replay_memory_root"]
+    assert not stale_artifact.exists()
+    assert (sandbox_root / "steps" / "evaluation_window_0001" / "replay_window.csv").exists()

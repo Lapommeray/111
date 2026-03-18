@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import math
+import shutil
 from pathlib import Path
 from typing import Any, Callable
 
@@ -45,6 +46,7 @@ def evaluate_replay(
     knowledge_candidate_limit: int = 6,
 ) -> dict[str, Any]:
     """Run replay evaluation using the existing replay pipeline path only."""
+    replay_memory_root = _prepare_replay_memory_root(memory_root)
     rows = _load_rows(Path(replay_csv_path))
     if len(rows) < bars:
         raise ValueError("Replay evaluation requires at least `bars` rows.")
@@ -80,7 +82,7 @@ def evaluate_replay(
             timeframe=timeframe,
             bars=bars,
             sample_path=sample_path,
-            memory_root=memory_root,
+            replay_memory_root=replay_memory_root,
             generated_registry_path=generated_registry_path,
             meta_adaptive_profile_path=meta_adaptive_profile_path,
             evolution_enabled=evolution_enabled,
@@ -118,7 +120,7 @@ def evaluate_replay(
                 timeframe=timeframe,
                 bars=bars,
                 sample_path=sample_path,
-                memory_root=memory_root,
+                replay_memory_root=replay_memory_root,
                 generated_registry_path=generated_registry_path,
                 meta_adaptive_profile_path=meta_adaptive_profile_path,
                 evolution_enabled=evolution_enabled,
@@ -176,6 +178,8 @@ def evaluate_replay(
         "oos_max_drawdown": oos_summary["oos_max_drawdown"],
         "per_cycle_summary": per_cycle_summary,
         "records": records,
+        "replay_isolated": True,
+        "replay_memory_root": str(replay_memory_root),
         "knowledge_expansion_config": {
             "enabled": knowledge_expansion_enabled,
             "root": knowledge_expansion_root,
@@ -195,7 +199,7 @@ def _run_replay_steps(
     timeframe: str,
     bars: int,
     sample_path: str,
-    memory_root: str,
+    replay_memory_root: Path,
     generated_registry_path: str,
     meta_adaptive_profile_path: str,
     evolution_enabled: bool,
@@ -207,23 +211,28 @@ def _run_replay_steps(
     records: list[dict[str, Any]] = []
     for step_index, end in enumerate(end_indexes, start=1):
         window = rows[:end]
-        temp_csv = Path(memory_root) / f"{window_prefix}_{step_index}.csv"
+        step_root = replay_memory_root / "steps" / f"{window_prefix}_{step_index:04d}"
+        temp_csv = step_root / "replay_window.csv"
         _write_rows(temp_csv, window)
+        step_generated_registry_path = step_root / Path(generated_registry_path).name
+        step_meta_adaptive_profile_path = step_root / Path(meta_adaptive_profile_path).name
+        step_evolution_registry_path = step_root / Path(evolution_registry_path).name
+        step_evolution_artifact_root = step_root / Path(evolution_artifact_root).name
 
         cfg = config_factory(
             symbol=symbol,
             timeframe=timeframe,
             bars=bars,
             sample_path=sample_path,
-            memory_root=memory_root,
+            memory_root=str(step_root),
             mode="replay",
             replay_source="csv",
             replay_csv_path=str(temp_csv),
-            generated_registry_path=generated_registry_path,
-            meta_adaptive_profile_path=meta_adaptive_profile_path,
+            generated_registry_path=str(step_generated_registry_path),
+            meta_adaptive_profile_path=str(step_meta_adaptive_profile_path),
             evolution_enabled=evolution_enabled,
-            evolution_registry_path=evolution_registry_path,
-            evolution_artifact_root=evolution_artifact_root,
+            evolution_registry_path=str(step_evolution_registry_path),
+            evolution_artifact_root=str(step_evolution_artifact_root),
             evolution_max_proposals=evolution_max_proposals,
             compact_output=False,
         )
@@ -389,6 +398,26 @@ def _load_rows(path: Path) -> list[dict[str, str]]:
         raise FileNotFoundError(f"Replay CSV not found for evaluation: {path}")
     with path.open("r", encoding="utf-8") as fh:
         return list(csv.DictReader(fh))
+
+
+def _prepare_replay_memory_root(memory_root: str) -> Path:
+    base = Path(memory_root).expanduser()
+    parent = base.parent.resolve()
+    sandbox = parent / f"{base.name}__replay_isolation"
+    if sandbox.exists():
+        if sandbox.is_file():
+            raise RuntimeError(f"Replay isolation path is a file, expected directory: {sandbox}")
+        _safe_rmtree(sandbox, expected_parent=parent)
+    sandbox.mkdir(parents=True, exist_ok=True)
+    return sandbox
+
+
+def _safe_rmtree(path: Path, *, expected_parent: Path) -> None:
+    resolved = path.resolve()
+    if resolved.name.endswith("__replay_isolation") and resolved.parent == expected_parent.resolve():
+        shutil.rmtree(resolved)
+        return
+    raise RuntimeError(f"Refusing to delete non-replay sandbox path: {resolved}")
 
 
 def _write_rows(path: Path, rows: list[dict[str, str]]) -> None:
