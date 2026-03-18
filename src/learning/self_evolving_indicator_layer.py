@@ -13777,6 +13777,7 @@ def run_self_evolving_indicator_layer(
         ),
         4,
     )
+    confidence_structure["cross_layer_reliability"] = confidence_structure["interaction_reliability"]
     confidence_structure["interaction_coherence_score"] = round(
         max(
             0.0,
@@ -13889,6 +13890,7 @@ def run_self_evolving_indicator_layer(
         ),
         4,
     )
+    confidence_structure["layer_discovery_reliability"] = confidence_structure["combination_reliability"]
     unified_market_intelligence_field["confidence_structure"] = confidence_structure
     decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
     if not isinstance(decision_refinements, dict):
@@ -13966,6 +13968,7 @@ def run_self_evolving_indicator_layer(
         "dominant_sequence_signature": str(temporal_context_memory_engine.get("dominant_sequence_signature", "unknown")),
         "temporal_reason_cluster": str(temporal_context_memory_engine.get("temporal_reason_cluster", "unknown")),
     }
+    components["temporal_context_state"] = components["temporal_context_memory_state"]
     unified_market_intelligence_field["components"] = components
     confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
     if not isinstance(confidence_structure, dict):
@@ -13974,6 +13977,7 @@ def run_self_evolving_indicator_layer(
         max(0.0, min(1.0, float(temporal_context_memory_engine.get("sequence_reliability", 0.0) or 0.0))),
         4,
     )
+    confidence_structure["temporal_context_reliability"] = confidence_structure["sequence_reliability"]
     confidence_structure["sequence_recurrence_score"] = round(
         max(0.0, min(1.0, float(temporal_context_memory_engine.get("sequence_recurrence_score", 0.0) or 0.0))),
         4,
@@ -13982,7 +13986,7 @@ def run_self_evolving_indicator_layer(
     decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
     if not isinstance(decision_refinements, dict):
         decision_refinements = {}
-    decision_refinements["temporal_context_memory"] = {
+    temporal_context_refinement = {
         "temporal_context_memory_state": temporal_context_memory_engine.get("temporal_context_memory_state", "unknown"),
         "sequence_reliability": round(float(temporal_context_memory_engine.get("sequence_reliability", 0.0) or 0.0), 4),
         "sequence_recurrence_score": round(
@@ -13998,6 +14002,8 @@ def run_self_evolving_indicator_layer(
             4,
         ),
     }
+    decision_refinements["temporal_context_memory"] = temporal_context_refinement
+    decision_refinements["temporal_context"] = temporal_context_refinement
     refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
     if not isinstance(refusal_pause_behavior, dict):
         refusal_pause_behavior = {}

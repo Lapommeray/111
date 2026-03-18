@@ -438,6 +438,7 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "cross_layer_integration_state",
         "layer_discovery_state",
         "temporal_context_memory_state",
+        "temporal_context_state",
     }
     assert 0.0 <= unified["unified_field_score"] <= 1.0
     assert 0.0 <= unified["confidence_structure"]["composite_confidence"] <= 1.0
@@ -760,6 +761,7 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "cross_layer_integration_state",
         "layer_discovery_state",
         "temporal_context_memory_state",
+        "temporal_context_state",
     }
 
 
@@ -5502,6 +5504,7 @@ def test_cross_layer_integration_layer_adds_unified_field_components_nonbreaking
     unified = result["unified_market_intelligence_field"]
     assert "cross_layer_integration_state" in unified["components"]
     assert "interaction_reliability" in unified["confidence_structure"]
+    assert "cross_layer_reliability" in unified["confidence_structure"]
     assert "interaction_coherence_score" in unified["confidence_structure"]
     assert "cross_layer_integration" in unified["decision_refinements"]
 
@@ -5630,6 +5633,7 @@ def test_layer_discovery_layer_adds_unified_field_components_nonbreaking(tmp_pat
     unified = result["unified_market_intelligence_field"]
     assert "layer_discovery_state" in unified["components"]
     assert "combination_reliability" in unified["confidence_structure"]
+    assert "layer_discovery_reliability" in unified["confidence_structure"]
     assert "layer_discovery" in unified["decision_refinements"]
 
 
@@ -5761,9 +5765,12 @@ def test_temporal_context_memory_layer_adds_unified_field_components_nonbreaking
     )
     unified = result["unified_market_intelligence_field"]
     assert "temporal_context_memory_state" in unified["components"]
+    assert "temporal_context_state" in unified["components"]
     assert "sequence_reliability" in unified["confidence_structure"]
+    assert "temporal_context_reliability" in unified["confidence_structure"]
     assert "sequence_recurrence_score" in unified["confidence_structure"]
     assert "temporal_context_memory" in unified["decision_refinements"]
+    assert "temporal_context" in unified["decision_refinements"]
 
 
 def test_temporal_context_memory_layer_detects_sequence_recurrence_from_ordered_layer_firings(tmp_path: Path) -> None:
