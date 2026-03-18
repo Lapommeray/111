@@ -84,6 +84,20 @@ def test_runtime_config_negative_execution_cost_fails_clearly() -> None:
         validate_runtime_config(RuntimeConfig(execution_slippage_cost_points=-0.01))
 
 
+def test_runtime_config_invalid_execution_realism_v2_fields_fail_clearly() -> None:
+    with pytest.raises(ValueError, match="execution_latency_penalty_points must be >= 0"):
+        validate_runtime_config(RuntimeConfig(execution_latency_penalty_points=-0.01))
+
+    with pytest.raises(ValueError, match="execution_slippage_multiplier must be >= 1"):
+        validate_runtime_config(RuntimeConfig(execution_slippage_multiplier=0.99))
+
+    with pytest.raises(ValueError, match="execution_no_fill_spread_threshold must be >= 0"):
+        validate_runtime_config(RuntimeConfig(execution_no_fill_spread_threshold=-1.0))
+
+    with pytest.raises(ValueError, match="execution_min_fill_confidence must be within \\[0, 1\\]"):
+        validate_runtime_config(RuntimeConfig(execution_min_fill_confidence=1.1))
+
+
 def test_runtime_config_invalid_walk_forward_fields_fail_clearly() -> None:
     with pytest.raises(ValueError, match="walk_forward_context_bars must be > 0"):
         validate_runtime_config(RuntimeConfig(walk_forward_context_bars=0))

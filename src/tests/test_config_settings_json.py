@@ -22,6 +22,11 @@ def test_settings_json_is_valid_and_has_required_keys() -> None:
         "execution_spread_cost_points",
         "execution_commission_cost_points",
         "execution_slippage_cost_points",
+        "execution_realism_v2_enabled",
+        "execution_latency_penalty_points",
+        "execution_slippage_multiplier",
+        "execution_no_fill_spread_threshold",
+        "execution_min_fill_confidence",
         "knowledge_candidate_limit",
     ):
         assert key in payload

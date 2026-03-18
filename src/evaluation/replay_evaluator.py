@@ -41,6 +41,11 @@ def evaluate_replay(
     execution_spread_cost_points: float = 0.0,
     execution_commission_cost_points: float = 0.0,
     execution_slippage_cost_points: float = 0.0,
+    execution_realism_v2_enabled: bool = False,
+    execution_latency_penalty_points: float = 0.0,
+    execution_slippage_multiplier: float = 1.0,
+    execution_no_fill_spread_threshold: float = 0.0,
+    execution_min_fill_confidence: float = 0.0,
     knowledge_expansion_enabled: bool = False,
     knowledge_expansion_root: str = "memory/knowledge_expansion",
     knowledge_candidate_limit: int = 6,
@@ -58,6 +63,13 @@ def evaluate_replay(
         spread_cost_points=execution_spread_cost_points,
         commission_cost_points=execution_commission_cost_points,
         slippage_cost_points=execution_slippage_cost_points,
+    )
+    execution_realism_v2 = _build_execution_realism_v2_config(
+        enabled=execution_realism_v2_enabled,
+        latency_penalty_points=execution_latency_penalty_points,
+        slippage_multiplier=execution_slippage_multiplier,
+        no_fill_spread_threshold=execution_no_fill_spread_threshold,
+        min_fill_confidence=execution_min_fill_confidence,
     )
 
     records: list[dict[str, Any]] = []
@@ -90,6 +102,7 @@ def evaluate_replay(
             evolution_artifact_root=evolution_artifact_root,
             evolution_max_proposals=evolution_max_proposals,
             execution_costs=execution_costs,
+            execution_realism_v2=execution_realism_v2,
         )
     else:
         cycles = _build_walk_forward_cycles(
@@ -128,6 +141,7 @@ def evaluate_replay(
                 evolution_artifact_root=evolution_artifact_root,
                 evolution_max_proposals=evolution_max_proposals,
                 execution_costs=execution_costs,
+                execution_realism_v2=execution_realism_v2,
             )
             for record in cycle_records:
                 record["walk_forward_cycle"] = cycle_index
@@ -154,6 +168,7 @@ def evaluate_replay(
     action_distribution = _action_distribution(records)
     confidence_distribution = _confidence_distribution(records)
 
+    execution_realism_v2_impact = _build_execution_realism_v2_impact(records, execution_realism_v2)
     return {
         "symbol": symbol,
         "mode": "replay_evaluation",
@@ -166,6 +181,12 @@ def evaluate_replay(
         "session_report": build_session_report(records),
         "execution_costs": execution_costs,
         "execution_cost_impact": _build_execution_cost_impact(records, execution_costs),
+        "execution_realism_v2": execution_realism_v2_impact,
+        "execution_realism_v2_enabled": execution_realism_v2_impact["execution_realism_v2_enabled"],
+        "realism_v2_rules_applied": execution_realism_v2_impact["realism_v2_rules_applied"],
+        "skipped_trade_count": execution_realism_v2_impact["skipped_trade_count"],
+        "additional_realism_penalty_points": execution_realism_v2_impact["additional_realism_penalty_points"],
+        "realism_adjusted_net_pnl_points": execution_realism_v2_impact["realism_adjusted_net_pnl_points"],
         "walk_forward_enabled": walk_forward_enabled,
         "cycle_count": cycle_count,
         "context_bars": walk_forward_context_bars,
@@ -174,6 +195,9 @@ def evaluate_replay(
         "total_oos_closed_trades": oos_summary["total_oos_closed_trades"],
         "total_oos_gross_pnl_points": oos_summary["total_oos_gross_pnl_points"],
         "total_oos_net_pnl_points": oos_summary["total_oos_net_pnl_points"],
+        "total_oos_realism_adjusted_net_pnl_points": oos_summary["total_oos_realism_adjusted_net_pnl_points"],
+        "total_oos_skipped_trades": oos_summary["total_oos_skipped_trades"],
+        "total_oos_additional_realism_penalty_points": oos_summary["total_oos_additional_realism_penalty_points"],
         "oos_win_rate": oos_summary["oos_win_rate"],
         "oos_max_drawdown": oos_summary["oos_max_drawdown"],
         "per_cycle_summary": per_cycle_summary,
@@ -207,6 +231,7 @@ def _run_replay_steps(
     evolution_artifact_root: str,
     evolution_max_proposals: int,
     execution_costs: dict[str, float],
+    execution_realism_v2: dict[str, Any],
 ) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     for step_index, end in enumerate(end_indexes, start=1):
@@ -238,6 +263,7 @@ def _run_replay_steps(
         )
         result = pipeline_runner(cfg)
         _apply_execution_costs_to_record(result, execution_costs)
+        _apply_execution_realism_v2_to_record(result, execution_costs, execution_realism_v2)
         result["evaluation_step"] = step_index
         records.append(result)
     return records
@@ -327,6 +353,28 @@ def _build_walk_forward_cycle_summary(
     cycle_records: list[dict[str, Any]],
 ) -> dict[str, Any]:
     closed_trades, gross_pnl_points, net_pnl_points, wins, net_series = _closed_outcome_points(cycle_records)
+    skipped_trade_count = 0
+    additional_realism_penalty_points = 0.0
+    realism_adjusted_net_pnl_points = 0.0
+    for record in cycle_records:
+        outcome = _extract_latest_trade_outcome(record)
+        if not _outcome_is_closed_trade(outcome):
+            continue
+        net = round(float(outcome.get("pnl_points_net", outcome.get("pnl_points", 0.0))), 3)
+        realism_v2 = outcome.get("execution_realism_v2", {})
+        if isinstance(realism_v2, dict):
+            if bool(realism_v2.get("no_fill_applied", False)):
+                skipped_trade_count += 1
+            additional_realism_penalty_points = round(
+                additional_realism_penalty_points + float(realism_v2.get("additional_penalty_points", 0.0)),
+                3,
+            )
+            realism_adjusted_net_pnl_points = round(
+                realism_adjusted_net_pnl_points + float(realism_v2.get("realism_adjusted_net_pnl_points", net)),
+                3,
+            )
+        else:
+            realism_adjusted_net_pnl_points = round(realism_adjusted_net_pnl_points + net, 3)
     return {
         "cycle_index": cycle_index,
         "context_start_bar_index": int(cycle["context_start_index"]),
@@ -338,6 +386,9 @@ def _build_walk_forward_cycle_summary(
         "wins": wins,
         "gross_pnl_points": gross_pnl_points,
         "net_pnl_points": net_pnl_points,
+        "realism_adjusted_net_pnl_points": realism_adjusted_net_pnl_points,
+        "skipped_trade_count": skipped_trade_count,
+        "additional_realism_penalty_points": additional_realism_penalty_points,
         "win_rate": round((wins / closed_trades), 4) if closed_trades else 0.0,
         "max_drawdown": _max_drawdown(net_series),
     }
@@ -359,6 +410,9 @@ def _empty_walk_forward_oos_summary(
         "total_oos_closed_trades": 0,
         "total_oos_gross_pnl_points": 0.0,
         "total_oos_net_pnl_points": 0.0,
+        "total_oos_realism_adjusted_net_pnl_points": 0.0,
+        "total_oos_skipped_trades": 0,
+        "total_oos_additional_realism_penalty_points": 0.0,
         "oos_win_rate": 0.0,
         "oos_max_drawdown": 0.0,
     }
@@ -374,6 +428,15 @@ def _build_walk_forward_oos_summary(
     total_closed = sum(int(cycle.get("closed_trades", 0)) for cycle in per_cycle_summary)
     total_gross = round(sum(float(cycle.get("gross_pnl_points", 0.0)) for cycle in per_cycle_summary), 3)
     total_net = round(sum(float(cycle.get("net_pnl_points", 0.0)) for cycle in per_cycle_summary), 3)
+    total_realism_adjusted_net = round(
+        sum(float(cycle.get("realism_adjusted_net_pnl_points", cycle.get("net_pnl_points", 0.0))) for cycle in per_cycle_summary),
+        3,
+    )
+    total_skipped = sum(int(cycle.get("skipped_trade_count", 0)) for cycle in per_cycle_summary)
+    total_additional_realism_penalty = round(
+        sum(float(cycle.get("additional_realism_penalty_points", 0.0)) for cycle in per_cycle_summary),
+        3,
+    )
     total_wins = sum(int(cycle.get("wins", 0)) for cycle in per_cycle_summary)
     max_drawdown_across_cycles = round(
         max((float(cycle.get("max_drawdown", 0.0)) for cycle in per_cycle_summary), default=0.0),
@@ -388,6 +451,9 @@ def _build_walk_forward_oos_summary(
         "total_oos_closed_trades": total_closed,
         "total_oos_gross_pnl_points": total_gross,
         "total_oos_net_pnl_points": total_net,
+        "total_oos_realism_adjusted_net_pnl_points": total_realism_adjusted_net,
+        "total_oos_skipped_trades": total_skipped,
+        "total_oos_additional_realism_penalty_points": total_additional_realism_penalty,
         "oos_win_rate": round((total_wins / total_closed), 4) if total_closed else 0.0,
         "oos_max_drawdown": max_drawdown_across_cycles,
     }
@@ -471,6 +537,37 @@ def _build_execution_costs(
     }
 
 
+def _build_execution_realism_v2_config(
+    *,
+    enabled: bool,
+    latency_penalty_points: float,
+    slippage_multiplier: float,
+    no_fill_spread_threshold: float,
+    min_fill_confidence: float,
+) -> dict[str, Any]:
+    latency = _validate_non_negative_cost("execution_latency_penalty_points", latency_penalty_points)
+    no_fill_threshold = _validate_non_negative_cost(
+        "execution_no_fill_spread_threshold",
+        no_fill_spread_threshold,
+    )
+    slippage_multi = _validate_non_negative_cost("execution_slippage_multiplier", slippage_multiplier)
+    if slippage_multi < 1.0:
+        raise ValueError("execution_slippage_multiplier must be >= 1")
+    min_conf_numeric = float(min_fill_confidence)
+    if not math.isfinite(min_conf_numeric):
+        raise ValueError("execution_min_fill_confidence must be finite")
+    if min_conf_numeric < 0.0 or min_conf_numeric > 1.0:
+        raise ValueError("execution_min_fill_confidence must be within [0, 1]")
+    min_conf = round(min_conf_numeric, 6)
+    return {
+        "enabled": bool(enabled),
+        "latency_penalty_points": latency,
+        "slippage_multiplier": slippage_multi,
+        "no_fill_spread_threshold": no_fill_threshold,
+        "min_fill_confidence": min_conf,
+    }
+
+
 def _validate_non_negative_cost(name: str, value: float) -> float:
     numeric_value = float(value)
     if not math.isfinite(numeric_value):
@@ -496,6 +593,104 @@ def _apply_execution_costs_to_record(record: dict[str, Any], execution_costs: di
     latest_outcome["execution_costs"] = {
         **execution_costs,
         "applied": True,
+    }
+
+
+def _apply_execution_realism_v2_to_record(
+    record: dict[str, Any],
+    execution_costs: dict[str, float],
+    execution_realism_v2: dict[str, Any],
+) -> None:
+    if not bool(execution_realism_v2.get("enabled", False)):
+        return
+    latest_outcome = _extract_latest_trade_outcome(record)
+    if not _outcome_is_closed_trade(latest_outcome):
+        return
+
+    spread_proxy = _extract_spread_proxy_points(record)
+    signal_confidence = _extract_signal_confidence(record)
+    execution_quality_confidence = _extract_execution_quality_confidence(record)
+    # Prefer execution-quality confidence when available because it is a direct
+    # execution-proxy signal; otherwise fall back to the trade signal confidence.
+    confidence_proxy = (
+        execution_quality_confidence
+        if execution_quality_confidence is not None
+        else signal_confidence
+    )
+    confidence_proxy = float(confidence_proxy)
+
+    no_fill_threshold = float(execution_realism_v2["no_fill_spread_threshold"])
+    no_fill_applied = (
+        no_fill_threshold > 0.0
+        and spread_proxy is not None
+        and spread_proxy > no_fill_threshold
+    )
+    net = round(float(latest_outcome.get("pnl_points_net", latest_outcome.get("pnl_points", 0.0))), 3)
+    additional_penalty_points = 0.0
+    rules_triggered: list[str] = []
+    calc_log: list[str] = []
+
+    if no_fill_applied:
+        rules_triggered.append("no_fill_spread_threshold")
+        calc_log.append(
+            f"spread_proxy={round(float(spread_proxy), 3)}, "
+            f"threshold={round(no_fill_threshold, 3)} -> no_fill"
+        )
+        realism_adjusted_net = 0.0
+    else:
+        latency_penalty = round(float(execution_realism_v2["latency_penalty_points"]), 3)
+        slippage_multiplier_penalty = round(
+            float(execution_costs.get("slippage_cost_points", 0.0))
+            * max(0.0, float(execution_realism_v2["slippage_multiplier"]) - 1.0),
+            3,
+        )
+        confidence_penalty = 0.0
+        min_fill_confidence = float(execution_realism_v2["min_fill_confidence"])
+        if min_fill_confidence > 0.0 and confidence_proxy < min_fill_confidence:
+            confidence_gap = round(min_fill_confidence - confidence_proxy, 6)
+            # Keep the confidence penalty deterministic and bounded: we scale by
+            # configured total execution cost, with a 0.1 minimum multiplier so the
+            # penalty can still apply when fixed execution costs are near zero.
+            confidence_penalty = round(confidence_gap * max(0.1, float(execution_costs.get("total_cost_points", 0.0))), 3)
+            rules_triggered.append("confidence_penalty")
+            calc_log.append(
+                f"confidence_proxy={round(confidence_proxy, 4)}, "
+                f"min_fill_confidence={round(min_fill_confidence, 4)} -> "
+                f"confidence_penalty={confidence_penalty}"
+            )
+        if latency_penalty > 0.0:
+            rules_triggered.append("latency_penalty")
+            calc_log.append(f"latency_penalty_points={latency_penalty}")
+        if slippage_multiplier_penalty > 0.0:
+            rules_triggered.append("spread_sensitive_slippage_multiplier")
+            calc_log.append(
+                f"base_slippage_cost_points={round(float(execution_costs.get('slippage_cost_points', 0.0)), 3)}, "
+                f"slippage_multiplier={round(float(execution_realism_v2['slippage_multiplier']), 3)} -> "
+                f"slippage_multiplier_penalty={slippage_multiplier_penalty}"
+            )
+        additional_penalty_points = round(latency_penalty + slippage_multiplier_penalty + confidence_penalty, 3)
+        realism_adjusted_net = round(net - additional_penalty_points, 3)
+
+    latest_outcome["execution_realism_v2"] = {
+        "enabled": True,
+        "applied": True,
+        "rules_triggered": sorted(set(rules_triggered)),
+        "no_fill_applied": no_fill_applied,
+        "proxy_values": {
+            "spread_proxy_points": spread_proxy,
+            "signal_confidence": round(signal_confidence, 4),
+            "execution_quality_confidence": execution_quality_confidence,
+            "confidence_proxy": round(confidence_proxy, 4),
+        },
+        "config": {
+            "latency_penalty_points": float(execution_realism_v2["latency_penalty_points"]),
+            "slippage_multiplier": float(execution_realism_v2["slippage_multiplier"]),
+            "no_fill_spread_threshold": float(execution_realism_v2["no_fill_spread_threshold"]),
+            "min_fill_confidence": float(execution_realism_v2["min_fill_confidence"]),
+        },
+        "additional_penalty_points": additional_penalty_points,
+        "realism_adjusted_net_pnl_points": realism_adjusted_net,
+        "calculation_log": calc_log,
     }
 
 
@@ -542,4 +737,109 @@ def _build_execution_cost_impact(
         "total_execution_cost_points": round(closed_trades * float(execution_costs["total_cost_points"]), 3),
         "net_pnl_points": net_pnl_points,
         "per_trade_total_cost_points": round(float(execution_costs["total_cost_points"]), 3),
+    }
+
+
+def _extract_signal_confidence(record: dict[str, Any]) -> float:
+    signal = record.get("signal", {})
+    if not isinstance(signal, dict):
+        return 0.0
+    return round(float(signal.get("confidence", 0.0) or 0.0), 6)
+
+
+def _extract_spread_proxy_points(record: dict[str, Any]) -> float | None:
+    module_results = _extract_module_results(record)
+    spread_state = module_results.get("spread_state", {})
+    if not isinstance(spread_state, dict):
+        return None
+    payload = spread_state.get("payload", spread_state)
+    if not isinstance(payload, dict):
+        return None
+    spread_points = payload.get("spread_points")
+    if spread_points is None:
+        return None
+    return round(float(spread_points), 6)
+
+
+def _extract_execution_quality_confidence(record: dict[str, Any]) -> float | None:
+    module_results = _extract_module_results(record)
+    execution_quality = module_results.get("execution_quality", {})
+    if not isinstance(execution_quality, dict):
+        return None
+    payload = execution_quality.get("payload", execution_quality)
+    if not isinstance(payload, dict):
+        return None
+    confidence = payload.get("confidence")
+    if confidence is None:
+        return None
+    return round(float(confidence), 6)
+
+
+def _extract_module_results(record: dict[str, Any]) -> dict[str, Any]:
+    signal = record.get("signal", {})
+    if not isinstance(signal, dict):
+        return {}
+    advanced_modules = signal.get("advanced_modules", {})
+    if not isinstance(advanced_modules, dict):
+        return {}
+    module_results = advanced_modules.get("module_results", {})
+    if not isinstance(module_results, dict):
+        return {}
+    return module_results
+
+
+def _build_execution_realism_v2_impact(
+    records: list[dict[str, Any]],
+    execution_realism_v2: dict[str, Any],
+) -> dict[str, Any]:
+    rules_applied: set[str] = set()
+    closed_trade_count = 0
+    skipped_trade_count = 0
+    gross_pnl_points = 0.0
+    net_pnl_points = 0.0
+    additional_realism_penalty_points = 0.0
+    realism_adjusted_net_pnl_points = 0.0
+
+    for record in records:
+        outcome = _extract_latest_trade_outcome(record)
+        if not _outcome_is_closed_trade(outcome):
+            continue
+        closed_trade_count += 1
+        gross = round(float(outcome.get("pnl_points_gross", outcome.get("pnl_points", 0.0))), 3)
+        net = round(float(outcome.get("pnl_points_net", gross)), 3)
+        realism_v2 = outcome.get("execution_realism_v2", {})
+        gross_pnl_points = round(gross_pnl_points + gross, 3)
+        net_pnl_points = round(net_pnl_points + net, 3)
+        if isinstance(realism_v2, dict):
+            for rule in realism_v2.get("rules_triggered", []):
+                if isinstance(rule, str) and rule.strip():
+                    rules_applied.add(rule)
+            if bool(realism_v2.get("no_fill_applied", False)):
+                skipped_trade_count += 1
+            additional_realism_penalty_points = round(
+                additional_realism_penalty_points + float(realism_v2.get("additional_penalty_points", 0.0)),
+                3,
+            )
+            realism_adjusted_net_pnl_points = round(
+                realism_adjusted_net_pnl_points + float(realism_v2.get("realism_adjusted_net_pnl_points", net)),
+                3,
+            )
+        else:
+            realism_adjusted_net_pnl_points = round(realism_adjusted_net_pnl_points + net, 3)
+
+    return {
+        "execution_realism_v2_enabled": bool(execution_realism_v2.get("enabled", False)),
+        "realism_v2_rules_configured": [
+            "latency_penalty",
+            "spread_sensitive_slippage_multiplier",
+            "no_fill_spread_threshold",
+            "confidence_penalty",
+        ],
+        "realism_v2_rules_applied": sorted(rules_applied),
+        "closed_trade_count": closed_trade_count,
+        "skipped_trade_count": skipped_trade_count,
+        "gross_pnl_points": gross_pnl_points,
+        "net_pnl_points": net_pnl_points,
+        "additional_realism_penalty_points": additional_realism_penalty_points,
+        "realism_adjusted_net_pnl_points": realism_adjusted_net_pnl_points,
     }
