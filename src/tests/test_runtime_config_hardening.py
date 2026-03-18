@@ -84,6 +84,35 @@ def test_runtime_config_negative_execution_cost_fails_clearly() -> None:
         validate_runtime_config(RuntimeConfig(execution_slippage_cost_points=-0.01))
 
 
+def test_runtime_config_invalid_walk_forward_fields_fail_clearly() -> None:
+    with pytest.raises(ValueError, match="walk_forward_context_bars must be > 0"):
+        validate_runtime_config(RuntimeConfig(walk_forward_context_bars=0))
+
+    with pytest.raises(ValueError, match="walk_forward_test_bars must be > 0"):
+        validate_runtime_config(RuntimeConfig(walk_forward_test_bars=0))
+
+    with pytest.raises(ValueError, match="walk_forward_step_bars must be > 0"):
+        validate_runtime_config(RuntimeConfig(walk_forward_step_bars=0))
+
+    with pytest.raises(ValueError, match="walk_forward_context_bars must be >= bars"):
+        validate_runtime_config(
+            RuntimeConfig(
+                bars=221,
+                walk_forward_enabled=True,
+                walk_forward_context_bars=220,
+            )
+        )
+
+    with pytest.raises(ValueError, match="walk_forward_test_bars must be >= evaluation_stride"):
+        validate_runtime_config(
+            RuntimeConfig(
+                walk_forward_enabled=True,
+                walk_forward_test_bars=4,
+                evaluation_stride=5,
+            )
+        )
+
+
 def test_runtime_config_invalid_mode_and_replay_source_fail_clearly() -> None:
     with pytest.raises(ValueError, match="Unsupported mode: paper\\. Supported modes: live, replay"):
         validate_runtime_config(RuntimeConfig(mode="paper"))

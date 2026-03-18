@@ -70,6 +70,10 @@ class RuntimeConfig:
     evaluation_steps: int = 30
     evaluation_stride: int = 5
     evaluation_output_path: str = "memory/replay_evaluation_report.json"
+    walk_forward_enabled: bool = False
+    walk_forward_context_bars: int = 220
+    walk_forward_test_bars: int = 60
+    walk_forward_step_bars: int = 60
     execution_spread_cost_points: float = 0.0
     execution_commission_cost_points: float = 0.0
     execution_slippage_cost_points: float = 0.0
@@ -127,6 +131,10 @@ RUNTIME_CONFIG_TYPES: dict[str, str] = {
     "evaluation_steps": "int",
     "evaluation_stride": "int",
     "evaluation_output_path": "str",
+    "walk_forward_enabled": "bool",
+    "walk_forward_context_bars": "int",
+    "walk_forward_test_bars": "int",
+    "walk_forward_step_bars": "int",
     "execution_spread_cost_points": "float",
     "execution_commission_cost_points": "float",
     "execution_slippage_cost_points": "float",
@@ -318,6 +326,16 @@ def validate_runtime_config(config: RuntimeConfig) -> None:
         raise ValueError("evaluation_steps must be > 0")
     if config.evaluation_stride <= 0:
         raise ValueError("evaluation_stride must be > 0")
+    if config.walk_forward_context_bars <= 0:
+        raise ValueError("walk_forward_context_bars must be > 0")
+    if config.walk_forward_test_bars <= 0:
+        raise ValueError("walk_forward_test_bars must be > 0")
+    if config.walk_forward_step_bars <= 0:
+        raise ValueError("walk_forward_step_bars must be > 0")
+    if config.walk_forward_enabled and config.walk_forward_context_bars < config.bars:
+        raise ValueError("walk_forward_context_bars must be >= bars")
+    if config.walk_forward_enabled and config.walk_forward_test_bars < config.evaluation_stride:
+        raise ValueError("walk_forward_test_bars must be >= evaluation_stride")
     if config.live_order_volume <= 0:
         raise ValueError("live_order_volume must be > 0")
     if config.execution_spread_cost_points < 0:
@@ -1641,6 +1659,10 @@ def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
         compact_output=config.compact_output,
         evaluation_steps=config.evaluation_steps,
         evaluation_stride=config.evaluation_stride,
+        walk_forward_enabled=config.walk_forward_enabled,
+        walk_forward_context_bars=config.walk_forward_context_bars,
+        walk_forward_test_bars=config.walk_forward_test_bars,
+        walk_forward_step_bars=config.walk_forward_step_bars,
         execution_spread_cost_points=config.execution_spread_cost_points,
         execution_commission_cost_points=config.execution_commission_cost_points,
         execution_slippage_cost_points=config.execution_slippage_cost_points,
