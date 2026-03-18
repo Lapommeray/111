@@ -1,9 +1,0 @@
-{
-  "sandbox_only": true,
-  "replay_validation_required": true,
-  "live_deployment_allowed": false,
-  "no_blind_live_self_rewrites": true,
-  "resource_allocation_pause_guard": false,
-  "resource_allocation_refusal_guard": false,
-  "replay_scope": "evaluation_replay"
-}
