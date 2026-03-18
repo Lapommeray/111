@@ -1,7 +1,0 @@
-{
-  "candidate_budget": 16,
-  "allowed_activation_count": 6,
-  "rejected_activation_count": 10,
-  "activation_readiness_score": 0.5475,
-  "activation_gate_reliability": 0.615
-}

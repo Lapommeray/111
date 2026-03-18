@@ -1,6 +1,0 @@
-{
-  "deprecation_readiness_score": 0.7015,
-  "rollbackability_score": 0.78,
-  "falsification_readiness": 0.6079,
-  "promotion_freeze_recommended": false
-}
