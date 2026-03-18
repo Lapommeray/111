@@ -238,7 +238,7 @@ def _build_execution_cost_impact(
     return {
         "closed_trade_count": closed_trades,
         "gross_pnl_points": gross_pnl_points,
-        "total_execution_cost_points": round(gross_pnl_points - net_pnl_points, 3),
+        "total_execution_cost_points": round(closed_trades * float(execution_costs["total_cost_points"]), 3),
         "net_pnl_points": net_pnl_points,
         "per_trade_total_cost_points": round(float(execution_costs["total_cost_points"]), 3),
     }

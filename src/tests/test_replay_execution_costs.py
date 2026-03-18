@@ -31,13 +31,13 @@ def _write_replay_csv(path: Path, rows: int = 12) -> None:
             )
 
 
-def _pipeline_runner_from_pnls(pnls: list[float]):
+def _pipeline_runner_from_pnls(pnl_values: list[float]):
     cursor = {"index": 0}
 
     def _runner(_config: Any) -> dict[str, Any]:
-        idx = min(cursor["index"], len(pnls) - 1)
+        idx = min(cursor["index"], len(pnl_values) - 1)
         cursor["index"] += 1
-        pnl_points = float(pnls[idx])
+        pnl_points = float(pnl_values[idx])
         return {
             "signal": {"action": "BUY", "confidence": 0.8, "blocked": False},
             "status_panel": {
@@ -56,6 +56,7 @@ def _pipeline_runner_from_pnls(pnls: list[float]):
 
 
 def _identity_config_factory(**kwargs: Any) -> dict[str, Any]:
+    """Return replay config kwargs unchanged for evaluate_replay test doubles."""
     return kwargs
 
 
