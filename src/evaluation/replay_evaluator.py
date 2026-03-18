@@ -366,7 +366,7 @@ def _build_walk_forward_oos_summary(
     total_gross = round(sum(float(cycle.get("gross_pnl_points", 0.0)) for cycle in per_cycle_summary), 3)
     total_net = round(sum(float(cycle.get("net_pnl_points", 0.0)) for cycle in per_cycle_summary), 3)
     total_wins = sum(int(cycle.get("wins", 0)) for cycle in per_cycle_summary)
-    max_cycle_drawdown = round(
+    max_drawdown_across_cycles = round(
         max((float(cycle.get("max_drawdown", 0.0)) for cycle in per_cycle_summary), default=0.0),
         3,
     )
@@ -380,7 +380,7 @@ def _build_walk_forward_oos_summary(
         "total_oos_gross_pnl_points": total_gross,
         "total_oos_net_pnl_points": total_net,
         "oos_win_rate": round((total_wins / total_closed), 4) if total_closed else 0.0,
-        "oos_max_drawdown": max_cycle_drawdown,
+        "oos_max_drawdown": max_drawdown_across_cycles,
     }
 
 
