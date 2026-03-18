@@ -17,6 +17,9 @@
   "evaluation_steps": 30,
   "evaluation_stride": 5,
   "evaluation_output_path": "memory/replay_evaluation_report.json",
+  "execution_spread_cost_points": 0.0,
+  "execution_commission_cost_points": 0.0,
+  "execution_slippage_cost_points": 0.0,
   "knowledge_expansion_enabled": false,
   "knowledge_expansion_root": "memory/knowledge_expansion",
   "knowledge_candidate_limit": 6
