@@ -1,0 +1,9 @@
+{
+  "sandbox_only": true,
+  "replay_validation_required": true,
+  "live_deployment_allowed": false,
+  "no_blind_live_self_rewrites": true,
+  "layer_discovery_pause_guard": false,
+  "layer_discovery_refusal_guard": false,
+  "replay_scope": "evaluation_replay"
+}

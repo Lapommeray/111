@@ -1,0 +1,11 @@
+{
+  "disconfirming_evidence_pressure": 0.2578,
+  "experiment_reason_cluster": "stress_validation_ready",
+  "watchlist": [
+    {
+      "axis": "transfer_stress",
+      "pressure": 0.2578,
+      "unresolved_hypothesis_count": 1
+    }
+  ]
+}
