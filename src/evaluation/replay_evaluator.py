@@ -402,19 +402,19 @@ def _load_rows(path: Path) -> list[dict[str, str]]:
 
 def _prepare_replay_memory_root(memory_root: str) -> Path:
     base = Path(memory_root).expanduser()
-    parent = (base.parent if str(base.parent) != "" else Path(".")).resolve()
+    parent = base.parent.resolve()
     sandbox = parent / f"{base.name}__replay_isolation"
     if sandbox.exists():
         if sandbox.is_file():
             raise RuntimeError(f"Replay isolation path is a file, expected directory: {sandbox}")
-        _safe_rmtree(sandbox)
+        _safe_rmtree(sandbox, expected_parent=parent)
     sandbox.mkdir(parents=True, exist_ok=True)
     return sandbox
 
 
-def _safe_rmtree(path: Path) -> None:
+def _safe_rmtree(path: Path, *, expected_parent: Path) -> None:
     resolved = path.resolve()
-    if resolved.name.endswith("__replay_isolation"):
+    if resolved.name.endswith("__replay_isolation") and resolved.parent == expected_parent.resolve():
         shutil.rmtree(resolved)
         return
     raise RuntimeError(f"Refusing to delete non-replay sandbox path: {resolved}")

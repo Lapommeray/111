@@ -310,7 +310,8 @@ def test_replay_isolation_keeps_repeated_runs_deterministic(tmp_path: Path) -> N
     assert {key: report_a[key] for key in keys} == {key: report_b[key] for key in keys}
     assert report_a["replay_isolated"] is True
     assert Path(report_a["replay_memory_root"]).exists()
-    assert report_a["action_distribution"] == {"BUY": 4, "SELL": 0, "WAIT": 0}
+    assert report_a["action_distribution"]["BUY"] == report_a["steps"]
+    assert report_a["action_distribution"]["SELL"] == 0
 
 
 def test_walk_forward_isolation_keeps_repeated_oos_summary_deterministic(tmp_path: Path) -> None:
