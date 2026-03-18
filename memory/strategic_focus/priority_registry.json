@@ -1,7 +1,0 @@
-{
-  "instrument_focus": "balanced_primary_secondary",
-  "strategy_family_emphasis": "mean_reversion",
-  "regime_preferences": "mean_reversion_regime",
-  "evolution_throttling": 0.3224,
-  "strategic_focus_state": "focused"
-}

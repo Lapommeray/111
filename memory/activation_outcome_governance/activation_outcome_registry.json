@@ -1,6 +1,0 @@
-{
-  "activation_outcome_state": "validated",
-  "post_activation_regression_risk": 0.3229,
-  "activation_outcome_reliability": 0.659,
-  "canary_validation_mode": "guarded_replay"
-}
