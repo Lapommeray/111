@@ -435,6 +435,9 @@ def test_advanced_discovery_layers_generate_signals_and_persist_artifacts(tmp_pa
         "capability_lineage_state",
         "knowledge_retirement_state",
         "retirement_tombstone_state",
+        "cross_layer_integration_state",
+        "layer_discovery_state",
+        "temporal_context_memory_state",
     }
     assert 0.0 <= unified["unified_field_score"] <= 1.0
     assert 0.0 <= unified["confidence_structure"]["composite_confidence"] <= 1.0
@@ -754,6 +757,9 @@ def test_unified_market_intelligence_field_non_regression_with_meta_capability_l
         "capability_lineage_state",
         "knowledge_retirement_state",
         "retirement_tombstone_state",
+        "cross_layer_integration_state",
+        "layer_discovery_state",
+        "temporal_context_memory_state",
     }
 
 
@@ -5433,3 +5439,488 @@ def test_retirement_tombstone_layer_feeds_capability_lineage_nonbreaking(tmp_pat
     lineage = second["capability_lineage_and_genealogy_intelligence_layer"]
     assert "lineage_reactivation_contamination_risk" in lineage
     assert 0.0 <= float(lineage["lineage_reactivation_contamination_risk"]) <= 1.0
+
+
+def test_cross_layer_integration_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "clip1", "status": "closed", "result": "loss", "pnl_points": -1.0, "failure_cause": "execution_failure"},
+            {"trade_id": "clip2", "status": "closed", "result": "loss", "pnl_points": -0.9, "failure_cause": "partial_fill"},
+            {"trade_id": "clip3", "status": "closed", "result": "win", "pnl_points": 0.5, "failure_cause": "none"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.1, "spread_ratio": 2.8, "slippage_ratio": 2.4},
+        replay_scope="full_replay",
+    )
+    layer = result["cross_layer_integration_intelligence_layer"]
+    assert Path(layer["paths"]["latest"]).exists()
+    assert Path(layer["paths"]["history"]).exists()
+    assert Path(layer["paths"]["interaction_matrix_registry"]).exists()
+    assert Path(layer["paths"]["interaction_conflict_registry"]).exists()
+    assert Path(layer["paths"]["interaction_synergy_registry"]).exists()
+    assert Path(layer["paths"]["cross_layer_integration_governance_state"]).exists()
+
+
+def test_cross_layer_integration_layer_returns_expected_schema(tmp_path: Path) -> None:
+    layer = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "clis1", "status": "closed", "result": "loss", "pnl_points": -0.9},
+            {"trade_id": "clis2", "status": "closed", "result": "win", "pnl_points": 0.6},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.8, "spread_ratio": 2.2, "slippage_ratio": 2.0},
+        replay_scope="focused_replay",
+    )["cross_layer_integration_intelligence_layer"]
+    expected_keys = {
+        "cross_layer_integration_state",
+        "interaction_coherence_score",
+        "interaction_reliability",
+        "synergy_score",
+        "conflict_score",
+        "dominant_interaction_cluster",
+        "weighted_layer_matrix",
+        "promotion_freeze_recommended",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(layer))
+    for key in ("interaction_coherence_score", "interaction_reliability", "synergy_score", "conflict_score"):
+        assert 0.0 <= float(layer[key]) <= 1.0
+    assert isinstance(layer["weighted_layer_matrix"], dict)
+
+
+def test_cross_layer_integration_layer_adds_unified_field_components_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "cliu1", "status": "closed", "result": "loss", "pnl_points": -0.8},
+            {"trade_id": "cliu2", "status": "closed", "result": "win", "pnl_points": 0.5},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.1, "slippage_ratio": 1.9},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "cross_layer_integration_state" in unified["components"]
+    assert "interaction_reliability" in unified["confidence_structure"]
+    assert "interaction_coherence_score" in unified["confidence_structure"]
+    assert "cross_layer_integration" in unified["decision_refinements"]
+
+
+def test_cross_layer_integration_layer_additively_influences_refusal_pause_behavior(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "clib1", "status": "closed", "result": "loss", "pnl_points": -1.8, "failure_cause": "execution_failure"},
+            {"trade_id": "clib2", "status": "closed", "result": "loss", "pnl_points": -1.4, "failure_cause": "partial_fill"},
+            {"trade_id": "clib3", "status": "closed", "result": "loss", "pnl_points": -1.2, "failure_cause": "spread_spike"},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 3.0, "spread_ratio": 4.0, "slippage_ratio": 3.8},
+        replay_scope="full_replay",
+    )
+    behavior = result["unified_market_intelligence_field"]["decision_refinements"]["refusal_pause_behavior"]
+    layer = result["cross_layer_integration_intelligence_layer"]
+    if float(layer["conflict_score"]) >= 0.5:
+        assert "cross_layer_conflict_pause_guard" in behavior["pause_reasons"]
+    if float(layer["conflict_score"]) >= 0.65 or float(layer["interaction_reliability"]) <= 0.42:
+        assert "cross_layer_conflict_refusal_guard" in behavior["refusal_reasons"]
+
+
+def test_cross_layer_integration_layer_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    layer = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "clim1", "status": "closed", "result": "loss", "pnl_points": -0.1},
+            {"trade_id": "clim2", "status": "closed", "result": "flat", "pnl_points": 0.0},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )["cross_layer_integration_intelligence_layer"]
+    assert isinstance(layer["cross_layer_integration_state"], str)
+    assert 0.0 <= float(layer["interaction_reliability"]) <= 1.0
+    assert layer["paths"]["latest"]
+
+
+def test_cross_layer_integration_layer_history_rolls_and_governance_is_sandbox_replay_only(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    for i in range(3):
+        run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"clig{i}a", "status": "closed", "result": "loss", "pnl_points": -0.7},
+                {"trade_id": f"clig{i}b", "status": "closed", "result": "win", "pnl_points": 0.4},
+            ],
+            market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.1, "slippage_ratio": 1.9},
+            replay_scope="focused_replay",
+        )
+    history = json.loads((memory_root / "cross_layer_integration" / "cross_layer_integration_history.json").read_text(encoding="utf-8"))
+    assert history["snapshots"]
+    assert len(history["snapshots"]) <= 200
+    flags = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "cligla", "status": "closed", "result": "loss", "pnl_points": -0.6},
+            {"trade_id": "cliglb", "status": "closed", "result": "win", "pnl_points": 0.4},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 1.9, "slippage_ratio": 1.8},
+        replay_scope="focused_replay",
+    )["cross_layer_integration_intelligence_layer"]["governance_flags"]
+    assert flags["sandbox_only"] is True
+    assert flags["replay_validation_required"] is True
+    assert flags["live_deployment_allowed"] is False
+    assert flags["no_blind_live_self_rewrites"] is True
+
+
+def test_layer_discovery_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    layer = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "ldp1", "status": "closed", "result": "loss", "pnl_points": -1.0},
+            {"trade_id": "ldp2", "status": "closed", "result": "loss", "pnl_points": -0.8},
+            {"trade_id": "ldp3", "status": "closed", "result": "win", "pnl_points": 0.6},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 2.7, "slippage_ratio": 2.4},
+        replay_scope="full_replay",
+    )["layer_discovery_and_combination_mining_layer"]
+    assert Path(layer["paths"]["latest"]).exists()
+    assert Path(layer["paths"]["history"]).exists()
+    assert Path(layer["paths"]["combination_candidate_registry"]).exists()
+    assert Path(layer["paths"]["combination_novelty_registry"]).exists()
+    assert Path(layer["paths"]["discovery_pressure_registry"]).exists()
+    assert Path(layer["paths"]["discovered_layer_signature_registry"]).exists()
+    assert Path(layer["paths"]["layer_discovery_governance_state"]).exists()
+
+
+def test_layer_discovery_layer_returns_expected_schema(tmp_path: Path) -> None:
+    layer = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "lds1", "status": "closed", "result": "loss", "pnl_points": -0.9},
+            {"trade_id": "lds2", "status": "closed", "result": "win", "pnl_points": 0.5},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.9, "spread_ratio": 2.3, "slippage_ratio": 2.1},
+        replay_scope="focused_replay",
+    )["layer_discovery_and_combination_mining_layer"]
+    expected_keys = {
+        "layer_discovery_state",
+        "combination_novelty_score",
+        "combination_reliability",
+        "candidate_combination_count",
+        "dominant_combination_signature",
+        "discovered_layer_candidate_registry",
+        "discovery_pressure_score",
+        "discovery_reason_cluster",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(layer))
+    assert 0.0 <= float(layer["combination_novelty_score"]) <= 1.0
+    assert 0.0 <= float(layer["combination_reliability"]) <= 1.0
+
+
+def test_layer_discovery_layer_adds_unified_field_components_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "ldu1", "status": "closed", "result": "loss", "pnl_points": -0.7},
+            {"trade_id": "ldu2", "status": "closed", "result": "win", "pnl_points": 0.5},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.0, "slippage_ratio": 1.8},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "layer_discovery_state" in unified["components"]
+    assert "combination_reliability" in unified["confidence_structure"]
+    assert "layer_discovery" in unified["decision_refinements"]
+
+
+def test_layer_discovery_layer_detects_combination_novelty_under_multi_layer_pressure(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    first = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "ldn1", "status": "closed", "result": "loss", "pnl_points": -1.2},
+            {"trade_id": "ldn2", "status": "closed", "result": "loss", "pnl_points": -1.0},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.6, "spread_ratio": 3.3, "slippage_ratio": 3.0},
+        replay_scope="full_replay",
+    )["layer_discovery_and_combination_mining_layer"]
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "ldn3", "status": "closed", "result": "loss", "pnl_points": -0.8},
+            {"trade_id": "ldn4", "status": "closed", "result": "win", "pnl_points": 0.4},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.2, "spread_ratio": 2.8, "slippage_ratio": 2.5},
+        replay_scope="full_replay",
+    )["layer_discovery_and_combination_mining_layer"]
+    assert 0.0 <= float(first["combination_novelty_score"]) <= 1.0
+    assert 0.0 <= float(second["combination_novelty_score"]) <= 1.0
+    assert int(second["candidate_combination_count"]) >= 1
+
+
+def test_layer_discovery_layer_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    layer = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "ldm1", "status": "closed", "result": "loss", "pnl_points": -0.1},
+            {"trade_id": "ldm2", "status": "closed", "result": "flat", "pnl_points": 0.0},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )["layer_discovery_and_combination_mining_layer"]
+    assert isinstance(layer["layer_discovery_state"], str)
+    assert 0.0 <= float(layer["combination_reliability"]) <= 1.0
+    assert layer["paths"]["latest"]
+
+
+def test_layer_discovery_layer_history_rolls_and_governance_is_sandbox_replay_only(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    for i in range(3):
+        run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"ldg{i}a", "status": "closed", "result": "loss", "pnl_points": -0.8},
+                {"trade_id": f"ldg{i}b", "status": "closed", "result": "win", "pnl_points": 0.4},
+            ],
+            market_state={"structure_state": "range", "volatility_ratio": 1.9, "spread_ratio": 2.3, "slippage_ratio": 2.1},
+            replay_scope="focused_replay",
+        )
+    history = json.loads((memory_root / "layer_discovery" / "layer_discovery_history.json").read_text(encoding="utf-8"))
+    assert history["snapshots"]
+    assert len(history["snapshots"]) <= 200
+    flags = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "ldgla", "status": "closed", "result": "loss", "pnl_points": -0.6},
+            {"trade_id": "ldglb", "status": "closed", "result": "win", "pnl_points": 0.4},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 2.0, "slippage_ratio": 1.8},
+        replay_scope="focused_replay",
+    )["layer_discovery_and_combination_mining_layer"]["governance_flags"]
+    assert flags["sandbox_only"] is True
+    assert flags["replay_validation_required"] is True
+    assert flags["live_deployment_allowed"] is False
+    assert flags["no_blind_live_self_rewrites"] is True
+
+
+def test_temporal_context_memory_layer_persists_required_artifacts(tmp_path: Path) -> None:
+    layer = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "tcp1", "status": "closed", "result": "loss", "pnl_points": -1.0},
+            {"trade_id": "tcp2", "status": "closed", "result": "loss", "pnl_points": -0.8},
+            {"trade_id": "tcp3", "status": "closed", "result": "win", "pnl_points": 0.6},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.1, "spread_ratio": 2.8, "slippage_ratio": 2.5},
+        replay_scope="full_replay",
+    )["temporal_context_memory_layer"]
+    assert Path(layer["paths"]["latest"]).exists()
+    assert Path(layer["paths"]["history"]).exists()
+    assert Path(layer["paths"]["sequence_signature_registry"]).exists()
+    assert Path(layer["paths"]["temporal_recurrence_registry"]).exists()
+    assert Path(layer["paths"]["sequence_failure_trace"]).exists()
+    assert Path(layer["paths"]["temporal_context_governance_state"]).exists()
+
+
+def test_temporal_context_memory_layer_returns_expected_schema(tmp_path: Path) -> None:
+    layer = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "tcs1", "status": "closed", "result": "loss", "pnl_points": -0.9},
+            {"trade_id": "tcs2", "status": "closed", "result": "win", "pnl_points": 0.5},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.9, "spread_ratio": 2.2, "slippage_ratio": 2.0},
+        replay_scope="focused_replay",
+    )["temporal_context_memory_layer"]
+    expected_keys = {
+        "temporal_context_memory_state",
+        "sequence_reliability",
+        "sequence_recurrence_score",
+        "temporal_interaction_pressure",
+        "dominant_sequence_signature",
+        "sequence_failure_recurrence",
+        "context_horizon_quality",
+        "temporal_reason_cluster",
+        "governance_flags",
+        "paths",
+    }
+    assert expected_keys.issubset(set(layer))
+    for key in ("sequence_reliability", "sequence_recurrence_score", "temporal_interaction_pressure", "sequence_failure_recurrence"):
+        assert 0.0 <= float(layer[key]) <= 1.0
+
+
+def test_temporal_context_memory_layer_adds_unified_field_components_nonbreaking(tmp_path: Path) -> None:
+    result = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "tcu1", "status": "closed", "result": "loss", "pnl_points": -0.7},
+            {"trade_id": "tcu2", "status": "closed", "result": "win", "pnl_points": 0.5},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.7, "spread_ratio": 2.0, "slippage_ratio": 1.8},
+        replay_scope="full_replay",
+    )
+    unified = result["unified_market_intelligence_field"]
+    assert "temporal_context_memory_state" in unified["components"]
+    assert "sequence_reliability" in unified["confidence_structure"]
+    assert "sequence_recurrence_score" in unified["confidence_structure"]
+    assert "temporal_context_memory" in unified["decision_refinements"]
+
+
+def test_temporal_context_memory_layer_detects_sequence_recurrence_from_ordered_layer_firings(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    first = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "tcr1", "status": "closed", "result": "loss", "pnl_points": -1.1},
+            {"trade_id": "tcr2", "status": "closed", "result": "loss", "pnl_points": -0.9},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.3, "spread_ratio": 3.0, "slippage_ratio": 2.7},
+        replay_scope="full_replay",
+    )["temporal_context_memory_layer"]
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "tcr3", "status": "closed", "result": "loss", "pnl_points": -0.7},
+            {"trade_id": "tcr4", "status": "closed", "result": "win", "pnl_points": 0.4},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.2, "spread_ratio": 2.9, "slippage_ratio": 2.6},
+        replay_scope="full_replay",
+    )["temporal_context_memory_layer"]
+    assert isinstance(second["dominant_sequence_signature"], str)
+    assert "->" in second["dominant_sequence_signature"]
+    assert float(second["sequence_recurrence_score"]) >= float(first["sequence_recurrence_score"])
+
+
+def test_temporal_context_memory_layer_nonbreaking_with_missing_inputs(tmp_path: Path) -> None:
+    layer = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "tcm1", "status": "closed", "result": "loss", "pnl_points": -0.1},
+            {"trade_id": "tcm2", "status": "closed", "result": "flat", "pnl_points": 0.0},
+        ],
+        market_state={"structure_state": "range"},
+        replay_scope="focused_replay",
+    )["temporal_context_memory_layer"]
+    assert isinstance(layer["temporal_context_memory_state"], str)
+    assert 0.0 <= float(layer["sequence_reliability"]) <= 1.0
+    assert layer["paths"]["latest"]
+
+
+def test_temporal_context_memory_layer_history_rolls_and_governance_is_sandbox_replay_only(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    for i in range(3):
+        run_self_evolving_indicator_layer(
+            memory_root=memory_root,
+            trade_outcomes=[
+                {"trade_id": f"tcg{i}a", "status": "closed", "result": "loss", "pnl_points": -0.8},
+                {"trade_id": f"tcg{i}b", "status": "closed", "result": "win", "pnl_points": 0.4},
+            ],
+            market_state={"structure_state": "range", "volatility_ratio": 1.9, "spread_ratio": 2.3, "slippage_ratio": 2.1},
+            replay_scope="focused_replay",
+        )
+    history = json.loads((memory_root / "temporal_context_memory" / "temporal_context_memory_history.json").read_text(encoding="utf-8"))
+    assert history["snapshots"]
+    assert len(history["snapshots"]) <= 200
+    flags = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "tcgla", "status": "closed", "result": "loss", "pnl_points": -0.6},
+            {"trade_id": "tcglb", "status": "closed", "result": "win", "pnl_points": 0.4},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 1.6, "spread_ratio": 2.0, "slippage_ratio": 1.8},
+        replay_scope="focused_replay",
+    )["temporal_context_memory_layer"]["governance_flags"]
+    assert flags["sandbox_only"] is True
+    assert flags["replay_validation_required"] is True
+    assert flags["live_deployment_allowed"] is False
+    assert flags["no_blind_live_self_rewrites"] is True
+
+
+def test_cross_layer_integration_feeds_self_expansion_quality_components_nonbreaking(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "clq1", "status": "closed", "result": "loss", "pnl_points": -1.1},
+            {"trade_id": "clq2", "status": "closed", "result": "loss", "pnl_points": -0.9},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.4, "spread_ratio": 3.1, "slippage_ratio": 2.9},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "clq3", "status": "closed", "result": "loss", "pnl_points": -0.7},
+            {"trade_id": "clq4", "status": "closed", "result": "win", "pnl_points": 0.5},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.0, "spread_ratio": 2.6, "slippage_ratio": 2.4},
+        replay_scope="full_replay",
+    )
+    quality_components = second["self_expansion_quality_layer"]["quality_components"]
+    for key in (
+        "interaction_coherence_context",
+        "interaction_reliability_context",
+        "interaction_conflict_pressure_context",
+    ):
+        assert key in quality_components
+        assert 0.0 <= float(quality_components[key]) <= 1.0
+
+
+def test_layer_discovery_feeds_self_suggestion_governor_nonbreaking(tmp_path: Path) -> None:
+    governor = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "ldg1", "status": "closed", "result": "loss", "pnl_points": -1.0},
+            {"trade_id": "ldg2", "status": "closed", "result": "loss", "pnl_points": -0.8},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.3, "spread_ratio": 2.9, "slippage_ratio": 2.6},
+        replay_scope="full_replay",
+    )["self_suggestion_governor"]
+    block = governor["layer_discovery_and_combination_mining_layer"]
+    assert {"layer_discovery_state", "combination_novelty_score", "combination_reliability", "discovery_pressure_score"}.issubset(
+        set(block)
+    )
+
+
+def test_temporal_context_memory_feeds_self_suggestion_governor_nonbreaking(tmp_path: Path) -> None:
+    governor = run_self_evolving_indicator_layer(
+        memory_root=tmp_path / "memory",
+        trade_outcomes=[
+            {"trade_id": "tcsg1", "status": "closed", "result": "loss", "pnl_points": -1.0},
+            {"trade_id": "tcsg2", "status": "closed", "result": "loss", "pnl_points": -0.8},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.3, "spread_ratio": 2.9, "slippage_ratio": 2.6},
+        replay_scope="full_replay",
+    )["self_suggestion_governor"]
+    block = governor["temporal_context_memory_layer"]
+    assert {
+        "temporal_context_memory_state",
+        "sequence_reliability",
+        "sequence_recurrence_score",
+        "temporal_interaction_pressure",
+    }.issubset(set(block))
+
+
+def test_temporal_context_memory_feeds_learning_stability_nonbreaking(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory"
+    run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "tcl1", "status": "closed", "result": "loss", "pnl_points": -1.2},
+            {"trade_id": "tcl2", "status": "closed", "result": "loss", "pnl_points": -1.0},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.6, "spread_ratio": 3.2, "slippage_ratio": 3.0},
+        replay_scope="full_replay",
+    )
+    second = run_self_evolving_indicator_layer(
+        memory_root=memory_root,
+        trade_outcomes=[
+            {"trade_id": "tcl3", "status": "closed", "result": "loss", "pnl_points": -0.8},
+            {"trade_id": "tcl4", "status": "closed", "result": "win", "pnl_points": 0.4},
+        ],
+        market_state={"structure_state": "range", "volatility_ratio": 2.2, "spread_ratio": 2.8, "slippage_ratio": 2.6},
+        replay_scope="full_replay",
+    )
+    learning = second["learning_stability_and_catastrophic_drift_guard_layer"]
+    assert 0.0 <= float(learning["catastrophic_drift_risk"]) <= 1.0
+    assert 0.0 <= float(learning["capability_expansion_pressure"]) <= 1.0

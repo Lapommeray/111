@@ -4905,6 +4905,9 @@ def _detect_improvement_gaps(
     capability_lineage_and_genealogy_intelligence_layer: dict[str, Any] | None = None,
     knowledge_retirement_and_pruning_governance_layer: dict[str, Any] | None = None,
     retirement_tombstone_and_resurrection_safety_layer: dict[str, Any] | None = None,
+    cross_layer_integration_intelligence_layer: dict[str, Any] | None = None,
+    layer_discovery_and_combination_mining_layer: dict[str, Any] | None = None,
+    temporal_context_memory_layer: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     gaps: list[dict[str, Any]] = []
     repeated = autonomous_behavior.get("trade_review_engine", {}).get("repeated_failure_patterns", [])
@@ -5734,6 +5737,91 @@ def _detect_improvement_gaps(
                 "severity": round(min(1.0, max(1.0 - resurrection_safety_score, 0.45)), 4),
             }
         )
+    cross_layer_integration_intelligence_layer = (
+        cross_layer_integration_intelligence_layer
+        if isinstance(cross_layer_integration_intelligence_layer, dict)
+        else {}
+    )
+    interaction_conflict_score = float(cross_layer_integration_intelligence_layer.get("conflict_score", 0.0) or 0.0)
+    interaction_coherence_score = float(
+        cross_layer_integration_intelligence_layer.get("interaction_coherence_score", 1.0) or 1.0
+    )
+    if interaction_coherence_score <= 0.45:
+        gaps.append(
+            {
+                "gap_type": "cross_layer_interaction_deficit",
+                "detail": str(
+                    cross_layer_integration_intelligence_layer.get(
+                        "dominant_interaction_cluster",
+                        "cross_layer_interaction_deficit",
+                    )
+                ),
+                "frequency": max(1, int(round((1.0 - interaction_coherence_score) * 4))),
+                "severity": round(min(1.0, 1.0 - interaction_coherence_score), 4),
+            }
+        )
+    if interaction_conflict_score >= 0.5:
+        gaps.append(
+            {
+                "gap_type": "interaction_conflict_instability",
+                "detail": str(
+                    cross_layer_integration_intelligence_layer.get(
+                        "dominant_interaction_cluster",
+                        "interaction_conflict_instability",
+                    )
+                ),
+                "frequency": max(1, int(round(interaction_conflict_score * 4))),
+                "severity": round(min(1.0, interaction_conflict_score), 4),
+            }
+        )
+    layer_discovery_and_combination_mining_layer = (
+        layer_discovery_and_combination_mining_layer
+        if isinstance(layer_discovery_and_combination_mining_layer, dict)
+        else {}
+    )
+    discovery_pressure_score = float(layer_discovery_and_combination_mining_layer.get("discovery_pressure_score", 0.0) or 0.0)
+    combination_novelty_score = float(layer_discovery_and_combination_mining_layer.get("combination_novelty_score", 1.0) or 1.0)
+    candidate_combination_count = int(layer_discovery_and_combination_mining_layer.get("candidate_combination_count", 0) or 0)
+    if discovery_pressure_score >= 0.55 and combination_novelty_score <= 0.5:
+        gaps.append(
+            {
+                "gap_type": "combination_discovery_stall",
+                "detail": str(
+                    layer_discovery_and_combination_mining_layer.get(
+                        "discovery_reason_cluster",
+                        "combination_discovery_stall",
+                    )
+                ),
+                "frequency": max(1, int(round(discovery_pressure_score * 4))),
+                "severity": round(min(1.0, max(discovery_pressure_score, 1.0 - combination_novelty_score)), 4),
+            }
+        )
+    if candidate_combination_count >= 3 and float(
+        layer_discovery_and_combination_mining_layer.get("combination_reliability", 1.0) or 1.0
+    ) <= 0.5:
+        gaps.append(
+            {
+                "gap_type": "discovered_layer_candidate_undervalidation",
+                "detail": str(
+                    layer_discovery_and_combination_mining_layer.get(
+                        "dominant_combination_signature",
+                        "discovered_layer_candidate_undervalidation",
+                    )
+                ),
+                "frequency": candidate_combination_count,
+                "severity": round(
+                    min(
+                        1.0,
+                        max(
+                            0.45,
+                            1.0 - float(layer_discovery_and_combination_mining_layer.get("combination_reliability", 1.0) or 1.0),
+                        ),
+                    ),
+                    4,
+                ),
+            }
+        )
+    temporal_context_memory_layer = temporal_context_memory_layer if isinstance(temporal_context_memory_layer, dict) else {}
     return gaps
 
 
@@ -6972,6 +7060,9 @@ def _self_suggestion_governor(
     capability_lineage_and_genealogy_intelligence_layer: dict[str, Any] | None = None,
     knowledge_retirement_and_pruning_governance_layer: dict[str, Any] | None = None,
     retirement_tombstone_and_resurrection_safety_layer: dict[str, Any] | None = None,
+    cross_layer_integration_intelligence_layer: dict[str, Any] | None = None,
+    layer_discovery_and_combination_mining_layer: dict[str, Any] | None = None,
+    temporal_context_memory_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     registry_dir = memory_root / "capability_registry"
     registry_dir.mkdir(parents=True, exist_ok=True)
@@ -7029,6 +7120,9 @@ def _self_suggestion_governor(
         capability_lineage_and_genealogy_intelligence_layer=capability_lineage_and_genealogy_intelligence_layer,
         knowledge_retirement_and_pruning_governance_layer=knowledge_retirement_and_pruning_governance_layer,
         retirement_tombstone_and_resurrection_safety_layer=retirement_tombstone_and_resurrection_safety_layer,
+        cross_layer_integration_intelligence_layer=cross_layer_integration_intelligence_layer,
+        layer_discovery_and_combination_mining_layer=layer_discovery_and_combination_mining_layer,
+        temporal_context_memory_layer=temporal_context_memory_layer,
     )
     calibration_uncertainty_engine = (
         calibration_uncertainty_engine if isinstance(calibration_uncertainty_engine, dict) else {}
@@ -7085,6 +7179,17 @@ def _self_suggestion_governor(
         retirement_tombstone_and_resurrection_safety_layer
         if isinstance(retirement_tombstone_and_resurrection_safety_layer, dict)
         else {}
+    )
+    cross_layer_integration_intelligence_layer = (
+        cross_layer_integration_intelligence_layer if isinstance(cross_layer_integration_intelligence_layer, dict) else {}
+    )
+    layer_discovery_and_combination_mining_layer = (
+        layer_discovery_and_combination_mining_layer
+        if isinstance(layer_discovery_and_combination_mining_layer, dict)
+        else {}
+    )
+    temporal_context_memory_layer = (
+        temporal_context_memory_layer if isinstance(temporal_context_memory_layer, dict) else {}
     )
     temporal_execution_state = str(temporal_execution_sequencing_layer.get("temporal_execution_state", "unknown"))
     timing_priority_score = float(temporal_execution_sequencing_layer.get("timing_priority_score", 0.0) or 0.0)
@@ -7230,6 +7335,42 @@ def _self_suggestion_governor(
         "resurrection_safety_score": round(resurrection_safety_score, 4),
         "tombstone_enforcement_reliability": round(tombstone_enforcement_reliability, 4),
         "reactivation_pressure": round(reactivation_pressure, 4),
+        "interaction_coherence_score": round(
+            float(cross_layer_integration_intelligence_layer.get("interaction_coherence_score", 0.0) or 0.0),
+            4,
+        ),
+        "interaction_reliability": round(
+            float(cross_layer_integration_intelligence_layer.get("interaction_reliability", 0.0) or 0.0),
+            4,
+        ),
+        "interaction_conflict_score": round(
+            float(cross_layer_integration_intelligence_layer.get("conflict_score", 0.0) or 0.0),
+            4,
+        ),
+        "combination_novelty_score": round(
+            float(layer_discovery_and_combination_mining_layer.get("combination_novelty_score", 0.0) or 0.0),
+            4,
+        ),
+        "combination_reliability": round(
+            float(layer_discovery_and_combination_mining_layer.get("combination_reliability", 0.0) or 0.0),
+            4,
+        ),
+        "discovery_pressure_score": round(
+            float(layer_discovery_and_combination_mining_layer.get("discovery_pressure_score", 0.0) or 0.0),
+            4,
+        ),
+        "sequence_reliability": round(
+            float(temporal_context_memory_layer.get("sequence_reliability", 0.0) or 0.0),
+            4,
+        ),
+        "sequence_recurrence_score": round(
+            float(temporal_context_memory_layer.get("sequence_recurrence_score", 0.0) or 0.0),
+            4,
+        ),
+        "temporal_interaction_pressure": round(
+            float(temporal_context_memory_layer.get("temporal_interaction_pressure", 0.0) or 0.0),
+            4,
+        ),
     }
     if previous_governor.get("input_signature") == input_signature:
         return previous_governor
@@ -7640,6 +7781,50 @@ def _self_suggestion_governor(
             "resurrection_safety_score": round(resurrection_safety_score, 4),
             "tombstone_enforcement_reliability": round(tombstone_enforcement_reliability, 4),
             "reactivation_pressure": round(reactivation_pressure, 4),
+        },
+        "cross_layer_integration_intelligence_layer": {
+            "cross_layer_integration_state": str(
+                cross_layer_integration_intelligence_layer.get("cross_layer_integration_state", "unknown")
+            ),
+            "interaction_coherence_score": round(
+                float(cross_layer_integration_intelligence_layer.get("interaction_coherence_score", 0.0) or 0.0),
+                4,
+            ),
+            "interaction_reliability": round(
+                float(cross_layer_integration_intelligence_layer.get("interaction_reliability", 0.0) or 0.0),
+                4,
+            ),
+            "conflict_score": round(
+                float(cross_layer_integration_intelligence_layer.get("conflict_score", 0.0) or 0.0),
+                4,
+            ),
+        },
+        "layer_discovery_and_combination_mining_layer": {
+            "layer_discovery_state": str(layer_discovery_and_combination_mining_layer.get("layer_discovery_state", "unknown")),
+            "combination_novelty_score": round(
+                float(layer_discovery_and_combination_mining_layer.get("combination_novelty_score", 0.0) or 0.0),
+                4,
+            ),
+            "combination_reliability": round(
+                float(layer_discovery_and_combination_mining_layer.get("combination_reliability", 0.0) or 0.0),
+                4,
+            ),
+            "discovery_pressure_score": round(
+                float(layer_discovery_and_combination_mining_layer.get("discovery_pressure_score", 0.0) or 0.0),
+                4,
+            ),
+        },
+        "temporal_context_memory_layer": {
+            "temporal_context_memory_state": str(temporal_context_memory_layer.get("temporal_context_memory_state", "unknown")),
+            "sequence_reliability": round(float(temporal_context_memory_layer.get("sequence_reliability", 0.0) or 0.0), 4),
+            "sequence_recurrence_score": round(
+                float(temporal_context_memory_layer.get("sequence_recurrence_score", 0.0) or 0.0),
+                4,
+            ),
+            "temporal_interaction_pressure": round(
+                float(temporal_context_memory_layer.get("temporal_interaction_pressure", 0.0) or 0.0),
+                4,
+            ),
         },
         "paths": {
             "registry": str(registry_path),
@@ -8143,6 +8328,9 @@ def _self_expansion_quality_layer(
     capability_lineage_and_genealogy_intelligence_layer: dict[str, Any] | None = None,
     knowledge_retirement_and_pruning_governance_layer: dict[str, Any] | None = None,
     retirement_tombstone_and_resurrection_safety_layer: dict[str, Any] | None = None,
+    cross_layer_integration_intelligence_layer: dict[str, Any] | None = None,
+    layer_discovery_and_combination_mining_layer: dict[str, Any] | None = None,
+    temporal_context_memory_layer: dict[str, Any] | None = None,
     replay_scope: str,
 ) -> dict[str, Any]:
     quality_dir = memory_root / "self_expansion_quality"
@@ -8215,6 +8403,19 @@ def _self_expansion_quality_layer(
         retirement_tombstone_and_resurrection_safety_layer
         if isinstance(retirement_tombstone_and_resurrection_safety_layer, dict)
         else {}
+    )
+    cross_layer_integration_intelligence_layer = (
+        cross_layer_integration_intelligence_layer
+        if isinstance(cross_layer_integration_intelligence_layer, dict)
+        else {}
+    )
+    layer_discovery_and_combination_mining_layer = (
+        layer_discovery_and_combination_mining_layer
+        if isinstance(layer_discovery_and_combination_mining_layer, dict)
+        else {}
+    )
+    temporal_context_memory_layer = (
+        temporal_context_memory_layer if isinstance(temporal_context_memory_layer, dict) else {}
     )
 
     candidates = capability_evolution_ladder.get("capability_candidates", [])
@@ -8822,6 +9023,45 @@ def _self_expansion_quality_layer(
             ),
             4,
         ),
+        "interaction_coherence_context": round(
+            max(
+                0.0,
+                min(1.0, float(cross_layer_integration_intelligence_layer.get("interaction_coherence_score", 0.0) or 0.0)),
+            ),
+            4,
+        ),
+        "interaction_reliability_context": round(
+            max(0.0, min(1.0, float(cross_layer_integration_intelligence_layer.get("interaction_reliability", 0.0) or 0.0))),
+            4,
+        ),
+        "interaction_conflict_pressure_context": round(
+            max(0.0, min(1.0, float(cross_layer_integration_intelligence_layer.get("conflict_score", 0.0) or 0.0))),
+            4,
+        ),
+        "combination_novelty_context": round(
+            max(0.0, min(1.0, float(layer_discovery_and_combination_mining_layer.get("combination_novelty_score", 0.0) or 0.0))),
+            4,
+        ),
+        "combination_reliability_context": round(
+            max(0.0, min(1.0, float(layer_discovery_and_combination_mining_layer.get("combination_reliability", 0.0) or 0.0))),
+            4,
+        ),
+        "discovery_pressure_context": round(
+            max(0.0, min(1.0, float(layer_discovery_and_combination_mining_layer.get("discovery_pressure_score", 0.0) or 0.0))),
+            4,
+        ),
+        "sequence_reliability_context": round(
+            max(0.0, min(1.0, float(temporal_context_memory_layer.get("sequence_reliability", 0.0) or 0.0))),
+            4,
+        ),
+        "sequence_recurrence_context": round(
+            max(0.0, min(1.0, float(temporal_context_memory_layer.get("sequence_recurrence_score", 0.0) or 0.0))),
+            4,
+        ),
+        "temporal_interaction_pressure_context": round(
+            max(0.0, min(1.0, float(temporal_context_memory_layer.get("temporal_interaction_pressure", 0.0) or 0.0))),
+            4,
+        ),
         "promotion_confidence_multiplier": promotion_confidence_multiplier,
         "quarantine_pressure_delta": quarantine_pressure_delta,
         "expansion_rate_limit": expansion_rate_limit,
@@ -9280,6 +9520,9 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
     latent_transition_hazard_engine: dict[str, Any] | None = None,
     knowledge_retirement_and_pruning_governance_layer: dict[str, Any] | None = None,
     retirement_tombstone_and_resurrection_safety_layer: dict[str, Any] | None = None,
+    cross_layer_integration_intelligence_layer: dict[str, Any] | None = None,
+    layer_discovery_and_combination_mining_layer: dict[str, Any] | None = None,
+    temporal_context_memory_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     stability_dir = memory_root / "learning_stability"
     stability_dir.mkdir(parents=True, exist_ok=True)
@@ -9321,6 +9564,19 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
         retirement_tombstone_and_resurrection_safety_layer
         if isinstance(retirement_tombstone_and_resurrection_safety_layer, dict)
         else {}
+    )
+    cross_layer_integration_intelligence_layer = (
+        cross_layer_integration_intelligence_layer
+        if isinstance(cross_layer_integration_intelligence_layer, dict)
+        else {}
+    )
+    layer_discovery_and_combination_mining_layer = (
+        layer_discovery_and_combination_mining_layer
+        if isinstance(layer_discovery_and_combination_mining_layer, dict)
+        else {}
+    )
+    temporal_context_memory_layer = (
+        temporal_context_memory_layer if isinstance(temporal_context_memory_layer, dict) else {}
     )
 
     confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
@@ -9407,6 +9663,15 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
             + float(retirement_tombstone_and_resurrection_safety_layer.get("unsafe_resurrection_risk", 0.0) or 0.0) * 0.45
         )
     )
+    interaction_conflict_score = _bounded(
+        float(cross_layer_integration_intelligence_layer.get("conflict_score", 0.0) or 0.0)
+    )
+    combination_discovery_pressure = _bounded(
+        float(layer_discovery_and_combination_mining_layer.get("discovery_pressure_score", 0.0) or 0.0)
+    )
+    temporal_interaction_pressure = _bounded(
+        float(temporal_context_memory_layer.get("temporal_interaction_pressure", 0.0) or 0.0)
+    )
 
     regime_memory_alignment = _bounded(
         float(structural_state.get("regime_memory_alignment", 0.5) or 0.5)
@@ -9474,7 +9739,12 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
     )
     if has_retirement_context:
         catastrophic_drift_risk = _bounded(catastrophic_drift_risk + ((1.0 - retirement_safety) * 0.03))
-    catastrophic_drift_risk = _bounded(catastrophic_drift_risk + (reactivation_instability_pressure * 0.04))
+    catastrophic_drift_risk = _bounded(
+        catastrophic_drift_risk
+        + (reactivation_instability_pressure * 0.04)
+        + (interaction_conflict_score * 0.03)
+        + (temporal_interaction_pressure * 0.02)
+    )
 
     # --- Metric 3: capability_expansion_pressure ---
     capability_expansion_pressure = _bounded(
@@ -9485,7 +9755,11 @@ def _learning_stability_and_catastrophic_drift_guard_layer(
     )
     if has_retirement_context:
         capability_expansion_pressure = _bounded(capability_expansion_pressure + (retirement_pressure * 0.05))
-    capability_expansion_pressure = _bounded(capability_expansion_pressure + (reactivation_instability_pressure * 0.03))
+    capability_expansion_pressure = _bounded(
+        capability_expansion_pressure
+        + (reactivation_instability_pressure * 0.03)
+        + (combination_discovery_pressure * 0.03)
+    )
 
     # --- Metric 4: regime_overfit_risk ---
     regime_overfit_risk = _bounded(
@@ -10199,6 +10473,9 @@ def _capability_lineage_and_genealogy_intelligence_layer(
     self_suggestion_governor: dict[str, Any] | None = None,
     knowledge_retirement_and_pruning_governance_layer: dict[str, Any] | None = None,
     retirement_tombstone_and_resurrection_safety_layer: dict[str, Any] | None = None,
+    cross_layer_integration_intelligence_layer: dict[str, Any] | None = None,
+    layer_discovery_and_combination_mining_layer: dict[str, Any] | None = None,
+    temporal_context_memory_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     lineage_dir = memory_root / "capability_lineage"
     lineage_dir.mkdir(parents=True, exist_ok=True)
@@ -10251,6 +10528,19 @@ def _capability_lineage_and_genealogy_intelligence_layer(
         retirement_tombstone_and_resurrection_safety_layer
         if isinstance(retirement_tombstone_and_resurrection_safety_layer, dict)
         else {}
+    )
+    cross_layer_integration_intelligence_layer = (
+        cross_layer_integration_intelligence_layer
+        if isinstance(cross_layer_integration_intelligence_layer, dict)
+        else {}
+    )
+    layer_discovery_and_combination_mining_layer = (
+        layer_discovery_and_combination_mining_layer
+        if isinstance(layer_discovery_and_combination_mining_layer, dict)
+        else {}
+    )
+    temporal_context_memory_layer = (
+        temporal_context_memory_layer if isinstance(temporal_context_memory_layer, dict) else {}
     )
 
     invention_reliability = _bounded(float(governed_capability_invention_layer.get("invention_reliability", 0.5) or 0.5))
@@ -10509,6 +10799,9 @@ def _knowledge_retirement_and_pruning_governance_layer(
     system_coherence_and_drift_integrity_layer: dict[str, Any] | None = None,
     capability_evolution_ladder: dict[str, Any] | None = None,
     self_suggestion_governor: dict[str, Any] | None = None,
+    cross_layer_integration_intelligence_layer: dict[str, Any] | None = None,
+    layer_discovery_and_combination_mining_layer: dict[str, Any] | None = None,
+    temporal_context_memory_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     retirement_dir = memory_root / "knowledge_retirement"
     retirement_dir.mkdir(parents=True, exist_ok=True)
@@ -10556,6 +10849,19 @@ def _knowledge_retirement_and_pruning_governance_layer(
     )
     capability_evolution_ladder = capability_evolution_ladder if isinstance(capability_evolution_ladder, dict) else {}
     self_suggestion_governor = self_suggestion_governor if isinstance(self_suggestion_governor, dict) else {}
+    cross_layer_integration_intelligence_layer = (
+        cross_layer_integration_intelligence_layer
+        if isinstance(cross_layer_integration_intelligence_layer, dict)
+        else {}
+    )
+    layer_discovery_and_combination_mining_layer = (
+        layer_discovery_and_combination_mining_layer
+        if isinstance(layer_discovery_and_combination_mining_layer, dict)
+        else {}
+    )
+    temporal_context_memory_layer = (
+        temporal_context_memory_layer if isinstance(temporal_context_memory_layer, dict) else {}
+    )
 
     invention_redundancy = _bounded(float(governed_capability_invention_layer.get("redundancy_risk", 0.0) or 0.0))
     expansion_pressure = _bounded(float(autonomous_capability_expansion_layer.get("expansion_pressure_score", 0.0) or 0.0))
@@ -10741,6 +11047,9 @@ def _retirement_tombstone_and_resurrection_safety_layer(
     capability_lineage_and_genealogy_intelligence_layer: dict[str, Any] | None = None,
     rollback_orchestration_and_safe_reversion_layer: dict[str, Any] | None = None,
     hypothesis_falsification_and_experiment_design_layer: dict[str, Any] | None = None,
+    cross_layer_integration_intelligence_layer: dict[str, Any] | None = None,
+    layer_discovery_and_combination_mining_layer: dict[str, Any] | None = None,
+    temporal_context_memory_layer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     tombstone_dir = memory_root / "retirement_tombstone_resurrection"
     tombstone_dir.mkdir(parents=True, exist_ok=True)
@@ -10779,6 +11088,19 @@ def _retirement_tombstone_and_resurrection_safety_layer(
         hypothesis_falsification_and_experiment_design_layer
         if isinstance(hypothesis_falsification_and_experiment_design_layer, dict)
         else {}
+    )
+    cross_layer_integration_intelligence_layer = (
+        cross_layer_integration_intelligence_layer
+        if isinstance(cross_layer_integration_intelligence_layer, dict)
+        else {}
+    )
+    layer_discovery_and_combination_mining_layer = (
+        layer_discovery_and_combination_mining_layer
+        if isinstance(layer_discovery_and_combination_mining_layer, dict)
+        else {}
+    )
+    temporal_context_memory_layer = (
+        temporal_context_memory_layer if isinstance(temporal_context_memory_layer, dict) else {}
     )
 
     previous_index = read_json_safe(retired_capability_index_path, default={"retired_capability_ids": []})
@@ -10987,6 +11309,609 @@ def _retirement_tombstone_and_resurrection_safety_layer(
     return payload
 
 
+def _cross_layer_integration_intelligence_layer(
+    *,
+    memory_root: Path,
+    replay_scope: str,
+    unified_market_intelligence_field: dict[str, Any],
+    self_suggestion_governor: dict[str, Any],
+    self_expansion_quality_layer: dict[str, Any],
+    knowledge_retirement_and_pruning_governance_layer: dict[str, Any],
+    retirement_tombstone_and_resurrection_safety_layer: dict[str, Any],
+    capability_lineage_and_genealogy_intelligence_layer: dict[str, Any],
+    hypothesis_falsification_and_experiment_design_layer: dict[str, Any],
+    rollback_orchestration_and_safe_reversion_layer: dict[str, Any],
+    learning_stability_and_catastrophic_drift_guard_layer: dict[str, Any],
+    system_coherence_and_drift_integrity_layer: dict[str, Any],
+    temporal_execution_sequencing_layer: dict[str, Any] | None = None,
+    portfolio_multi_context_capital_allocation_layer: dict[str, Any] | None = None,
+    hierarchical_decision_policy_layer: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    integration_dir = memory_root / "cross_layer_integration"
+    integration_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = integration_dir / "cross_layer_integration_latest.json"
+    history_path = integration_dir / "cross_layer_integration_history.json"
+    matrix_registry_path = integration_dir / "interaction_matrix_registry.json"
+    conflict_registry_path = integration_dir / "interaction_conflict_registry.json"
+    synergy_registry_path = integration_dir / "interaction_synergy_registry.json"
+    governance_state_path = integration_dir / "cross_layer_integration_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    unified_market_intelligence_field = (
+        unified_market_intelligence_field if isinstance(unified_market_intelligence_field, dict) else {}
+    )
+    self_suggestion_governor = self_suggestion_governor if isinstance(self_suggestion_governor, dict) else {}
+    self_expansion_quality_layer = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+    knowledge_retirement_and_pruning_governance_layer = (
+        knowledge_retirement_and_pruning_governance_layer
+        if isinstance(knowledge_retirement_and_pruning_governance_layer, dict)
+        else {}
+    )
+    retirement_tombstone_and_resurrection_safety_layer = (
+        retirement_tombstone_and_resurrection_safety_layer
+        if isinstance(retirement_tombstone_and_resurrection_safety_layer, dict)
+        else {}
+    )
+    capability_lineage_and_genealogy_intelligence_layer = (
+        capability_lineage_and_genealogy_intelligence_layer
+        if isinstance(capability_lineage_and_genealogy_intelligence_layer, dict)
+        else {}
+    )
+    hypothesis_falsification_and_experiment_design_layer = (
+        hypothesis_falsification_and_experiment_design_layer
+        if isinstance(hypothesis_falsification_and_experiment_design_layer, dict)
+        else {}
+    )
+    rollback_orchestration_and_safe_reversion_layer = (
+        rollback_orchestration_and_safe_reversion_layer
+        if isinstance(rollback_orchestration_and_safe_reversion_layer, dict)
+        else {}
+    )
+    learning_stability_and_catastrophic_drift_guard_layer = (
+        learning_stability_and_catastrophic_drift_guard_layer
+        if isinstance(learning_stability_and_catastrophic_drift_guard_layer, dict)
+        else {}
+    )
+    system_coherence_and_drift_integrity_layer = (
+        system_coherence_and_drift_integrity_layer if isinstance(system_coherence_and_drift_integrity_layer, dict) else {}
+    )
+    temporal_execution_sequencing_layer = (
+        temporal_execution_sequencing_layer if isinstance(temporal_execution_sequencing_layer, dict) else {}
+    )
+    portfolio_multi_context_capital_allocation_layer = (
+        portfolio_multi_context_capital_allocation_layer
+        if isinstance(portfolio_multi_context_capital_allocation_layer, dict)
+        else {}
+    )
+    hierarchical_decision_policy_layer = (
+        hierarchical_decision_policy_layer if isinstance(hierarchical_decision_policy_layer, dict) else {}
+    )
+
+    layer_metrics = {
+        "self_expansion_quality": _bounded(float(self_expansion_quality_layer.get("expansion_quality_score", 0.5) or 0.5)),
+        "knowledge_retirement": _bounded(float(knowledge_retirement_and_pruning_governance_layer.get("retirement_safety_score", 0.5) or 0.5)),
+        "retirement_tombstone": _bounded(float(retirement_tombstone_and_resurrection_safety_layer.get("resurrection_safety_score", 0.5) or 0.5)),
+        "capability_lineage": _bounded(float(capability_lineage_and_genealogy_intelligence_layer.get("lineage_reliability", 0.5) or 0.5)),
+        "hypothesis_falsification": _bounded(
+            float(hypothesis_falsification_and_experiment_design_layer.get("falsification_reliability", 0.5) or 0.5)
+        ),
+        "rollback_orchestration": _bounded(float(rollback_orchestration_and_safe_reversion_layer.get("rollback_reversion_reliability", 0.5) or 0.5)),
+        "learning_stability": _bounded(float(learning_stability_and_catastrophic_drift_guard_layer.get("stability_reliability", 0.5) or 0.5)),
+        "system_coherence": _bounded(float(system_coherence_and_drift_integrity_layer.get("coherence_reliability", 0.5) or 0.5)),
+        "temporal_execution": _bounded(float(temporal_execution_sequencing_layer.get("sequencing_reliability", 0.5) or 0.5)),
+        "capital_allocation": _bounded(float(portfolio_multi_context_capital_allocation_layer.get("allocation_reliability", 0.5) or 0.5)),
+        "decision_policy": _bounded(float(hierarchical_decision_policy_layer.get("policy_reliability", 0.5) or 0.5)),
+    }
+    metric_values = list(layer_metrics.values())
+    interaction_reliability = _bounded(sum(metric_values) / max(1, len(metric_values)))
+    interaction_coherence_score = _bounded(
+        (
+            interaction_reliability * 0.45
+            + _bounded(float(system_coherence_and_drift_integrity_layer.get("coherence_score", 0.5) or 0.5)) * 0.35
+            + _bounded(float(learning_stability_and_catastrophic_drift_guard_layer.get("learning_stability_score", 0.5) or 0.5)) * 0.2
+        )
+    )
+    conflict_score = _bounded(
+        (
+            _bounded(float(system_coherence_and_drift_integrity_layer.get("fragmentation_risk", 0.0) or 0.0)) * 0.35
+            + _bounded(float(rollback_orchestration_and_safe_reversion_layer.get("rollback_urgency", 0.0) or 0.0)) * 0.2
+            + _bounded(float(retirement_tombstone_and_resurrection_safety_layer.get("unsafe_resurrection_risk", 0.0) or 0.0)) * 0.2
+            + _bounded(float(hierarchical_decision_policy_layer.get("policy_conflict_score", 0.0) or 0.0)) * 0.15
+            + _bounded(float(portfolio_multi_context_capital_allocation_layer.get("context_competition_score", 0.0) or 0.0)) * 0.1
+        )
+    )
+    synergy_score = _bounded(max(0.0, interaction_coherence_score * 0.65 + interaction_reliability * 0.35 - (conflict_score * 0.55)))
+
+    weighted_layer_matrix: dict[str, dict[str, float]] = {}
+    metric_items = list(layer_metrics.items())
+    for source, source_value in metric_items:
+        row: dict[str, float] = {}
+        for target, target_value in metric_items:
+            row[target] = _bounded((source_value * 0.55) + (target_value * 0.45))
+        weighted_layer_matrix[source] = row
+    dominant_interaction_cluster = max(layer_metrics.items(), key=lambda item: item[1])[0]
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "cross_layer_conflict_pause_guard": conflict_score >= 0.5,
+        "cross_layer_conflict_refusal_guard": conflict_score >= 0.65 or interaction_reliability <= 0.42,
+    }
+    promotion_freeze_recommended = bool(
+        conflict_score >= 0.62
+        or interaction_reliability <= 0.45
+        or bool(rollback_orchestration_and_safe_reversion_layer.get("promotion_freeze", False))
+    )
+    if conflict_score >= 0.65:
+        cross_layer_integration_state = "conflicted"
+    elif interaction_coherence_score >= 0.66 and interaction_reliability >= 0.62:
+        cross_layer_integration_state = "coherent"
+    elif interaction_reliability <= 0.45:
+        cross_layer_integration_state = "fragile"
+    else:
+        cross_layer_integration_state = "watch"
+
+    payload = {
+        "cross_layer_integration_state": cross_layer_integration_state,
+        "interaction_coherence_score": interaction_coherence_score,
+        "interaction_reliability": interaction_reliability,
+        "synergy_score": synergy_score,
+        "conflict_score": conflict_score,
+        "dominant_interaction_cluster": dominant_interaction_cluster,
+        "weighted_layer_matrix": weighted_layer_matrix,
+        "promotion_freeze_recommended": promotion_freeze_recommended,
+        "governance_flags": governance_flags,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "interaction_matrix_registry": str(matrix_registry_path),
+            "interaction_conflict_registry": str(conflict_registry_path),
+            "interaction_synergy_registry": str(synergy_registry_path),
+            "cross_layer_integration_governance_state": str(governance_state_path),
+        },
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-_RETIREMENT_HISTORY_LIMIT:]})
+    write_json_atomic(matrix_registry_path, {"weighted_layer_matrix": weighted_layer_matrix, "dominant_interaction_cluster": dominant_interaction_cluster})
+    write_json_atomic(
+        conflict_registry_path,
+        {
+            "conflict_score": conflict_score,
+            "fragmentation_risk": float(system_coherence_and_drift_integrity_layer.get("fragmentation_risk", 0.0) or 0.0),
+            "rollback_urgency": float(rollback_orchestration_and_safe_reversion_layer.get("rollback_urgency", 0.0) or 0.0),
+            "policy_conflict_score": float(hierarchical_decision_policy_layer.get("policy_conflict_score", 0.0) or 0.0),
+        },
+    )
+    write_json_atomic(
+        synergy_registry_path,
+        {
+            "synergy_score": synergy_score,
+            "interaction_coherence_score": interaction_coherence_score,
+            "interaction_reliability": interaction_reliability,
+            "dominant_interaction_cluster": dominant_interaction_cluster,
+        },
+    )
+    write_json_atomic(governance_state_path, {**governance_flags, "replay_scope": replay_scope})
+    return payload
+
+
+def _layer_discovery_and_combination_mining_layer(
+    *,
+    memory_root: Path,
+    replay_scope: str,
+    cross_layer_integration_intelligence_layer: dict[str, Any],
+    self_suggestion_governor: dict[str, Any],
+    self_expansion_quality_layer: dict[str, Any],
+    capability_lineage_and_genealogy_intelligence_layer: dict[str, Any],
+    knowledge_retirement_and_pruning_governance_layer: dict[str, Any],
+    retirement_tombstone_and_resurrection_safety_layer: dict[str, Any],
+    hypothesis_falsification_and_experiment_design_layer: dict[str, Any],
+    rollback_orchestration_and_safe_reversion_layer: dict[str, Any],
+) -> dict[str, Any]:
+    discovery_dir = memory_root / "layer_discovery"
+    discovery_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = discovery_dir / "layer_discovery_latest.json"
+    history_path = discovery_dir / "layer_discovery_history.json"
+    candidate_registry_path = discovery_dir / "combination_candidate_registry.json"
+    novelty_registry_path = discovery_dir / "combination_novelty_registry.json"
+    pressure_registry_path = discovery_dir / "discovery_pressure_registry.json"
+    signature_registry_path = discovery_dir / "discovered_layer_signature_registry.json"
+    governance_state_path = discovery_dir / "layer_discovery_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    cross_layer_integration_intelligence_layer = (
+        cross_layer_integration_intelligence_layer
+        if isinstance(cross_layer_integration_intelligence_layer, dict)
+        else {}
+    )
+    self_suggestion_governor = self_suggestion_governor if isinstance(self_suggestion_governor, dict) else {}
+    self_expansion_quality_layer = self_expansion_quality_layer if isinstance(self_expansion_quality_layer, dict) else {}
+    capability_lineage_and_genealogy_intelligence_layer = (
+        capability_lineage_and_genealogy_intelligence_layer
+        if isinstance(capability_lineage_and_genealogy_intelligence_layer, dict)
+        else {}
+    )
+    knowledge_retirement_and_pruning_governance_layer = (
+        knowledge_retirement_and_pruning_governance_layer
+        if isinstance(knowledge_retirement_and_pruning_governance_layer, dict)
+        else {}
+    )
+    retirement_tombstone_and_resurrection_safety_layer = (
+        retirement_tombstone_and_resurrection_safety_layer
+        if isinstance(retirement_tombstone_and_resurrection_safety_layer, dict)
+        else {}
+    )
+    hypothesis_falsification_and_experiment_design_layer = (
+        hypothesis_falsification_and_experiment_design_layer
+        if isinstance(hypothesis_falsification_and_experiment_design_layer, dict)
+        else {}
+    )
+    rollback_orchestration_and_safe_reversion_layer = (
+        rollback_orchestration_and_safe_reversion_layer
+        if isinstance(rollback_orchestration_and_safe_reversion_layer, dict)
+        else {}
+    )
+    repeated_unresolved = self_suggestion_governor.get("repeated_unresolved_gaps", [])
+    if not isinstance(repeated_unresolved, list):
+        repeated_unresolved = []
+    unresolved_pressure = _bounded(len([item for item in repeated_unresolved if isinstance(item, dict)]) / 8.0)
+    interaction_conflict_score = _bounded(float(cross_layer_integration_intelligence_layer.get("conflict_score", 0.0) or 0.0))
+    interaction_reliability = _bounded(
+        float(cross_layer_integration_intelligence_layer.get("interaction_reliability", 0.5) or 0.5)
+    )
+    expansion_quality_score = _bounded(float(self_expansion_quality_layer.get("expansion_quality_score", 0.5) or 0.5))
+    lineage_reliability = _bounded(float(capability_lineage_and_genealogy_intelligence_layer.get("lineage_reliability", 0.5) or 0.5))
+    retirement_safety = _bounded(
+        float(knowledge_retirement_and_pruning_governance_layer.get("retirement_safety_score", 0.5) or 0.5)
+    )
+    resurrection_safety = _bounded(
+        float(retirement_tombstone_and_resurrection_safety_layer.get("resurrection_safety_score", 0.5) or 0.5)
+    )
+    falsification_reliability = _bounded(
+        float(hypothesis_falsification_and_experiment_design_layer.get("falsification_reliability", 0.5) or 0.5)
+    )
+    rollback_reliability = _bounded(
+        float(rollback_orchestration_and_safe_reversion_layer.get("rollback_reversion_reliability", 0.5) or 0.5)
+    )
+
+    dominant_combination_signature = "|".join(
+        [
+            str(cross_layer_integration_intelligence_layer.get("dominant_interaction_cluster", "cross_layer")),
+            str(capability_lineage_and_genealogy_intelligence_layer.get("dominant_lineage_axis", "lineage")),
+            str(knowledge_retirement_and_pruning_governance_layer.get("retirement_reason_cluster", "retirement")),
+        ]
+    )
+    combination_novelty_score = _bounded(
+        (
+            float(cross_layer_integration_intelligence_layer.get("synergy_score", 0.0) or 0.0) * 0.3
+            + (1.0 - interaction_conflict_score) * 0.25
+            + expansion_quality_score * 0.2
+            + lineage_reliability * 0.15
+            + unresolved_pressure * 0.1
+        )
+    )
+    combination_reliability = _bounded(
+        interaction_reliability * 0.28
+        + falsification_reliability * 0.2
+        + rollback_reliability * 0.2
+        + retirement_safety * 0.16
+        + resurrection_safety * 0.16
+    )
+    discovery_pressure_score = _bounded(
+        unresolved_pressure * 0.35
+        + interaction_conflict_score * 0.25
+        + (1.0 - combination_reliability) * 0.2
+        + (1.0 - expansion_quality_score) * 0.2
+    )
+    candidate_combination_count = max(1, min(6, int(round((combination_novelty_score + discovery_pressure_score) * 4))))
+    discovered_layer_candidate_registry = [
+        {
+            "candidate_id": f"combination_candidate_{index + 1}",
+            "combination_signature": dominant_combination_signature,
+            "novelty_score": combination_novelty_score,
+            "reliability": combination_reliability,
+            "governance_mode": "sandbox_replay_only",
+        }
+        for index in range(candidate_combination_count)
+    ]
+    if discovery_pressure_score >= 0.65:
+        discovery_reason_cluster = "high_discovery_pressure"
+    elif combination_novelty_score <= 0.45:
+        discovery_reason_cluster = "novelty_decay"
+    elif combination_reliability <= 0.5:
+        discovery_reason_cluster = "combination_reliability_deficit"
+    else:
+        discovery_reason_cluster = "balanced_combination_discovery"
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "layer_discovery_pause_guard": discovery_pressure_score >= 0.55,
+        "layer_discovery_refusal_guard": combination_reliability <= 0.4 and interaction_conflict_score >= 0.6,
+    }
+    if combination_reliability >= 0.62 and combination_novelty_score >= 0.58:
+        layer_discovery_state = "productive"
+    elif discovery_pressure_score >= 0.62:
+        layer_discovery_state = "stalled"
+    elif combination_novelty_score <= 0.45:
+        layer_discovery_state = "novelty_constrained"
+    else:
+        layer_discovery_state = "watch"
+
+    payload = {
+        "layer_discovery_state": layer_discovery_state,
+        "combination_novelty_score": combination_novelty_score,
+        "combination_reliability": combination_reliability,
+        "candidate_combination_count": candidate_combination_count,
+        "dominant_combination_signature": dominant_combination_signature,
+        "discovered_layer_candidate_registry": discovered_layer_candidate_registry,
+        "discovery_pressure_score": discovery_pressure_score,
+        "discovery_reason_cluster": discovery_reason_cluster,
+        "governance_flags": governance_flags,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "combination_candidate_registry": str(candidate_registry_path),
+            "combination_novelty_registry": str(novelty_registry_path),
+            "discovery_pressure_registry": str(pressure_registry_path),
+            "discovered_layer_signature_registry": str(signature_registry_path),
+            "layer_discovery_governance_state": str(governance_state_path),
+        },
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-_RETIREMENT_HISTORY_LIMIT:]})
+    write_json_atomic(candidate_registry_path, {"candidates": discovered_layer_candidate_registry, "candidate_combination_count": candidate_combination_count})
+    write_json_atomic(
+        novelty_registry_path,
+        {
+            "combination_novelty_score": combination_novelty_score,
+            "dominant_combination_signature": dominant_combination_signature,
+            "combination_reliability": combination_reliability,
+        },
+    )
+    write_json_atomic(
+        pressure_registry_path,
+        {
+            "discovery_pressure_score": discovery_pressure_score,
+            "interaction_conflict_score": interaction_conflict_score,
+            "unresolved_pressure": unresolved_pressure,
+            "discovery_reason_cluster": discovery_reason_cluster,
+        },
+    )
+    write_json_atomic(
+        signature_registry_path,
+        {
+            "dominant_combination_signature": dominant_combination_signature,
+            "layer_discovery_state": layer_discovery_state,
+            "candidate_combination_count": candidate_combination_count,
+        },
+    )
+    write_json_atomic(governance_state_path, {**governance_flags, "replay_scope": replay_scope})
+    return payload
+
+
+def _temporal_context_memory_layer(
+    *,
+    memory_root: Path,
+    replay_scope: str,
+    cross_layer_integration_intelligence_layer: dict[str, Any],
+    layer_discovery_and_combination_mining_layer: dict[str, Any],
+    self_suggestion_governor: dict[str, Any],
+    unified_market_intelligence_field: dict[str, Any],
+    learning_stability_and_catastrophic_drift_guard_layer: dict[str, Any],
+    capability_lineage_and_genealogy_intelligence_layer: dict[str, Any],
+    knowledge_retirement_and_pruning_governance_layer: dict[str, Any],
+) -> dict[str, Any]:
+    temporal_dir = memory_root / "temporal_context_memory"
+    temporal_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = temporal_dir / "temporal_context_memory_latest.json"
+    history_path = temporal_dir / "temporal_context_memory_history.json"
+    sequence_registry_path = temporal_dir / "sequence_signature_registry.json"
+    recurrence_registry_path = temporal_dir / "temporal_recurrence_registry.json"
+    failure_trace_path = temporal_dir / "sequence_failure_trace.json"
+    governance_state_path = temporal_dir / "temporal_context_governance_state.json"
+
+    def _bounded(value: float, *, low: float = 0.0, high: float = 1.0) -> float:
+        return round(max(low, min(high, value)), 4)
+
+    cross_layer_integration_intelligence_layer = (
+        cross_layer_integration_intelligence_layer
+        if isinstance(cross_layer_integration_intelligence_layer, dict)
+        else {}
+    )
+    layer_discovery_and_combination_mining_layer = (
+        layer_discovery_and_combination_mining_layer
+        if isinstance(layer_discovery_and_combination_mining_layer, dict)
+        else {}
+    )
+    self_suggestion_governor = self_suggestion_governor if isinstance(self_suggestion_governor, dict) else {}
+    unified_market_intelligence_field = (
+        unified_market_intelligence_field if isinstance(unified_market_intelligence_field, dict) else {}
+    )
+    learning_stability_and_catastrophic_drift_guard_layer = (
+        learning_stability_and_catastrophic_drift_guard_layer
+        if isinstance(learning_stability_and_catastrophic_drift_guard_layer, dict)
+        else {}
+    )
+    capability_lineage_and_genealogy_intelligence_layer = (
+        capability_lineage_and_genealogy_intelligence_layer
+        if isinstance(capability_lineage_and_genealogy_intelligence_layer, dict)
+        else {}
+    )
+    knowledge_retirement_and_pruning_governance_layer = (
+        knowledge_retirement_and_pruning_governance_layer
+        if isinstance(knowledge_retirement_and_pruning_governance_layer, dict)
+        else {}
+    )
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    repeated_unresolved = self_suggestion_governor.get("repeated_unresolved_gaps", [])
+    if not isinstance(repeated_unresolved, list):
+        repeated_unresolved = []
+    unresolved_pressure = _bounded(len([item for item in repeated_unresolved if isinstance(item, dict)]) / 8.0)
+
+    ordered_sequence = [
+        str(cross_layer_integration_intelligence_layer.get("cross_layer_integration_state", "cross_layer_unknown")),
+        str(layer_discovery_and_combination_mining_layer.get("layer_discovery_state", "layer_discovery_unknown")),
+        str(learning_stability_and_catastrophic_drift_guard_layer.get("learning_stability_state", "learning_unknown")),
+        str(capability_lineage_and_genealogy_intelligence_layer.get("capability_lineage_state", "lineage_unknown")),
+        str(knowledge_retirement_and_pruning_governance_layer.get("retirement_reason_cluster", "retirement_unknown")),
+    ]
+    dominant_sequence_signature = "->".join(ordered_sequence)
+    input_signature = {
+        "replay_scope": replay_scope,
+        "dominant_sequence_signature": dominant_sequence_signature,
+    }
+    previous_payload = read_json_safe(latest_path, default={})
+    if isinstance(previous_payload, dict) and previous_payload.get("input_signature") == input_signature:
+        return previous_payload
+
+    previous_registry = read_json_safe(sequence_registry_path, default={"entries": []})
+    if not isinstance(previous_registry, dict):
+        previous_registry = {"entries": []}
+    previous_entries = previous_registry.get("entries", [])
+    if not isinstance(previous_entries, list):
+        previous_entries = []
+    prior_signatures = [str(item.get("dominant_sequence_signature", "")) for item in previous_entries if isinstance(item, dict)]
+    recurrence_count = prior_signatures.count(dominant_sequence_signature)
+    sequence_recurrence_score = _bounded(min(1.0, recurrence_count / 3.0))
+    sequence_reliability = _bounded(
+        (
+            float(cross_layer_integration_intelligence_layer.get("interaction_reliability", 0.5) or 0.5) * 0.35
+            + float(layer_discovery_and_combination_mining_layer.get("combination_reliability", 0.5) or 0.5) * 0.25
+            + float(learning_stability_and_catastrophic_drift_guard_layer.get("stability_reliability", 0.5) or 0.5) * 0.2
+            + float(confidence_structure.get("composite_confidence", 0.5) or 0.5) * 0.2
+        )
+    )
+    sequence_failure_recurrence = _bounded(
+        (
+            float(cross_layer_integration_intelligence_layer.get("conflict_score", 0.0) or 0.0) * 0.5
+            + float(layer_discovery_and_combination_mining_layer.get("discovery_pressure_score", 0.0) or 0.0) * 0.3
+            + unresolved_pressure * 0.2
+        )
+    )
+    temporal_interaction_pressure = _bounded(
+        sequence_failure_recurrence * 0.55 + (1.0 - sequence_reliability) * 0.3 + (1.0 - sequence_recurrence_score) * 0.15
+    )
+    context_horizon_quality = _bounded(
+        0.45
+        + (sequence_recurrence_score * 0.25)
+        + (sequence_reliability * 0.2)
+        + ((1.0 - sequence_failure_recurrence) * 0.1)
+    )
+    if temporal_interaction_pressure >= 0.65:
+        temporal_reason_cluster = "temporal_conflict_recurrence"
+    elif sequence_recurrence_score >= 0.66:
+        temporal_reason_cluster = "stable_sequence_recurrence"
+    elif sequence_reliability <= 0.45:
+        temporal_reason_cluster = "sequence_reliability_decay"
+    else:
+        temporal_reason_cluster = "temporal_sequence_watch"
+    if sequence_reliability >= 0.62 and sequence_recurrence_score >= 0.55:
+        temporal_context_memory_state = "stable"
+    elif temporal_interaction_pressure >= 0.62:
+        temporal_context_memory_state = "pressure"
+    elif sequence_reliability <= 0.45:
+        temporal_context_memory_state = "fragile"
+    else:
+        temporal_context_memory_state = "learning"
+    governance_flags = {
+        "sandbox_only": True,
+        "replay_validation_required": True,
+        "live_deployment_allowed": False,
+        "no_blind_live_self_rewrites": True,
+        "temporal_context_pause_guard": temporal_interaction_pressure >= 0.5,
+        "temporal_context_refusal_guard": temporal_interaction_pressure >= 0.65 and sequence_reliability <= 0.45,
+    }
+    payload = {
+        "input_signature": input_signature,
+        "temporal_context_memory_state": temporal_context_memory_state,
+        "sequence_reliability": sequence_reliability,
+        "sequence_recurrence_score": sequence_recurrence_score,
+        "temporal_interaction_pressure": temporal_interaction_pressure,
+        "dominant_sequence_signature": dominant_sequence_signature,
+        "sequence_failure_recurrence": sequence_failure_recurrence,
+        "context_horizon_quality": context_horizon_quality,
+        "temporal_reason_cluster": temporal_reason_cluster,
+        "governance_flags": governance_flags,
+        "paths": {
+            "latest": str(latest_path),
+            "history": str(history_path),
+            "sequence_signature_registry": str(sequence_registry_path),
+            "temporal_recurrence_registry": str(recurrence_registry_path),
+            "sequence_failure_trace": str(failure_trace_path),
+            "temporal_context_governance_state": str(governance_state_path),
+        },
+    }
+    write_json_atomic(latest_path, payload)
+    history = read_json_safe(history_path, default={"snapshots": []})
+    if not isinstance(history, dict):
+        history = {"snapshots": []}
+    snapshots = history.get("snapshots", [])
+    if not isinstance(snapshots, list):
+        snapshots = []
+    snapshots.append(payload)
+    write_json_atomic(history_path, {"snapshots": snapshots[-_RETIREMENT_HISTORY_LIMIT:]})
+    write_json_atomic(
+        sequence_registry_path,
+        {
+            "entries": (
+                previous_entries
+                + [
+                    {
+                        "dominant_sequence_signature": dominant_sequence_signature,
+                        "temporal_context_memory_state": temporal_context_memory_state,
+                        "sequence_reliability": sequence_reliability,
+                        "replay_scope": replay_scope,
+                    }
+                ]
+            )[-500:],
+        },
+    )
+    write_json_atomic(
+        recurrence_registry_path,
+        {
+            "dominant_sequence_signature": dominant_sequence_signature,
+            "sequence_recurrence_score": sequence_recurrence_score,
+            "recurrence_count": recurrence_count,
+            "temporal_reason_cluster": temporal_reason_cluster,
+            "proxy_sequence_window_cycles": 3,
+        },
+    )
+    write_json_atomic(
+        failure_trace_path,
+        {
+            "sequence_failure_recurrence": sequence_failure_recurrence,
+            "temporal_interaction_pressure": temporal_interaction_pressure,
+            "interaction_conflict_score": float(cross_layer_integration_intelligence_layer.get("conflict_score", 0.0) or 0.0),
+            "discovery_pressure_score": float(layer_discovery_and_combination_mining_layer.get("discovery_pressure_score", 0.0) or 0.0),
+        },
+    )
+    write_json_atomic(governance_state_path, {**governance_flags, "replay_scope": replay_scope})
+    return payload
+
+
 def run_self_evolving_indicator_layer(
     *,
     memory_root: Path,
@@ -11000,6 +11925,9 @@ def run_self_evolving_indicator_layer(
     feature_contributors = feature_contributors if isinstance(feature_contributors, dict) else {}
     mutation_candidates = mutation_candidates if isinstance(mutation_candidates, list) else []
     closed = _closed_outcomes(trade_outcomes)
+    cross_layer_integration_context: dict[str, Any] = {}
+    layer_discovery_context: dict[str, Any] = {}
+    temporal_context_memory_context: dict[str, Any] = {}
 
     autonomous_behavior = run_autonomous_behavior_layer(
         memory_root=memory_root,
@@ -11970,6 +12898,9 @@ def run_self_evolving_indicator_layer(
         hierarchical_decision_policy_layer=hierarchical_decision_policy_engine,
         portfolio_multi_context_capital_allocation_layer=portfolio_multi_context_capital_allocation_engine,
         temporal_execution_sequencing_layer=temporal_execution_sequencing_engine,
+        cross_layer_integration_intelligence_layer=cross_layer_integration_context,
+        layer_discovery_and_combination_mining_layer=layer_discovery_context,
+        temporal_context_memory_layer=temporal_context_memory_context,
     )
     governed_capability_invention_engine = _governed_capability_invention_layer(
         memory_root=memory_root,
@@ -12105,6 +13036,9 @@ def run_self_evolving_indicator_layer(
         temporal_execution_sequencing_layer=temporal_execution_sequencing_engine,
         governed_capability_invention_layer=governed_capability_invention_engine,
         autonomous_capability_expansion_layer=autonomous_capability_expansion_engine,
+        cross_layer_integration_intelligence_layer=cross_layer_integration_context,
+        layer_discovery_and_combination_mining_layer=layer_discovery_context,
+        temporal_context_memory_layer=temporal_context_memory_context,
         replay_scope=replay_scope,
     )
     components = unified_market_intelligence_field.get("components", {})
@@ -12226,6 +13160,9 @@ def run_self_evolving_indicator_layer(
         self_expansion_quality_layer=self_expansion_quality_engine,
         structural_memory_graph_engine=structural_memory_graph_engine,
         latent_transition_hazard_engine=latent_transition_hazard_engine,
+        cross_layer_integration_intelligence_layer=cross_layer_integration_context,
+        layer_discovery_and_combination_mining_layer=layer_discovery_context,
+        temporal_context_memory_layer=temporal_context_memory_context,
     )
     components = unified_market_intelligence_field.get("components", {})
     if not isinstance(components, dict):
@@ -12529,6 +13466,9 @@ def run_self_evolving_indicator_layer(
         system_coherence_and_drift_integrity_layer=system_coherence_drift_integrity_engine,
         capability_evolution_ladder=capability_evolution_ladder,
         self_suggestion_governor=self_suggestion_governor,
+        cross_layer_integration_intelligence_layer=cross_layer_integration_context,
+        layer_discovery_and_combination_mining_layer=layer_discovery_context,
+        temporal_context_memory_layer=temporal_context_memory_context,
     )
     self_suggestion_governor["knowledge_retirement_and_pruning_governance_layer"] = {
         "retirement_pressure_score": knowledge_retirement_and_pruning_governance_engine.get("retirement_pressure_score", 0.0),
@@ -12663,6 +13603,9 @@ def run_self_evolving_indicator_layer(
         capability_lineage_and_genealogy_intelligence_layer=capability_lineage_engine,
         rollback_orchestration_and_safe_reversion_layer=rollback_orchestration_engine,
         hypothesis_falsification_and_experiment_design_layer=hypothesis_falsification_engine,
+        cross_layer_integration_intelligence_layer=cross_layer_integration_context,
+        layer_discovery_and_combination_mining_layer=layer_discovery_context,
+        temporal_context_memory_layer=temporal_context_memory_context,
     )
     self_suggestion_governor["retirement_tombstone_and_resurrection_safety_layer"] = {
         "resurrection_safety_score": float(
@@ -12781,6 +13724,308 @@ def run_self_evolving_indicator_layer(
     )
     decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
     unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    cross_layer_integration_intelligence_engine = _cross_layer_integration_intelligence_layer(
+        memory_root=memory_root,
+        replay_scope=replay_scope,
+        unified_market_intelligence_field=unified_market_intelligence_field,
+        self_suggestion_governor=self_suggestion_governor,
+        self_expansion_quality_layer=self_expansion_quality_engine,
+        knowledge_retirement_and_pruning_governance_layer=knowledge_retirement_and_pruning_governance_engine,
+        retirement_tombstone_and_resurrection_safety_layer=retirement_tombstone_and_resurrection_safety_engine,
+        capability_lineage_and_genealogy_intelligence_layer=capability_lineage_engine,
+        hypothesis_falsification_and_experiment_design_layer=hypothesis_falsification_engine,
+        rollback_orchestration_and_safe_reversion_layer=rollback_orchestration_engine,
+        learning_stability_and_catastrophic_drift_guard_layer=learning_stability_guard_engine,
+        system_coherence_and_drift_integrity_layer=system_coherence_drift_integrity_engine,
+        temporal_execution_sequencing_layer=temporal_execution_sequencing_engine,
+        portfolio_multi_context_capital_allocation_layer=portfolio_multi_context_capital_allocation_engine,
+        hierarchical_decision_policy_layer=hierarchical_decision_policy_engine,
+    )
+    self_suggestion_governor["cross_layer_integration_intelligence_layer"] = {
+        "cross_layer_integration_state": cross_layer_integration_intelligence_engine.get(
+            "cross_layer_integration_state",
+            "unknown",
+        ),
+        "interaction_coherence_score": float(
+            cross_layer_integration_intelligence_engine.get("interaction_coherence_score", 0.0) or 0.0
+        ),
+        "interaction_reliability": float(
+            cross_layer_integration_intelligence_engine.get("interaction_reliability", 0.0) or 0.0
+        ),
+        "conflict_score": float(cross_layer_integration_intelligence_engine.get("conflict_score", 0.0) or 0.0),
+    }
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["cross_layer_integration_state"] = {
+        "state": str(cross_layer_integration_intelligence_engine.get("cross_layer_integration_state", "unknown")),
+        "dominant_interaction_cluster": str(
+            cross_layer_integration_intelligence_engine.get("dominant_interaction_cluster", "unknown")
+        ),
+        "promotion_freeze_recommended": bool(
+            cross_layer_integration_intelligence_engine.get("promotion_freeze_recommended", False)
+        ),
+    }
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["interaction_reliability"] = round(
+        max(
+            0.0,
+            min(1.0, float(cross_layer_integration_intelligence_engine.get("interaction_reliability", 0.0) or 0.0)),
+        ),
+        4,
+    )
+    confidence_structure["interaction_coherence_score"] = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                float(cross_layer_integration_intelligence_engine.get("interaction_coherence_score", 0.0) or 0.0),
+            ),
+        ),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["cross_layer_integration"] = {
+        "cross_layer_integration_state": cross_layer_integration_intelligence_engine.get(
+            "cross_layer_integration_state",
+            "unknown",
+        ),
+        "interaction_coherence_score": round(
+            float(cross_layer_integration_intelligence_engine.get("interaction_coherence_score", 0.0) or 0.0),
+            4,
+        ),
+        "interaction_reliability": round(
+            float(cross_layer_integration_intelligence_engine.get("interaction_reliability", 0.0) or 0.0),
+            4,
+        ),
+        "synergy_score": round(float(cross_layer_integration_intelligence_engine.get("synergy_score", 0.0) or 0.0), 4),
+        "conflict_score": round(float(cross_layer_integration_intelligence_engine.get("conflict_score", 0.0) or 0.0), 4),
+        "dominant_interaction_cluster": cross_layer_integration_intelligence_engine.get(
+            "dominant_interaction_cluster",
+            "unknown",
+        ),
+    }
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    if float(cross_layer_integration_intelligence_engine.get("conflict_score", 0.0) or 0.0) >= 0.5 and (
+        "cross_layer_conflict_pause_guard" not in pause_reasons
+    ):
+        pause_reasons.append("cross_layer_conflict_pause_guard")
+    if (
+        float(cross_layer_integration_intelligence_engine.get("conflict_score", 0.0) or 0.0) >= 0.65
+        or float(cross_layer_integration_intelligence_engine.get("interaction_reliability", 1.0) or 1.0) <= 0.42
+    ) and ("cross_layer_conflict_refusal_guard" not in refusal_reasons):
+        refusal_reasons.append("cross_layer_conflict_refusal_guard")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        "cross_layer_conflict_pause_guard" in pause_reasons
+    )
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        "cross_layer_conflict_refusal_guard" in refusal_reasons
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    layer_discovery_and_combination_mining_engine = _layer_discovery_and_combination_mining_layer(
+        memory_root=memory_root,
+        replay_scope=replay_scope,
+        cross_layer_integration_intelligence_layer=cross_layer_integration_intelligence_engine,
+        self_suggestion_governor=self_suggestion_governor,
+        self_expansion_quality_layer=self_expansion_quality_engine,
+        capability_lineage_and_genealogy_intelligence_layer=capability_lineage_engine,
+        knowledge_retirement_and_pruning_governance_layer=knowledge_retirement_and_pruning_governance_engine,
+        retirement_tombstone_and_resurrection_safety_layer=retirement_tombstone_and_resurrection_safety_engine,
+        hypothesis_falsification_and_experiment_design_layer=hypothesis_falsification_engine,
+        rollback_orchestration_and_safe_reversion_layer=rollback_orchestration_engine,
+    )
+    self_suggestion_governor["layer_discovery_and_combination_mining_layer"] = {
+        "layer_discovery_state": layer_discovery_and_combination_mining_engine.get("layer_discovery_state", "unknown"),
+        "combination_novelty_score": float(
+            layer_discovery_and_combination_mining_engine.get("combination_novelty_score", 0.0) or 0.0
+        ),
+        "combination_reliability": float(
+            layer_discovery_and_combination_mining_engine.get("combination_reliability", 0.0) or 0.0
+        ),
+        "discovery_pressure_score": float(
+            layer_discovery_and_combination_mining_engine.get("discovery_pressure_score", 0.0) or 0.0
+        ),
+    }
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["layer_discovery_state"] = {
+        "state": str(layer_discovery_and_combination_mining_engine.get("layer_discovery_state", "unknown")),
+        "dominant_combination_signature": str(
+            layer_discovery_and_combination_mining_engine.get("dominant_combination_signature", "unknown")
+        ),
+        "candidate_combination_count": int(
+            layer_discovery_and_combination_mining_engine.get("candidate_combination_count", 0) or 0
+        ),
+    }
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["combination_reliability"] = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                float(layer_discovery_and_combination_mining_engine.get("combination_reliability", 0.0) or 0.0),
+            ),
+        ),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["layer_discovery"] = {
+        "layer_discovery_state": layer_discovery_and_combination_mining_engine.get("layer_discovery_state", "unknown"),
+        "combination_novelty_score": round(
+            float(layer_discovery_and_combination_mining_engine.get("combination_novelty_score", 0.0) or 0.0),
+            4,
+        ),
+        "combination_reliability": round(
+            float(layer_discovery_and_combination_mining_engine.get("combination_reliability", 0.0) or 0.0),
+            4,
+        ),
+        "candidate_combination_count": int(
+            layer_discovery_and_combination_mining_engine.get("candidate_combination_count", 0) or 0
+        ),
+        "discovery_pressure_score": round(
+            float(layer_discovery_and_combination_mining_engine.get("discovery_pressure_score", 0.0) or 0.0),
+            4,
+        ),
+    }
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    if float(layer_discovery_and_combination_mining_engine.get("discovery_pressure_score", 0.0) or 0.0) >= 0.55 and (
+        "layer_discovery_pause_guard" not in pause_reasons
+    ):
+        pause_reasons.append("layer_discovery_pause_guard")
+    if (
+        float(layer_discovery_and_combination_mining_engine.get("combination_reliability", 1.0) or 1.0) <= 0.4
+        and float(cross_layer_integration_intelligence_engine.get("conflict_score", 0.0) or 0.0) >= 0.6
+    ) and ("layer_discovery_refusal_guard" not in refusal_reasons):
+        refusal_reasons.append("layer_discovery_refusal_guard")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        "layer_discovery_pause_guard" in pause_reasons
+    )
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        "layer_discovery_refusal_guard" in refusal_reasons
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
+    temporal_context_memory_engine = _temporal_context_memory_layer(
+        memory_root=memory_root,
+        replay_scope=replay_scope,
+        cross_layer_integration_intelligence_layer=cross_layer_integration_intelligence_engine,
+        layer_discovery_and_combination_mining_layer=layer_discovery_and_combination_mining_engine,
+        self_suggestion_governor=self_suggestion_governor,
+        unified_market_intelligence_field=unified_market_intelligence_field,
+        learning_stability_and_catastrophic_drift_guard_layer=learning_stability_guard_engine,
+        capability_lineage_and_genealogy_intelligence_layer=capability_lineage_engine,
+        knowledge_retirement_and_pruning_governance_layer=knowledge_retirement_and_pruning_governance_engine,
+    )
+    self_suggestion_governor["temporal_context_memory_layer"] = {
+        "temporal_context_memory_state": temporal_context_memory_engine.get("temporal_context_memory_state", "unknown"),
+        "sequence_reliability": float(temporal_context_memory_engine.get("sequence_reliability", 0.0) or 0.0),
+        "sequence_recurrence_score": float(temporal_context_memory_engine.get("sequence_recurrence_score", 0.0) or 0.0),
+        "temporal_interaction_pressure": float(
+            temporal_context_memory_engine.get("temporal_interaction_pressure", 0.0) or 0.0
+        ),
+    }
+    components = unified_market_intelligence_field.get("components", {})
+    if not isinstance(components, dict):
+        components = {}
+    components["temporal_context_memory_state"] = {
+        "state": str(temporal_context_memory_engine.get("temporal_context_memory_state", "unknown")),
+        "dominant_sequence_signature": str(temporal_context_memory_engine.get("dominant_sequence_signature", "unknown")),
+        "temporal_reason_cluster": str(temporal_context_memory_engine.get("temporal_reason_cluster", "unknown")),
+    }
+    unified_market_intelligence_field["components"] = components
+    confidence_structure = unified_market_intelligence_field.get("confidence_structure", {})
+    if not isinstance(confidence_structure, dict):
+        confidence_structure = {}
+    confidence_structure["sequence_reliability"] = round(
+        max(0.0, min(1.0, float(temporal_context_memory_engine.get("sequence_reliability", 0.0) or 0.0))),
+        4,
+    )
+    confidence_structure["sequence_recurrence_score"] = round(
+        max(0.0, min(1.0, float(temporal_context_memory_engine.get("sequence_recurrence_score", 0.0) or 0.0))),
+        4,
+    )
+    unified_market_intelligence_field["confidence_structure"] = confidence_structure
+    decision_refinements = unified_market_intelligence_field.get("decision_refinements", {})
+    if not isinstance(decision_refinements, dict):
+        decision_refinements = {}
+    decision_refinements["temporal_context_memory"] = {
+        "temporal_context_memory_state": temporal_context_memory_engine.get("temporal_context_memory_state", "unknown"),
+        "sequence_reliability": round(float(temporal_context_memory_engine.get("sequence_reliability", 0.0) or 0.0), 4),
+        "sequence_recurrence_score": round(
+            float(temporal_context_memory_engine.get("sequence_recurrence_score", 0.0) or 0.0),
+            4,
+        ),
+        "temporal_interaction_pressure": round(
+            float(temporal_context_memory_engine.get("temporal_interaction_pressure", 0.0) or 0.0),
+            4,
+        ),
+        "sequence_failure_recurrence": round(
+            float(temporal_context_memory_engine.get("sequence_failure_recurrence", 0.0) or 0.0),
+            4,
+        ),
+    }
+    refusal_pause_behavior = decision_refinements.get("refusal_pause_behavior", {})
+    if not isinstance(refusal_pause_behavior, dict):
+        refusal_pause_behavior = {}
+    refusal_reasons = refusal_pause_behavior.get("refusal_reasons", [])
+    if not isinstance(refusal_reasons, list):
+        refusal_reasons = []
+    pause_reasons = refusal_pause_behavior.get("pause_reasons", [])
+    if not isinstance(pause_reasons, list):
+        pause_reasons = []
+    if float(temporal_context_memory_engine.get("temporal_interaction_pressure", 0.0) or 0.0) >= 0.5 and (
+        "temporal_context_pause_guard" not in pause_reasons
+    ):
+        pause_reasons.append("temporal_context_pause_guard")
+    if (
+        float(temporal_context_memory_engine.get("temporal_interaction_pressure", 0.0) or 0.0) >= 0.65
+        and float(temporal_context_memory_engine.get("sequence_reliability", 1.0) or 1.0) <= 0.45
+    ) and ("temporal_context_refusal_guard" not in refusal_reasons):
+        refusal_reasons.append("temporal_context_refusal_guard")
+    refusal_pause_behavior["refusal_reasons"] = refusal_reasons
+    refusal_pause_behavior["pause_reasons"] = pause_reasons
+    refusal_pause_behavior["should_pause"] = bool(refusal_pause_behavior.get("should_pause", False)) or bool(
+        "temporal_context_pause_guard" in pause_reasons
+    )
+    refusal_pause_behavior["should_refuse"] = bool(refusal_pause_behavior.get("should_refuse", False)) or bool(
+        "temporal_context_refusal_guard" in refusal_reasons
+    )
+    decision_refinements["refusal_pause_behavior"] = refusal_pause_behavior
+    unified_market_intelligence_field["decision_refinements"] = decision_refinements
     survival_intelligence = {
         "capital_survival_engine": autonomous_behavior.get("capital_survival_engine", {}),
         "pain_memory_survival_layer": pain_memory_survival,
@@ -12816,6 +14061,9 @@ def run_self_evolving_indicator_layer(
         "capability_lineage_and_genealogy_intelligence_layer": capability_lineage_engine,
         "knowledge_retirement_and_pruning_governance_layer": knowledge_retirement_and_pruning_governance_engine,
         "retirement_tombstone_and_resurrection_safety_layer": retirement_tombstone_and_resurrection_safety_engine,
+        "cross_layer_integration_intelligence_layer": cross_layer_integration_intelligence_engine,
+        "layer_discovery_and_combination_mining_layer": layer_discovery_and_combination_mining_engine,
+        "temporal_context_memory_layer": temporal_context_memory_engine,
     }
     meta_learning_loop = _meta_learning_loop(
         memory_root=memory_root,
@@ -12864,5 +14112,8 @@ def run_self_evolving_indicator_layer(
         "capability_lineage_and_genealogy_intelligence_layer": capability_lineage_engine,
         "knowledge_retirement_and_pruning_governance_layer": knowledge_retirement_and_pruning_governance_engine,
         "retirement_tombstone_and_resurrection_safety_layer": retirement_tombstone_and_resurrection_safety_engine,
+        "cross_layer_integration_intelligence_layer": cross_layer_integration_intelligence_engine,
+        "layer_discovery_and_combination_mining_layer": layer_discovery_and_combination_mining_engine,
+        "temporal_context_memory_layer": temporal_context_memory_engine,
         "meta_learning_loop": meta_learning_loop,
     }
