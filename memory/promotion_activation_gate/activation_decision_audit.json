@@ -1,7 +1,0 @@
-{
-  "promotion_activation_state": "watch",
-  "activation_mode": "watch_only",
-  "promotion_freeze_recommended": false,
-  "quarantine_required": false,
-  "activation_block_pressure": 0.3311
-}

@@ -1,7 +1,0 @@
-{
-  "tombstone_enforcement_reliability": 0.705,
-  "reactivation_pressure": 0.11,
-  "rollback_reversion_reliability": 0.7,
-  "falsification_reliability": 0.6,
-  "resurrection_gate_enforced": true
-}
