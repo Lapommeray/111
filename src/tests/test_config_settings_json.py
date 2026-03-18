@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 def test_settings_json_is_valid_and_has_required_keys() -> None:
-    settings_path = Path("/home/runner/work/111/111/config/settings.json")
+    settings_path = Path(__file__).resolve().parents[2] / "config" / "settings.json"
     payload = json.loads(settings_path.read_text(encoding="utf-8"))
 
     for key in (
