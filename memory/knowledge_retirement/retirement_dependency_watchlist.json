@@ -1,0 +1,6 @@
+{
+  "rollback_dependency_risk": 0.2947,
+  "rollback_urgency": 0.2674,
+  "rollback_reliability": 0.672,
+  "catastrophic_drift_risk": 0.4087
+}
