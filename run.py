@@ -45,6 +45,8 @@ from src.utils import normalize_reasons, register_generated_artifact, write_json
 
 
 SUPPORTED_TIMEFRAMES = {"M1", "M5", "M15", "H1", "H4"}
+SUPPORTED_MODES = {"live", "replay"}
+SUPPORTED_REPLAY_SOURCES = {"csv", "memory"}
 MIN_TRADE_VOLUME = 0.01
 
 
@@ -94,6 +96,77 @@ class RuntimeConfig:
     promotion_minimum_stability_score: float = 0.55
 
 
+REQUIRED_RUNTIME_CONFIG_KEYS = (
+    "symbol",
+    "timeframe",
+    "bars",
+    "sample_path",
+    "memory_root",
+    "mode",
+)
+
+RUNTIME_CONFIG_TYPES: dict[str, str] = {
+    "symbol": "str",
+    "timeframe": "str",
+    "bars": "int",
+    "sample_path": "str",
+    "memory_root": "str",
+    "mode": "str",
+    "replay_source": "str",
+    "replay_csv_path": "str",
+    "generated_registry_path": "str",
+    "meta_adaptive_profile_path": "str",
+    "evolution_enabled": "bool",
+    "evolution_registry_path": "str",
+    "evolution_artifact_root": "str",
+    "evolution_max_proposals": "int",
+    "compact_output": "bool",
+    "evaluation_steps": "int",
+    "evaluation_stride": "int",
+    "evaluation_output_path": "str",
+    "knowledge_expansion_enabled": "bool",
+    "knowledge_expansion_root": "str",
+    "knowledge_candidate_limit": "int",
+    "live_execution_enabled": "bool",
+    "live_order_volume": "float",
+    "alpha_vantage_api_key": "str",
+    "fred_api_key": "str",
+    "treasury_yields_endpoint": "str",
+    "economic_calendar_endpoint": "str",
+    "comex_open_interest_endpoint": "str",
+    "gold_etf_flows_endpoint": "str",
+    "option_magnet_levels_endpoint": "str",
+    "physical_premium_discount_endpoint": "str",
+    "central_bank_reserve_endpoint": "str",
+    "macro_feed_enabled": "bool",
+    "macro_feed_allow_replay_fetch": "bool",
+    "max_daily_loss_points": "float",
+    "max_total_drawdown_points": "float",
+    "max_consecutive_loss_streak": "int",
+    "max_anomaly_clusters": "int",
+    "promotion_minimum_replay_sample_size": "int",
+    "promotion_minimum_expectancy_points": "float",
+    "promotion_maximum_drawdown_points": "float",
+    "promotion_minimum_stability_score": "float",
+}
+
+NON_EMPTY_STRING_CONFIG_KEYS = {
+    "symbol",
+    "timeframe",
+    "sample_path",
+    "memory_root",
+    "mode",
+    "replay_source",
+    "replay_csv_path",
+    "generated_registry_path",
+    "meta_adaptive_profile_path",
+    "evolution_registry_path",
+    "evolution_artifact_root",
+    "evaluation_output_path",
+    "knowledge_expansion_root",
+}
+
+
 def ensure_sample_data(path: Path) -> None:
     if path.exists():
         return
@@ -130,68 +203,93 @@ def ensure_sample_data(path: Path) -> None:
         writer.writerows(rows)
 
 
+def _expect_runtime_config_type(key: str, value: Any, expected: str) -> Any:
+    def _is_plain_int(candidate: Any) -> bool:
+        return isinstance(candidate, int) and not isinstance(candidate, bool)
+
+    def _is_plain_number(candidate: Any) -> bool:
+        return isinstance(candidate, (int, float)) and not isinstance(candidate, bool)
+
+    if expected == "bool":
+        if isinstance(value, bool):
+            return value
+        raise ValueError(
+            f"Invalid type for config key '{key}': expected bool, got {type(value).__name__}"
+        )
+    if expected == "int":
+        if not _is_plain_int(value):
+            raise ValueError(
+                f"Invalid type for config key '{key}': expected int, got {type(value).__name__}"
+            )
+        return value
+    if expected == "float":
+        if not _is_plain_number(value):
+            raise ValueError(
+                f"Invalid type for config key '{key}': expected float, got {type(value).__name__}"
+            )
+        return float(value)
+    if expected == "str":
+        if not isinstance(value, str):
+            raise ValueError(
+                f"Invalid type for config key '{key}': expected str, got {type(value).__name__}"
+            )
+        return value
+    raise ValueError(f"Unsupported runtime config schema type for key '{key}': {expected}")
+
+
 def load_runtime_config(path: Path) -> RuntimeConfig:
     if not path.exists():
         return RuntimeConfig()
-    with path.open("r", encoding="utf-8") as fh:
-        data = json.load(fh)
-    return RuntimeConfig(
-        symbol=str(data.get("symbol", "XAUUSD")),
-        timeframe=str(data.get("timeframe", "M5")),
-        bars=int(data.get("bars", 220)),
-        sample_path=str(data.get("sample_path", "data/samples/xauusd.csv")),
-        memory_root=str(data.get("memory_root", "memory")),
-        mode=str(data.get("mode", "live")),
-        replay_source=str(data.get("replay_source", "csv")),
-        replay_csv_path=str(data.get("replay_csv_path", "data/samples/xauusd.csv")),
-        generated_registry_path=str(
-            data.get("generated_registry_path", "memory/generated_code_registry.json")
-        ),
-        meta_adaptive_profile_path=str(
-            data.get("meta_adaptive_profile_path", "memory/meta_adaptive_profile.json")
-        ),
-        evolution_enabled=bool(data.get("evolution_enabled", True)),
-        evolution_registry_path=str(data.get("evolution_registry_path", "memory/evolution_registry.json")),
-        evolution_artifact_root=str(data.get("evolution_artifact_root", "memory/evolution_artifacts")),
-        evolution_max_proposals=int(data.get("evolution_max_proposals", 3)),
-        compact_output=bool(data.get("compact_output", False)),
-        evaluation_steps=int(data.get("evaluation_steps", 30)),
-        evaluation_stride=int(data.get("evaluation_stride", 5)),
-        evaluation_output_path=str(data.get("evaluation_output_path", "memory/replay_evaluation_report.json")),
-        knowledge_expansion_enabled=bool(data.get("knowledge_expansion_enabled", False)),
-        knowledge_expansion_root=str(data.get("knowledge_expansion_root", "memory/knowledge_expansion")),
-        knowledge_candidate_limit=int(data.get("knowledge_candidate_limit", 6)),
-        live_execution_enabled=bool(data.get("live_execution_enabled", True)),
-        live_order_volume=float(data.get("live_order_volume", 0.01)),
-        alpha_vantage_api_key=str(
-            data.get("alpha_vantage_api_key", os.getenv("ALPHA_VANTAGE_API_KEY", ""))
-        ),
-        fred_api_key=str(data.get("fred_api_key", os.getenv("FRED_API_KEY", ""))),
-        treasury_yields_endpoint=str(
-            data.get("treasury_yields_endpoint", "https://moneymatter.me/api/treasury/interest-rates")
-        ),
-        economic_calendar_endpoint=str(
-            data.get("economic_calendar_endpoint", "https://nfs.faireconomy.media/ff_calendar_thisweek.json")
-        ),
-        comex_open_interest_endpoint=str(data.get("comex_open_interest_endpoint", "")),
-        gold_etf_flows_endpoint=str(data.get("gold_etf_flows_endpoint", "")),
-        option_magnet_levels_endpoint=str(data.get("option_magnet_levels_endpoint", "")),
-        physical_premium_discount_endpoint=str(data.get("physical_premium_discount_endpoint", "")),
-        central_bank_reserve_endpoint=str(data.get("central_bank_reserve_endpoint", "")),
-        macro_feed_enabled=bool(data.get("macro_feed_enabled", True)),
-        macro_feed_allow_replay_fetch=bool(data.get("macro_feed_allow_replay_fetch", False)),
-        max_daily_loss_points=float(data.get("max_daily_loss_points", 3.0)),
-        max_total_drawdown_points=float(data.get("max_total_drawdown_points", 12.0)),
-        max_consecutive_loss_streak=int(data.get("max_consecutive_loss_streak", 3)),
-        max_anomaly_clusters=int(data.get("max_anomaly_clusters", 2)),
-        promotion_minimum_replay_sample_size=int(data.get("promotion_minimum_replay_sample_size", 30)),
-        promotion_minimum_expectancy_points=float(data.get("promotion_minimum_expectancy_points", 0.05)),
-        promotion_maximum_drawdown_points=float(data.get("promotion_maximum_drawdown_points", 4.0)),
-        promotion_minimum_stability_score=float(data.get("promotion_minimum_stability_score", 0.55)),
+    try:
+        with path.open("r", encoding="utf-8") as fh:
+            data = json.load(fh)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid JSON in runtime config '{path}': {exc.msg}") from exc
+
+    if not isinstance(data, dict):
+        raise ValueError(
+            f"Invalid runtime config root in '{path}': expected JSON object, got {type(data).__name__}"
+        )
+
+    missing_keys = [key for key in REQUIRED_RUNTIME_CONFIG_KEYS if key not in data]
+    if missing_keys:
+        raise ValueError(
+            f"Missing required config key(s) in '{path}': {', '.join(sorted(missing_keys))}"
+        )
+
+    unknown_keys = sorted(set(data) - set(RUNTIME_CONFIG_TYPES))
+    if unknown_keys:
+        raise ValueError(f"Unsupported config key(s) in '{path}': {', '.join(unknown_keys)}")
+
+    defaults = RuntimeConfig(
+        alpha_vantage_api_key=os.getenv("ALPHA_VANTAGE_API_KEY", ""),
+        fred_api_key=os.getenv("FRED_API_KEY", ""),
     )
+    payload: dict[str, Any] = dict(defaults.__dict__)
+
+    for key, value in data.items():
+        payload[key] = _expect_runtime_config_type(key, value, RUNTIME_CONFIG_TYPES[key])
+        if (
+            key in NON_EMPTY_STRING_CONFIG_KEYS
+            and isinstance(payload[key], str)
+            and not payload[key].strip()
+        ):
+            raise ValueError(f"Config key '{key}' must be a non-empty string")
+
+    return RuntimeConfig(**payload)
 
 
 def validate_runtime_config(config: RuntimeConfig) -> None:
+    if config.mode not in SUPPORTED_MODES:
+        supported_modes = ", ".join(sorted(SUPPORTED_MODES))
+        raise ValueError(f"Unsupported mode: {config.mode}. Supported modes: {supported_modes}")
+
+    if config.replay_source not in SUPPORTED_REPLAY_SOURCES:
+        supported_sources = ", ".join(sorted(SUPPORTED_REPLAY_SOURCES))
+        raise ValueError(
+            f"Unsupported replay_source: {config.replay_source}. Supported sources: {supported_sources}"
+        )
+
     guard_result = SymbolGuard().validate(config.symbol)
     if not guard_result["ready"]:
         raise ValueError("Only XAUUSD is supported in this project stage.")
