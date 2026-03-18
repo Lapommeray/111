@@ -408,6 +408,12 @@ def test_walk_forward_remains_compatible_with_execution_realism_v2(tmp_path: Pat
         float(report["total_oos_net_pnl_points"]) - expected_additional_penalty,
         3,
     )
+    for cycle in report["per_cycle_summary"]:
+        assert cycle["additional_realism_penalty_points"] == round(cycle["closed_trades"] * 0.12, 3)
+        assert cycle["realism_adjusted_net_pnl_points"] == round(
+            float(cycle["net_pnl_points"]) - float(cycle["additional_realism_penalty_points"]),
+            3,
+        )
 
 
 def test_replay_isolation_keeps_repeated_runs_deterministic(tmp_path: Path) -> None:

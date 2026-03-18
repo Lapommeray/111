@@ -553,9 +553,12 @@ def _build_execution_realism_v2_config(
     slippage_multi = _validate_non_negative_cost("execution_slippage_multiplier", slippage_multiplier)
     if slippage_multi < 1.0:
         raise ValueError("execution_slippage_multiplier must be >= 1")
-    min_conf = _validate_non_negative_cost("execution_min_fill_confidence", min_fill_confidence)
-    if min_conf > 1.0:
-        raise ValueError("execution_min_fill_confidence must be <= 1")
+    min_conf_numeric = float(min_fill_confidence)
+    if not math.isfinite(min_conf_numeric):
+        raise ValueError("execution_min_fill_confidence must be finite")
+    if min_conf_numeric < 0.0 or min_conf_numeric > 1.0:
+        raise ValueError("execution_min_fill_confidence must be within [0, 1]")
+    min_conf = round(min_conf_numeric, 6)
     return {
         "enabled": bool(enabled),
         "latency_penalty_points": latency,
@@ -607,11 +610,14 @@ def _apply_execution_realism_v2_to_record(
     spread_proxy = _extract_spread_proxy_points(record)
     signal_confidence = _extract_signal_confidence(record)
     execution_quality_confidence = _extract_execution_quality_confidence(record)
+    # Prefer execution-quality confidence when available because it is a direct
+    # execution-proxy signal; otherwise fall back to the trade signal confidence.
     confidence_proxy = (
         execution_quality_confidence
         if execution_quality_confidence is not None
         else signal_confidence
     )
+    confidence_proxy = float(confidence_proxy)
 
     no_fill_threshold = float(execution_realism_v2["no_fill_spread_threshold"])
     no_fill_applied = (
@@ -642,6 +648,9 @@ def _apply_execution_realism_v2_to_record(
         min_fill_confidence = float(execution_realism_v2["min_fill_confidence"])
         if min_fill_confidence > 0.0 and confidence_proxy < min_fill_confidence:
             confidence_gap = round(min_fill_confidence - confidence_proxy, 6)
+            # Keep the confidence penalty deterministic and bounded: we scale by
+            # configured total execution cost, with a 0.1 minimum multiplier so the
+            # penalty can still apply when fixed execution costs are near zero.
             confidence_penalty = round(confidence_gap * max(0.1, float(execution_costs.get("total_cost_points", 0.0))), 3)
             rules_triggered.append("confidence_penalty")
             calc_log.append(
