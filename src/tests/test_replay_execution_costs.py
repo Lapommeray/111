@@ -32,7 +32,13 @@ def _write_replay_csv(path: Path, rows: int = 12) -> None:
             )
 
 
-def _pipeline_runner_from_pnls(pnl_values: list[float]):
+def _pipeline_runner_from_pnls(
+    pnl_values: list[float],
+    *,
+    spread_points: float = 25.0,
+    signal_confidence: float = 0.8,
+    execution_quality_confidence: float = 0.55,
+):
     cursor = {"index": 0}
 
     def _runner(_config: Any) -> dict[str, Any]:
@@ -40,7 +46,17 @@ def _pipeline_runner_from_pnls(pnl_values: list[float]):
         cursor["index"] += 1
         pnl_points = float(pnl_values[idx])
         return {
-            "signal": {"action": "BUY", "confidence": 0.8, "blocked": False},
+            "signal": {
+                "action": "BUY",
+                "confidence": signal_confidence,
+                "blocked": False,
+                "advanced_modules": {
+                    "module_results": {
+                        "spread_state": {"payload": {"spread_points": spread_points}},
+                        "execution_quality": {"payload": {"confidence": execution_quality_confidence}},
+                    }
+                },
+            },
             "status_panel": {
                 "memory_result": {
                     "latest_trade_outcome": {
@@ -103,11 +119,24 @@ def _evaluate_with_costs(
     walk_forward_test_bars: int = 3,
     walk_forward_step_bars: int = 3,
     csv_rows: int = 12,
+    spread_points: float = 25.0,
+    signal_confidence: float = 0.8,
+    execution_quality_confidence: float = 0.55,
+    execution_realism_v2_enabled: bool = False,
+    execution_latency_penalty_points: float = 0.0,
+    execution_slippage_multiplier: float = 1.0,
+    execution_no_fill_spread_threshold: float = 0.0,
+    execution_min_fill_confidence: float = 0.0,
 ) -> dict[str, Any]:
     csv_path = tmp_path / "replay.csv"
     _write_replay_csv(csv_path, rows=csv_rows)
     return evaluate_replay(
-        pipeline_runner=_pipeline_runner_from_pnls(pnls),
+        pipeline_runner=_pipeline_runner_from_pnls(
+            pnls,
+            spread_points=spread_points,
+            signal_confidence=signal_confidence,
+            execution_quality_confidence=execution_quality_confidence,
+        ),
         config_factory=_identity_config_factory,
         symbol="XAUUSD",
         timeframe="M5",
@@ -131,6 +160,11 @@ def _evaluate_with_costs(
         execution_spread_cost_points=spread,
         execution_commission_cost_points=commission,
         execution_slippage_cost_points=slippage,
+        execution_realism_v2_enabled=execution_realism_v2_enabled,
+        execution_latency_penalty_points=execution_latency_penalty_points,
+        execution_slippage_multiplier=execution_slippage_multiplier,
+        execution_no_fill_spread_threshold=execution_no_fill_spread_threshold,
+        execution_min_fill_confidence=execution_min_fill_confidence,
     )
 
 
@@ -176,9 +210,81 @@ def test_combined_execution_costs_reduce_performance_deterministically(tmp_path:
     assert impact["per_trade_total_cost_points"] == 0.17
 
 
+def test_execution_realism_v2_disabled_preserves_post_cost_behavior(tmp_path: Path) -> None:
+    report = _evaluate_with_costs(
+        tmp_path,
+        pnls=[1.0, 0.5],
+        spread=0.1,
+        commission=0.05,
+        slippage=0.02,
+        execution_realism_v2_enabled=False,
+        execution_latency_penalty_points=0.5,
+        execution_slippage_multiplier=2.0,
+        execution_no_fill_spread_threshold=10.0,
+        execution_min_fill_confidence=0.9,
+    )
+    assert report["execution_realism_v2_enabled"] is False
+    assert report["realism_v2_rules_applied"] == []
+    assert report["skipped_trade_count"] == 0
+    assert report["additional_realism_penalty_points"] == 0.0
+    assert report["realism_adjusted_net_pnl_points"] == report["execution_cost_impact"]["net_pnl_points"]
+    outcome = report["records"][0]["status_panel"]["memory_result"]["latest_trade_outcome"]
+    assert "execution_realism_v2" not in outcome
+
+
+def test_execution_realism_v2_enabled_adds_deterministic_penalties(tmp_path: Path) -> None:
+    report = _evaluate_with_costs(
+        tmp_path,
+        pnls=[1.0],
+        slippage=0.2,
+        execution_realism_v2_enabled=True,
+        execution_latency_penalty_points=0.1,
+        execution_slippage_multiplier=2.0,
+        execution_min_fill_confidence=0.5,
+        execution_quality_confidence=0.7,
+    )
+    outcome = report["records"][0]["status_panel"]["memory_result"]["latest_trade_outcome"]
+
+    assert outcome["pnl_points_net"] == 0.8
+    assert outcome["execution_realism_v2"]["additional_penalty_points"] == 0.3
+    assert outcome["execution_realism_v2"]["realism_adjusted_net_pnl_points"] == 0.5
+    assert report["additional_realism_penalty_points"] == 0.3
+    assert report["realism_adjusted_net_pnl_points"] == 0.5
+    assert set(report["realism_v2_rules_applied"]) == {"latency_penalty", "spread_sensitive_slippage_multiplier"}
+
+
+def test_execution_realism_v2_no_fill_is_deterministic(tmp_path: Path) -> None:
+    report = _evaluate_with_costs(
+        tmp_path,
+        pnls=[1.0],
+        spread_points=80.0,
+        execution_realism_v2_enabled=True,
+        execution_no_fill_spread_threshold=40.0,
+    )
+    outcome = report["records"][0]["status_panel"]["memory_result"]["latest_trade_outcome"]
+    realism = outcome["execution_realism_v2"]
+
+    assert realism["no_fill_applied"] is True
+    assert realism["realism_adjusted_net_pnl_points"] == 0.0
+    assert report["skipped_trade_count"] == 1
+    assert report["realism_adjusted_net_pnl_points"] == 0.0
+    assert "no_fill_spread_threshold" in report["realism_v2_rules_applied"]
+    assert any("-> no_fill" in line for line in realism["calculation_log"])
+
+
 def test_invalid_execution_cost_config_fails_clearly(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="execution_spread_cost_points must be >= 0"):
         _evaluate_with_costs(tmp_path, pnls=[1.0], spread=-0.01)
+
+
+def test_invalid_execution_realism_v2_config_fails_clearly(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="execution_slippage_multiplier must be >= 1"):
+        _evaluate_with_costs(
+            tmp_path,
+            pnls=[1.0],
+            execution_realism_v2_enabled=True,
+            execution_slippage_multiplier=0.9,
+        )
 
 
 def test_walk_forward_disabled_preserves_standard_replay_behavior(tmp_path: Path) -> None:
@@ -245,6 +351,9 @@ def test_walk_forward_oos_summary_fields_are_present(tmp_path: Path) -> None:
         "total_oos_closed_trades",
         "total_oos_gross_pnl_points",
         "total_oos_net_pnl_points",
+        "total_oos_realism_adjusted_net_pnl_points",
+        "total_oos_skipped_trades",
+        "total_oos_additional_realism_penalty_points",
         "oos_win_rate",
         "oos_max_drawdown",
         "per_cycle_summary",
@@ -274,6 +383,31 @@ def test_walk_forward_remains_compatible_with_execution_cost_model(tmp_path: Pat
         3,
     )
     assert realized_total_cost == expected_total_cost
+
+
+def test_walk_forward_remains_compatible_with_execution_realism_v2(tmp_path: Path) -> None:
+    report = _evaluate_with_costs(
+        tmp_path,
+        pnls=[1.0] * 30,
+        spread=0.1,
+        commission=0.05,
+        slippage=0.02,
+        bars=5,
+        walk_forward_enabled=True,
+        walk_forward_context_bars=6,
+        walk_forward_test_bars=3,
+        walk_forward_step_bars=3,
+        csv_rows=16,
+        execution_realism_v2_enabled=True,
+        execution_latency_penalty_points=0.1,
+        execution_slippage_multiplier=2.0,
+    )
+    expected_additional_penalty = round(report["total_oos_closed_trades"] * 0.12, 3)
+    assert report["total_oos_additional_realism_penalty_points"] == expected_additional_penalty
+    assert report["total_oos_realism_adjusted_net_pnl_points"] == round(
+        float(report["total_oos_net_pnl_points"]) - expected_additional_penalty,
+        3,
+    )
 
 
 def test_replay_isolation_keeps_repeated_runs_deterministic(tmp_path: Path) -> None:

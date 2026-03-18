@@ -24,6 +24,11 @@
   "execution_spread_cost_points": 0.0,
   "execution_commission_cost_points": 0.0,
   "execution_slippage_cost_points": 0.0,
+  "execution_realism_v2_enabled": false,
+  "execution_latency_penalty_points": 0.0,
+  "execution_slippage_multiplier": 1.0,
+  "execution_no_fill_spread_threshold": 0.0,
+  "execution_min_fill_confidence": 0.0,
   "knowledge_expansion_enabled": false,
   "knowledge_expansion_root": "memory/knowledge_expansion",
   "knowledge_candidate_limit": 6

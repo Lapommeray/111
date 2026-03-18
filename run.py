@@ -77,6 +77,11 @@ class RuntimeConfig:
     execution_spread_cost_points: float = 0.0
     execution_commission_cost_points: float = 0.0
     execution_slippage_cost_points: float = 0.0
+    execution_realism_v2_enabled: bool = False
+    execution_latency_penalty_points: float = 0.0
+    execution_slippage_multiplier: float = 1.0
+    execution_no_fill_spread_threshold: float = 0.0
+    execution_min_fill_confidence: float = 0.0
     knowledge_expansion_enabled: bool = False
     knowledge_expansion_root: str = "memory/knowledge_expansion"
     knowledge_candidate_limit: int = 6
@@ -138,6 +143,11 @@ RUNTIME_CONFIG_TYPES: dict[str, str] = {
     "execution_spread_cost_points": "float",
     "execution_commission_cost_points": "float",
     "execution_slippage_cost_points": "float",
+    "execution_realism_v2_enabled": "bool",
+    "execution_latency_penalty_points": "float",
+    "execution_slippage_multiplier": "float",
+    "execution_no_fill_spread_threshold": "float",
+    "execution_min_fill_confidence": "float",
     "knowledge_expansion_enabled": "bool",
     "knowledge_expansion_root": "str",
     "knowledge_candidate_limit": "int",
@@ -344,6 +354,14 @@ def validate_runtime_config(config: RuntimeConfig) -> None:
         raise ValueError("execution_commission_cost_points must be >= 0")
     if config.execution_slippage_cost_points < 0:
         raise ValueError("execution_slippage_cost_points must be >= 0")
+    if config.execution_latency_penalty_points < 0:
+        raise ValueError("execution_latency_penalty_points must be >= 0")
+    if config.execution_slippage_multiplier < 1:
+        raise ValueError("execution_slippage_multiplier must be >= 1")
+    if config.execution_no_fill_spread_threshold < 0:
+        raise ValueError("execution_no_fill_spread_threshold must be >= 0")
+    if config.execution_min_fill_confidence < 0 or config.execution_min_fill_confidence > 1:
+        raise ValueError("execution_min_fill_confidence must be within [0, 1]")
     if config.max_daily_loss_points <= 0:
         raise ValueError("max_daily_loss_points must be > 0")
     if config.max_total_drawdown_points <= 0:
@@ -1666,6 +1684,11 @@ def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
         execution_spread_cost_points=config.execution_spread_cost_points,
         execution_commission_cost_points=config.execution_commission_cost_points,
         execution_slippage_cost_points=config.execution_slippage_cost_points,
+        execution_realism_v2_enabled=config.execution_realism_v2_enabled,
+        execution_latency_penalty_points=config.execution_latency_penalty_points,
+        execution_slippage_multiplier=config.execution_slippage_multiplier,
+        execution_no_fill_spread_threshold=config.execution_no_fill_spread_threshold,
+        execution_min_fill_confidence=config.execution_min_fill_confidence,
         knowledge_expansion_enabled=config.knowledge_expansion_enabled,
         knowledge_expansion_root=config.knowledge_expansion_root,
         knowledge_candidate_limit=config.knowledge_candidate_limit,
