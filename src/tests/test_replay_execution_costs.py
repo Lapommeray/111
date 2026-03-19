@@ -501,7 +501,10 @@ def test_walk_forward_oos_analytics_summary_is_additive_and_compatible(tmp_path:
     assert oos_analytics["walk_forward_enabled"] is True
     assert oos_analytics["closed_trade_count"] == report["total_oos_closed_trades"]
     assert oos_analytics["win_rate"] == report["oos_win_rate"]
-    assert oos_analytics["average_realism_adjusted_net_pnl_points"] == report["oos_average_realism_adjusted_net_pnl_points"]
+    assert (
+        oos_analytics["average_realism_adjusted_net_pnl_points"]
+        == report["oos_average_realism_adjusted_net_pnl_points"]
+    )
     assert oos_analytics["expectancy_points"] == report["oos_expectancy_points"]
     assert oos_analytics["profit_factor"] == report["oos_profit_factor"]
     assert oos_analytics["max_drawdown_points"] == report["oos_max_drawdown_points"]
