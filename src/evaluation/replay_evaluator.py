@@ -105,6 +105,8 @@ def evaluate_replay(
             evolution_max_proposals=evolution_max_proposals,
             execution_costs=execution_costs,
             execution_realism_v2=execution_realism_v2,
+            signal_lifecycle_enabled=signal_lifecycle_enabled,
+            signal_max_age_seconds=signal_max_age_seconds,
         )
     else:
         cycles = _build_walk_forward_cycles(
@@ -144,6 +146,8 @@ def evaluate_replay(
                 evolution_max_proposals=evolution_max_proposals,
                 execution_costs=execution_costs,
                 execution_realism_v2=execution_realism_v2,
+                signal_lifecycle_enabled=signal_lifecycle_enabled,
+                signal_max_age_seconds=signal_max_age_seconds,
             )
             for record in cycle_records:
                 record["walk_forward_cycle"] = cycle_index
@@ -242,6 +246,8 @@ def _run_replay_steps(
     evolution_max_proposals: int,
     execution_costs: dict[str, float],
     execution_realism_v2: dict[str, Any],
+    signal_lifecycle_enabled: bool,
+    signal_max_age_seconds: int,
 ) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     for step_index, end in enumerate(end_indexes, start=1):
