@@ -49,6 +49,8 @@ def evaluate_replay(
     knowledge_expansion_enabled: bool = False,
     knowledge_expansion_root: str = "memory/knowledge_expansion",
     knowledge_candidate_limit: int = 6,
+    signal_lifecycle_enabled: bool = False,
+    signal_max_age_seconds: int = 900,
 ) -> dict[str, Any]:
     """Run replay evaluation using the existing replay pipeline path only."""
     replay_memory_root = _prepare_replay_memory_root(memory_root)
@@ -103,6 +105,8 @@ def evaluate_replay(
             evolution_max_proposals=evolution_max_proposals,
             execution_costs=execution_costs,
             execution_realism_v2=execution_realism_v2,
+            signal_lifecycle_enabled=signal_lifecycle_enabled,
+            signal_max_age_seconds=signal_max_age_seconds,
         )
     else:
         cycles = _build_walk_forward_cycles(
@@ -142,6 +146,8 @@ def evaluate_replay(
                 evolution_max_proposals=evolution_max_proposals,
                 execution_costs=execution_costs,
                 execution_realism_v2=execution_realism_v2,
+                signal_lifecycle_enabled=signal_lifecycle_enabled,
+                signal_max_age_seconds=signal_max_age_seconds,
             )
             for record in cycle_records:
                 record["walk_forward_cycle"] = cycle_index
@@ -240,6 +246,8 @@ def _run_replay_steps(
     evolution_max_proposals: int,
     execution_costs: dict[str, float],
     execution_realism_v2: dict[str, Any],
+    signal_lifecycle_enabled: bool,
+    signal_max_age_seconds: int,
 ) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     for step_index, end in enumerate(end_indexes, start=1):
@@ -268,6 +276,8 @@ def _run_replay_steps(
             evolution_artifact_root=str(step_evolution_artifact_root),
             evolution_max_proposals=evolution_max_proposals,
             compact_output=False,
+            signal_lifecycle_enabled=signal_lifecycle_enabled,
+            signal_max_age_seconds=signal_max_age_seconds,
         )
         result = pipeline_runner(cfg)
         _apply_execution_costs_to_record(result, execution_costs)

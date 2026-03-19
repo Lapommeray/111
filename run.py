@@ -106,6 +106,8 @@ class RuntimeConfig:
     promotion_minimum_expectancy_points: float = 0.05
     promotion_maximum_drawdown_points: float = 4.0
     promotion_minimum_stability_score: float = 0.55
+    signal_lifecycle_enabled: bool = False
+    signal_max_age_seconds: int = 900
 
 
 REQUIRED_RUNTIME_CONFIG_KEYS = (
@@ -172,6 +174,8 @@ RUNTIME_CONFIG_TYPES: dict[str, str] = {
     "promotion_minimum_expectancy_points": "float",
     "promotion_maximum_drawdown_points": "float",
     "promotion_minimum_stability_score": "float",
+    "signal_lifecycle_enabled": "bool",
+    "signal_max_age_seconds": "int",
 }
 
 NON_EMPTY_STRING_CONFIG_KEYS = {
@@ -370,6 +374,8 @@ def validate_runtime_config(config: RuntimeConfig) -> None:
         raise ValueError("max_consecutive_loss_streak must be > 0")
     if config.max_anomaly_clusters <= 0:
         raise ValueError("max_anomaly_clusters must be > 0")
+    if config.signal_max_age_seconds <= 0:
+        raise ValueError("signal_max_age_seconds must be > 0")
 
 
 def load_bars_from_csv(csv_path: Path, bars: int) -> list[dict[str, Any]]:
@@ -414,6 +420,109 @@ def _assess_data_freshness(bars: list[dict[str, Any]], *, max_age_seconds: int) 
     now_ts = int(datetime.now(tz=timezone.utc).timestamp())
     data_age_seconds = max(0, now_ts - latest_time)
     return data_age_seconds <= int(max_age_seconds), data_age_seconds
+
+
+def _coerce_unix_timestamp(value: Any) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        candidate = int(value)
+        return candidate if candidate > 0 else None
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return None
+        try:
+            if stripped.isdigit():
+                candidate = int(stripped)
+                return candidate if candidate > 0 else None
+            normalized = (
+                f"{stripped.removesuffix('Z')}+00:00"
+                if stripped.endswith("Z")
+                else stripped
+            )
+            parsed = datetime.fromisoformat(normalized)
+            candidate = int(parsed.timestamp())
+            return candidate if candidate > 0 else None
+        except Exception:
+            return None
+    return None
+
+
+def _build_signal_lifecycle_context(
+    *,
+    enabled: bool,
+    max_age_seconds: int,
+    bars: list[dict[str, Any]],
+) -> dict[str, Any]:
+    source_bar_time = _coerce_unix_timestamp(bars[-1].get("time")) if bars else None
+    return {
+        "signal_lifecycle_enabled": bool(enabled),
+        "signal_max_age_seconds": int(max_age_seconds),
+        "decision_created_at": datetime.now(tz=timezone.utc).isoformat(),
+        "source_bar_time": source_bar_time,
+        "signal_age_basis": "source_bar_time" if source_bar_time is not None else "decision_created_at",
+    }
+
+
+def _evaluate_signal_lifecycle(
+    *,
+    signal_lifecycle: dict[str, Any] | None,
+) -> dict[str, Any]:
+    lifecycle = dict(signal_lifecycle or {})
+    execution_checked_at = datetime.now(tz=timezone.utc)
+    enabled = bool(lifecycle.get("signal_lifecycle_enabled", False))
+    max_age_seconds = int(lifecycle.get("signal_max_age_seconds", 900))
+    execution_ts = int(execution_checked_at.timestamp())
+    source_bar_time = _coerce_unix_timestamp(lifecycle.get("source_bar_time"))
+    decision_created_at_ts = _coerce_unix_timestamp(lifecycle.get("decision_created_at"))
+    if source_bar_time is not None:
+        source_ts = source_bar_time
+        age_basis = "source_bar_time"
+    elif decision_created_at_ts is not None:
+        source_ts = decision_created_at_ts
+        age_basis = "decision_created_at"
+    else:
+        source_ts = None
+        age_basis = "none"
+    future_timestamp = source_ts is not None and source_ts > execution_ts
+    if future_timestamp:
+        # Cannot compute age for signals with timestamps in the future.
+        signal_age_seconds = None
+    else:
+        signal_age_seconds = (execution_ts - source_ts) if source_ts is not None else None
+    if not enabled:
+        signal_fresh = True
+        lifecycle_reason = "signal_lifecycle_disabled"
+        refusal_reasons: list[str] = []
+    elif future_timestamp:
+        signal_fresh = False
+        lifecycle_reason = "signal_timestamp_in_future"
+        refusal_reasons = ["signal_stale", "signal_timestamp_in_future"]
+    elif signal_age_seconds is None:
+        signal_fresh = False
+        lifecycle_reason = "signal_timestamp_missing"
+        refusal_reasons = ["signal_stale", "signal_timestamp_missing"]
+    elif signal_age_seconds <= max_age_seconds:
+        signal_fresh = True
+        lifecycle_reason = "signal_fresh"
+        refusal_reasons = []
+    else:
+        signal_fresh = False
+        lifecycle_reason = "signal_age_exceeded"
+        refusal_reasons = ["signal_stale", "signal_age_exceeded"]
+    return {
+        "signal_lifecycle_enabled": enabled,
+        "signal_max_age_seconds": max_age_seconds,
+        "signal_age_basis": age_basis,
+        "source_bar_time": source_bar_time,
+        "decision_created_at": lifecycle.get("decision_created_at"),
+        "execution_checked_at": execution_checked_at.isoformat(),
+        "signal_age_seconds": signal_age_seconds,
+        "signal_fresh": signal_fresh,
+        "signal_lifecycle_reason": lifecycle_reason,
+        "signal_lifecycle_refusal_reasons": refusal_reasons,
+    }
 
 
 def _build_non_live_mt5_readiness(
@@ -754,9 +863,11 @@ def _run_controlled_mt5_live_execution(
     risk_state_valid: bool,
     fail_safe_state_clear: bool,
     trade_tags: dict[str, Any] | None = None,
+    signal_lifecycle: dict[str, Any] | None = None,
     mt5_module: Any | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, str]]:
     persistent_state = _load_mt5_controlled_execution_state(memory_root)
+    lifecycle_evaluation = _evaluate_signal_lifecycle(signal_lifecycle=signal_lifecycle)
     pre_trade_checks = [
         {"name": "live_execution_enabled", "passed": bool(live_execution_enabled)},
         {
@@ -785,6 +896,10 @@ def _run_controlled_mt5_live_execution(
             "name": "auto_stop_inactive",
             "passed": not bool(persistent_state.get("auto_stop_active", False)),
         },
+        {
+            "name": "signal_freshness_valid",
+            "passed": bool(lifecycle_evaluation.get("signal_fresh", True)),
+        },
     ]
     failed_checks = sorted(check["name"] for check in pre_trade_checks if not bool(check["passed"]))
     entry_decision = {
@@ -794,6 +909,7 @@ def _run_controlled_mt5_live_execution(
         "decision": decision,
         "confidence": float(confidence),
         "eligible_for_order": mode == "live" and decision in {"BUY", "SELL"},
+        "signal_lifecycle": lifecycle_evaluation,
     }
 
     order_request: dict[str, Any] = {}
@@ -808,6 +924,14 @@ def _run_controlled_mt5_live_execution(
         rejection_reasons = ["no_trade_signal"]
     elif failed_checks:
         rejection_reasons = [f"pretrade_check_failed:{name}" for name in failed_checks]
+        if "signal_freshness_valid" in failed_checks:
+            rejection_reasons.extend(
+                [
+                    str(reason)
+                    for reason in lifecycle_evaluation.get("signal_lifecycle_refusal_reasons", [])
+                    if str(reason).strip()
+                ]
+            )
     else:
         last_price = float(bars[-1]["close"]) if bars else 0.0
         sl_offset = 2.0
@@ -920,6 +1044,7 @@ def _run_controlled_mt5_live_execution(
         "mistake_failure_classification": failure_classification,
         "replay_feedback_hook": replay_feedback_hook,
         "auto_stop_active": auto_stop_active,
+        "signal_lifecycle": lifecycle_evaluation,
     }
 
     updated_state = {
@@ -1367,6 +1492,11 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     if combined_blocked:
         decision = "WAIT"
 
+    signal_lifecycle = _build_signal_lifecycle_context(
+        enabled=bool(config.signal_lifecycle_enabled),
+        max_age_seconds=int(config.signal_max_age_seconds),
+        bars=bars,
+    )
     fail_safe_state_clear = len(controlled_mt5_readiness.get("fail_safe_blocked_reasons", [])) == 0
     risk_state_valid = not bool(block.get("blocked", False)) and not bool(capital_guard.get("trade_refused", False))
     controlled_execution, controlled_execution_state, controlled_execution_paths = _run_controlled_mt5_live_execution(
@@ -1384,6 +1514,7 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         risk_state_valid=risk_state_valid,
         fail_safe_state_clear=fail_safe_state_clear,
         trade_tags=macro_tags,
+        signal_lifecycle=signal_lifecycle,
     )
     if decision in {"BUY", "SELL"} and controlled_execution.get("order_result", {}).get("status") != "accepted":
         decision = "WAIT"
@@ -1398,6 +1529,9 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     controlled_mt5_readiness = {
         **controlled_mt5_readiness,
         "live_execution_enabled": bool(config.live_execution_enabled),
+        "signal_lifecycle_enabled": bool(config.signal_lifecycle_enabled),
+        "signal_max_age_seconds": int(config.signal_max_age_seconds),
+        "signal_lifecycle": dict(controlled_execution.get("signal_lifecycle", {})),
         "controlled_execution_state": controlled_execution_state,
         "controlled_execution_artifact": controlled_execution,
         "controlled_execution_paths": controlled_execution_paths,
@@ -1589,6 +1723,7 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         "trigger_reasons": capital_guard.get("trigger_reasons", []),
         "macro_size_multiplier": float(macro_risk.get("size_multiplier", 1.0) or 1.0),
     }
+    signal_payload["signal_lifecycle"] = dict(controlled_execution.get("signal_lifecycle", {}))
 
     if config.compact_output:
         signal_payload = _build_compact_signal_payload(signal_payload)
@@ -1692,6 +1827,8 @@ def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
         knowledge_expansion_enabled=config.knowledge_expansion_enabled,
         knowledge_expansion_root=config.knowledge_expansion_root,
         knowledge_candidate_limit=config.knowledge_candidate_limit,
+        signal_lifecycle_enabled=config.signal_lifecycle_enabled,
+        signal_max_age_seconds=config.signal_max_age_seconds,
     )
 
     if config.knowledge_expansion_enabled:
