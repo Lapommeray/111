@@ -15,6 +15,7 @@ from run import (
     ensure_sample_data,
     run_pipeline,
 )
+from src.state import ModuleResult, PipelineState
 from src.mt5.adapter import MT5Adapter, MT5Config
 
 
@@ -1885,6 +1886,137 @@ class TestExecutionGateSemantics(unittest.TestCase):
         self.assertIsInstance(decision["invalidation_reason"], str)
         self.assertTrue(bool(decision["invalidation_reason"]))
         self.assertIn("NO_TRADE", decision["why_not_trade"])
+
+    def test_pipeline_applies_directional_conviction_gate_on_insufficient_vote_margin(self) -> None:
+        sample_path = Path(self._mkdtemp(prefix="directional_conviction_samples_")) / "xauusd.csv"
+        ensure_sample_data(sample_path)
+        bars = [
+            {"time": 1_700_000_000 + (idx * 60), "open": 2100.0, "high": 2100.5, "low": 2099.5, "close": 2100.2, "tick_volume": 140.0}
+            for idx in range(60)
+        ]
+        structure = {"state": "trend_up", "bias": "buy", "strength": 0.9}
+        liquidity = {"liquidity_state": "stable", "direction_hint": "buy", "score": 0.8}
+        weak_margin_state = PipelineState(
+            symbol="XAUUSD",
+            mode="replay",
+            bars=bars,
+            structure=structure,
+            liquidity=liquidity,
+            base_confidence=0.9,
+            base_direction="BUY",
+            final_confidence=0.95,
+            final_direction="BUY",
+            blocked=False,
+            blocked_reasons=[],
+            module_results={
+                "sessions": ModuleResult(
+                    name="sessions",
+                    role="session_classifier",
+                    direction_vote="neutral",
+                    confidence_delta=0.0,
+                    blocked=False,
+                    reasons=[],
+                    payload={"state": "london"},
+                ),
+                "spread_state": ModuleResult(
+                    name="spread_state",
+                    role="spread_proxy_estimator",
+                    direction_vote="neutral",
+                    confidence_delta=0.0,
+                    blocked=False,
+                    reasons=[],
+                    payload={"spread_points": 15.0},
+                ),
+                "volatility": ModuleResult(
+                    name="volatility",
+                    role="volatility_regime",
+                    direction_vote="neutral",
+                    confidence_delta=0.0,
+                    blocked=False,
+                    reasons=[],
+                    payload={"volatility_ratio": 1.0, "state": "balanced", "metrics": {"ratio": 1.0}},
+                ),
+                "direction_buy_a": ModuleResult(
+                    name="direction_buy_a",
+                    role="vote_a",
+                    direction_vote="buy",
+                    confidence_delta=0.02,
+                    blocked=False,
+                    reasons=[],
+                    payload={},
+                ),
+                "direction_buy_b": ModuleResult(
+                    name="direction_buy_b",
+                    role="vote_b",
+                    direction_vote="buy",
+                    confidence_delta=0.02,
+                    blocked=False,
+                    reasons=[],
+                    payload={},
+                ),
+                "direction_sell_a": ModuleResult(
+                    name="direction_sell_a",
+                    role="vote_c",
+                    direction_vote="sell",
+                    confidence_delta=0.0,
+                    blocked=False,
+                    reasons=[],
+                    payload={},
+                ),
+                "conflict_filter": ModuleResult(
+                    name="conflict_filter",
+                    role="vote_conflict_gate",
+                    direction_vote="neutral",
+                    confidence_delta=0.01,
+                    blocked=False,
+                    reasons=["buy_votes=2", "sell_votes=1"],
+                    payload={},
+                ),
+            },
+        )
+
+        with (
+            patch("run.classify_market_structure", return_value=structure),
+            patch("run.assess_liquidity_state", return_value=liquidity),
+            patch("run.compute_confidence", return_value={"confidence": 0.9, "direction": "BUY", "reasons": ["seed_buy"]}),
+            patch("run.run_advanced_modules", return_value=weak_margin_state),
+            patch(
+                "run.collect_xauusd_macro_state",
+                return_value={
+                    "trade_tags": {},
+                    "risk_behavior": {"pause_trading": False, "confidence_penalty": 0.0, "size_multiplier": 1.0, "reasons": []},
+                },
+            ),
+            patch(
+                "run.evaluate_capital_protection",
+                return_value={
+                    "effective_volume": 0.01,
+                    "trade_refused": False,
+                    "daily_loss_check": {"allowed": True},
+                    "trigger_reasons": [],
+                },
+            ),
+        ):
+            output = run_pipeline(
+                RuntimeConfig(
+                    symbol="XAUUSD",
+                    timeframe="M5",
+                    bars=60,
+                    sample_path=str(sample_path),
+                    replay_source="csv",
+                    replay_csv_path=str(sample_path),
+                    memory_root=self._mkdtemp(prefix="directional_conviction_memory_"),
+                    mode="replay",
+                    evolution_enabled=False,
+                    live_execution_enabled=False,
+                    macro_feed_enabled=False,
+                )
+            )
+
+        decision = output["status_panel"]["entry_exit_decision"]
+        self.assertEqual(decision["action"], "NO_TRADE")
+        reasons = output["signal"]["reasons"]
+        self.assertIn("directional_vote_margin_insufficient", reasons)
 
     def test_clean_long_entry_decision_contract_for_buy_signal(self) -> None:
         decision = _build_entry_exit_decision_contract(
