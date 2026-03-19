@@ -1051,6 +1051,8 @@ def _run_controlled_mt5_live_execution(
             "status": order_result.get("status", "refused"),
             "order_sent": bool(order_result.get("order_sent", False)),
             "rejection_reason": rollback_reasons[0],
+            "broker_state_confirmation": "unconfirmed",
+            "broker_state_outcome": "unconfirmed_non_accepted_send_outcome",
         }
     else:
         order_result = {
@@ -1058,6 +1060,8 @@ def _run_controlled_mt5_live_execution(
             "status": "accepted",
             "order_sent": True,
             "rejection_reason": "",
+            "broker_state_confirmation": "confirmed",
+            "broker_state_outcome": "accepted_send_outcome",
         }
 
     is_live_trade_attempt = mode == "live" and decision in {"BUY", "SELL"}
