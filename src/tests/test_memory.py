@@ -667,6 +667,7 @@ def test_signal_lifecycle_future_timestamp_is_rejected(tmp_path: Path) -> None:
     lifecycle = controlled_execution["signal_lifecycle"]
     assert lifecycle["signal_fresh"] is False
     assert lifecycle["signal_lifecycle_reason"] == "signal_timestamp_in_future"
+    assert lifecycle["signal_age_seconds"] is None
     assert "pretrade_check_failed:signal_freshness_valid" in controlled_execution["rollback_refusal_reasons"]
     assert "signal_timestamp_in_future" in controlled_execution["rollback_refusal_reasons"]
 

@@ -470,13 +470,10 @@ def _evaluate_signal_lifecycle(
     signal_lifecycle: dict[str, Any] | None,
 ) -> dict[str, Any]:
     lifecycle = dict(signal_lifecycle or {})
+    execution_checked_at = datetime.now(tz=timezone.utc)
     enabled = bool(lifecycle.get("signal_lifecycle_enabled", False))
-    raw_max_age_seconds = lifecycle.get("signal_max_age_seconds", 900)
-    try:
-        max_age_seconds = int(raw_max_age_seconds)
-    except Exception:
-        max_age_seconds = 900
-    execution_ts = int(datetime.now(tz=timezone.utc).timestamp())
+    max_age_seconds = int(lifecycle.get("signal_max_age_seconds", 900))
+    execution_ts = int(execution_checked_at.timestamp())
     source_bar_time = _coerce_unix_timestamp(lifecycle.get("source_bar_time"))
     decision_created_at_ts = _coerce_unix_timestamp(lifecycle.get("decision_created_at"))
     if source_bar_time is not None:
@@ -489,23 +486,23 @@ def _evaluate_signal_lifecycle(
         source_ts = None
         age_basis = "none"
     future_timestamp = source_ts is not None and source_ts > execution_ts
-    signal_age_seconds = (execution_ts - source_ts) if source_ts is not None else None
+    if future_timestamp:
+        # Cannot compute age for future-dated signal timestamps.
+        signal_age_seconds = None
+    else:
+        signal_age_seconds = (execution_ts - source_ts) if source_ts is not None else None
     if not enabled:
         signal_fresh = True
         lifecycle_reason = "signal_lifecycle_disabled"
         refusal_reasons: list[str] = []
-    elif max_age_seconds <= 0:
-        signal_fresh = False
-        lifecycle_reason = "signal_lifecycle_invalid_max_age"
-        refusal_reasons = ["signal_stale", "signal_lifecycle_invalid_max_age"]
-    elif signal_age_seconds is None:
-        signal_fresh = False
-        lifecycle_reason = "signal_timestamp_missing"
-        refusal_reasons = ["signal_stale", "signal_timestamp_missing"]
     elif future_timestamp:
         signal_fresh = False
         lifecycle_reason = "signal_timestamp_in_future"
         refusal_reasons = ["signal_stale", "signal_timestamp_in_future"]
+    elif signal_age_seconds is None:
+        signal_fresh = False
+        lifecycle_reason = "signal_timestamp_missing"
+        refusal_reasons = ["signal_stale", "signal_timestamp_missing"]
     elif signal_age_seconds <= max_age_seconds:
         signal_fresh = True
         lifecycle_reason = "signal_fresh"
@@ -520,7 +517,7 @@ def _evaluate_signal_lifecycle(
         "signal_age_basis": age_basis,
         "source_bar_time": source_bar_time,
         "decision_created_at": lifecycle.get("decision_created_at"),
-        "execution_checked_at": datetime.now(tz=timezone.utc).isoformat(),
+        "execution_checked_at": execution_checked_at.isoformat(),
         "signal_age_seconds": signal_age_seconds,
         "signal_fresh": signal_fresh,
         "signal_lifecycle_reason": lifecycle_reason,
