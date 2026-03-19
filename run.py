@@ -902,6 +902,7 @@ def _place_controlled_mt5_order(
         retcode_no_money = getattr(mt5, "TRADE_RETCODE_NO_MONEY", None)
         retcode_market_closed = getattr(mt5, "TRADE_RETCODE_MARKET_CLOSED", None)
         retcode_trade_disabled = getattr(mt5, "TRADE_RETCODE_TRADE_DISABLED", None)
+        retcode_invalid_volume = getattr(mt5, "TRADE_RETCODE_INVALID_VOLUME", None)
         if retcode_done is not None and retcode == retcode_done:
             return {
                 "status": "accepted",
@@ -955,6 +956,14 @@ def _place_controlled_mt5_order(
                 "status": "trade_disabled",
                 "order_sent": True,
                 "error_reason": "mt5_trade_disabled",
+                "retcode": retcode,
+                "order_id": int(getattr(result, "order", 0) or 0),
+            }
+        if retcode_invalid_volume is not None and retcode == retcode_invalid_volume:
+            return {
+                "status": "invalid_volume",
+                "order_sent": True,
+                "error_reason": "mt5_invalid_volume",
                 "retcode": retcode,
                 "order_id": int(getattr(result, "order", 0) or 0),
             }
