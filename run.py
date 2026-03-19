@@ -436,7 +436,12 @@ def _coerce_unix_timestamp(value: Any) -> int | None:
             if stripped.isdigit():
                 candidate = int(stripped)
                 return candidate if candidate > 0 else None
-            parsed = datetime.fromisoformat(stripped.replace("Z", "+00:00"))
+            normalized = (
+                f"{stripped.removesuffix('Z')}+00:00"
+                if stripped.endswith("Z")
+                else stripped
+            )
+            parsed = datetime.fromisoformat(normalized)
             candidate = int(parsed.timestamp())
             return candidate if candidate > 0 else None
         except Exception:
@@ -484,7 +489,7 @@ def _evaluate_signal_lifecycle(
         source_ts = None
         age_basis = "none"
     future_timestamp = source_ts is not None and source_ts > execution_ts
-    signal_age_seconds = max(0, execution_ts - source_ts) if source_ts is not None else None
+    signal_age_seconds = (execution_ts - source_ts) if source_ts is not None else None
     if not enabled:
         signal_fresh = True
         lifecycle_reason = "signal_lifecycle_disabled"
