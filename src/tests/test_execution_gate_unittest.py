@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+import tempfile
 from pathlib import Path
 
 from run import _run_controlled_mt5_live_execution
@@ -52,7 +53,7 @@ def _base_kwargs(memory_root: str) -> dict[str, object]:
 
 class TestExecutionGateSemantics(unittest.TestCase):
     def test_blocked_default_readiness_refuses_execution(self) -> None:
-        kwargs = _base_kwargs("/tmp/unittest_execution_gate_blocked")
+        kwargs = _base_kwargs(tempfile.mkdtemp(prefix="execution_gate_blocked_"))
         controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
         self.assertEqual(controlled_execution["order_result"]["status"], "refused")
         self.assertIn(
@@ -61,8 +62,7 @@ class TestExecutionGateSemantics(unittest.TestCase):
         )
 
     def test_explicit_live_authorized_readiness_reaches_order_stub(self) -> None:
-        memory_root = "/tmp/unittest_execution_gate_live"
-        Path(memory_root).mkdir(parents=True, exist_ok=True)
+        memory_root = tempfile.mkdtemp(prefix="execution_gate_live_")
         kwargs = _base_kwargs(memory_root)
         kwargs["controlled_mt5_readiness"] = {
             **dict(kwargs["controlled_mt5_readiness"]),
