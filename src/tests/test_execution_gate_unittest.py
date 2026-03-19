@@ -23,6 +23,7 @@ RETCODE_INVALID_VOLUME = 107
 RETCODE_INVALID_STOPS = 108
 RETCODE_PRICE_OFF = 109
 RETCODE_TOO_MANY_REQUESTS = 110
+RETCODE_INVALID_PRICE = 111
 
 
 class _AcceptedResult:
@@ -83,6 +84,11 @@ class _PriceOffResult:
 class _TooManyRequestsResult:
     retcode = RETCODE_TOO_MANY_REQUESTS
     order = 53
+
+
+class _InvalidPriceResult:
+    retcode = RETCODE_INVALID_PRICE
+    order = 54
 
 
 class _MT5BaseStub:
@@ -175,6 +181,13 @@ class _MT5TooManyRequestsStub(_MT5BaseStub):
 
     def order_send(self, _request: dict[str, object]) -> object:
         return _TooManyRequestsResult()
+
+
+class _MT5InvalidPriceStub(_MT5BaseStub):
+    TRADE_RETCODE_INVALID_PRICE = RETCODE_INVALID_PRICE
+
+    def order_send(self, _request: dict[str, object]) -> object:
+        return _InvalidPriceResult()
 
 
 class _MT5Info:
@@ -652,6 +665,38 @@ class TestExecutionGateSemantics(unittest.TestCase):
         self.assertEqual(controlled_execution["order_result"]["order_id"], 53)
         self.assertIn(
             "mt5_too_many_requests",
+            controlled_execution["rollback_refusal_reasons"],
+        )
+
+    def test_invalid_price_retcode_has_explicit_non_accepted_classification(self) -> None:
+        memory_root = self._mkdtemp(prefix="execution_gate_invalid_price_")
+        kwargs = _base_kwargs(memory_root)
+        kwargs["controlled_mt5_readiness"] = {
+            **dict(kwargs["controlled_mt5_readiness"]),
+            "live_execution_blocked": False,
+            "order_execution_enabled": True,
+            "execution_refused": False,
+            "execution_gate": "live_authorized_controlled_execution",
+        }
+        kwargs["mt5_module"] = _MT5InvalidPriceStub()
+        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "invalid_price")
+        self.assertTrue(controlled_execution["order_result"]["order_sent"])
+        self.assertEqual(
+            controlled_execution["order_result"]["error_reason"],
+            "mt5_invalid_price",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_state_confirmation"],
+            "unconfirmed",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_state_outcome"],
+            "unconfirmed_non_accepted_send_outcome",
+        )
+        self.assertEqual(controlled_execution["order_result"]["order_id"], 54)
+        self.assertIn(
+            "mt5_invalid_price",
             controlled_execution["rollback_refusal_reasons"],
         )
 
