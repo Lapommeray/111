@@ -5,6 +5,7 @@ import csv
 import hashlib
 import json
 import os
+import time
 from datetime import datetime, timezone
 from dataclasses import dataclass
 from pathlib import Path
@@ -48,6 +49,7 @@ SUPPORTED_TIMEFRAMES = {"M1", "M5", "M15", "H1", "H4"}
 SUPPORTED_MODES = {"live", "replay"}
 SUPPORTED_REPLAY_SOURCES = {"csv", "memory"}
 MIN_TRADE_VOLUME = 0.01
+BOUNDED_DELAYED_BROKER_RECHECK_SECONDS = 0.5
 TRANSIENT_RETRY_ELIGIBLE_STATUSES = frozenset(
     {
         "requote",
@@ -1714,13 +1716,28 @@ def _run_controlled_mt5_live_execution(
             **_build_retry_metadata(order_result=order_result),
         }
     else:
+        sent_order_id = int(order_result.get("order_id", 0) or 0)
         broker_position_verification = _verify_accepted_send_position_linkage(
-            sent_order_id=int(order_result.get("order_id", 0) or 0),
+            sent_order_id=sent_order_id,
             symbol=symbol,
             side=decision,
             volume=float(order_request.get("volume", 0.0)),
             mt5_module=mt5_module,
         )
+        if (
+            sent_order_id > 0
+            and broker_position_verification.get("confirmation") != "confirmed"
+        ):
+            time.sleep(BOUNDED_DELAYED_BROKER_RECHECK_SECONDS)
+            delayed_broker_position_verification = _verify_accepted_send_position_linkage(
+                sent_order_id=sent_order_id,
+                symbol=symbol,
+                side=decision,
+                volume=float(order_request.get("volume", 0.0)),
+                mt5_module=mt5_module,
+            )
+            if delayed_broker_position_verification.get("confirmation") == "confirmed":
+                broker_position_verification = delayed_broker_position_verification
         order_result = {
             **order_result,
             "status": "accepted",
@@ -1785,13 +1802,25 @@ def _run_controlled_mt5_live_execution(
             ),
         }
     elif order_status == "partial":
+        sent_order_id = int(order_result.get("order_id", 0) or 0)
         partial_quantity_verification = _verify_partial_send_deal_quantity(
-            sent_order_id=int(order_result.get("order_id", 0) or 0),
+            sent_order_id=sent_order_id,
             symbol=symbol,
             side=decision,
             requested_volume=float(order_result.get("requested_volume", order_request.get("volume", 0.0))),
             mt5_module=mt5_module,
         )
+        if sent_order_id > 0 and partial_quantity_verification.get("confirmation") != "confirmed":
+            time.sleep(BOUNDED_DELAYED_BROKER_RECHECK_SECONDS)
+            delayed_partial_quantity_verification = _verify_partial_send_deal_quantity(
+                sent_order_id=sent_order_id,
+                symbol=symbol,
+                side=decision,
+                requested_volume=float(order_result.get("requested_volume", order_request.get("volume", 0.0))),
+                mt5_module=mt5_module,
+            )
+            if delayed_partial_quantity_verification.get("confirmation") == "confirmed":
+                partial_quantity_verification = delayed_partial_quantity_verification
         if partial_quantity_verification.get("confirmation") == "confirmed":
             order_result = {
                 **order_result,
