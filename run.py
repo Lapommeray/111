@@ -904,6 +904,7 @@ def _place_controlled_mt5_order(
         retcode_trade_disabled = getattr(mt5, "TRADE_RETCODE_TRADE_DISABLED", None)
         retcode_invalid_volume = getattr(mt5, "TRADE_RETCODE_INVALID_VOLUME", None)
         retcode_invalid_stops = getattr(mt5, "TRADE_RETCODE_INVALID_STOPS", None)
+        retcode_price_off = getattr(mt5, "TRADE_RETCODE_PRICE_OFF", None)
         if retcode_done is not None and retcode == retcode_done:
             return {
                 "status": "accepted",
@@ -973,6 +974,14 @@ def _place_controlled_mt5_order(
                 "status": "invalid_stops",
                 "order_sent": True,
                 "error_reason": "mt5_invalid_stops",
+                "retcode": retcode,
+                "order_id": int(getattr(result, "order", 0) or 0),
+            }
+        if retcode_price_off is not None and retcode == retcode_price_off:
+            return {
+                "status": "price_off",
+                "order_sent": True,
+                "error_reason": "mt5_price_off",
                 "retcode": retcode,
                 "order_id": int(getattr(result, "order", 0) or 0),
             }
