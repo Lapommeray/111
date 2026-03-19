@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 from run import (
@@ -546,6 +547,109 @@ def test_controlled_mt5_execution_auto_stop_after_repeated_failures(tmp_path: Pa
     assert state["auto_stop_active"] is True
     assert fourth_execution["auto_stop_active"] is True
     assert "pretrade_check_failed:auto_stop_inactive" in fourth_execution["rollback_refusal_reasons"]
+
+
+def _base_controlled_execution_kwargs(tmp_path: Path) -> dict[str, object]:
+    return {
+        "memory_root": str(tmp_path / "memory_signal_lifecycle"),
+        "mode": "live",
+        "symbol": "XAUUSD",
+        "decision": "BUY",
+        "confidence": 0.9,
+        "bars": [{"close": 2100.0, "time": 1_700_000_000}],
+        "live_execution_enabled": True,
+        "live_order_volume": 0.01,
+        "controlled_mt5_readiness": {
+            "ready_for_controlled_usage": True,
+            "symbol_validity": True,
+            "account_trading_permission": True,
+            "account_readiness": True,
+            "data_freshness": True,
+            "tick_data_freshness": True,
+            "fail_safe_blocked_reasons": [],
+        },
+        "readiness_chain": {"all_checks_passed": True},
+        "quarantine_state": {"quarantine_required": False},
+        "risk_state_valid": True,
+        "fail_safe_state_clear": True,
+        "signal_lifecycle": {
+            "signal_lifecycle_enabled": False,
+            "signal_max_age_seconds": 900,
+            "decision_created_at": datetime.now(tz=timezone.utc).isoformat(),
+            "source_bar_time": int(datetime.now(tz=timezone.utc).timestamp()),
+            "signal_age_basis": "source_bar_time",
+        },
+    }
+
+
+def test_signal_lifecycle_disabled_preserves_current_execution_behavior(tmp_path: Path) -> None:
+    kwargs = _base_controlled_execution_kwargs(tmp_path)
+    controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+
+    lifecycle = controlled_execution["signal_lifecycle"]
+    assert lifecycle["signal_lifecycle_enabled"] is False
+    assert lifecycle["signal_fresh"] is True
+    assert lifecycle["signal_lifecycle_reason"] == "signal_lifecycle_disabled"
+    assert "pretrade_check_failed:signal_freshness_valid" not in controlled_execution["rollback_refusal_reasons"]
+
+
+def test_signal_lifecycle_fresh_signal_passes_gate(tmp_path: Path) -> None:
+    kwargs = _base_controlled_execution_kwargs(tmp_path)
+    now_ts = int(datetime.now(tz=timezone.utc).timestamp())
+    kwargs["signal_lifecycle"] = {
+        "signal_lifecycle_enabled": True,
+        "signal_max_age_seconds": 60,
+        "decision_created_at": datetime.now(tz=timezone.utc).isoformat(),
+        "source_bar_time": now_ts,
+        "signal_age_basis": "source_bar_time",
+    }
+    controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+
+    lifecycle = controlled_execution["signal_lifecycle"]
+    assert lifecycle["signal_lifecycle_enabled"] is True
+    assert lifecycle["signal_fresh"] is True
+    assert lifecycle["signal_lifecycle_reason"] == "signal_fresh"
+    assert "pretrade_check_failed:signal_freshness_valid" not in controlled_execution["rollback_refusal_reasons"]
+    assert "signal_stale" not in controlled_execution["rollback_refusal_reasons"]
+
+
+def test_signal_lifecycle_stale_signal_is_rejected_with_explicit_reasons(tmp_path: Path) -> None:
+    kwargs = _base_controlled_execution_kwargs(tmp_path)
+    old_time = int((datetime.now(tz=timezone.utc) - timedelta(seconds=120)).timestamp())
+    kwargs["signal_lifecycle"] = {
+        "signal_lifecycle_enabled": True,
+        "signal_max_age_seconds": 60,
+        "decision_created_at": datetime.now(tz=timezone.utc).isoformat(),
+        "source_bar_time": old_time,
+        "signal_age_basis": "source_bar_time",
+    }
+    controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+
+    lifecycle = controlled_execution["signal_lifecycle"]
+    assert lifecycle["signal_fresh"] is False
+    assert lifecycle["signal_lifecycle_reason"] == "signal_age_exceeded"
+    assert controlled_execution["order_result"]["status"] == "refused"
+    assert "pretrade_check_failed:signal_freshness_valid" in controlled_execution["rollback_refusal_reasons"]
+    assert "signal_stale" in controlled_execution["rollback_refusal_reasons"]
+    assert "signal_age_exceeded" in controlled_execution["rollback_refusal_reasons"]
+
+
+def test_signal_lifecycle_exact_max_age_boundary_is_fresh(tmp_path: Path) -> None:
+    kwargs = _base_controlled_execution_kwargs(tmp_path)
+    exact_boundary = int((datetime.now(tz=timezone.utc) - timedelta(seconds=60)).timestamp())
+    kwargs["signal_lifecycle"] = {
+        "signal_lifecycle_enabled": True,
+        "signal_max_age_seconds": 60,
+        "decision_created_at": datetime.now(tz=timezone.utc).isoformat(),
+        "source_bar_time": exact_boundary,
+        "signal_age_basis": "source_bar_time",
+    }
+    controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+
+    lifecycle = controlled_execution["signal_lifecycle"]
+    assert lifecycle["signal_age_seconds"] <= 60
+    assert lifecycle["signal_fresh"] is True
+    assert lifecycle["signal_lifecycle_reason"] == "signal_fresh"
 
 
 def test_config_validation_xauusd_first_and_timeframe() -> None:
