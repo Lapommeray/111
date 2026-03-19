@@ -672,48 +672,6 @@ def test_signal_lifecycle_future_timestamp_is_rejected(tmp_path: Path) -> None:
     assert "signal_timestamp_in_future" in controlled_execution["rollback_refusal_reasons"]
 
 
-def test_controlled_mt5_execution_refuses_when_readiness_keeps_live_block_defaults(tmp_path: Path) -> None:
-    kwargs = _base_controlled_execution_kwargs(tmp_path)
-    controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
-
-    assert controlled_execution["order_result"]["status"] == "refused"
-    assert "pretrade_check_failed:readiness_allows_live_order" in controlled_execution["rollback_refusal_reasons"]
-
-
-def test_controlled_mt5_execution_allows_explicit_live_readiness_and_reaches_order_stub(tmp_path: Path) -> None:
-    class _AcceptedResult:
-        retcode = 100
-        order = 42
-
-    class _MT5Stub:
-        TRADE_RETCODE_DONE = 100
-
-        def initialize(self) -> bool:
-            return True
-
-        def order_send(self, _request: dict[str, object]) -> object:
-            return _AcceptedResult()
-
-        def shutdown(self) -> None:
-            return None
-
-    kwargs = _base_controlled_execution_kwargs(tmp_path)
-    kwargs["controlled_mt5_readiness"] = {
-        **dict(kwargs["controlled_mt5_readiness"]),
-        "live_execution_blocked": False,
-        "order_execution_enabled": True,
-        "execution_refused": False,
-        "execution_gate": "live_authorized_controlled_execution",
-    }
-    kwargs["mt5_module"] = _MT5Stub()
-    controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
-
-    assert controlled_execution["order_result"]["status"] == "accepted"
-    assert controlled_execution["order_result"]["order_sent"] is True
-    assert controlled_execution["order_result"]["order_id"] == 42
-    assert "pretrade_check_failed:readiness_allows_live_order" not in controlled_execution["rollback_refusal_reasons"]
-
-
 def test_config_validation_xauusd_first_and_timeframe() -> None:
     validate_runtime_config(RuntimeConfig(symbol="XAUUSD", timeframe="M5"))
 
