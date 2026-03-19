@@ -1060,6 +1060,183 @@ def _normalize_mt5_order_side(*, mt5_module: Any, order_type: Any) -> str | None
     return None
 
 
+def _normalize_mt5_deal_side(*, mt5_module: Any, deal_type: Any) -> str | None:
+    deal_type_buy = getattr(mt5_module, "DEAL_TYPE_BUY", None)
+    deal_type_sell = getattr(mt5_module, "DEAL_TYPE_SELL", None)
+    if deal_type_buy is not None and deal_type == deal_type_buy:
+        return "BUY"
+    if deal_type_sell is not None and deal_type == deal_type_sell:
+        return "SELL"
+    if deal_type == 0:
+        return "BUY"
+    if deal_type == 1:
+        return "SELL"
+    normalized = str(deal_type).strip().upper()
+    if normalized in {"BUY", "SELL"}:
+        return normalized
+    return None
+
+
+def _verify_partial_send_deal_quantity(
+    *,
+    sent_order_id: int,
+    symbol: str,
+    side: str,
+    requested_volume: float,
+    mt5_module: Any | None = None,
+) -> dict[str, Any]:
+    fail_closed = {
+        "confirmation": "unconfirmed",
+        "partial_outcome_quantity_truth": "unresolved",
+        "broker_quantity_outcome": "partial_quantity_unresolved",
+        "fail_closed_reason": "",
+        "sent_order_id": int(sent_order_id or 0),
+        "deal_lookup_source": "history_deals_get",
+        "linked_deal_count": 0,
+        "linkage_field_used": None,
+        "linkage_value_matched": None,
+        "matched_symbol": None,
+        "matched_side": None,
+        "requested_volume": float(requested_volume),
+        "filled_volume": None,
+        "remaining_volume": None,
+        "symbol_match": None,
+        "side_match": None,
+        "quantity_consistent": None,
+    }
+    if int(sent_order_id or 0) <= 0:
+        return {**fail_closed, "fail_closed_reason": "invalid_sent_order_id"}
+    if float(requested_volume) <= 0.0:
+        return {**fail_closed, "fail_closed_reason": "invalid_requested_volume"}
+
+    mt5 = mt5_module
+    if mt5 is None:
+        try:
+            import MetaTrader5 as mt5  # type: ignore
+        except Exception:
+            return {**fail_closed, "fail_closed_reason": "mt5_module_unavailable"}
+
+    initialized = False
+    try:
+        initialize = getattr(mt5, "initialize", None)
+        if not callable(initialize) or not bool(initialize()):
+            return {**fail_closed, "fail_closed_reason": "mt5_initialize_failed"}
+        initialized = True
+        history_deals_get = getattr(mt5, "history_deals_get", None)
+        if not callable(history_deals_get):
+            return {**fail_closed, "fail_closed_reason": "mt5_history_deals_get_unavailable"}
+        deals_result = history_deals_get()
+        if deals_result is None:
+            return {**fail_closed, "fail_closed_reason": "mt5_history_deals_get_unavailable"}
+        try:
+            deals = list(deals_result)
+        except Exception:
+            return {**fail_closed, "fail_closed_reason": "mt5_history_deals_unreadable"}
+
+        readable_linkage_available = False
+        supporting_only_match_found = False
+        linkage_match_with_support_mismatch = False
+        candidates: list[dict[str, Any]] = []
+        for deal in deals:
+            linkage_value = getattr(deal, "order", None)
+            if linkage_value is None:
+                continue
+            try:
+                linkage_value_int = int(linkage_value)
+            except Exception:
+                continue
+            readable_linkage_available = True
+            deal_symbol = str(getattr(deal, "symbol", ""))
+            deal_side = _normalize_mt5_deal_side(
+                mt5_module=mt5,
+                deal_type=getattr(deal, "type", None),
+            )
+            try:
+                deal_volume = float(getattr(deal, "volume", None))
+            except Exception:
+                deal_volume = None
+            symbol_match = deal_symbol == str(symbol)
+            side_match = deal_side == str(side)
+            volume_readable = deal_volume is not None
+            if (
+                symbol_match
+                and side_match
+                and volume_readable
+                and linkage_value_int != int(sent_order_id)
+            ):
+                supporting_only_match_found = True
+            if linkage_value_int != int(sent_order_id):
+                continue
+            if not (symbol_match and side_match and volume_readable):
+                linkage_match_with_support_mismatch = True
+                continue
+            candidates.append(
+                {
+                    "deal": deal,
+                    "linkage_field_used": "order",
+                    "linkage_value_matched": linkage_value_int,
+                    "symbol_match": symbol_match,
+                    "side_match": side_match,
+                    "matched_side": deal_side,
+                    "matched_volume": deal_volume,
+                }
+            )
+
+        if len(candidates) == 1:
+            candidate = candidates[0]
+            filled_volume = float(candidate["matched_volume"])
+            remaining_volume = float(requested_volume) - filled_volume
+            quantity_consistent = (
+                filled_volume > 0.0 and filled_volume < float(requested_volume) and remaining_volume >= 0.0
+            )
+            if not quantity_consistent:
+                return {
+                    **fail_closed,
+                    "linked_deal_count": 1,
+                    "linkage_field_used": candidate["linkage_field_used"],
+                    "linkage_value_matched": candidate["linkage_value_matched"],
+                    "matched_symbol": str(getattr(candidate["deal"], "symbol", "")),
+                    "matched_side": candidate["matched_side"],
+                    "symbol_match": True,
+                    "side_match": True,
+                    "quantity_consistent": False,
+                    "fail_closed_reason": "linked_deal_quantity_inconsistent",
+                }
+            return {
+                **fail_closed,
+                "confirmation": "confirmed",
+                "partial_outcome_quantity_truth": "broker_confirmed_partial_quantity",
+                "broker_quantity_outcome": "partial_quantity_confirmed_from_linked_deal",
+                "fail_closed_reason": "",
+                "linked_deal_count": 1,
+                "linkage_field_used": candidate["linkage_field_used"],
+                "linkage_value_matched": candidate["linkage_value_matched"],
+                "matched_symbol": str(getattr(candidate["deal"], "symbol", "")),
+                "matched_side": candidate["matched_side"],
+                "filled_volume": filled_volume,
+                "remaining_volume": remaining_volume,
+                "symbol_match": True,
+                "side_match": True,
+                "quantity_consistent": True,
+            }
+        if len(candidates) > 1:
+            return {**fail_closed, "fail_closed_reason": "non_unique_linked_deal_match"}
+        if not readable_linkage_available:
+            return {**fail_closed, "fail_closed_reason": "linked_deal_order_field_unavailable_or_unreadable"}
+        if supporting_only_match_found:
+            return {**fail_closed, "fail_closed_reason": "deal_supporting_metadata_only_match"}
+        if linkage_match_with_support_mismatch:
+            return {**fail_closed, "fail_closed_reason": "linked_deal_supporting_mismatch"}
+        return {**fail_closed, "fail_closed_reason": "exact_linked_deal_mismatch"}
+    except Exception:
+        return {**fail_closed, "fail_closed_reason": "partial_deal_verification_unavailable"}
+    finally:
+        if initialized:
+            shutdown = getattr(mt5, "shutdown", None)
+            if callable(shutdown):
+                shutdown()
+
+
 def _verify_accepted_send_order_acknowledgement(
     *,
     mt5_module: Any,
@@ -1600,6 +1777,34 @@ def _run_controlled_mt5_live_execution(
             ),
         }
     elif order_status == "partial":
+        partial_quantity_verification = _verify_partial_send_deal_quantity(
+            sent_order_id=int(order_result.get("order_id", 0) or 0),
+            symbol=symbol,
+            side=decision,
+            requested_volume=float(order_result.get("requested_volume", order_request.get("volume", 0.0))),
+            mt5_module=mt5_module,
+        )
+        if partial_quantity_verification.get("confirmation") == "confirmed":
+            order_result = {
+                **order_result,
+                "filled_volume": partial_quantity_verification.get("filled_volume"),
+                "remaining_volume": partial_quantity_verification.get("remaining_volume"),
+                "partial_outcome_quantity_truth": partial_quantity_verification.get(
+                    "partial_outcome_quantity_truth",
+                    "unresolved",
+                ),
+            }
+        else:
+            order_result = {
+                **order_result,
+                "filled_volume": None,
+                "remaining_volume": None,
+                "partial_outcome_quantity_truth": "unresolved",
+            }
+        order_result = {
+            **order_result,
+            "partial_quantity_verification": partial_quantity_verification,
+        }
         open_position_state = {
             "status": "partial_exposure_unresolved",
             "position_id": None,
@@ -1613,7 +1818,9 @@ def _run_controlled_mt5_live_execution(
             "requested_volume": float(order_result.get("requested_volume", order_request.get("volume", 0.0))),
             "filled_volume": order_result.get("filled_volume"),
             "remaining_volume": order_result.get("remaining_volume"),
-            "partial_outcome_quantity_truth": "unresolved",
+            "partial_outcome_quantity_truth": str(
+                order_result.get("partial_outcome_quantity_truth", "unresolved")
+            ),
         }
         exit_decision = {
             "decision": "defer_exit_partial_exposure_unresolved",
