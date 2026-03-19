@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "replay_scope": "evaluation_replay",
+      "experiment_priority_score": 0.3415,
+      "dominant_experiment_axis": "transfer_stress",
+      "experiment_reason_cluster": "stress_validation_ready"
+    }
+  ]
+}

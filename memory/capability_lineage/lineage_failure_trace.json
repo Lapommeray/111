@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "replay_scope": "evaluation_replay",
+      "lineage_failure_recurrence": 0.1747,
+      "lineage_fragmentation_risk": 0.1427,
+      "genealogy_reason_cluster": "coherent_lineage_progression"
+    }
+  ]
+}
