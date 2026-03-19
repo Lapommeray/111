@@ -169,6 +169,8 @@ def evaluate_replay(
     confidence_distribution = _confidence_distribution(records)
 
     execution_realism_v2_impact = _build_execution_realism_v2_impact(records, execution_realism_v2)
+    analytics_summary = _build_analytics_summary(records)
+    oos_analytics_summary = _build_oos_analytics_summary(records, walk_forward_enabled=walk_forward_enabled)
     return {
         "symbol": symbol,
         "mode": "replay_evaluation",
@@ -200,6 +202,12 @@ def evaluate_replay(
         "total_oos_additional_realism_penalty_points": oos_summary["total_oos_additional_realism_penalty_points"],
         "oos_win_rate": oos_summary["oos_win_rate"],
         "oos_max_drawdown": oos_summary["oos_max_drawdown"],
+        "oos_expectancy_points": oos_analytics_summary["expectancy_points"],
+        "oos_profit_factor": oos_analytics_summary["profit_factor"],
+        "oos_max_drawdown_points": oos_analytics_summary["max_drawdown_points"],
+        "oos_average_realism_adjusted_net_pnl_points": oos_analytics_summary["average_realism_adjusted_net_pnl_points"],
+        "analytics_summary": analytics_summary,
+        "oos_analytics_summary": oos_analytics_summary,
         "per_cycle_summary": per_cycle_summary,
         "records": records,
         "replay_isolated": True,
@@ -842,4 +850,159 @@ def _build_execution_realism_v2_impact(
         "net_pnl_points": net_pnl_points,
         "additional_realism_penalty_points": additional_realism_penalty_points,
         "realism_adjusted_net_pnl_points": realism_adjusted_net_pnl_points,
+    }
+
+
+def _build_oos_analytics_summary(
+    records: list[dict[str, Any]],
+    *,
+    walk_forward_enabled: bool,
+) -> dict[str, Any]:
+    if not walk_forward_enabled:
+        return {
+            **_empty_analytics_summary(),
+            "walk_forward_enabled": False,
+        }
+    return {
+        **_build_analytics_summary(records),
+        "walk_forward_enabled": True,
+    }
+
+
+def _build_analytics_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
+    gross_points: list[float] = []
+    net_points: list[float] = []
+    realism_adjusted_net_points: list[float] = []
+    skipped_trade_count = 0
+
+    for record in records:
+        outcome = _extract_latest_trade_outcome(record)
+        if not _outcome_is_closed_trade(outcome):
+            continue
+        gross = round(float(outcome.get("pnl_points_gross", outcome.get("pnl_points", 0.0))), 3)
+        net = round(float(outcome.get("pnl_points_net", gross)), 3)
+        realism_adjusted_net = net
+        realism_v2 = outcome.get("execution_realism_v2", {})
+        if isinstance(realism_v2, dict):
+            if bool(realism_v2.get("no_fill_applied", False)):
+                skipped_trade_count += 1
+            realism_adjusted_net = round(float(realism_v2.get("realism_adjusted_net_pnl_points", net)), 3)
+
+        gross_points.append(gross)
+        net_points.append(net)
+        realism_adjusted_net_points.append(realism_adjusted_net)
+
+    gross = _build_series_analytics(gross_points)
+    net = _build_series_analytics(net_points)
+    realism_adjusted = _build_series_analytics(realism_adjusted_net_points)
+
+    return {
+        "closed_trade_count": net["closed_trade_count"],
+        "win_count": net["win_count"],
+        "loss_count": net["loss_count"],
+        "flat_count": net["flat_count"],
+        "skipped_trade_count": skipped_trade_count,
+        "win_rate": net["win_rate"],
+        "average_gross_pnl_points": gross["average_pnl_points"],
+        "average_net_pnl_points": net["average_pnl_points"],
+        "average_realism_adjusted_net_pnl_points": realism_adjusted["average_pnl_points"],
+        "expectancy_points": net["expectancy_points"],
+        "profit_factor": net["profit_factor"],
+        "max_drawdown_points": net["max_drawdown_points"],
+        "average_win_points": net["average_win_points"],
+        "average_loss_points": net["average_loss_points"],
+        "payoff_ratio": net["payoff_ratio"],
+        "best_trade_points": net["best_trade_points"],
+        "worst_trade_points": net["worst_trade_points"],
+        "consecutive_wins_max": net["consecutive_wins_max"],
+        "consecutive_losses_max": net["consecutive_losses_max"],
+        "series": {
+            "gross": gross,
+            "net": net,
+            "realism_adjusted_net": {
+                **realism_adjusted,
+                "skipped_trade_count": skipped_trade_count,
+            },
+        },
+    }
+
+
+def _empty_analytics_summary() -> dict[str, Any]:
+    empty_series = _build_series_analytics([])
+    return {
+        "closed_trade_count": 0,
+        "win_count": 0,
+        "loss_count": 0,
+        "flat_count": 0,
+        "skipped_trade_count": 0,
+        "win_rate": 0.0,
+        "average_gross_pnl_points": 0.0,
+        "average_net_pnl_points": 0.0,
+        "average_realism_adjusted_net_pnl_points": 0.0,
+        "expectancy_points": 0.0,
+        "profit_factor": None,
+        "max_drawdown_points": 0.0,
+        "average_win_points": 0.0,
+        "average_loss_points": 0.0,
+        "payoff_ratio": None,
+        "best_trade_points": 0.0,
+        "worst_trade_points": 0.0,
+        "consecutive_wins_max": 0,
+        "consecutive_losses_max": 0,
+        "series": {
+            "gross": empty_series,
+            "net": empty_series,
+            "realism_adjusted_net": {
+                **empty_series,
+                "skipped_trade_count": 0,
+            },
+        },
+    }
+
+
+def _build_series_analytics(points: list[float]) -> dict[str, Any]:
+    rounded_points = [round(float(value), 3) for value in points]
+    closed_trade_count = len(rounded_points)
+    wins = [value for value in rounded_points if value > 0.0]
+    losses = [value for value in rounded_points if value < 0.0]
+    flats = [value for value in rounded_points if value == 0.0]
+    gross_wins = round(sum(wins), 3)
+    gross_losses_abs = round(abs(sum(losses)), 3)
+    average_loss_points = round((sum(losses) / len(losses)), 3) if losses else 0.0
+    average_win_points = round((sum(wins) / len(wins)), 3) if wins else 0.0
+
+    consecutive_wins_max = 0
+    consecutive_losses_max = 0
+    current_wins = 0
+    current_losses = 0
+    for value in rounded_points:
+        if value > 0.0:
+            current_wins += 1
+            current_losses = 0
+        elif value < 0.0:
+            current_losses += 1
+            current_wins = 0
+        else:
+            current_wins = 0
+            current_losses = 0
+        consecutive_wins_max = max(consecutive_wins_max, current_wins)
+        consecutive_losses_max = max(consecutive_losses_max, current_losses)
+
+    return {
+        "closed_trade_count": closed_trade_count,
+        "win_count": len(wins),
+        "loss_count": len(losses),
+        "flat_count": len(flats),
+        "win_rate": round((len(wins) / closed_trade_count), 6) if closed_trade_count else 0.0,
+        "average_pnl_points": round((sum(rounded_points) / closed_trade_count), 3) if closed_trade_count else 0.0,
+        "expectancy_points": round((sum(rounded_points) / closed_trade_count), 3) if closed_trade_count else 0.0,
+        "profit_factor": round(gross_wins / gross_losses_abs, 6) if gross_losses_abs > 0.0 else None,
+        "max_drawdown_points": _max_drawdown(rounded_points),
+        "average_win_points": average_win_points,
+        "average_loss_points": average_loss_points,
+        "payoff_ratio": round(average_win_points / abs(average_loss_points), 6) if average_loss_points < 0.0 else None,
+        "best_trade_points": round(max(rounded_points), 3) if rounded_points else 0.0,
+        "worst_trade_points": round(min(rounded_points), 3) if rounded_points else 0.0,
+        "consecutive_wins_max": consecutive_wins_max,
+        "consecutive_losses_max": consecutive_losses_max,
     }
