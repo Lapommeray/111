@@ -12,60 +12,54 @@ from run import RuntimeConfig, _run_controlled_mt5_live_execution, ensure_sample
 from src.mt5.adapter import MT5Adapter, MT5Config
 
 
+RETCODE_DONE = 100
+RETCODE_DONE_PARTIAL = 101
+RETCODE_REQUOTE = 102
+
+
 class _AcceptedResult:
-    retcode = 100
+    retcode = RETCODE_DONE
     order = 42
 
 
 class _PartialResult:
-    retcode = 101
+    retcode = RETCODE_DONE_PARTIAL
     order = 43
 
 
 class _RequoteResult:
-    retcode = 102
+    retcode = RETCODE_REQUOTE
     order = 44
 
 
-class _MT5AcceptedStub:
-    TRADE_RETCODE_DONE = 100
+class _MT5BaseStub:
+    TRADE_RETCODE_DONE = RETCODE_DONE
 
     def initialize(self) -> bool:
         return True
+
+    def shutdown(self) -> None:
+        return None
+
+
+class _MT5AcceptedStub(_MT5BaseStub):
 
     def order_send(self, _request: dict[str, object]) -> object:
         return _AcceptedResult()
 
-    def shutdown(self) -> None:
-        return None
 
-
-class _MT5PartialStub:
-    TRADE_RETCODE_DONE = 100
-    TRADE_RETCODE_DONE_PARTIAL = 101
-
-    def initialize(self) -> bool:
-        return True
+class _MT5PartialStub(_MT5BaseStub):
+    TRADE_RETCODE_DONE_PARTIAL = RETCODE_DONE_PARTIAL
 
     def order_send(self, _request: dict[str, object]) -> object:
         return _PartialResult()
 
-    def shutdown(self) -> None:
-        return None
 
-
-class _MT5RequoteStub:
-    TRADE_RETCODE_DONE = 100
-    TRADE_RETCODE_REQUOTE = 102
-
-    def initialize(self) -> bool:
-        return True
+class _MT5RequoteStub(_MT5BaseStub):
+    TRADE_RETCODE_REQUOTE = RETCODE_REQUOTE
 
     def order_send(self, _request: dict[str, object]) -> object:
         return _RequoteResult()
-
-    def shutdown(self) -> None:
-        return None
 
 
 class _MT5Info:
@@ -78,7 +72,7 @@ class _MT5Account:
 
 
 class _AcceptedPipelineResult:
-    retcode = 100
+    retcode = RETCODE_DONE
     order = 77
 
 
@@ -88,7 +82,7 @@ class _MT5LivePipelineStub:
     TIMEFRAME_M15 = 15
     TIMEFRAME_H1 = 60
     TIMEFRAME_H4 = 240
-    TRADE_RETCODE_DONE = 100
+    TRADE_RETCODE_DONE = RETCODE_DONE
 
     def initialize(self) -> bool:
         return True
