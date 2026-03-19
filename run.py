@@ -1018,6 +1018,30 @@ def _place_controlled_mt5_order(
         mt5.shutdown()
 
 
+def _retry_policy_truth_for_non_accepted_outcome(*, order_result: dict[str, Any]) -> dict[str, Any]:
+    status = str(order_result.get("status") or "").strip().lower()
+    order_sent = bool(order_result.get("order_sent", False))
+    transient_retry_eligible_statuses = {
+        "requote",
+        "price_changed",
+        "price_off",
+        "too_many_requests",
+    }
+    retry_eligible = bool(order_sent and status in transient_retry_eligible_statuses)
+    retry_eligibility_reason = (
+        "transient_non_accepted_send_outcome"
+        if retry_eligible
+        else ("no_order_send_attempt" if not order_sent else "non_transient_non_accepted_send_outcome")
+    )
+    return {
+        "retry_eligible": retry_eligible,
+        "retry_attempted_count": 0,
+        "retry_policy": "not_implemented",
+        "retry_policy_truth": "no_retry_policy_implemented",
+        "retry_eligibility_reason": retry_eligibility_reason,
+    }
+
+
 def _run_controlled_mt5_live_execution(
     *,
     memory_root: str,
@@ -1141,6 +1165,7 @@ def _run_controlled_mt5_live_execution(
             "broker_state_outcome": (
                 "unconfirmed_non_accepted_send_outcome" if order_sent else "no_order_send_attempt"
             ),
+            **_retry_policy_truth_for_non_accepted_outcome(order_result=order_result),
         }
     else:
         order_result = {

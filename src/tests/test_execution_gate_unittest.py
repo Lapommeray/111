@@ -287,6 +287,17 @@ class TestExecutionGateSemantics(unittest.TestCase):
             controlled_execution["order_result"]["broker_state_outcome"],
             "no_order_send_attempt",
         )
+        self.assertEqual(controlled_execution["order_result"]["retry_eligible"], False)
+        self.assertEqual(controlled_execution["order_result"]["retry_attempted_count"], 0)
+        self.assertEqual(controlled_execution["order_result"]["retry_policy"], "not_implemented")
+        self.assertEqual(
+            controlled_execution["order_result"]["retry_policy_truth"],
+            "no_retry_policy_implemented",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["retry_eligibility_reason"],
+            "no_order_send_attempt",
+        )
         self.assertIn(
             "pretrade_check_failed:readiness_allows_live_order",
             controlled_execution["rollback_refusal_reasons"],
@@ -429,6 +440,17 @@ class TestExecutionGateSemantics(unittest.TestCase):
             controlled_execution["order_result"]["broker_state_outcome"],
             "unconfirmed_non_accepted_send_outcome",
         )
+        self.assertEqual(controlled_execution["order_result"]["retry_eligible"], True)
+        self.assertEqual(controlled_execution["order_result"]["retry_attempted_count"], 0)
+        self.assertEqual(controlled_execution["order_result"]["retry_policy"], "not_implemented")
+        self.assertEqual(
+            controlled_execution["order_result"]["retry_policy_truth"],
+            "no_retry_policy_implemented",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["retry_eligibility_reason"],
+            "transient_non_accepted_send_outcome",
+        )
         self.assertEqual(controlled_execution["order_result"]["order_id"], 44)
         self.assertIn(
             "mt5_requote_unretried",
@@ -524,6 +546,17 @@ class TestExecutionGateSemantics(unittest.TestCase):
         self.assertEqual(
             controlled_execution["order_result"]["broker_state_outcome"],
             "unconfirmed_non_accepted_send_outcome",
+        )
+        self.assertEqual(controlled_execution["order_result"]["retry_eligible"], False)
+        self.assertEqual(controlled_execution["order_result"]["retry_attempted_count"], 0)
+        self.assertEqual(controlled_execution["order_result"]["retry_policy"], "not_implemented")
+        self.assertEqual(
+            controlled_execution["order_result"]["retry_policy_truth"],
+            "no_retry_policy_implemented",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["retry_eligibility_reason"],
+            "non_transient_non_accepted_send_outcome",
         )
         self.assertEqual(controlled_execution["order_result"]["order_id"], 47)
         self.assertIn(
