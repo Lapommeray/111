@@ -1046,13 +1046,16 @@ def _run_controlled_mt5_live_execution(
 
     if rejection_reasons:
         rollback_reasons = sorted(set(rejection_reasons))
+        order_sent = bool(order_result.get("order_sent", False))
         order_result = {
             **order_result,
             "status": order_result.get("status", "refused"),
-            "order_sent": bool(order_result.get("order_sent", False)),
+            "order_sent": order_sent,
             "rejection_reason": rollback_reasons[0],
-            "broker_state_confirmation": "unconfirmed",
-            "broker_state_outcome": "unconfirmed_non_accepted_send_outcome",
+            "broker_state_confirmation": "unconfirmed" if order_sent else "not_applicable",
+            "broker_state_outcome": (
+                "unconfirmed_non_accepted_send_outcome" if order_sent else "no_order_send_attempt"
+            ),
         }
     else:
         order_result = {

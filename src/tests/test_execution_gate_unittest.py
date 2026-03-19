@@ -161,6 +161,15 @@ class TestExecutionGateSemantics(unittest.TestCase):
         kwargs = _base_kwargs(self._mkdtemp(prefix="execution_gate_blocked_"))
         controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
         self.assertEqual(controlled_execution["order_result"]["status"], "refused")
+        self.assertFalse(controlled_execution["order_result"]["order_sent"])
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_state_confirmation"],
+            "not_applicable",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_state_outcome"],
+            "no_order_send_attempt",
+        )
         self.assertIn(
             "pretrade_check_failed:readiness_allows_live_order",
             controlled_execution["rollback_refusal_reasons"],
@@ -180,6 +189,14 @@ class TestExecutionGateSemantics(unittest.TestCase):
         controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
         self.assertEqual(controlled_execution["order_result"]["status"], "accepted")
         self.assertTrue(controlled_execution["order_result"]["order_sent"])
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_state_confirmation"],
+            "confirmed",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_state_outcome"],
+            "accepted_send_outcome",
+        )
         self.assertEqual(controlled_execution["order_result"]["order_id"], 42)
 
     def test_partial_fill_retcode_reported_as_partial_unreconciled(self) -> None:
