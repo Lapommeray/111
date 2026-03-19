@@ -1600,6 +1600,67 @@ def _build_retry_metadata(*, order_result: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _safe_positive_finite_float(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if not isinstance(value, (int, float)):
+        return None
+    numeric = float(value)
+    if not math.isfinite(numeric) or numeric <= 0.0:
+        return None
+    return numeric
+
+
+def _resolve_broker_retry_price(
+    *,
+    symbol: str,
+    decision: str,
+    mt5_module: Any | None = None,
+) -> tuple[float | None, str]:
+    mt5 = mt5_module
+    if mt5 is None:
+        try:
+            import MetaTrader5 as mt5  # type: ignore
+        except Exception:
+            return None, "broker_price_refresh_mt5_module_unavailable"
+
+    symbol_info_tick = getattr(mt5, "symbol_info_tick", None)
+    if not callable(symbol_info_tick):
+        return None, "broker_price_refresh_symbol_info_tick_unavailable"
+
+    initialize = getattr(mt5, "initialize", None)
+    shutdown = getattr(mt5, "shutdown", None)
+    initialized = False
+    try:
+        if callable(initialize):
+            if not bool(initialize()):
+                return None, "broker_price_refresh_mt5_initialize_failed"
+            initialized = True
+        tick = symbol_info_tick(symbol)
+    except Exception:
+        return None, "broker_price_refresh_tick_fetch_failed"
+    finally:
+        if initialized and callable(shutdown):
+            shutdown()
+
+    if tick is None:
+        return None, "broker_price_refresh_tick_unavailable"
+
+    ask_raw = tick.get("ask") if isinstance(tick, dict) else getattr(tick, "ask", None)
+    bid_raw = tick.get("bid") if isinstance(tick, dict) else getattr(tick, "bid", None)
+    ask = _safe_positive_finite_float(ask_raw)
+    bid = _safe_positive_finite_float(bid_raw)
+    if ask is None or bid is None:
+        return None, "broker_price_refresh_tick_sides_invalid"
+    if ask < bid:
+        return None, "broker_price_refresh_tick_crossed"
+    if decision == "BUY":
+        return ask, ""
+    if decision == "SELL":
+        return bid, ""
+    return None, "broker_price_refresh_decision_not_trade_side"
+
+
 def _run_controlled_mt5_live_execution(
     *,
     memory_root: str,
@@ -1736,16 +1797,29 @@ def _run_controlled_mt5_live_execution(
                     "passed": first_status in BOUNDED_SINGLE_RETRY_EXECUTION_STATUSES,
                 },
             ]
-            refreshed_price = float(bars[-1]["close"]) if bars else 0.0
+            refreshed_price = None
+            refreshed_price_failure_reason = ""
+            if first_status in BOUNDED_SINGLE_RETRY_EXECUTION_STATUSES:
+                refreshed_price, refreshed_price_failure_reason = _resolve_broker_retry_price(
+                    symbol=symbol,
+                    decision=decision,
+                    mt5_module=mt5_module,
+                )
             refreshed_price_valid = (
-                isinstance(refreshed_price, (int, float))
-                and math.isfinite(float(refreshed_price))
-                and float(refreshed_price) > 0.0
+                refreshed_price is not None
+                if first_status in BOUNDED_SINGLE_RETRY_EXECUTION_STATUSES
+                else True
             )
             retry_guard_checks.append(
                 {"name": "refreshed_price_valid", "passed": bool(refreshed_price_valid)}
             )
             failed_retry_guards = [check["name"] for check in retry_guard_checks if not bool(check["passed"])]
+            if (
+                first_status in BOUNDED_SINGLE_RETRY_EXECUTION_STATUSES
+                and not refreshed_price_valid
+                and refreshed_price_failure_reason
+            ):
+                failed_retry_guards.append(str(refreshed_price_failure_reason))
             if not failed_retry_guards and retry_metadata.get("retry_eligible", False):
                 time.sleep(BOUNDED_SINGLE_RETRY_DELAY_SECONDS)
                 retry_request = {**order_request, "price": round(float(refreshed_price), 5)}
