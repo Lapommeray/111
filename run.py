@@ -2630,6 +2630,45 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     )
     if combined_blocked:
         decision = "WAIT"
+    directional_votes: list[str] = []
+    for module in advanced_state.module_results.values():
+        normalized_vote = str(module.direction_vote).lower()
+        if normalized_vote in {"buy", "sell"}:
+            directional_votes.append(normalized_vote)
+    buy_votes = sum(1 for vote in directional_votes if vote == "buy")
+    sell_votes = sum(1 for vote in directional_votes if vote == "sell")
+    directional_vote_total = buy_votes + sell_votes
+    directional_vote_margin = abs(buy_votes - sell_votes)
+    selected_votes = buy_votes if decision == "BUY" else sell_votes if decision == "SELL" else 0
+    directional_support_ratio = selected_votes / max(1, directional_vote_total)
+    directional_margin_ratio = directional_vote_margin / max(1, directional_vote_total)
+    directional_conviction = round(
+        (float(advanced_state.final_confidence) * 0.7)
+        + (directional_support_ratio * 0.2)
+        + (directional_margin_ratio * 0.1),
+        4,
+    )
+    conflict_filter_result = advanced_state.module_results.get("conflict_filter")
+    conflict_blocked = bool(conflict_filter_result.blocked) if conflict_filter_result is not None else False
+    if decision in {"BUY", "SELL"} and not combined_blocked:
+        weak_directional_conviction = directional_conviction < 0.62
+        insufficient_vote_margin = directional_vote_margin < 2
+        if weak_directional_conviction or insufficient_vote_margin or conflict_blocked:
+            decision = "WAIT"
+            reasons = normalize_reasons(
+                reasons
+                + (
+                    ["directional_conviction_below_threshold"]
+                    if weak_directional_conviction
+                    else []
+                )
+                + (
+                    ["directional_vote_margin_insufficient"]
+                    if insufficient_vote_margin
+                    else []
+                )
+                + (["directional_conflict_active"] if conflict_blocked else [])
+            )
 
     signal_lifecycle = _build_signal_lifecycle_context(
         enabled=bool(config.signal_lifecycle_enabled),
