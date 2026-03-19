@@ -1,0 +1,12 @@
+{
+  "pending_rollback_count": 2,
+  "candidates": [
+    {
+      "candidate_id": "rollback_candidate_capability_expansion",
+      "candidate_type": "capability_expansion",
+      "risk_score": 0.2674,
+      "reversion_ready": true,
+      "rollback_mode": "monitor_only"
+    }
+  ]
+}
