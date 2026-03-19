@@ -424,9 +424,14 @@ class _MT5RequoteThenAcceptedStub(_MT5BaseStub):
 
     def __init__(self) -> None:
         self.send_calls = 0
+        self.last_request_price = None
 
-    def order_send(self, _request: dict[str, object]) -> object:
+    def symbol_info_tick(self, _symbol: str) -> object:
+        return {"ask": 2100.45, "bid": 2100.35}
+
+    def order_send(self, request: dict[str, object]) -> object:
         self.send_calls += 1
+        self.last_request_price = request.get("price")
         if self.send_calls == 1:
             return _RequoteResult()
         return _AcceptedResult()
@@ -437,12 +442,31 @@ class _MT5PriceChangedThenAcceptedStub(_MT5BaseStub):
 
     def __init__(self) -> None:
         self.send_calls = 0
+        self.last_request_price = None
 
-    def order_send(self, _request: dict[str, object]) -> object:
+    def symbol_info_tick(self, _symbol: str) -> object:
+        return {"ask": 2100.55, "bid": 2100.25}
+
+    def order_send(self, request: dict[str, object]) -> object:
         self.send_calls += 1
+        self.last_request_price = request.get("price")
         if self.send_calls == 1:
             return _PriceChangedResult()
         return _AcceptedResult()
+
+
+class _MT5RequoteInvalidTickStub(_MT5BaseStub):
+    TRADE_RETCODE_REQUOTE = RETCODE_REQUOTE
+
+    def __init__(self) -> None:
+        self.send_calls = 0
+
+    def symbol_info_tick(self, _symbol: str) -> object:
+        return {"ask": 0.0, "bid": 2100.2}
+
+    def order_send(self, _request: dict[str, object]) -> object:
+        self.send_calls += 1
+        return _RequoteResult()
 
 
 class _MT5NoMoneyStub(_MT5BaseStub):
@@ -1183,6 +1207,7 @@ class TestExecutionGateSemantics(unittest.TestCase):
         self.assertEqual(controlled_execution["order_result"]["retry_blocked_reason"], "")
         self.assertEqual(controlled_execution["order_result"]["retry_final_outcome_status"], "accepted")
         self.assertEqual(retry_stub.send_calls, 2)
+        self.assertEqual(retry_stub.last_request_price, 2100.45)
 
     def test_partial_fill_delayed_recheck_confirms_exact_linked_deal_when_broker_truth_appears(self) -> None:
         memory_root = self._mkdtemp(prefix="execution_gate_partial_delayed_confirmed_")
@@ -1314,6 +1339,53 @@ class TestExecutionGateSemantics(unittest.TestCase):
         self.assertEqual(controlled_execution["order_result"]["retry_blocked_reason"], "")
         self.assertEqual(controlled_execution["order_result"]["retry_final_outcome_status"], "accepted")
         self.assertEqual(retry_stub.send_calls, 2)
+        self.assertEqual(retry_stub.last_request_price, 2100.55)
+
+    def test_price_changed_sell_retry_uses_tick_bid_price(self) -> None:
+        memory_root = self._mkdtemp(prefix="execution_gate_price_changed_retry_sell_")
+        kwargs = _base_kwargs(memory_root)
+        kwargs["decision"] = "SELL"
+        kwargs["controlled_mt5_readiness"] = {
+            **dict(kwargs["controlled_mt5_readiness"]),
+            "live_execution_blocked": False,
+            "order_execution_enabled": True,
+            "execution_refused": False,
+            "execution_gate": "live_authorized_controlled_execution",
+        }
+        retry_stub = _MT5PriceChangedThenAcceptedStub()
+        kwargs["mt5_module"] = retry_stub
+        with patch("run.time.sleep", return_value=None):
+            controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "accepted")
+        self.assertEqual(controlled_execution["order_result"]["retry_attempted_count"], 1)
+        self.assertEqual(retry_stub.send_calls, 2)
+        self.assertEqual(retry_stub.last_request_price, 2100.25)
+
+    def test_requote_retry_fails_closed_when_broker_tick_price_invalid(self) -> None:
+        memory_root = self._mkdtemp(prefix="execution_gate_requote_retry_fail_closed_tick_")
+        kwargs = _base_kwargs(memory_root)
+        kwargs["controlled_mt5_readiness"] = {
+            **dict(kwargs["controlled_mt5_readiness"]),
+            "live_execution_blocked": False,
+            "order_execution_enabled": True,
+            "execution_refused": False,
+            "execution_gate": "live_authorized_controlled_execution",
+        }
+        retry_stub = _MT5RequoteInvalidTickStub()
+        kwargs["mt5_module"] = retry_stub
+        with patch("run.time.sleep", return_value=None):
+            controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "requote")
+        self.assertEqual(controlled_execution["order_result"]["retry_attempted_count"], 0)
+        self.assertEqual(
+            controlled_execution["order_result"]["retry_policy_truth"],
+            "retry_not_attempted_fail_closed_guard_blocked",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["retry_blocked_reason"],
+            "refreshed_price_valid;broker_price_refresh_tick_sides_invalid",
+        )
+        self.assertEqual(retry_stub.send_calls, 1)
 
     def test_no_money_retcode_has_explicit_non_accepted_classification(self) -> None:
         memory_root = self._mkdtemp(prefix="execution_gate_no_money_")
