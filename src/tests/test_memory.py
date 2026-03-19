@@ -652,6 +652,25 @@ def test_signal_lifecycle_exact_max_age_boundary_is_fresh(tmp_path: Path) -> Non
     assert lifecycle["signal_lifecycle_reason"] == "signal_fresh"
 
 
+def test_signal_lifecycle_future_timestamp_is_rejected(tmp_path: Path) -> None:
+    kwargs = _base_controlled_execution_kwargs(tmp_path)
+    future_ts = int((datetime.now(tz=timezone.utc) + timedelta(seconds=300)).timestamp())
+    kwargs["signal_lifecycle"] = {
+        "signal_lifecycle_enabled": True,
+        "signal_max_age_seconds": 60,
+        "decision_created_at": datetime.now(tz=timezone.utc).isoformat(),
+        "source_bar_time": future_ts,
+        "signal_age_basis": "source_bar_time",
+    }
+    controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+
+    lifecycle = controlled_execution["signal_lifecycle"]
+    assert lifecycle["signal_fresh"] is False
+    assert lifecycle["signal_lifecycle_reason"] == "signal_timestamp_in_future"
+    assert "pretrade_check_failed:signal_freshness_valid" in controlled_execution["rollback_refusal_reasons"]
+    assert "signal_timestamp_in_future" in controlled_execution["rollback_refusal_reasons"]
+
+
 def test_config_validation_xauusd_first_and_timeframe() -> None:
     validate_runtime_config(RuntimeConfig(symbol="XAUUSD", timeframe="M5"))
 

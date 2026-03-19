@@ -466,7 +466,11 @@ def _evaluate_signal_lifecycle(
 ) -> dict[str, Any]:
     lifecycle = dict(signal_lifecycle or {})
     enabled = bool(lifecycle.get("signal_lifecycle_enabled", False))
-    max_age_seconds = int(lifecycle.get("signal_max_age_seconds", 900) or 900)
+    raw_max_age_seconds = lifecycle.get("signal_max_age_seconds", 900)
+    try:
+        max_age_seconds = int(raw_max_age_seconds)
+    except Exception:
+        max_age_seconds = 900
     execution_ts = int(datetime.now(tz=timezone.utc).timestamp())
     source_bar_time = _coerce_unix_timestamp(lifecycle.get("source_bar_time"))
     decision_created_at_ts = _coerce_unix_timestamp(lifecycle.get("decision_created_at"))
@@ -479,15 +483,24 @@ def _evaluate_signal_lifecycle(
     else:
         source_ts = None
         age_basis = "none"
+    future_timestamp = source_ts is not None and source_ts > execution_ts
     signal_age_seconds = max(0, execution_ts - source_ts) if source_ts is not None else None
     if not enabled:
         signal_fresh = True
         lifecycle_reason = "signal_lifecycle_disabled"
         refusal_reasons: list[str] = []
+    elif max_age_seconds <= 0:
+        signal_fresh = False
+        lifecycle_reason = "signal_lifecycle_invalid_max_age"
+        refusal_reasons = ["signal_stale", "signal_lifecycle_invalid_max_age"]
     elif signal_age_seconds is None:
         signal_fresh = False
         lifecycle_reason = "signal_timestamp_missing"
         refusal_reasons = ["signal_stale", "signal_timestamp_missing"]
+    elif future_timestamp:
+        signal_fresh = False
+        lifecycle_reason = "signal_timestamp_in_future"
+        refusal_reasons = ["signal_stale", "signal_timestamp_in_future"]
     elif signal_age_seconds <= max_age_seconds:
         signal_fresh = True
         lifecycle_reason = "signal_fresh"
