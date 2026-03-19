@@ -255,6 +255,28 @@ class _MT5AcceptedWithLinkedOrderSupportingMismatchStub(_MT5AcceptedStub):
         ]
 
 
+class _MT5AcceptedDelayedLinkedPositionStub(_MT5AcceptedStub):
+    POSITION_TYPE_BUY = 0
+    POSITION_TYPE_SELL = 1
+
+    def __init__(self) -> None:
+        self._positions_calls = 0
+
+    def positions_get(self) -> list[object]:
+        self._positions_calls += 1
+        if self._positions_calls == 1:
+            return []
+        return [
+            _Position(
+                ticket=42,
+                identifier=42,
+                symbol="XAUUSD",
+                type_value=self.POSITION_TYPE_BUY,
+                volume=0.01,
+            )
+        ]
+
+
 class _MT5PartialStub(_MT5BaseStub):
     TRADE_RETCODE_DONE_PARTIAL = RETCODE_DONE_PARTIAL
 
@@ -351,6 +373,27 @@ class _MT5PartialWithPositionsOnlyStub(_MT5PartialStub):
                 identifier=43,
                 symbol="XAUUSD",
                 type_value=self.POSITION_TYPE_BUY,
+                volume=0.004,
+            )
+        ]
+
+
+class _MT5PartialDelayedLinkedDealStub(_MT5PartialStub):
+    DEAL_TYPE_BUY = 0
+    DEAL_TYPE_SELL = 1
+
+    def __init__(self) -> None:
+        self._deals_calls = 0
+
+    def history_deals_get(self) -> list[object]:
+        self._deals_calls += 1
+        if self._deals_calls == 1:
+            return []
+        return [
+            _Deal(
+                order=43,
+                symbol="XAUUSD",
+                type_value=self.DEAL_TYPE_BUY,
                 volume=0.004,
             )
         ]
@@ -1026,6 +1069,41 @@ class TestExecutionGateSemantics(unittest.TestCase):
             "order_linkage_supporting_mismatch",
         )
 
+    def test_accepted_send_delayed_recheck_confirms_exact_linkage_when_broker_truth_appears(self) -> None:
+        memory_root = self._mkdtemp(prefix="execution_gate_live_delayed_confirmed_")
+        kwargs = _base_kwargs(memory_root)
+        kwargs["controlled_mt5_readiness"] = {
+            **dict(kwargs["controlled_mt5_readiness"]),
+            "live_execution_blocked": False,
+            "order_execution_enabled": True,
+            "execution_refused": False,
+            "execution_gate": "live_authorized_controlled_execution",
+        }
+        kwargs["mt5_module"] = _MT5AcceptedDelayedLinkedPositionStub()
+        with patch("run.time.sleep", return_value=None):
+            controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "accepted")
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_state_confirmation"],
+            "confirmed",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_state_outcome"],
+            "accepted_send_position_confirmed",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_position_verification"]["linkage_value_matched"],
+            42,
+        )
+        self.assertEqual(
+            controlled_execution["open_position_state"]["broker_position_confirmation"],
+            "confirmed",
+        )
+        self.assertEqual(
+            controlled_execution["pnl_snapshot"]["position_open_truth"],
+            "broker_confirmed_open_position",
+        )
+
     def test_requote_retcode_reported_as_unretried_requote(self) -> None:
         memory_root = self._mkdtemp(prefix="execution_gate_requote_")
         kwargs = _base_kwargs(memory_root)
@@ -1062,6 +1140,39 @@ class TestExecutionGateSemantics(unittest.TestCase):
         self.assertEqual(
             controlled_execution["order_result"]["retry_eligibility_reason"],
             "transient_non_accepted_send_outcome",
+        )
+
+    def test_partial_fill_delayed_recheck_confirms_exact_linked_deal_when_broker_truth_appears(self) -> None:
+        memory_root = self._mkdtemp(prefix="execution_gate_partial_delayed_confirmed_")
+        kwargs = _base_kwargs(memory_root)
+        kwargs["controlled_mt5_readiness"] = {
+            **dict(kwargs["controlled_mt5_readiness"]),
+            "live_execution_blocked": False,
+            "order_execution_enabled": True,
+            "execution_refused": False,
+            "execution_gate": "live_authorized_controlled_execution",
+        }
+        kwargs["mt5_module"] = _MT5PartialDelayedLinkedDealStub()
+        with patch("run.time.sleep", return_value=None):
+            controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "partial")
+        self.assertEqual(
+            controlled_execution["order_result"]["partial_outcome_quantity_truth"],
+            "broker_confirmed_partial_quantity",
+        )
+        self.assertEqual(controlled_execution["order_result"]["filled_volume"], 0.004)
+        self.assertEqual(controlled_execution["order_result"]["remaining_volume"], 0.006)
+        self.assertEqual(
+            controlled_execution["order_result"]["partial_quantity_verification"]["confirmation"],
+            "confirmed",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["partial_quantity_verification"]["broker_quantity_outcome"],
+            "partial_quantity_confirmed_from_linked_deal",
+        )
+        self.assertEqual(
+            controlled_execution["open_position_state"]["partial_outcome_quantity_truth"],
+            "broker_confirmed_partial_quantity",
         )
         self.assertEqual(controlled_execution["order_result"]["order_id"], 44)
         self.assertIn(
