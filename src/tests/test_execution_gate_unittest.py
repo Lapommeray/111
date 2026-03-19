@@ -2091,7 +2091,102 @@ class TestExecutionGateSemantics(unittest.TestCase):
         self.assertIsInstance(decision["stop_loss"], float)
         self.assertIsInstance(decision["exit_rule"], str)
         self.assertTrue(bool(decision["exit_rule"]))
+        self.assertIn("open_position_management_exit", decision["exit_rule"])
         self.assertIn("No new entry", decision["why_not_trade"])
+
+    def test_exit_rule_uses_stop_loss_breach_condition(self) -> None:
+        decision = _build_entry_exit_decision_contract(
+            decision="WAIT",
+            effective_signal_confidence=0.77,
+            bars=[{"close": 2097.9}],
+            reasons=["existing_open_position_requires_exit_management"],
+            controlled_execution={
+                "stop_loss_take_profit": {"stop_loss": 2098.2, "take_profit": 2104.2},
+                "rollback_refusal_reasons": [],
+                "order_result": {},
+                "open_position_state": {
+                    "status": "open",
+                    "side": "BUY",
+                    "entry_price": 2100.2,
+                    "stop_loss": 2098.2,
+                    "take_profit": 2104.2,
+                },
+                "exit_decision": {"reason": "broker_confirmed_open_position"},
+            },
+        )
+        self.assertEqual(decision["action"], "EXIT")
+        self.assertIn("stop_loss_breached_exit", decision["exit_rule"])
+        self.assertIn("side=BUY", decision["exit_rule"])
+
+    def test_exit_rule_uses_take_profit_reached_condition(self) -> None:
+        decision = _build_entry_exit_decision_contract(
+            decision="WAIT",
+            effective_signal_confidence=0.77,
+            bars=[{"close": 2105.0}],
+            reasons=["existing_open_position_requires_exit_management"],
+            controlled_execution={
+                "stop_loss_take_profit": {"stop_loss": 2098.2, "take_profit": 2104.2},
+                "rollback_refusal_reasons": [],
+                "order_result": {},
+                "open_position_state": {
+                    "status": "open",
+                    "side": "BUY",
+                    "entry_price": 2100.2,
+                    "stop_loss": 2098.2,
+                    "take_profit": 2104.2,
+                },
+                "exit_decision": {"reason": "broker_confirmed_open_position"},
+            },
+        )
+        self.assertEqual(decision["action"], "EXIT")
+        self.assertIn("take_profit_reached_exit", decision["exit_rule"])
+        self.assertIn("side=BUY", decision["exit_rule"])
+
+    def test_exit_rule_uses_partial_exposure_condition(self) -> None:
+        decision = _build_entry_exit_decision_contract(
+            decision="WAIT",
+            effective_signal_confidence=0.77,
+            bars=[{"close": 2100.2}],
+            reasons=["existing_open_position_requires_exit_management"],
+            controlled_execution={
+                "stop_loss_take_profit": {"stop_loss": 2098.2, "take_profit": 2104.2},
+                "rollback_refusal_reasons": [],
+                "order_result": {},
+                "open_position_state": {
+                    "status": "partial_exposure_unresolved",
+                    "side": "BUY",
+                    "entry_price": 2100.2,
+                    "stop_loss": 2098.2,
+                    "take_profit": 2104.2,
+                },
+                "exit_decision": {"reason": "partial_fill_exposure_unresolved"},
+            },
+        )
+        self.assertEqual(decision["action"], "EXIT")
+        self.assertIn("partial_exposure_unresolved_manage_exit", decision["exit_rule"])
+
+    def test_exit_rule_falls_back_to_reason_when_condition_unavailable(self) -> None:
+        decision = _build_entry_exit_decision_contract(
+            decision="WAIT",
+            effective_signal_confidence=0.77,
+            bars=[],
+            reasons=["existing_open_position_requires_exit_management"],
+            controlled_execution={
+                "stop_loss_take_profit": {"stop_loss": None, "take_profit": None},
+                "rollback_refusal_reasons": [],
+                "order_result": {},
+                "open_position_state": {
+                    "status": "open",
+                    "side": "UNKNOWN",
+                    "entry_price": 2100.2,
+                    "stop_loss": None,
+                    "take_profit": None,
+                },
+                "exit_decision": {"reason": "broker_confirmed_open_position"},
+            },
+        )
+        self.assertEqual(decision["action"], "EXIT")
+        self.assertEqual(decision["exit_rule"], "broker_confirmed_open_position")
 
 
 if __name__ == "__main__":

@@ -2316,7 +2316,81 @@ def _build_entry_exit_decision_contract(
         decision_contract.pop("exit_rule", None)
     elif action == "EXIT":
         decision_contract["entry_price"] = open_position_state.get("entry_price")
-        decision_contract["exit_rule"] = str(exit_decision.get("reason", "exit_required_open_position"))
+        current_price_raw = bars[-1].get("close") if bars else None
+        current_price: float | None
+        try:
+            current_price = float(current_price_raw) if current_price_raw is not None else None
+        except (TypeError, ValueError):
+            current_price = None
+
+        side = str(open_position_state.get("side", "")).upper()
+        position_status = str(open_position_state.get("status", "")).lower()
+
+        sl_value: float | None
+        tp_value: float | None
+        try:
+            sl_source = (
+                open_position_state.get("stop_loss")
+                if open_position_state.get("stop_loss") is not None
+                else stop_loss
+            )
+            sl_value = float(sl_source) if sl_source is not None else None
+        except (TypeError, ValueError):
+            sl_value = None
+        try:
+            tp_source = (
+                open_position_state.get("take_profit")
+                if open_position_state.get("take_profit") is not None
+                else take_profit
+            )
+            tp_value = float(tp_source) if tp_source is not None else None
+        except (TypeError, ValueError):
+            tp_value = None
+
+        derived_exit_rule = ""
+        if position_status == "partial_exposure_unresolved":
+            derived_exit_rule = (
+                "partial_exposure_unresolved_manage_exit: await_quantity_reconciliation_before_new_entry"
+            )
+        elif (
+            current_price is not None
+            and sl_value is not None
+            and (
+                (side in {"BUY", "LONG"} and current_price <= sl_value)
+                or (side in {"SELL", "SHORT"} and current_price >= sl_value)
+            )
+        ):
+            derived_exit_rule = (
+                f"stop_loss_breached_exit: side={side or 'UNKNOWN'} price={current_price:.5f} "
+                f"stop_loss={sl_value:.5f}"
+            )
+        elif (
+            current_price is not None
+            and tp_value is not None
+            and (
+                (side in {"BUY", "LONG"} and current_price >= tp_value)
+                or (side in {"SELL", "SHORT"} and current_price <= tp_value)
+            )
+        ):
+            derived_exit_rule = (
+                f"take_profit_reached_exit: side={side or 'UNKNOWN'} price={current_price:.5f} "
+                f"take_profit={tp_value:.5f}"
+            )
+        elif position_status == "open" and (
+            side in {"BUY", "SELL", "LONG", "SHORT"}
+            or current_price is not None
+            or sl_value is not None
+            or tp_value is not None
+        ):
+            derived_exit_rule = (
+                "open_position_management_exit: monitor_until_stop_loss_or_take_profit_trigger"
+            )
+
+        decision_contract["exit_rule"] = (
+            derived_exit_rule
+            if derived_exit_rule
+            else str(exit_decision.get("reason", "exit_required_open_position"))
+        )
         decision_contract["take_profit"] = open_position_state.get("take_profit")
         decision_contract["stop_loss"] = open_position_state.get("stop_loss")
         decision_contract["why_not_trade"] = (
