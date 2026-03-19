@@ -45,6 +45,12 @@ def _pipeline_runner_from_pnls(
         idx = min(cursor["index"], len(pnl_values) - 1)
         cursor["index"] += 1
         pnl_points = float(pnl_values[idx])
+        if pnl_points > 0.0:
+            result = "win"
+        elif pnl_points < 0.0:
+            result = "loss"
+        else:
+            result = "flat"
         return {
             "signal": {
                 "action": "BUY",
@@ -63,6 +69,7 @@ def _pipeline_runner_from_pnls(
                         "trade_id": f"trade_{cursor['index']}",
                         "status": "closed",
                         "direction": "BUY",
+                        "result": result,
                         "pnl_points": pnl_points,
                     }
                 }
