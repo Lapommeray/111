@@ -92,6 +92,25 @@ class _InvalidPriceResult:
     order = 54
 
 
+class _Position:
+    def __init__(
+        self,
+        *,
+        ticket: int | None = None,
+        identifier: int | None = None,
+        symbol: str = "XAUUSD",
+        type_value: object = 0,
+        volume: float = 0.01,
+    ) -> None:
+        if ticket is not None:
+            self.ticket = ticket
+        if identifier is not None:
+            self.identifier = identifier
+        self.symbol = symbol
+        self.type = type_value
+        self.volume = volume
+
+
 class _MT5BaseStub:
     TRADE_RETCODE_DONE = RETCODE_DONE
 
@@ -106,6 +125,38 @@ class _MT5AcceptedStub(_MT5BaseStub):
 
     def order_send(self, _request: dict[str, object]) -> object:
         return _AcceptedResult()
+
+
+class _MT5AcceptedWithLinkedPositionStub(_MT5AcceptedStub):
+    POSITION_TYPE_BUY = 0
+    POSITION_TYPE_SELL = 1
+
+    def positions_get(self) -> list[object]:
+        return [
+            _Position(
+                ticket=42,
+                identifier=42,
+                symbol="XAUUSD",
+                type_value=self.POSITION_TYPE_BUY,
+                volume=0.01,
+            )
+        ]
+
+
+class _MT5AcceptedWithMetadataOnlyPositionStub(_MT5AcceptedStub):
+    POSITION_TYPE_BUY = 0
+    POSITION_TYPE_SELL = 1
+
+    def positions_get(self) -> list[object]:
+        return [
+            _Position(
+                ticket=None,
+                identifier=None,
+                symbol="XAUUSD",
+                type_value=self.POSITION_TYPE_BUY,
+                volume=0.01,
+            )
+        ]
 
 
 class _MT5PartialStub(_MT5BaseStub):
@@ -327,6 +378,96 @@ class TestExecutionGateSemantics(unittest.TestCase):
             "accepted_send_unreconciled",
         )
         self.assertEqual(controlled_execution["order_result"]["order_id"], 42)
+        self.assertEqual(
+            controlled_execution["open_position_state"]["broker_position_confirmation"],
+            "unconfirmed",
+        )
+        self.assertEqual(
+            controlled_execution["open_position_state"]["position_state_outcome"],
+            "assumed_open_from_accepted_send_unreconciled",
+        )
+        self.assertEqual(
+            controlled_execution["exit_decision"]["reason"],
+            "assumed_open_position_from_accepted_send_unreconciled",
+        )
+        self.assertEqual(
+            controlled_execution["pnl_snapshot"]["position_open_truth"],
+            "assumed_from_accepted_send_unreconciled",
+        )
+
+    def test_accepted_send_upgrades_to_confirmed_only_on_exact_linkage_match(self) -> None:
+        memory_root = self._mkdtemp(prefix="execution_gate_live_confirmed_")
+        kwargs = _base_kwargs(memory_root)
+        kwargs["controlled_mt5_readiness"] = {
+            **dict(kwargs["controlled_mt5_readiness"]),
+            "live_execution_blocked": False,
+            "order_execution_enabled": True,
+            "execution_refused": False,
+            "execution_gate": "live_authorized_controlled_execution",
+        }
+        kwargs["mt5_module"] = _MT5AcceptedWithLinkedPositionStub()
+        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "accepted")
+        self.assertTrue(controlled_execution["order_result"]["order_sent"])
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_state_confirmation"],
+            "confirmed",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_state_outcome"],
+            "accepted_send_position_confirmed",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_position_verification"]["linkage_field_used"],
+            "ticket",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_position_verification"]["linkage_value_matched"],
+            42,
+        )
+        self.assertEqual(
+            controlled_execution["open_position_state"]["broker_position_confirmation"],
+            "confirmed",
+        )
+        self.assertEqual(
+            controlled_execution["open_position_state"]["position_state_outcome"],
+            "broker_confirmed_open_position",
+        )
+        self.assertEqual(
+            controlled_execution["exit_decision"]["reason"],
+            "broker_confirmed_open_position",
+        )
+        self.assertEqual(
+            controlled_execution["pnl_snapshot"]["position_open_truth"],
+            "broker_confirmed_open_position",
+        )
+
+    def test_accepted_send_with_metadata_only_position_match_fails_closed_unconfirmed(self) -> None:
+        memory_root = self._mkdtemp(prefix="execution_gate_live_metadata_only_")
+        kwargs = _base_kwargs(memory_root)
+        kwargs["controlled_mt5_readiness"] = {
+            **dict(kwargs["controlled_mt5_readiness"]),
+            "live_execution_blocked": False,
+            "order_execution_enabled": True,
+            "execution_refused": False,
+            "execution_gate": "live_authorized_controlled_execution",
+        }
+        kwargs["mt5_module"] = _MT5AcceptedWithMetadataOnlyPositionStub()
+        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "accepted")
+        self.assertTrue(controlled_execution["order_result"]["order_sent"])
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_state_confirmation"],
+            "unconfirmed",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_state_outcome"],
+            "accepted_send_unreconciled",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_position_verification"]["fail_closed_reason"],
+            "linkage_field_unavailable_or_unreadable",
+        )
         self.assertEqual(
             controlled_execution["open_position_state"]["broker_position_confirmation"],
             "unconfirmed",

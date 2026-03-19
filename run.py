@@ -1026,6 +1026,162 @@ def _place_controlled_mt5_order(
         mt5.shutdown()
 
 
+def _normalize_mt5_position_side(*, mt5_module: Any, position_type: Any) -> str | None:
+    position_type_buy = getattr(mt5_module, "POSITION_TYPE_BUY", None)
+    position_type_sell = getattr(mt5_module, "POSITION_TYPE_SELL", None)
+    if position_type_buy is not None and position_type == position_type_buy:
+        return "BUY"
+    if position_type_sell is not None and position_type == position_type_sell:
+        return "SELL"
+    if position_type == 0:
+        return "BUY"
+    if position_type == 1:
+        return "SELL"
+    normalized = str(position_type).strip().upper()
+    if normalized in {"BUY", "SELL"}:
+        return normalized
+    return None
+
+
+def _verify_accepted_send_position_linkage(
+    *,
+    sent_order_id: int,
+    symbol: str,
+    side: str,
+    volume: float,
+    mt5_module: Any | None = None,
+) -> dict[str, Any]:
+    fail_closed = {
+        "confirmation": "unconfirmed",
+        "broker_state_outcome": "accepted_send_unreconciled",
+        "fail_closed_reason": "",
+        "sent_order_id": int(sent_order_id or 0),
+        "linkage_field_used": None,
+        "linkage_value_matched": None,
+        "matched_position_ticket": None,
+        "matched_symbol": None,
+        "matched_side": None,
+        "matched_volume": None,
+        "symbol_match": None,
+        "side_match": None,
+        "volume_match": None,
+    }
+    if int(sent_order_id or 0) <= 0:
+        return {**fail_closed, "fail_closed_reason": "invalid_sent_order_id"}
+
+    mt5 = mt5_module
+    if mt5 is None:
+        try:
+            import MetaTrader5 as mt5  # type: ignore
+        except Exception:
+            return {**fail_closed, "fail_closed_reason": "mt5_module_unavailable"}
+
+    initialized = False
+    try:
+        initialize = getattr(mt5, "initialize", None)
+        if not callable(initialize) or not bool(initialize()):
+            return {**fail_closed, "fail_closed_reason": "mt5_initialize_failed"}
+        initialized = True
+        positions_get = getattr(mt5, "positions_get", None)
+        if not callable(positions_get):
+            return {**fail_closed, "fail_closed_reason": "mt5_positions_get_unavailable"}
+        positions = positions_get()
+        if positions is None:
+            return {**fail_closed, "fail_closed_reason": "mt5_positions_get_unavailable"}
+        try:
+            broker_positions = list(positions)
+        except Exception:
+            return {**fail_closed, "fail_closed_reason": "mt5_positions_unreadable"}
+        readable_linkage_available = False
+        supporting_only_match_found = False
+        linkage_match_with_support_mismatch = False
+        candidates: list[dict[str, Any]] = []
+        for position in broker_positions:
+            linkage_matches: list[tuple[str, int]] = []
+            for field_name in ("ticket", "identifier"):
+                field_value = getattr(position, field_name, None)
+                if field_value is None:
+                    continue
+                try:
+                    linkage_value = int(field_value)
+                except Exception:
+                    continue
+                readable_linkage_available = True
+                if linkage_value == int(sent_order_id):
+                    linkage_matches.append((field_name, linkage_value))
+            position_symbol = str(getattr(position, "symbol", ""))
+            position_side = _normalize_mt5_position_side(
+                mt5_module=mt5,
+                position_type=getattr(position, "type", None),
+            )
+            try:
+                position_volume = float(getattr(position, "volume", None))
+            except Exception:
+                position_volume = None
+            symbol_match = position_symbol == str(symbol)
+            side_match = position_side == str(side)
+            volume_match = position_volume is not None and position_volume == float(volume)
+            if symbol_match and side_match and volume_match and not linkage_matches:
+                supporting_only_match_found = True
+            if not linkage_matches:
+                continue
+            if not (symbol_match and side_match and volume_match):
+                linkage_match_with_support_mismatch = True
+                continue
+            linkage_field_used, linkage_value_matched = linkage_matches[0]
+            candidates.append(
+                {
+                    "position": position,
+                    "linkage_field_used": linkage_field_used,
+                    "linkage_value_matched": linkage_value_matched,
+                    "symbol_match": symbol_match,
+                    "side_match": side_match,
+                    "volume_match": volume_match,
+                    "matched_side": position_side,
+                    "matched_volume": position_volume,
+                }
+            )
+        if len(candidates) == 1:
+            candidate = candidates[0]
+            matched_position = candidate["position"]
+            matched_ticket = getattr(matched_position, "ticket", None)
+            try:
+                matched_ticket = int(matched_ticket) if matched_ticket is not None else None
+            except Exception:
+                matched_ticket = None
+            return {
+                **fail_closed,
+                "confirmation": "confirmed",
+                "broker_state_outcome": "accepted_send_position_confirmed",
+                "fail_closed_reason": "",
+                "linkage_field_used": candidate["linkage_field_used"],
+                "linkage_value_matched": candidate["linkage_value_matched"],
+                "matched_position_ticket": matched_ticket,
+                "matched_symbol": str(getattr(matched_position, "symbol", "")),
+                "matched_side": candidate["matched_side"],
+                "matched_volume": candidate["matched_volume"],
+                "symbol_match": True,
+                "side_match": True,
+                "volume_match": True,
+            }
+        if len(candidates) > 1:
+            return {**fail_closed, "fail_closed_reason": "non_unique_linkage_match"}
+        if not readable_linkage_available:
+            return {**fail_closed, "fail_closed_reason": "linkage_field_unavailable_or_unreadable"}
+        if supporting_only_match_found:
+            return {**fail_closed, "fail_closed_reason": "supporting_metadata_only_match"}
+        if linkage_match_with_support_mismatch:
+            return {**fail_closed, "fail_closed_reason": "linkage_match_supporting_mismatch"}
+        return {**fail_closed, "fail_closed_reason": "exact_linkage_mismatch"}
+    except Exception:
+        return {**fail_closed, "fail_closed_reason": "broker_verification_unavailable"}
+    finally:
+        if initialized:
+            shutdown = getattr(mt5, "shutdown", None)
+            if callable(shutdown):
+                shutdown()
+
+
 def _build_retry_metadata(*, order_result: dict[str, Any]) -> dict[str, Any]:
     status = str(order_result.get("status") or "").strip().lower()
     order_sent = bool(order_result.get("order_sent", False))
@@ -1170,13 +1326,21 @@ def _run_controlled_mt5_live_execution(
             **_build_retry_metadata(order_result=order_result),
         }
     else:
+        broker_position_verification = _verify_accepted_send_position_linkage(
+            sent_order_id=int(order_result.get("order_id", 0) or 0),
+            symbol=symbol,
+            side=decision,
+            volume=float(order_request.get("volume", 0.0)),
+            mt5_module=mt5_module,
+        )
         order_result = {
             **order_result,
             "status": "accepted",
             "order_sent": True,
             "rejection_reason": "",
-            "broker_state_confirmation": "unconfirmed",
-            "broker_state_outcome": "accepted_send_unreconciled",
+            "broker_state_confirmation": broker_position_verification["confirmation"],
+            "broker_state_outcome": broker_position_verification["broker_state_outcome"],
+            "broker_position_verification": broker_position_verification,
         }
 
     is_live_trade_attempt = mode == "live" and decision in {"BUY", "SELL"}
@@ -1192,20 +1356,45 @@ def _run_controlled_mt5_live_execution(
 
     order_status = str(order_result.get("status") or "")
     if order_status == "accepted":
+        broker_position_verification = dict(order_result.get("broker_position_verification") or {})
+        broker_position_confirmed = (
+            order_result.get("broker_state_confirmation") == "confirmed"
+            and order_result.get("broker_state_outcome") == "accepted_send_position_confirmed"
+        )
         open_position_state = {
             "status": "open",
-            "position_id": int(order_result.get("order_id", 0) or 0),
-            "symbol": symbol,
-            "side": decision,
+            "position_id": (
+                int(broker_position_verification.get("matched_position_ticket"))
+                if broker_position_verification.get("matched_position_ticket") is not None
+                else int(order_result.get("order_id", 0) or 0)
+            ),
+            "symbol": (
+                str(broker_position_verification.get("matched_symbol"))
+                if broker_position_verification.get("matched_symbol")
+                else symbol
+            ),
+            "side": (
+                str(broker_position_verification.get("matched_side"))
+                if broker_position_verification.get("matched_side")
+                else decision
+            ),
             "entry_price": float(order_request.get("price", 0.0)),
             "stop_loss": stop_loss_take_profit["stop_loss"],
             "take_profit": stop_loss_take_profit["take_profit"],
-            "broker_position_confirmation": "unconfirmed",
-            "position_state_outcome": "assumed_open_from_accepted_send_unreconciled",
+            "broker_position_confirmation": "confirmed" if broker_position_confirmed else "unconfirmed",
+            "position_state_outcome": (
+                "broker_confirmed_open_position"
+                if broker_position_confirmed
+                else "assumed_open_from_accepted_send_unreconciled"
+            ),
         }
         exit_decision = {
             "decision": "hold_open_position",
-            "reason": "assumed_open_position_from_accepted_send_unreconciled",
+            "reason": (
+                "broker_confirmed_open_position"
+                if broker_position_confirmed
+                else "assumed_open_position_from_accepted_send_unreconciled"
+            ),
         }
     elif order_status == "partial":
         open_position_state = {
@@ -1253,7 +1442,11 @@ def _run_controlled_mt5_live_execution(
         "unrealized_pnl": 0.0,
         "position_open": pnl_position_open,
         "position_open_truth": (
-            "assumed_from_accepted_send_unreconciled"
+            (
+                "broker_confirmed_open_position"
+                if open_position_state.get("broker_position_confirmation") == "confirmed"
+                else "assumed_from_accepted_send_unreconciled"
+            )
             if open_position_state["status"] == "open"
             else (
                 "partial_fill_exposure_unresolved"
