@@ -1,0 +1,102 @@
+{
+  "snapshots": [
+    {
+      "layer_discovery_state": "novelty_constrained",
+      "combination_novelty_score": 0.4426,
+      "combination_reliability": 0.6072,
+      "candidate_combination_count": 3,
+      "dominant_combination_signature": "retirement_tombstone|quality_lineage|balanced_retirement_governance",
+      "discovered_layer_candidate_registry": [
+        {
+          "candidate_id": "combination_candidate_1",
+          "combination_signature": "retirement_tombstone|quality_lineage|balanced_retirement_governance",
+          "novelty_score": 0.4426,
+          "reliability": 0.6072,
+          "governance_mode": "sandbox_replay_only"
+        },
+        {
+          "candidate_id": "combination_candidate_2",
+          "combination_signature": "retirement_tombstone|quality_lineage|balanced_retirement_governance",
+          "novelty_score": 0.4426,
+          "reliability": 0.6072,
+          "governance_mode": "sandbox_replay_only"
+        },
+        {
+          "candidate_id": "combination_candidate_3",
+          "combination_signature": "retirement_tombstone|quality_lineage|balanced_retirement_governance",
+          "novelty_score": 0.4426,
+          "reliability": 0.6072,
+          "governance_mode": "sandbox_replay_only"
+        }
+      ],
+      "discovery_pressure_score": 0.305,
+      "discovery_reason_cluster": "novelty_decay",
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true,
+        "layer_discovery_pause_guard": false,
+        "layer_discovery_refusal_guard": false
+      },
+      "paths": {
+        "latest": "memory/layer_discovery/layer_discovery_latest.json",
+        "history": "memory/layer_discovery/layer_discovery_history.json",
+        "combination_candidate_registry": "memory/layer_discovery/combination_candidate_registry.json",
+        "combination_novelty_registry": "memory/layer_discovery/combination_novelty_registry.json",
+        "discovery_pressure_registry": "memory/layer_discovery/discovery_pressure_registry.json",
+        "discovered_layer_signature_registry": "memory/layer_discovery/discovered_layer_signature_registry.json",
+        "layer_discovery_governance_state": "memory/layer_discovery/layer_discovery_governance_state.json"
+      }
+    },
+    {
+      "layer_discovery_state": "novelty_constrained",
+      "combination_novelty_score": 0.4426,
+      "combination_reliability": 0.6072,
+      "candidate_combination_count": 3,
+      "dominant_combination_signature": "retirement_tombstone|quality_lineage|balanced_retirement_governance",
+      "discovered_layer_candidate_registry": [
+        {
+          "candidate_id": "combination_candidate_1",
+          "combination_signature": "retirement_tombstone|quality_lineage|balanced_retirement_governance",
+          "novelty_score": 0.4426,
+          "reliability": 0.6072,
+          "governance_mode": "sandbox_replay_only"
+        },
+        {
+          "candidate_id": "combination_candidate_2",
+          "combination_signature": "retirement_tombstone|quality_lineage|balanced_retirement_governance",
+          "novelty_score": 0.4426,
+          "reliability": 0.6072,
+          "governance_mode": "sandbox_replay_only"
+        },
+        {
+          "candidate_id": "combination_candidate_3",
+          "combination_signature": "retirement_tombstone|quality_lineage|balanced_retirement_governance",
+          "novelty_score": 0.4426,
+          "reliability": 0.6072,
+          "governance_mode": "sandbox_replay_only"
+        }
+      ],
+      "discovery_pressure_score": 0.305,
+      "discovery_reason_cluster": "novelty_decay",
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true,
+        "layer_discovery_pause_guard": false,
+        "layer_discovery_refusal_guard": false
+      },
+      "paths": {
+        "latest": "memory/layer_discovery/layer_discovery_latest.json",
+        "history": "memory/layer_discovery/layer_discovery_history.json",
+        "combination_candidate_registry": "memory/layer_discovery/combination_candidate_registry.json",
+        "combination_novelty_registry": "memory/layer_discovery/combination_novelty_registry.json",
+        "discovery_pressure_registry": "memory/layer_discovery/discovery_pressure_registry.json",
+        "discovered_layer_signature_registry": "memory/layer_discovery/discovered_layer_signature_registry.json",
+        "layer_discovery_governance_state": "memory/layer_discovery/layer_discovery_governance_state.json"
+      }
+    }
+  ]
+}

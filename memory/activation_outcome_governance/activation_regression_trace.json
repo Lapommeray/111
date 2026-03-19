@@ -1,0 +1,9 @@
+{
+  "post_activation_regression_risk": 0.3229,
+  "activation_block_pressure": 0.3311,
+  "catastrophic_drift_risk": 0.4087,
+  "fragmentation_risk": 0.3171,
+  "rollback_urgency": 0.2674,
+  "temporal_interaction_pressure": 0.4257,
+  "lineage_fragmentation_risk": 0.1427
+}

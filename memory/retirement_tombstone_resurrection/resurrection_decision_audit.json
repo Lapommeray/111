@@ -1,0 +1,7 @@
+{
+  "resurrection_reason_cluster": "no_reactivation_pressure",
+  "resurrection_safety_score": 0.6997,
+  "unsafe_resurrection_risk": 0.211,
+  "lineage_reactivation_contamination_risk": 0.1721,
+  "requalification_required": false
+}

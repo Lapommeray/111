@@ -1,0 +1,60 @@
+{
+  "snapshots": [
+    {
+      "strategic_focus_state": {
+        "state": "focused",
+        "instrument_focus": "balanced_primary_secondary",
+        "strategy_family_emphasis": "mean_reversion"
+      },
+      "strategic_focus_reliability": 0.7565,
+      "strategic_focus": {
+        "instrument_focus": "balanced_primary_secondary",
+        "strategy_family_emphasis": "mean_reversion",
+        "regime_preferences": "mean_reversion_regime",
+        "evolution_throttling": 0.3224
+      },
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true,
+        "strategic_focus_pause_guard": false,
+        "strategic_focus_refusal_guard": false
+      },
+      "paths": {
+        "latest": "memory/strategic_focus/strategic_focus_latest.json",
+        "history": "memory/strategic_focus/strategic_focus_history.json",
+        "priority_registry": "memory/strategic_focus/priority_registry.json",
+        "strategic_focus_governance_state": "memory/strategic_focus/strategic_focus_governance_state.json"
+      }
+    },
+    {
+      "strategic_focus_state": {
+        "state": "focused",
+        "instrument_focus": "balanced_primary_secondary",
+        "strategy_family_emphasis": "mean_reversion"
+      },
+      "strategic_focus_reliability": 0.7565,
+      "strategic_focus": {
+        "instrument_focus": "balanced_primary_secondary",
+        "strategy_family_emphasis": "mean_reversion",
+        "regime_preferences": "mean_reversion_regime",
+        "evolution_throttling": 0.3224
+      },
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true,
+        "strategic_focus_pause_guard": false,
+        "strategic_focus_refusal_guard": false
+      },
+      "paths": {
+        "latest": "memory/strategic_focus/strategic_focus_latest.json",
+        "history": "memory/strategic_focus/strategic_focus_history.json",
+        "priority_registry": "memory/strategic_focus/priority_registry.json",
+        "strategic_focus_governance_state": "memory/strategic_focus/strategic_focus_governance_state.json"
+      }
+    }
+  ]
+}
