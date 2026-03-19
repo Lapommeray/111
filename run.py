@@ -64,6 +64,7 @@ BOUNDED_SINGLE_RETRY_EXECUTION_STATUSES = frozenset(
     {
         "requote",
         "price_changed",
+        "price_off",
     }
 )
 
@@ -1592,7 +1593,7 @@ def _build_retry_metadata(*, order_result: dict[str, Any]) -> dict[str, Any]:
     return {
         "retry_eligible": retry_eligible,
         "retry_attempted_count": 0,
-        "retry_policy": "bounded_single_retry_execution_policy_for_requote_price_changed",
+        "retry_policy": "bounded_single_retry_execution_policy_for_requote_price_changed_price_off",
         "retry_policy_truth": "retry_not_attempted",
         "retry_eligibility_reason": retry_eligibility_reason,
         "retry_blocked_reason": "",
