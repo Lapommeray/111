@@ -672,6 +672,14 @@ def test_signal_lifecycle_future_timestamp_is_rejected(tmp_path: Path) -> None:
     assert "signal_timestamp_in_future" in controlled_execution["rollback_refusal_reasons"]
 
 
+def test_controlled_mt5_execution_refuses_when_readiness_keeps_live_block_defaults(tmp_path: Path) -> None:
+    kwargs = _base_controlled_execution_kwargs(tmp_path)
+    controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+
+    assert controlled_execution["order_result"]["status"] == "refused"
+    assert "pretrade_check_failed:readiness_allows_live_order" in controlled_execution["rollback_refusal_reasons"]
+
+
 def test_config_validation_xauusd_first_and_timeframe() -> None:
     validate_runtime_config(RuntimeConfig(symbol="XAUUSD", timeframe="M5"))
 

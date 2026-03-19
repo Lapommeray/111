@@ -792,6 +792,18 @@ def _classify_mt5_execution_failure(reasons: list[str]) -> str:
     return "governed_refusal"
 
 
+def _readiness_allows_live_order(readiness: dict[str, Any]) -> bool:
+    execution_gate = str(readiness.get("execution_gate", "")).strip().lower()
+    return all(
+        [
+            not bool(readiness.get("live_execution_blocked", True)),
+            bool(readiness.get("order_execution_enabled", False)),
+            not bool(readiness.get("execution_refused", True)),
+            execution_gate in {"controlled_live", "live_enabled"},
+        ]
+    )
+
+
 def _place_controlled_mt5_order(
     *,
     order_request: dict[str, Any],
@@ -874,6 +886,10 @@ def _run_controlled_mt5_live_execution(
             "name": "mt5_readiness_valid",
             "passed": bool(readiness_chain.get("all_checks_passed", False))
             and bool(controlled_mt5_readiness.get("ready_for_controlled_usage", False)),
+        },
+        {
+            "name": "readiness_allows_live_order",
+            "passed": _readiness_allows_live_order(controlled_mt5_readiness),
         },
         {"name": "symbol_valid", "passed": bool(controlled_mt5_readiness.get("symbol_validity", False))},
         {
