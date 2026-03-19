@@ -5165,6 +5165,90 @@
         "mode": "live",
         "snapshot_id": "snap_20260319231137462424"
       }
+    },
+    {
+      "timestamp": "2026-03-19T23:16:08.595116+00:00",
+      "artifact_type": "generated_rules",
+      "artifact_path": "/tmp/directional_conviction_memory_6m52y3kd/generated_rules.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "replay",
+        "rule_count": 0,
+        "snapshot_id": "snap_20260319231608590478"
+      }
+    },
+    {
+      "timestamp": "2026-03-19T23:16:08.599407+00:00",
+      "artifact_type": "meta_adaptive_profile",
+      "artifact_path": "memory/meta_adaptive_profile.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "replay",
+        "snapshot_id": "snap_20260319231608590478"
+      }
+    },
+    {
+      "timestamp": "2026-03-19T23:16:08.644460+00:00",
+      "artifact_type": "generated_rules",
+      "artifact_path": "/tmp/decision_contract_no_trade_memory_a0snycy1/generated_rules.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "live",
+        "rule_count": 0,
+        "snapshot_id": "snap_20260319231608638573"
+      }
+    },
+    {
+      "timestamp": "2026-03-19T23:16:08.648428+00:00",
+      "artifact_type": "meta_adaptive_profile",
+      "artifact_path": "memory/meta_adaptive_profile.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "live",
+        "snapshot_id": "snap_20260319231608638573"
+      }
+    },
+    {
+      "timestamp": "2026-03-19T23:16:08.693939+00:00",
+      "artifact_type": "generated_rules",
+      "artifact_path": "/tmp/execution_gate_pipeline_blocked_xlf_r6q_/generated_rules.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "live",
+        "rule_count": 0,
+        "snapshot_id": "snap_20260319231608688160"
+      }
+    },
+    {
+      "timestamp": "2026-03-19T23:16:08.697814+00:00",
+      "artifact_type": "meta_adaptive_profile",
+      "artifact_path": "memory/meta_adaptive_profile.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "live",
+        "snapshot_id": "snap_20260319231608688160"
+      }
+    },
+    {
+      "timestamp": "2026-03-19T23:16:08.732828+00:00",
+      "artifact_type": "generated_rules",
+      "artifact_path": "/tmp/execution_gate_pipeline_authorized_3xco91fw/generated_rules.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "live",
+        "rule_count": 0,
+        "snapshot_id": "snap_20260319231608727135"
+      }
+    },
+    {
+      "timestamp": "2026-03-19T23:16:08.736789+00:00",
+      "artifact_type": "meta_adaptive_profile",
+      "artifact_path": "memory/meta_adaptive_profile.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "live",
+        "snapshot_id": "snap_20260319231608727135"
+      }
     }
   ],
   "schema_version": "v1"

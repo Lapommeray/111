@@ -2630,11 +2630,11 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     )
     if combined_blocked:
         decision = "WAIT"
-    directional_votes = [
-        str(module.direction_vote).lower()
-        for module in advanced_state.module_results.values()
-        if str(module.direction_vote).lower() in {"buy", "sell"}
-    ]
+    directional_votes: list[str] = []
+    for module in advanced_state.module_results.values():
+        normalized_vote = str(module.direction_vote).lower()
+        if normalized_vote in {"buy", "sell"}:
+            directional_votes.append(normalized_vote)
     buy_votes = sum(1 for vote in directional_votes if vote == "buy")
     sell_votes = sum(1 for vote in directional_votes if vote == "sell")
     directional_vote_total = buy_votes + sell_votes
