@@ -1651,6 +1651,88 @@ def _build_compact_signal_payload(signal_payload: dict[str, Any]) -> dict[str, A
     return compact
 
 
+def _build_entry_exit_decision_contract(
+    *,
+    decision: str,
+    effective_signal_confidence: float,
+    bars: list[dict[str, Any]],
+    reasons: list[str],
+    controlled_execution: dict[str, Any],
+) -> dict[str, Any]:
+    action_map = {"BUY": "LONG_ENTRY", "SELL": "SHORT_ENTRY", "WAIT": "NO_TRADE"}
+    action = action_map.get(str(decision), "NO_TRADE")
+    last_price = float(bars[-1].get("close", 0.0)) if bars else 0.0
+    stop_loss_take_profit = dict(controlled_execution.get("stop_loss_take_profit", {}))
+    stop_loss = stop_loss_take_profit.get("stop_loss")
+    take_profit = stop_loss_take_profit.get("take_profit")
+    rollback_reasons = list(controlled_execution.get("rollback_refusal_reasons", []))
+    order_result = dict(controlled_execution.get("order_result", {}))
+    open_position_state = dict(controlled_execution.get("open_position_state", {}))
+    exit_decision = dict(controlled_execution.get("exit_decision", {}))
+
+    if (
+        decision not in {"BUY", "SELL"}
+        and str(open_position_state.get("status", "")) in {"open", "partial_exposure_unresolved"}
+    ):
+        action = "EXIT"
+
+    invalidation_reason = (
+        "; ".join(str(r) for r in rollback_reasons if str(r).strip())
+        if rollback_reasons
+        else ("; ".join(str(r) for r in reasons if str(r).strip()) if action == "NO_TRADE" else "")
+    )
+
+    decision_contract = {
+        "action": action,
+        "entry_price": None,
+        "stop_loss": stop_loss,
+        "take_profit": take_profit,
+        "exit_rule": None,
+        "invalidation_reason": invalidation_reason,
+        "confidence": float(effective_signal_confidence),
+        "why_this_trade": "",
+        "why_not_trade": "",
+    }
+
+    if action in {"LONG_ENTRY", "SHORT_ENTRY"}:
+        entry_price = order_result.get("fill_price")
+        if entry_price is None:
+            entry_price = order_result.get("requested_price")
+        if entry_price is None:
+            entry_price = last_price
+        decision_contract["entry_price"] = float(entry_price)
+        decision_contract["why_this_trade"] = (
+            f"{action} because final decision={decision} and entry gate accepted signal."
+        )
+        decision_contract.pop("exit_rule", None)
+    elif action == "EXIT":
+        decision_contract["entry_price"] = open_position_state.get("entry_price")
+        decision_contract["exit_rule"] = str(exit_decision.get("reason", "exit_required_open_position"))
+        decision_contract["take_profit"] = open_position_state.get("take_profit")
+        decision_contract["stop_loss"] = open_position_state.get("stop_loss")
+        decision_contract["why_not_trade"] = (
+            "No new entry because an open/partial position exists; explicit exit rule provided."
+        )
+    else:
+        decision_contract["entry_price"] = None
+        decision_contract["stop_loss"] = None
+        decision_contract["take_profit"] = None
+        decision_contract["why_not_trade"] = (
+            f"NO_TRADE due to blocking/refusal: {invalidation_reason}" if invalidation_reason else "NO_TRADE."
+        )
+        decision_contract.pop("exit_rule", None)
+
+    if action in {"LONG_ENTRY", "SHORT_ENTRY"}:
+        decision_contract.pop("why_not_trade", None)
+    elif action == "EXIT":
+        decision_contract.pop("why_this_trade", None)
+        decision_contract.pop("take_profit", None)
+    else:
+        decision_contract.pop("why_this_trade", None)
+
+    return decision_contract
+
+
 def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     validate_runtime_config(config)
     sample_path = Path(config.sample_path)
@@ -2227,6 +2309,13 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     status_panel["macro_state"] = macro_state
     status_panel["trade_tags"] = macro_tags
     status_panel["strategy_promotion_policy"] = promotion_policy
+    status_panel["entry_exit_decision"] = _build_entry_exit_decision_contract(
+        decision=decision,
+        effective_signal_confidence=effective_signal_confidence,
+        bars=bars,
+        reasons=reasons,
+        controlled_execution=controlled_execution,
+    )
 
     return build_indicator_output(
         symbol=config.symbol,

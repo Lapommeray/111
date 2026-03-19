@@ -8,7 +8,13 @@ import time
 from pathlib import Path
 from unittest.mock import patch
 
-from run import RuntimeConfig, _run_controlled_mt5_live_execution, ensure_sample_data, run_pipeline
+from run import (
+    RuntimeConfig,
+    _build_entry_exit_decision_contract,
+    _run_controlled_mt5_live_execution,
+    ensure_sample_data,
+    run_pipeline,
+)
 from src.mt5.adapter import MT5Adapter, MT5Config
 
 
@@ -1018,6 +1024,120 @@ class TestExecutionGateSemantics(unittest.TestCase):
             self.assertTrue(audit["enabled"])
             self.assertTrue(audit["authorized"])
             self.assertEqual(audit["failed_conditions"], [])
+
+    def test_pipeline_includes_clean_no_trade_decision_contract_when_not_authorized(self) -> None:
+        sample_path = Path(self._mkdtemp(prefix="decision_contract_no_trade_samples_")) / "xauusd.csv"
+        ensure_sample_data(sample_path)
+        with patch.dict(sys.modules, {"MetaTrader5": _MT5LivePipelineStub()}):
+            output = run_pipeline(
+                RuntimeConfig(
+                    symbol="XAUUSD",
+                    timeframe="M5",
+                    bars=60,
+                    sample_path=str(sample_path),
+                    memory_root=self._mkdtemp(prefix="decision_contract_no_trade_memory_"),
+                    mode="live",
+                    live_execution_enabled=True,
+                    live_authorization_enabled=False,
+                )
+            )
+        decision = output["status_panel"]["entry_exit_decision"]
+        self.assertEqual(
+            sorted(decision.keys()),
+            sorted(
+                [
+                    "action",
+                    "entry_price",
+                    "stop_loss",
+                    "take_profit",
+                    "invalidation_reason",
+                    "confidence",
+                    "why_not_trade",
+                ]
+            ),
+        )
+        self.assertEqual(decision["action"], "NO_TRADE")
+        self.assertIsNone(decision["entry_price"])
+        self.assertIsNone(decision["stop_loss"])
+        self.assertIsNone(decision["take_profit"])
+        self.assertIsInstance(decision["invalidation_reason"], str)
+        self.assertTrue(bool(decision["invalidation_reason"]))
+        self.assertIn("NO_TRADE", decision["why_not_trade"])
+
+    def test_clean_long_entry_decision_contract_for_buy_signal(self) -> None:
+        decision = _build_entry_exit_decision_contract(
+            decision="BUY",
+            effective_signal_confidence=0.81,
+            bars=[{"close": 2100.2}],
+            reasons=["advanced_direction=BUY"],
+            controlled_execution={
+                "stop_loss_take_profit": {"stop_loss": 2098.2, "take_profit": 2104.2},
+                "rollback_refusal_reasons": [],
+                "order_result": {"status": "accepted", "requested_price": 2100.2},
+                "open_position_state": {"status": "flat"},
+                "exit_decision": {"reason": "no_position_exit"},
+            },
+        )
+        self.assertEqual(
+            sorted(decision.keys()),
+            sorted(
+                [
+                    "action",
+                    "entry_price",
+                    "stop_loss",
+                    "take_profit",
+                    "invalidation_reason",
+                    "confidence",
+                    "why_this_trade",
+                ]
+            ),
+        )
+        self.assertEqual(decision["action"], "LONG_ENTRY")
+        self.assertIsInstance(decision["entry_price"], float)
+        self.assertIsInstance(decision["stop_loss"], float)
+        self.assertIsInstance(decision["take_profit"], float)
+        self.assertEqual(decision["invalidation_reason"], "")
+        self.assertIn("LONG_ENTRY", decision["why_this_trade"])
+
+    def test_clean_exit_decision_contract_for_existing_open_position(self) -> None:
+        decision = _build_entry_exit_decision_contract(
+            decision="WAIT",
+            effective_signal_confidence=0.77,
+            bars=[{"close": 2100.2}],
+            reasons=["existing_open_position_requires_exit_management"],
+            controlled_execution={
+                "stop_loss_take_profit": {"stop_loss": 2098.2, "take_profit": 2104.2},
+                "rollback_refusal_reasons": [],
+                "order_result": {},
+                "open_position_state": {
+                    "status": "open",
+                    "entry_price": 2100.2,
+                    "stop_loss": 2098.2,
+                    "take_profit": 2104.2,
+                },
+                "exit_decision": {"reason": "broker_confirmed_open_position"},
+            },
+        )
+        self.assertEqual(
+            sorted(decision.keys()),
+            sorted(
+                [
+                    "action",
+                    "entry_price",
+                    "stop_loss",
+                    "exit_rule",
+                    "invalidation_reason",
+                    "confidence",
+                    "why_not_trade",
+                ]
+            ),
+        )
+        self.assertEqual(decision["action"], "EXIT")
+        self.assertIsInstance(decision["entry_price"], float)
+        self.assertIsInstance(decision["stop_loss"], float)
+        self.assertIsInstance(decision["exit_rule"], str)
+        self.assertTrue(bool(decision["exit_rule"]))
+        self.assertIn("No new entry", decision["why_not_trade"])
 
 
 if __name__ == "__main__":
