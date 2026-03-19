@@ -86,6 +86,7 @@ class RuntimeConfig:
     knowledge_expansion_root: str = "memory/knowledge_expansion"
     knowledge_candidate_limit: int = 6
     live_execution_enabled: bool = True
+    live_authorization_enabled: bool = False
     live_order_volume: float = 0.01
     alpha_vantage_api_key: str = ""
     fred_api_key: str = ""
@@ -154,6 +155,7 @@ RUNTIME_CONFIG_TYPES: dict[str, str] = {
     "knowledge_expansion_root": "str",
     "knowledge_candidate_limit": "int",
     "live_execution_enabled": "bool",
+    "live_authorization_enabled": "bool",
     "live_order_volume": "float",
     "alpha_vantage_api_key": "str",
     "fred_api_key": "str",
@@ -792,6 +794,72 @@ def _classify_mt5_execution_failure(reasons: list[str]) -> str:
     return "governed_refusal"
 
 
+def _readiness_allows_live_order(readiness: dict[str, Any]) -> bool:
+    execution_gate = str(readiness.get("execution_gate", "")).strip().lower()
+    live_authorized_execution_gates = {
+        "live_authorized_controlled_execution",
+    }
+    return all(
+        [
+            not bool(readiness.get("live_execution_blocked", True)),
+            bool(readiness.get("order_execution_enabled", False)),
+            not bool(readiness.get("execution_refused", True)),
+            execution_gate in live_authorized_execution_gates,
+        ]
+    )
+
+
+def _apply_explicit_live_authorization(
+    *,
+    readiness: dict[str, Any],
+    mode: str,
+    live_authorization_enabled: bool,
+    readiness_chain: dict[str, Any],
+    quarantine_state: dict[str, Any],
+) -> dict[str, Any]:
+    condition_checks = [
+        {"name": "flag_enabled", "passed": bool(live_authorization_enabled)},
+        {"name": "mode_live", "passed": mode == "live"},
+        {"name": "readiness_chain_passed", "passed": bool(readiness_chain.get("all_checks_passed", False))},
+        {"name": "quarantine_clear", "passed": not bool(quarantine_state.get("quarantine_required", False))},
+        {"name": "ready_for_controlled_usage", "passed": bool(readiness.get("ready_for_controlled_usage", False))},
+        {"name": "symbol_validity", "passed": bool(readiness.get("symbol_validity", False))},
+        {"name": "account_trading_permission", "passed": bool(readiness.get("account_trading_permission", False))},
+        {"name": "account_readiness", "passed": bool(readiness.get("account_readiness", False))},
+        {"name": "data_freshness", "passed": bool(readiness.get("data_freshness", False))},
+        {"name": "tick_data_freshness", "passed": bool(readiness.get("tick_data_freshness", False))},
+        {
+            "name": "execution_not_refused_pre_authorization",
+            "passed": not bool(readiness.get("execution_refused", True)),
+        },
+        {
+            "name": "no_fail_safe_blocked_reasons",
+            "passed": not bool(readiness.get("fail_safe_blocked_reasons", [])),
+        },
+    ]
+    failed_conditions = sorted(check["name"] for check in condition_checks if not bool(check["passed"]))
+    audited = {
+        **readiness,
+        "live_authorization_audit": {
+            "enabled": bool(live_authorization_enabled),
+            "mode": str(mode),
+            "authorized": not failed_conditions,
+            "conditions": condition_checks,
+            "failed_conditions": failed_conditions,
+        },
+    }
+    if failed_conditions:
+        return audited
+    return {
+        **audited,
+        "live_execution_blocked": False,
+        "order_execution_enabled": True,
+        "execution_refused": False,
+        "execution_gate": "live_authorized_controlled_execution",
+        "live_authorization_applied": True,
+    }
+
+
 def _place_controlled_mt5_order(
     *,
     order_request: dict[str, Any],
@@ -874,6 +942,10 @@ def _run_controlled_mt5_live_execution(
             "name": "mt5_readiness_valid",
             "passed": bool(readiness_chain.get("all_checks_passed", False))
             and bool(controlled_mt5_readiness.get("ready_for_controlled_usage", False)),
+        },
+        {
+            "name": "readiness_allows_live_order",
+            "passed": _readiness_allows_live_order(controlled_mt5_readiness),
         },
         {"name": "symbol_valid", "passed": bool(controlled_mt5_readiness.get("symbol_validity", False))},
         {
@@ -1326,6 +1398,13 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
             "execution_refused": False,
             "safe_resume_applied": True,
         }
+    controlled_mt5_readiness = _apply_explicit_live_authorization(
+        readiness=controlled_mt5_readiness,
+        mode=config.mode,
+        live_authorization_enabled=bool(config.live_authorization_enabled),
+        readiness_chain=readiness_chain,
+        quarantine_state=quarantine_state,
+    )
 
     execution_state = ExecutionState(
         symbol=config.symbol,
@@ -1861,6 +1940,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--evaluation-stride", type=int, default=None)
     parser.add_argument("--knowledge-expansion-enabled", choices=["true", "false"], default=None)
     parser.add_argument("--live-execution-enabled", choices=["true", "false"], default=None)
+    parser.add_argument("--live-authorization-enabled", choices=["true", "false"], default=None)
     parser.add_argument("--live-order-volume", type=float, default=None)
     return parser.parse_args()
 
@@ -1898,6 +1978,13 @@ def main() -> None:
             **{
                 **config.__dict__,
                 "live_execution_enabled": args.live_execution_enabled.lower() == "true",
+            }
+        )
+    if args.live_authorization_enabled is not None:
+        config = RuntimeConfig(
+            **{
+                **config.__dict__,
+                "live_authorization_enabled": args.live_authorization_enabled.lower() == "true",
             }
         )
     if args.live_order_volume is not None:
