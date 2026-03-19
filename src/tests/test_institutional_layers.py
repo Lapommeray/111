@@ -253,6 +253,34 @@ def test_monitoring_state_open_orders_require_broker_verified_open(tmp_path: Pat
     assert payload["open_orders"] == [{"symbol": "XAUUSD", "volume": 0.02}]
 
 
+def test_monitoring_state_marks_partial_exposure_unresolved_truthfully(tmp_path: Path) -> None:
+    memory_root = tmp_path / "memory_partial_unresolved"
+    monitor = update_system_monitor_state(
+        memory_root=str(memory_root),
+        execution_state={"mt5_quarantined": False, "mt5_auto_stop_active": False},
+        controlled_execution={
+            "open_position_state": {
+                "status": "partial_exposure_unresolved",
+                "broker_position_confirmation": "unconfirmed",
+                "position_state_outcome": "partial_fill_exposure_unresolved",
+            },
+            "order_request": {"symbol": "XAUUSD", "volume": 0.01},
+            "rollback_refusal_reasons": ["mt5_partial_fill_unreconciled"],
+        },
+        trade_outcomes=[],
+        strategy_version="institutional_v1",
+    )
+    payload = json.loads(Path(monitor["paths"]["system_state"]).read_text(encoding="utf-8"))
+
+    assert payload["assumed_open_position"] is False
+    assert payload["broker_verified_open_position"] is False
+    assert payload["partial_exposure_unresolved"] is True
+    assert payload["open_position_truth"] == "partial_exposure_unresolved"
+    assert payload["open_position_state_outcome"] == "partial_fill_exposure_unresolved"
+    assert payload["open_position_broker_confirmation"] == "unconfirmed"
+    assert payload["open_orders"] == []
+
+
 def test_capital_guard_runtime_refuses_when_limit_exceeded(tmp_path: Path) -> None:
     memory_root = tmp_path / "memory"
     blocked = evaluate_capital_protection(
