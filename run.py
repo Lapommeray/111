@@ -4,6 +4,7 @@ import argparse
 import csv
 import hashlib
 import json
+import math
 import os
 import time
 from datetime import datetime, timezone
@@ -50,12 +51,19 @@ SUPPORTED_MODES = {"live", "replay"}
 SUPPORTED_REPLAY_SOURCES = {"csv", "memory"}
 MIN_TRADE_VOLUME = 0.01
 BOUNDED_DELAYED_BROKER_RECHECK_SECONDS = 0.5
+BOUNDED_SINGLE_RETRY_DELAY_SECONDS = 0.5
 TRANSIENT_RETRY_ELIGIBLE_STATUSES = frozenset(
     {
         "requote",
         "price_changed",
         "price_off",
         "too_many_requests",
+    }
+)
+BOUNDED_SINGLE_RETRY_EXECUTION_STATUSES = frozenset(
+    {
+        "requote",
+        "price_changed",
     }
 )
 
@@ -1584,9 +1592,11 @@ def _build_retry_metadata(*, order_result: dict[str, Any]) -> dict[str, Any]:
     return {
         "retry_eligible": retry_eligible,
         "retry_attempted_count": 0,
-        "retry_policy": "not_implemented",
-        "retry_policy_truth": "no_retry_policy_implemented",
+        "retry_policy": "bounded_single_retry_execution_policy_for_requote_price_changed",
+        "retry_policy_truth": "retry_not_attempted",
         "retry_eligibility_reason": retry_eligibility_reason,
+        "retry_blocked_reason": "",
+        "retry_final_outcome_status": status if status else "unknown",
     }
 
 
@@ -1661,6 +1671,7 @@ def _run_controlled_mt5_live_execution(
 
     order_request: dict[str, Any] = {}
     order_result: dict[str, Any] = {}
+    retry_metadata: dict[str, Any] = _build_retry_metadata(order_result=order_result)
     rejection_reasons: list[str] = []
     rollback_reasons: list[str] = []
     stop_loss_take_profit = {"stop_loss": None, "take_profit": None}
@@ -1698,12 +1709,87 @@ def _run_controlled_mt5_live_execution(
             "comment": "governed_controlled_execution",
         }
         order_result = _place_controlled_mt5_order(order_request=order_request, mt5_module=mt5_module)
+        retry_metadata = _build_retry_metadata(order_result=order_result)
+        first_status = str(order_result.get("status") or "").strip().lower()
+        first_order_sent = bool(order_result.get("order_sent", False))
+        retry_attempted_count = 0
+        retry_blocked_reason = ""
+        retry_policy_truth = "retry_not_attempted"
+        if first_status != "accepted":
+            retry_guard_checks = [
+                {"name": "live_mode", "passed": mode == "live"},
+                {"name": "decision_trade_side", "passed": decision in {"BUY", "SELL"}},
+                {"name": "initial_pretrade_checks_passed", "passed": not failed_checks},
+                {"name": "first_order_send_occurred", "passed": first_order_sent},
+                {
+                    "name": "first_non_accepted_non_partial",
+                    "passed": first_status not in {"accepted", "partial"},
+                },
+                {"name": "retry_attempted_count_zero", "passed": retry_attempted_count == 0},
+                {"name": "auto_stop_inactive", "passed": not bool(persistent_state.get("auto_stop_active", False))},
+                {
+                    "name": "readiness_explicit_live_authorized",
+                    "passed": _readiness_allows_live_order(controlled_mt5_readiness),
+                },
+                {
+                    "name": "first_status_in_retry_slice",
+                    "passed": first_status in BOUNDED_SINGLE_RETRY_EXECUTION_STATUSES,
+                },
+            ]
+            refreshed_price = float(bars[-1]["close"]) if bars else 0.0
+            refreshed_price_valid = (
+                isinstance(refreshed_price, (int, float))
+                and math.isfinite(float(refreshed_price))
+                and float(refreshed_price) > 0.0
+            )
+            retry_guard_checks.append(
+                {"name": "refreshed_price_valid", "passed": bool(refreshed_price_valid)}
+            )
+            failed_retry_guards = [check["name"] for check in retry_guard_checks if not bool(check["passed"])]
+            if not failed_retry_guards and retry_metadata.get("retry_eligible", False):
+                time.sleep(BOUNDED_SINGLE_RETRY_DELAY_SECONDS)
+                retry_request = {**order_request, "price": round(float(refreshed_price), 5)}
+                order_result = _place_controlled_mt5_order(order_request=retry_request, mt5_module=mt5_module)
+                retry_attempted_count = 1
+                retry_policy_truth = "retry_attempted_bounded_single_retry_execution_policy"
+            else:
+                retry_blocked_reason = (
+                    ";".join(failed_retry_guards)
+                    if failed_retry_guards
+                    else str(retry_metadata.get("retry_eligibility_reason") or "retry_not_eligible")
+                )
+                retry_policy_truth = "retry_not_attempted_fail_closed_guard_blocked"
+            retry_metadata = {
+                **retry_metadata,
+                "retry_attempted_count": int(retry_attempted_count),
+                "retry_policy_truth": retry_policy_truth,
+                "retry_blocked_reason": str(retry_blocked_reason),
+                "retry_final_outcome_status": str(order_result.get("status") or "unknown"),
+            }
+        else:
+            retry_metadata = {
+                **retry_metadata,
+                "retry_policy_truth": "retry_not_attempted_accepted_on_first_send",
+                "retry_final_outcome_status": "accepted",
+            }
         if order_result.get("status") != "accepted":
             rejection_reasons = [str(order_result.get("error_reason") or "order_send_refused")]
 
     if rejection_reasons:
         rollback_reasons = sorted(set(rejection_reasons))
         order_sent = bool(order_result.get("order_sent", False))
+        if (
+            int(retry_metadata.get("retry_attempted_count", 0)) == 0
+            and not str(retry_metadata.get("retry_blocked_reason", "")).strip()
+        ):
+            retry_metadata = {
+                **retry_metadata,
+                "retry_policy_truth": "retry_not_attempted_fail_closed_guard_blocked",
+                "retry_blocked_reason": str(
+                    retry_metadata.get("retry_eligibility_reason") or "retry_not_eligible"
+                ),
+                "retry_final_outcome_status": str(order_result.get("status") or "refused"),
+            }
         order_result = {
             **order_result,
             "status": order_result.get("status", "refused"),
@@ -1713,7 +1799,7 @@ def _run_controlled_mt5_live_execution(
             "broker_state_outcome": (
                 "unconfirmed_non_accepted_send_outcome" if order_sent else "no_order_send_attempt"
             ),
-            **_build_retry_metadata(order_result=order_result),
+            **retry_metadata,
         }
     else:
         sent_order_id = int(order_result.get("order_id", 0) or 0)
@@ -1746,6 +1832,7 @@ def _run_controlled_mt5_live_execution(
             "broker_state_confirmation": broker_position_verification["confirmation"],
             "broker_state_outcome": broker_position_verification["broker_state_outcome"],
             "broker_position_verification": broker_position_verification,
+            **retry_metadata,
         }
 
     is_live_trade_attempt = mode == "live" and decision in {"BUY", "SELL"}

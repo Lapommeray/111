@@ -419,6 +419,32 @@ class _MT5PriceChangedStub(_MT5BaseStub):
         return _PriceChangedResult()
 
 
+class _MT5RequoteThenAcceptedStub(_MT5BaseStub):
+    TRADE_RETCODE_REQUOTE = RETCODE_REQUOTE
+
+    def __init__(self) -> None:
+        self.send_calls = 0
+
+    def order_send(self, _request: dict[str, object]) -> object:
+        self.send_calls += 1
+        if self.send_calls == 1:
+            return _RequoteResult()
+        return _AcceptedResult()
+
+
+class _MT5PriceChangedThenAcceptedStub(_MT5BaseStub):
+    TRADE_RETCODE_PRICE_CHANGED = RETCODE_PRICE_CHANGED
+
+    def __init__(self) -> None:
+        self.send_calls = 0
+
+    def order_send(self, _request: dict[str, object]) -> object:
+        self.send_calls += 1
+        if self.send_calls == 1:
+            return _PriceChangedResult()
+        return _AcceptedResult()
+
+
 class _MT5NoMoneyStub(_MT5BaseStub):
     TRADE_RETCODE_NO_MONEY = RETCODE_NO_MONEY
 
@@ -574,14 +600,25 @@ class TestExecutionGateSemantics(unittest.TestCase):
         )
         self.assertEqual(controlled_execution["order_result"]["retry_eligible"], False)
         self.assertEqual(controlled_execution["order_result"]["retry_attempted_count"], 0)
-        self.assertEqual(controlled_execution["order_result"]["retry_policy"], "not_implemented")
+        self.assertEqual(
+            controlled_execution["order_result"]["retry_policy"],
+            "bounded_single_retry_execution_policy_for_requote_price_changed",
+        )
         self.assertEqual(
             controlled_execution["order_result"]["retry_policy_truth"],
-            "no_retry_policy_implemented",
+            "retry_not_attempted_fail_closed_guard_blocked",
         )
         self.assertEqual(
             controlled_execution["order_result"]["retry_eligibility_reason"],
             "no_order_send_attempt",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["retry_blocked_reason"],
+            "no_order_send_attempt",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["retry_final_outcome_status"],
+            "refused",
         )
         self.assertIn(
             "pretrade_check_failed:readiness_allows_live_order",
@@ -1104,7 +1141,7 @@ class TestExecutionGateSemantics(unittest.TestCase):
             "broker_confirmed_open_position",
         )
 
-    def test_requote_retcode_reported_as_unretried_requote(self) -> None:
+    def test_requote_retcode_retries_once_and_accepts_when_second_send_succeeds(self) -> None:
         memory_root = self._mkdtemp(prefix="execution_gate_requote_")
         kwargs = _base_kwargs(memory_root)
         kwargs["controlled_mt5_readiness"] = {
@@ -1114,33 +1151,38 @@ class TestExecutionGateSemantics(unittest.TestCase):
             "execution_refused": False,
             "execution_gate": "live_authorized_controlled_execution",
         }
-        kwargs["mt5_module"] = _MT5RequoteStub()
-        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
-        self.assertEqual(controlled_execution["order_result"]["status"], "requote")
+        retry_stub = _MT5RequoteThenAcceptedStub()
+        kwargs["mt5_module"] = retry_stub
+        with patch("run.time.sleep", return_value=None):
+            controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "accepted")
         self.assertTrue(controlled_execution["order_result"]["order_sent"])
-        self.assertEqual(
-            controlled_execution["order_result"]["error_reason"],
-            "mt5_requote_unretried",
-        )
+        self.assertEqual(controlled_execution["order_result"]["error_reason"], "")
         self.assertEqual(
             controlled_execution["order_result"]["broker_state_confirmation"],
             "unconfirmed",
         )
         self.assertEqual(
             controlled_execution["order_result"]["broker_state_outcome"],
-            "unconfirmed_non_accepted_send_outcome",
+            "accepted_send_unreconciled",
         )
         self.assertEqual(controlled_execution["order_result"]["retry_eligible"], True)
-        self.assertEqual(controlled_execution["order_result"]["retry_attempted_count"], 0)
-        self.assertEqual(controlled_execution["order_result"]["retry_policy"], "not_implemented")
+        self.assertEqual(controlled_execution["order_result"]["retry_attempted_count"], 1)
+        self.assertEqual(
+            controlled_execution["order_result"]["retry_policy"],
+            "bounded_single_retry_execution_policy_for_requote_price_changed",
+        )
         self.assertEqual(
             controlled_execution["order_result"]["retry_policy_truth"],
-            "no_retry_policy_implemented",
+            "retry_attempted_bounded_single_retry_execution_policy",
         )
         self.assertEqual(
             controlled_execution["order_result"]["retry_eligibility_reason"],
             "transient_non_accepted_send_outcome",
         )
+        self.assertEqual(controlled_execution["order_result"]["retry_blocked_reason"], "")
+        self.assertEqual(controlled_execution["order_result"]["retry_final_outcome_status"], "accepted")
+        self.assertEqual(retry_stub.send_calls, 2)
 
     def test_partial_fill_delayed_recheck_confirms_exact_linked_deal_when_broker_truth_appears(self) -> None:
         memory_root = self._mkdtemp(prefix="execution_gate_partial_delayed_confirmed_")
@@ -1239,6 +1281,40 @@ class TestExecutionGateSemantics(unittest.TestCase):
             controlled_execution["rollback_refusal_reasons"],
         )
 
+    def test_price_changed_retcode_retries_once_and_accepts_when_second_send_succeeds(self) -> None:
+        memory_root = self._mkdtemp(prefix="execution_gate_price_changed_retry_")
+        kwargs = _base_kwargs(memory_root)
+        kwargs["controlled_mt5_readiness"] = {
+            **dict(kwargs["controlled_mt5_readiness"]),
+            "live_execution_blocked": False,
+            "order_execution_enabled": True,
+            "execution_refused": False,
+            "execution_gate": "live_authorized_controlled_execution",
+        }
+        retry_stub = _MT5PriceChangedThenAcceptedStub()
+        kwargs["mt5_module"] = retry_stub
+        with patch("run.time.sleep", return_value=None):
+            controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "accepted")
+        self.assertTrue(controlled_execution["order_result"]["order_sent"])
+        self.assertEqual(controlled_execution["order_result"]["retry_eligible"], True)
+        self.assertEqual(controlled_execution["order_result"]["retry_attempted_count"], 1)
+        self.assertEqual(
+            controlled_execution["order_result"]["retry_policy"],
+            "bounded_single_retry_execution_policy_for_requote_price_changed",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["retry_policy_truth"],
+            "retry_attempted_bounded_single_retry_execution_policy",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["retry_eligibility_reason"],
+            "transient_non_accepted_send_outcome",
+        )
+        self.assertEqual(controlled_execution["order_result"]["retry_blocked_reason"], "")
+        self.assertEqual(controlled_execution["order_result"]["retry_final_outcome_status"], "accepted")
+        self.assertEqual(retry_stub.send_calls, 2)
+
     def test_no_money_retcode_has_explicit_non_accepted_classification(self) -> None:
         memory_root = self._mkdtemp(prefix="execution_gate_no_money_")
         kwargs = _base_kwargs(memory_root)
@@ -1267,14 +1343,25 @@ class TestExecutionGateSemantics(unittest.TestCase):
         )
         self.assertEqual(controlled_execution["order_result"]["retry_eligible"], False)
         self.assertEqual(controlled_execution["order_result"]["retry_attempted_count"], 0)
-        self.assertEqual(controlled_execution["order_result"]["retry_policy"], "not_implemented")
+        self.assertEqual(
+            controlled_execution["order_result"]["retry_policy"],
+            "bounded_single_retry_execution_policy_for_requote_price_changed",
+        )
         self.assertEqual(
             controlled_execution["order_result"]["retry_policy_truth"],
-            "no_retry_policy_implemented",
+            "retry_not_attempted_fail_closed_guard_blocked",
         )
         self.assertEqual(
             controlled_execution["order_result"]["retry_eligibility_reason"],
             "non_transient_non_accepted_send_outcome",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["retry_blocked_reason"],
+            "first_status_in_retry_slice",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["retry_final_outcome_status"],
+            "insufficient_margin",
         )
         self.assertEqual(controlled_execution["order_result"]["order_id"], 47)
         self.assertIn(
