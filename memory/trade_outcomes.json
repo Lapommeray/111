@@ -54,5 +54,56 @@
       "session_filter:off_hours_block"
     ],
     "confidence": 0.9983
+  },
+  {
+    "timestamp": "2026-03-19T06:44:43.384615+00:00",
+    "trade_id": "blocked_snap_20260319064443368093",
+    "symbol": "XAUUSD",
+    "direction": "WAIT",
+    "status": "skipped",
+    "result": "n/a",
+    "pnl_points": 0.0,
+    "source_reasons": [
+      "structure_liquidity_conflict",
+      "mt5_execution_refused_unsafe_readiness",
+      "mt5_quarantined_invalid_readiness",
+      "mt5_fail_safe:account_not_ready",
+      "mt5_fail_safe:terminal_connection_unstable",
+      "mt5_fail_safe:tick_data_stale",
+      "macro_feed_unsafe_pause",
+      "macro_risk:stop_hunt_sweep_detected",
+      "macro_risk:dxy_proxy_degraded_fallback_alpha",
+      "macro_risk:gld_flow_optional_unavailable",
+      "macro_risk:feeds_unavailable:alpha_vantage,central_bank_gold_reserves,comex_open_interest,dxy_proxy,economic_calendar,fred_DGS10,fred_DGS2,fred_T10YIE,gold_option_magnet_levels,gold_physical_premium_discount,treasury",
+      "macro_risk:macro_feed_state_unsafe_or_stale"
+    ],
+    "confidence": 0.4962,
+    "trade_tags": {
+      "session": "asia",
+      "volatility_regime": "balanced",
+      "macro_state": "balanced",
+      "dxy_state": "unavailable",
+      "yield_state": "flat_or_inverted",
+      "event_news_state": "calm",
+      "round_number_proximity": "clear_round_number",
+      "correlation_regime_state": "insufficient_data",
+      "major_round_number_proximity": "clear_major_round_number",
+      "event_type": "unknown",
+      "session_policy": "asia_reduced_size",
+      "correlation_confirmation": "dual_stable",
+      "surgical_layer_triggers": [
+        "stop_hunt_footprint_analyzer",
+        "round_number_stop_cluster_map"
+      ],
+      "dxy_proxy_state": "unavailable",
+      "gld_flow_state": "unavailable",
+      "macro_feed_health": "degraded",
+      "synthetic_feature_state": "sandbox_pending",
+      "negative_space_state": "sandbox_pending",
+      "invariant_break_state": "sandbox_pending",
+      "pain_geometry_risk": 0.0,
+      "counterfactual_evaluation": "sandbox_pending",
+      "liquidity_decay_state": "sandbox_pending"
+    }
   }
 ]

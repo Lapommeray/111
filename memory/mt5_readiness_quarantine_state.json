@@ -1,0 +1,14 @@
+{
+  "quarantine_required": true,
+  "quarantine_reasons": [
+    "account_readiness",
+    "terminal_connection_stable",
+    "tick_data_freshness"
+  ],
+  "invalid_state_reasons": [],
+  "failed_required_checks": [
+    "account_readiness",
+    "terminal_connection_stable",
+    "tick_data_freshness"
+  ]
+}

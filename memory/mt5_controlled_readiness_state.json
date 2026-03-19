@@ -1,0 +1,38 @@
+{
+  "readiness_timestamp": "2026-03-19T06:44:43.333525+00:00",
+  "data_source": "csv_fallback",
+  "terminal_connection_attempts": 0,
+  "terminal_connection_successes": 0,
+  "terminal_connectivity": false,
+  "terminal_connection_stable": false,
+  "symbol_validity": true,
+  "symbol_subscription_ready": true,
+  "account_trading_permission": false,
+  "account_readiness": false,
+  "data_freshness": false,
+  "data_age_seconds": 73883483,
+  "tick_freshness_window_seconds": 900,
+  "tick_data_freshness": false,
+  "tick_age_seconds": 73883483,
+  "fail_safe_blocked_state": true,
+  "fail_safe_blocked_reasons": [
+    "account_not_ready",
+    "terminal_connection_unstable",
+    "tick_data_stale"
+  ],
+  "live_execution_blocked": true,
+  "order_execution_enabled": false,
+  "execution_gate": "refused_unsafe_readiness",
+  "execution_refused": true,
+  "ready_for_controlled_usage": false,
+  "reason_codes": [
+    "account_not_ready",
+    "csv_fallback_mode",
+    "data_stale_or_missing",
+    "live_execution_blocked_by_default",
+    "mt5_module_unavailable",
+    "primary_symbol",
+    "terminal_connection_unstable",
+    "tick_data_stale"
+  ]
+}

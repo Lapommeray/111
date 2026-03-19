@@ -1,0 +1,18 @@
+{
+  "audit_id": "mt5-audit-csv_fallback-live-deb555792e0e59127d6435227fa5f325",
+  "mode": "live",
+  "deterministic_fingerprint": "True|True|False|False|account_readiness,terminal_connection_stable,tick_data_freshness|account_readiness,terminal_connection_stable,tick_data_freshness|interrupted",
+  "all_checks_passed": false,
+  "failed_required_checks": [
+    "account_readiness",
+    "terminal_connection_stable",
+    "tick_data_freshness"
+  ],
+  "quarantine_required": true,
+  "quarantine_reasons": [
+    "account_readiness",
+    "terminal_connection_stable",
+    "tick_data_freshness"
+  ],
+  "safe_resume_applied": false
+}
