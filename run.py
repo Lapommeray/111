@@ -900,6 +900,7 @@ def _place_controlled_mt5_order(
         retcode_requote = getattr(mt5, "TRADE_RETCODE_REQUOTE", None)
         retcode_price_changed = getattr(mt5, "TRADE_RETCODE_PRICE_CHANGED", None)
         retcode_no_money = getattr(mt5, "TRADE_RETCODE_NO_MONEY", None)
+        retcode_market_closed = getattr(mt5, "TRADE_RETCODE_MARKET_CLOSED", None)
         if retcode_done is not None and retcode == retcode_done:
             return {
                 "status": "accepted",
@@ -937,6 +938,14 @@ def _place_controlled_mt5_order(
                 "status": "insufficient_margin",
                 "order_sent": True,
                 "error_reason": "mt5_no_money",
+                "retcode": retcode,
+                "order_id": int(getattr(result, "order", 0) or 0),
+            }
+        if retcode_market_closed is not None and retcode == retcode_market_closed:
+            return {
+                "status": "market_closed",
+                "order_sent": True,
+                "error_reason": "mt5_market_closed",
                 "retcode": retcode,
                 "order_id": int(getattr(result, "order", 0) or 0),
             }
