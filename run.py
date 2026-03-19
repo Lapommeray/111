@@ -1144,8 +1144,8 @@ def _run_controlled_mt5_live_execution(
             "status": "accepted",
             "order_sent": True,
             "rejection_reason": "",
-            "broker_state_confirmation": "confirmed",
-            "broker_state_outcome": "accepted_send_outcome",
+            "broker_state_confirmation": "unconfirmed",
+            "broker_state_outcome": "accepted_send_unreconciled",
         }
 
     is_live_trade_attempt = mode == "live" and decision in {"BUY", "SELL"}

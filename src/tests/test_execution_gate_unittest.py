@@ -308,11 +308,11 @@ class TestExecutionGateSemantics(unittest.TestCase):
         self.assertTrue(controlled_execution["order_result"]["order_sent"])
         self.assertEqual(
             controlled_execution["order_result"]["broker_state_confirmation"],
-            "confirmed",
+            "unconfirmed",
         )
         self.assertEqual(
             controlled_execution["order_result"]["broker_state_outcome"],
-            "accepted_send_outcome",
+            "accepted_send_unreconciled",
         )
         self.assertEqual(controlled_execution["order_result"]["order_id"], 42)
 
