@@ -12,6 +12,7 @@ from run import RuntimeConfig, _run_controlled_mt5_live_execution, ensure_sample
 from src.mt5.adapter import MT5Adapter, MT5Config
 
 
+# MT5 retcode fixture values used by test stubs to simulate controlled send outcomes.
 RETCODE_DONE = 100
 RETCODE_DONE_PARTIAL = 101
 RETCODE_REQUOTE = 102

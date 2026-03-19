@@ -48,6 +48,14 @@ SUPPORTED_TIMEFRAMES = {"M1", "M5", "M15", "H1", "H4"}
 SUPPORTED_MODES = {"live", "replay"}
 SUPPORTED_REPLAY_SOURCES = {"csv", "memory"}
 MIN_TRADE_VOLUME = 0.01
+TRANSIENT_RETRY_ELIGIBLE_STATUSES = frozenset(
+    {
+        "requote",
+        "price_changed",
+        "price_off",
+        "too_many_requests",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -1018,16 +1026,10 @@ def _place_controlled_mt5_order(
         mt5.shutdown()
 
 
-def _retry_policy_truth_for_non_accepted_outcome(*, order_result: dict[str, Any]) -> dict[str, Any]:
+def _build_retry_metadata(*, order_result: dict[str, Any]) -> dict[str, Any]:
     status = str(order_result.get("status") or "").strip().lower()
     order_sent = bool(order_result.get("order_sent", False))
-    transient_retry_eligible_statuses = {
-        "requote",
-        "price_changed",
-        "price_off",
-        "too_many_requests",
-    }
-    retry_eligible = bool(order_sent and status in transient_retry_eligible_statuses)
+    retry_eligible = bool(order_sent and status in TRANSIENT_RETRY_ELIGIBLE_STATUSES)
     retry_eligibility_reason = (
         "transient_non_accepted_send_outcome"
         if retry_eligible
@@ -1165,7 +1167,7 @@ def _run_controlled_mt5_live_execution(
             "broker_state_outcome": (
                 "unconfirmed_non_accepted_send_outcome" if order_sent else "no_order_send_attempt"
             ),
-            **_retry_policy_truth_for_non_accepted_outcome(order_result=order_result),
+            **_build_retry_metadata(order_result=order_result),
         }
     else:
         order_result = {
