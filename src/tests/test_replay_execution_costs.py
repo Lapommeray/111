@@ -210,6 +210,52 @@ def test_combined_execution_costs_reduce_performance_deterministically(tmp_path:
     assert impact["per_trade_total_cost_points"] == 0.17
 
 
+def test_analytics_summary_present_and_deterministic_metrics_are_correct(tmp_path: Path) -> None:
+    report = _evaluate_with_costs(tmp_path, pnls=[1.0, -0.5, 0.0, 2.0, -1.0])
+    analytics = report["analytics_summary"]
+
+    assert analytics["closed_trade_count"] == 5
+    assert analytics["win_count"] == 2
+    assert analytics["loss_count"] == 2
+    assert analytics["flat_count"] == 1
+    assert analytics["win_rate"] == 0.4
+    assert analytics["average_gross_pnl_points"] == 0.3
+    assert analytics["average_net_pnl_points"] == 0.3
+    assert analytics["average_realism_adjusted_net_pnl_points"] == 0.3
+    assert analytics["expectancy_points"] == 0.3
+    assert analytics["profit_factor"] == 2.0
+    assert analytics["max_drawdown_points"] == 1.0
+    assert analytics["average_win_points"] == 1.5
+    assert analytics["average_loss_points"] == -0.75
+    assert analytics["payoff_ratio"] == 2.0
+    assert analytics["best_trade_points"] == 2.0
+    assert analytics["worst_trade_points"] == -1.0
+    assert analytics["consecutive_wins_max"] == 1
+    assert analytics["consecutive_losses_max"] == 1
+    assert analytics["series"]["gross"]["expectancy_points"] == 0.3
+    assert analytics["series"]["net"]["expectancy_points"] == 0.3
+    assert analytics["series"]["realism_adjusted_net"]["expectancy_points"] == 0.3
+
+
+def test_analytics_profit_factor_edge_cases_are_safe(tmp_path: Path) -> None:
+    wins_only = _evaluate_with_costs(tmp_path / "wins", pnls=[1.0, 0.5, 2.0])
+    losses_only = _evaluate_with_costs(tmp_path / "losses", pnls=[-1.0, -0.5])
+
+    assert wins_only["analytics_summary"]["profit_factor"] is None
+    assert wins_only["analytics_summary"]["payoff_ratio"] is None
+    assert losses_only["analytics_summary"]["profit_factor"] == 0.0
+    assert losses_only["analytics_summary"]["payoff_ratio"] == 0.0
+
+
+def test_analytics_streak_metrics_and_drawdown_are_correct(tmp_path: Path) -> None:
+    report = _evaluate_with_costs(tmp_path, pnls=[1.0, 2.0, -1.0, -2.0, -3.0, 0.0, 1.0, 1.0])
+    analytics = report["analytics_summary"]
+
+    assert analytics["consecutive_wins_max"] == 2
+    assert analytics["consecutive_losses_max"] == 3
+    assert analytics["max_drawdown_points"] == 6.0
+
+
 def test_execution_realism_v2_disabled_preserves_post_cost_behavior(tmp_path: Path) -> None:
     report = _evaluate_with_costs(
         tmp_path,
@@ -228,6 +274,9 @@ def test_execution_realism_v2_disabled_preserves_post_cost_behavior(tmp_path: Pa
     assert report["skipped_trade_count"] == 0
     assert report["additional_realism_penalty_points"] == 0.0
     assert report["realism_adjusted_net_pnl_points"] == report["execution_cost_impact"]["net_pnl_points"]
+    assert report["analytics_summary"]["average_realism_adjusted_net_pnl_points"] == report["analytics_summary"][
+        "average_net_pnl_points"
+    ]
     outcome = report["records"][0]["status_panel"]["memory_result"]["latest_trade_outcome"]
     assert "execution_realism_v2" not in outcome
 
@@ -251,6 +300,8 @@ def test_execution_realism_v2_enabled_adds_deterministic_penalties(tmp_path: Pat
     assert report["additional_realism_penalty_points"] == 0.3
     assert report["realism_adjusted_net_pnl_points"] == 0.5
     assert set(report["realism_v2_rules_applied"]) == {"latency_penalty", "spread_sensitive_slippage_multiplier"}
+    assert report["analytics_summary"]["average_net_pnl_points"] == 0.8
+    assert report["analytics_summary"]["average_realism_adjusted_net_pnl_points"] == 0.5
 
 
 def test_execution_realism_v2_no_fill_is_deterministic(tmp_path: Path) -> None:
@@ -356,6 +407,11 @@ def test_walk_forward_oos_summary_fields_are_present(tmp_path: Path) -> None:
         "total_oos_additional_realism_penalty_points",
         "oos_win_rate",
         "oos_max_drawdown",
+        "oos_expectancy_points",
+        "oos_profit_factor",
+        "oos_max_drawdown_points",
+        "oos_average_realism_adjusted_net_pnl_points",
+        "oos_analytics_summary",
         "per_cycle_summary",
     ):
         assert key in report
@@ -414,6 +470,34 @@ def test_walk_forward_remains_compatible_with_execution_realism_v2(tmp_path: Pat
             float(cycle["net_pnl_points"]) - float(cycle["additional_realism_penalty_points"]),
             3,
         )
+
+
+def test_walk_forward_oos_analytics_summary_is_additive_and_compatible(tmp_path: Path) -> None:
+    report = _evaluate_with_costs(
+        tmp_path,
+        pnls=[1.0] * 30,
+        spread=0.1,
+        commission=0.05,
+        slippage=0.02,
+        bars=5,
+        walk_forward_enabled=True,
+        walk_forward_context_bars=6,
+        walk_forward_test_bars=3,
+        walk_forward_step_bars=3,
+        csv_rows=16,
+        execution_realism_v2_enabled=True,
+        execution_latency_penalty_points=0.1,
+        execution_slippage_multiplier=2.0,
+    )
+    oos_analytics = report["oos_analytics_summary"]
+
+    assert oos_analytics["walk_forward_enabled"] is True
+    assert oos_analytics["closed_trade_count"] == report["total_oos_closed_trades"]
+    assert oos_analytics["win_rate"] == report["oos_win_rate"]
+    assert oos_analytics["average_realism_adjusted_net_pnl_points"] == report["oos_average_realism_adjusted_net_pnl_points"]
+    assert oos_analytics["expectancy_points"] == report["oos_expectancy_points"]
+    assert oos_analytics["profit_factor"] == report["oos_profit_factor"]
+    assert oos_analytics["max_drawdown_points"] == report["oos_max_drawdown_points"]
 
 
 def test_replay_isolation_keeps_repeated_runs_deterministic(tmp_path: Path) -> None:
