@@ -2361,8 +2361,7 @@ def _build_entry_exit_decision_contract(
             )
         ):
             derived_exit_rule = (
-                f"stop_loss_breached_exit: side={side or 'UNKNOWN'} price={current_price:.5f} "
-                f"stop_loss={sl_value:.5f}"
+                f"stop_loss_breached_exit: side={side or 'UNKNOWN'} price={current_price:.5f} stop_loss={sl_value:.5f}"
             )
         elif (
             current_price is not None
@@ -2373,8 +2372,7 @@ def _build_entry_exit_decision_contract(
             )
         ):
             derived_exit_rule = (
-                f"take_profit_reached_exit: side={side or 'UNKNOWN'} price={current_price:.5f} "
-                f"take_profit={tp_value:.5f}"
+                f"take_profit_reached_exit: side={side or 'UNKNOWN'} price={current_price:.5f} take_profit={tp_value:.5f}"
             )
         elif position_status == "open" and (
             side in {"BUY", "SELL", "LONG", "SHORT"}
