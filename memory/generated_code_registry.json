@@ -5039,6 +5039,69 @@
         "mode": "live",
         "snapshot_id": "snap_20260319221903489786"
       }
+    },
+    {
+      "timestamp": "2026-03-19T22:33:11.992309+00:00",
+      "artifact_type": "generated_rules",
+      "artifact_path": "/tmp/decision_contract_no_trade_memory_hlr5ijai/generated_rules.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "live",
+        "rule_count": 0,
+        "snapshot_id": "snap_20260319223311986410"
+      }
+    },
+    {
+      "timestamp": "2026-03-19T22:33:11.996336+00:00",
+      "artifact_type": "meta_adaptive_profile",
+      "artifact_path": "memory/meta_adaptive_profile.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "live",
+        "snapshot_id": "snap_20260319223311986410"
+      }
+    },
+    {
+      "timestamp": "2026-03-19T22:33:12.039897+00:00",
+      "artifact_type": "generated_rules",
+      "artifact_path": "/tmp/execution_gate_pipeline_blocked_q1r56oqv/generated_rules.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "live",
+        "rule_count": 0,
+        "snapshot_id": "snap_20260319223312033831"
+      }
+    },
+    {
+      "timestamp": "2026-03-19T22:33:12.044058+00:00",
+      "artifact_type": "meta_adaptive_profile",
+      "artifact_path": "memory/meta_adaptive_profile.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "live",
+        "snapshot_id": "snap_20260319223312033831"
+      }
+    },
+    {
+      "timestamp": "2026-03-19T22:33:12.078756+00:00",
+      "artifact_type": "generated_rules",
+      "artifact_path": "/tmp/execution_gate_pipeline_authorized_qav3pbk2/generated_rules.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "live",
+        "rule_count": 0,
+        "snapshot_id": "snap_20260319223312073114"
+      }
+    },
+    {
+      "timestamp": "2026-03-19T22:33:12.082805+00:00",
+      "artifact_type": "meta_adaptive_profile",
+      "artifact_path": "memory/meta_adaptive_profile.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "live",
+        "snapshot_id": "snap_20260319223312073114"
+      }
     }
   ],
   "schema_version": "v1"
