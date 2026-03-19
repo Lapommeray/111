@@ -1043,6 +1043,160 @@ def _normalize_mt5_position_side(*, mt5_module: Any, position_type: Any) -> str 
     return None
 
 
+def _normalize_mt5_order_side(*, mt5_module: Any, order_type: Any) -> str | None:
+    order_type_buy = getattr(mt5_module, "ORDER_TYPE_BUY", None)
+    order_type_sell = getattr(mt5_module, "ORDER_TYPE_SELL", None)
+    if order_type_buy is not None and order_type == order_type_buy:
+        return "BUY"
+    if order_type_sell is not None and order_type == order_type_sell:
+        return "SELL"
+    if order_type == 0:
+        return "BUY"
+    if order_type == 1:
+        return "SELL"
+    normalized = str(order_type).strip().upper()
+    if normalized in {"BUY", "SELL"}:
+        return normalized
+    return None
+
+
+def _verify_accepted_send_order_acknowledgement(
+    *,
+    mt5_module: Any,
+    sent_order_id: int,
+    symbol: str,
+    side: str,
+    volume: float,
+) -> dict[str, Any]:
+    lookup_sources = (
+        ("orders_get", getattr(mt5_module, "orders_get", None)),
+        ("history_orders_get", getattr(mt5_module, "history_orders_get", None)),
+    )
+    fail_closed = {
+        "order_acknowledged": False,
+        "order_ack_source": None,
+        "matched_order_ticket": None,
+        "matched_order_symbol": None,
+        "matched_order_side": None,
+        "matched_order_volume": None,
+        "order_symbol_match": None,
+        "order_side_match": None,
+        "order_volume_match": None,
+        "fail_closed_reason": "order_lookup_inconclusive",
+    }
+    lookup_callable_available = False
+    lookup_readable_available = False
+    readable_linkage_available = False
+    supporting_only_match_found = False
+    linkage_match_with_support_mismatch = False
+    candidates: list[dict[str, Any]] = []
+
+    for source_name, source_callable in lookup_sources:
+        if not callable(source_callable):
+            continue
+        lookup_callable_available = True
+        try:
+            source_result = source_callable()
+        except Exception:
+            continue
+        if source_result is None:
+            continue
+        try:
+            source_orders = list(source_result)
+        except Exception:
+            continue
+        lookup_readable_available = True
+        for order in source_orders:
+            linkage_matches: list[tuple[str, int]] = []
+            for field_name in ("ticket", "order"):
+                field_value = getattr(order, field_name, None)
+                if field_value is None:
+                    continue
+                try:
+                    linkage_value = int(field_value)
+                except Exception:
+                    continue
+                readable_linkage_available = True
+                if linkage_value == int(sent_order_id):
+                    linkage_matches.append((field_name, linkage_value))
+            order_symbol = str(getattr(order, "symbol", ""))
+            order_side = _normalize_mt5_order_side(
+                mt5_module=mt5_module,
+                order_type=getattr(order, "type", None),
+            )
+            order_volume = None
+            for volume_field_name in ("volume_current", "volume_initial", "volume"):
+                volume_value = getattr(order, volume_field_name, None)
+                if volume_value is None:
+                    continue
+                try:
+                    order_volume = float(volume_value)
+                    break
+                except Exception:
+                    continue
+            symbol_match = order_symbol == str(symbol)
+            side_match = order_side == str(side)
+            volume_match = order_volume is not None and order_volume == float(volume)
+            if symbol_match and side_match and volume_match and not linkage_matches:
+                supporting_only_match_found = True
+            if not linkage_matches:
+                continue
+            if not (symbol_match and side_match and volume_match):
+                linkage_match_with_support_mismatch = True
+                continue
+            linkage_field_used, linkage_value_matched = linkage_matches[0]
+            candidates.append(
+                {
+                    "source_name": source_name,
+                    "order": order,
+                    "linkage_field_used": linkage_field_used,
+                    "linkage_value_matched": linkage_value_matched,
+                    "matched_side": order_side,
+                    "matched_volume": order_volume,
+                    "symbol_match": symbol_match,
+                    "side_match": side_match,
+                    "volume_match": volume_match,
+                }
+            )
+
+    if len(candidates) == 1:
+        candidate = candidates[0]
+        matched_order = candidate["order"]
+        matched_ticket = getattr(matched_order, "ticket", None)
+        if matched_ticket is None:
+            matched_ticket = getattr(matched_order, "order", None)
+        try:
+            matched_ticket = int(matched_ticket) if matched_ticket is not None else None
+        except Exception:
+            matched_ticket = None
+        return {
+            **fail_closed,
+            "order_acknowledged": True,
+            "order_ack_source": candidate["source_name"],
+            "matched_order_ticket": matched_ticket,
+            "matched_order_symbol": str(getattr(matched_order, "symbol", "")),
+            "matched_order_side": candidate["matched_side"],
+            "matched_order_volume": candidate["matched_volume"],
+            "order_symbol_match": True,
+            "order_side_match": True,
+            "order_volume_match": True,
+            "fail_closed_reason": "",
+        }
+    if len(candidates) > 1:
+        return {**fail_closed, "fail_closed_reason": "non_unique_order_linkage_match"}
+    if not lookup_callable_available:
+        return {**fail_closed, "fail_closed_reason": "mt5_order_lookup_unavailable"}
+    if not lookup_readable_available:
+        return {**fail_closed, "fail_closed_reason": "mt5_order_lookup_unreadable"}
+    if not readable_linkage_available:
+        return {**fail_closed, "fail_closed_reason": "exact_order_linkage_unavailable_or_unreadable"}
+    if supporting_only_match_found:
+        return {**fail_closed, "fail_closed_reason": "order_supporting_metadata_only_match"}
+    if linkage_match_with_support_mismatch:
+        return {**fail_closed, "fail_closed_reason": "order_linkage_supporting_mismatch"}
+    return {**fail_closed, "fail_closed_reason": "exact_order_linkage_mismatch"}
+
+
 def _verify_accepted_send_position_linkage(
     *,
     sent_order_id: int,
@@ -1065,6 +1219,15 @@ def _verify_accepted_send_position_linkage(
         "symbol_match": None,
         "side_match": None,
         "volume_match": None,
+        "order_acknowledged": False,
+        "order_ack_source": None,
+        "matched_order_ticket": None,
+        "matched_order_symbol": None,
+        "matched_order_side": None,
+        "matched_order_volume": None,
+        "order_symbol_match": None,
+        "order_side_match": None,
+        "order_volume_match": None,
     }
     if int(sent_order_id or 0) <= 0:
         return {**fail_closed, "fail_closed_reason": "invalid_sent_order_id"}
@@ -1165,14 +1328,54 @@ def _verify_accepted_send_position_linkage(
                 "volume_match": True,
             }
         if len(candidates) > 1:
-            return {**fail_closed, "fail_closed_reason": "non_unique_linkage_match"}
-        if not readable_linkage_available:
-            return {**fail_closed, "fail_closed_reason": "linkage_field_unavailable_or_unreadable"}
-        if supporting_only_match_found:
-            return {**fail_closed, "fail_closed_reason": "supporting_metadata_only_match"}
-        if linkage_match_with_support_mismatch:
-            return {**fail_closed, "fail_closed_reason": "linkage_match_supporting_mismatch"}
-        return {**fail_closed, "fail_closed_reason": "exact_linkage_mismatch"}
+            position_fail_closed_reason = "non_unique_linkage_match"
+        elif not readable_linkage_available:
+            position_fail_closed_reason = "linkage_field_unavailable_or_unreadable"
+        elif supporting_only_match_found:
+            position_fail_closed_reason = "supporting_metadata_only_match"
+        elif linkage_match_with_support_mismatch:
+            position_fail_closed_reason = "linkage_match_supporting_mismatch"
+        else:
+            position_fail_closed_reason = "exact_linkage_mismatch"
+
+        order_ack_verification = _verify_accepted_send_order_acknowledgement(
+            mt5_module=mt5,
+            sent_order_id=int(sent_order_id),
+            symbol=symbol,
+            side=side,
+            volume=volume,
+        )
+        if bool(order_ack_verification.get("order_acknowledged", False)):
+            return {
+                **fail_closed,
+                "confirmation": "unconfirmed",
+                "broker_state_outcome": "accepted_send_order_acknowledged_position_unconfirmed",
+                "fail_closed_reason": position_fail_closed_reason,
+                "order_acknowledged": True,
+                "order_ack_source": order_ack_verification.get("order_ack_source"),
+                "matched_order_ticket": order_ack_verification.get("matched_order_ticket"),
+                "matched_order_symbol": order_ack_verification.get("matched_order_symbol"),
+                "matched_order_side": order_ack_verification.get("matched_order_side"),
+                "matched_order_volume": order_ack_verification.get("matched_order_volume"),
+                "order_symbol_match": order_ack_verification.get("order_symbol_match"),
+                "order_side_match": order_ack_verification.get("order_side_match"),
+                "order_volume_match": order_ack_verification.get("order_volume_match"),
+            }
+        return {
+            **fail_closed,
+            "fail_closed_reason": str(
+                order_ack_verification.get("fail_closed_reason") or position_fail_closed_reason
+            ),
+            "order_acknowledged": False,
+            "order_ack_source": order_ack_verification.get("order_ack_source"),
+            "matched_order_ticket": order_ack_verification.get("matched_order_ticket"),
+            "matched_order_symbol": order_ack_verification.get("matched_order_symbol"),
+            "matched_order_side": order_ack_verification.get("matched_order_side"),
+            "matched_order_volume": order_ack_verification.get("matched_order_volume"),
+            "order_symbol_match": order_ack_verification.get("order_symbol_match"),
+            "order_side_match": order_ack_verification.get("order_side_match"),
+            "order_volume_match": order_ack_verification.get("order_volume_match"),
+        }
     except Exception:
         return {**fail_closed, "fail_closed_reason": "broker_verification_unavailable"}
     finally:
