@@ -1136,7 +1136,7 @@ def _verify_partial_send_deal_quantity(
         readable_linkage_available = False
         supporting_only_match_found = False
         linkage_match_with_support_mismatch = False
-        candidates: list[dict[str, Any]] = []
+        linked_deals: list[dict[str, Any]] = []
         for deal in deals:
             linkage_value = getattr(deal, "order", None)
             if linkage_value is None:
@@ -1170,7 +1170,7 @@ def _verify_partial_send_deal_quantity(
             if not (symbol_match and side_match and volume_readable):
                 linkage_match_with_support_mismatch = True
                 continue
-            candidates.append(
+            linked_deals.append(
                 {
                     "deal": deal,
                     "linkage_field_used": "order",
@@ -1182,9 +1182,19 @@ def _verify_partial_send_deal_quantity(
                 }
             )
 
-        if len(candidates) == 1:
-            candidate = candidates[0]
-            filled_volume = float(candidate["matched_volume"])
+        if linked_deals:
+            if linkage_match_with_support_mismatch:
+                return {
+                    **fail_closed,
+                    "linked_deal_count": len(linked_deals),
+                    "linkage_field_used": "order",
+                    "linkage_value_matched": int(sent_order_id),
+                    "symbol_match": False,
+                    "side_match": False,
+                    "quantity_consistent": False,
+                    "fail_closed_reason": "linked_deal_supporting_mismatch",
+                }
+            filled_volume = float(sum(float(deal["matched_volume"]) for deal in linked_deals))
             remaining_volume = float(requested_volume) - filled_volume
             quantity_consistent = (
                 filled_volume > 0.0 and filled_volume < float(requested_volume) and remaining_volume >= 0.0
@@ -1192,11 +1202,11 @@ def _verify_partial_send_deal_quantity(
             if not quantity_consistent:
                 return {
                     **fail_closed,
-                    "linked_deal_count": 1,
-                    "linkage_field_used": candidate["linkage_field_used"],
-                    "linkage_value_matched": candidate["linkage_value_matched"],
-                    "matched_symbol": str(getattr(candidate["deal"], "symbol", "")),
-                    "matched_side": candidate["matched_side"],
+                    "linked_deal_count": len(linked_deals),
+                    "linkage_field_used": "order",
+                    "linkage_value_matched": int(sent_order_id),
+                    "matched_symbol": str(symbol),
+                    "matched_side": str(side),
                     "symbol_match": True,
                     "side_match": True,
                     "quantity_consistent": False,
@@ -1208,19 +1218,17 @@ def _verify_partial_send_deal_quantity(
                 "partial_outcome_quantity_truth": "broker_confirmed_partial_quantity",
                 "broker_quantity_outcome": "partial_quantity_confirmed_from_linked_deal",
                 "fail_closed_reason": "",
-                "linked_deal_count": 1,
-                "linkage_field_used": candidate["linkage_field_used"],
-                "linkage_value_matched": candidate["linkage_value_matched"],
-                "matched_symbol": str(getattr(candidate["deal"], "symbol", "")),
-                "matched_side": candidate["matched_side"],
+                "linked_deal_count": len(linked_deals),
+                "linkage_field_used": "order",
+                "linkage_value_matched": int(sent_order_id),
+                "matched_symbol": str(symbol),
+                "matched_side": str(side),
                 "filled_volume": filled_volume,
                 "remaining_volume": remaining_volume,
                 "symbol_match": True,
                 "side_match": True,
                 "quantity_consistent": True,
             }
-        if len(candidates) > 1:
-            return {**fail_closed, "fail_closed_reason": "non_unique_linked_deal_match"}
         if not readable_linkage_available:
             return {**fail_closed, "fail_closed_reason": "linked_deal_order_field_unavailable_or_unreadable"}
         if supporting_only_match_found:

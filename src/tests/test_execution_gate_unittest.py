@@ -277,6 +277,69 @@ class _MT5PartialWithLinkedDealStub(_MT5PartialStub):
         ]
 
 
+class _MT5PartialWithMultipleLinkedDealsStub(_MT5PartialStub):
+    DEAL_TYPE_BUY = 0
+    DEAL_TYPE_SELL = 1
+
+    def history_deals_get(self) -> list[object]:
+        return [
+            _Deal(
+                order=43,
+                symbol="XAUUSD",
+                type_value=self.DEAL_TYPE_BUY,
+                volume=0.004,
+            ),
+            _Deal(
+                order=43,
+                symbol="XAUUSD",
+                type_value=self.DEAL_TYPE_BUY,
+                volume=0.003,
+            ),
+        ]
+
+
+class _MT5PartialWithLinkedDealSupportingMismatchStub(_MT5PartialStub):
+    DEAL_TYPE_BUY = 0
+    DEAL_TYPE_SELL = 1
+
+    def history_deals_get(self) -> list[object]:
+        return [
+            _Deal(
+                order=43,
+                symbol="XAUUSD",
+                type_value=self.DEAL_TYPE_BUY,
+                volume=0.004,
+            ),
+            _Deal(
+                order=43,
+                symbol="EURUSD",
+                type_value=self.DEAL_TYPE_BUY,
+                volume=0.003,
+            ),
+        ]
+
+
+class _MT5PartialWithLinkedDealQuantityInconsistentStub(_MT5PartialStub):
+    DEAL_TYPE_BUY = 0
+    DEAL_TYPE_SELL = 1
+
+    def history_deals_get(self) -> list[object]:
+        return [
+            _Deal(
+                order=43,
+                symbol="XAUUSD",
+                type_value=self.DEAL_TYPE_BUY,
+                volume=0.006,
+            ),
+            _Deal(
+                order=43,
+                symbol="XAUUSD",
+                type_value=self.DEAL_TYPE_BUY,
+                volume=0.005,
+            ),
+        ]
+
+
 class _MT5PartialWithPositionsOnlyStub(_MT5PartialStub):
     POSITION_TYPE_BUY = 0
     POSITION_TYPE_SELL = 1
@@ -733,6 +796,108 @@ class TestExecutionGateSemantics(unittest.TestCase):
         )
         self.assertEqual(controlled_execution["open_position_state"]["filled_volume"], 0.004)
         self.assertEqual(controlled_execution["open_position_state"]["remaining_volume"], 0.006)
+
+    def test_partial_fill_aggregates_exact_linked_broker_deal_quantities_strictly(self) -> None:
+        memory_root = self._mkdtemp(prefix="execution_gate_partial_linked_multi_deal_")
+        kwargs = _base_kwargs(memory_root)
+        kwargs["controlled_mt5_readiness"] = {
+            **dict(kwargs["controlled_mt5_readiness"]),
+            "live_execution_blocked": False,
+            "order_execution_enabled": True,
+            "execution_refused": False,
+            "execution_gate": "live_authorized_controlled_execution",
+        }
+        kwargs["mt5_module"] = _MT5PartialWithMultipleLinkedDealsStub()
+        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "partial")
+        self.assertEqual(
+            controlled_execution["order_result"]["partial_outcome_quantity_truth"],
+            "broker_confirmed_partial_quantity",
+        )
+        self.assertEqual(controlled_execution["order_result"]["filled_volume"], 0.007)
+        self.assertEqual(controlled_execution["order_result"]["remaining_volume"], 0.003)
+        self.assertEqual(
+            controlled_execution["order_result"]["partial_quantity_verification"]["confirmation"],
+            "confirmed",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["partial_quantity_verification"]["linked_deal_count"],
+            2,
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["partial_quantity_verification"]["linkage_field_used"],
+            "order",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["partial_quantity_verification"]["linkage_value_matched"],
+            43,
+        )
+        self.assertEqual(
+            controlled_execution["open_position_state"]["partial_outcome_quantity_truth"],
+            "broker_confirmed_partial_quantity",
+        )
+        self.assertEqual(controlled_execution["open_position_state"]["filled_volume"], 0.007)
+        self.assertEqual(controlled_execution["open_position_state"]["remaining_volume"], 0.003)
+
+    def test_partial_fill_multi_deal_fails_closed_on_any_linked_deal_supporting_mismatch(self) -> None:
+        memory_root = self._mkdtemp(prefix="execution_gate_partial_linked_multi_deal_mismatch_")
+        kwargs = _base_kwargs(memory_root)
+        kwargs["controlled_mt5_readiness"] = {
+            **dict(kwargs["controlled_mt5_readiness"]),
+            "live_execution_blocked": False,
+            "order_execution_enabled": True,
+            "execution_refused": False,
+            "execution_gate": "live_authorized_controlled_execution",
+        }
+        kwargs["mt5_module"] = _MT5PartialWithLinkedDealSupportingMismatchStub()
+        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "partial")
+        self.assertIsNone(controlled_execution["order_result"]["filled_volume"])
+        self.assertIsNone(controlled_execution["order_result"]["remaining_volume"])
+        self.assertEqual(
+            controlled_execution["order_result"]["partial_outcome_quantity_truth"],
+            "unresolved",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["partial_quantity_verification"]["fail_closed_reason"],
+            "linked_deal_supporting_mismatch",
+        )
+        self.assertEqual(
+            controlled_execution["open_position_state"]["partial_outcome_quantity_truth"],
+            "unresolved",
+        )
+        self.assertIsNone(controlled_execution["open_position_state"]["filled_volume"])
+        self.assertIsNone(controlled_execution["open_position_state"]["remaining_volume"])
+
+    def test_partial_fill_multi_deal_fails_closed_on_aggregated_quantity_inconsistency(self) -> None:
+        memory_root = self._mkdtemp(prefix="execution_gate_partial_linked_multi_deal_inconsistent_")
+        kwargs = _base_kwargs(memory_root)
+        kwargs["controlled_mt5_readiness"] = {
+            **dict(kwargs["controlled_mt5_readiness"]),
+            "live_execution_blocked": False,
+            "order_execution_enabled": True,
+            "execution_refused": False,
+            "execution_gate": "live_authorized_controlled_execution",
+        }
+        kwargs["mt5_module"] = _MT5PartialWithLinkedDealQuantityInconsistentStub()
+        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "partial")
+        self.assertIsNone(controlled_execution["order_result"]["filled_volume"])
+        self.assertIsNone(controlled_execution["order_result"]["remaining_volume"])
+        self.assertEqual(
+            controlled_execution["order_result"]["partial_outcome_quantity_truth"],
+            "unresolved",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["partial_quantity_verification"]["fail_closed_reason"],
+            "linked_deal_quantity_inconsistent",
+        )
+        self.assertEqual(
+            controlled_execution["open_position_state"]["partial_outcome_quantity_truth"],
+            "unresolved",
+        )
+        self.assertIsNone(controlled_execution["open_position_state"]["filled_volume"])
+        self.assertIsNone(controlled_execution["open_position_state"]["remaining_volume"])
 
     def test_partial_fill_with_positions_only_fails_closed_unresolved_without_deal_truth(self) -> None:
         memory_root = self._mkdtemp(prefix="execution_gate_partial_positions_only_")
