@@ -375,7 +375,7 @@ def validate_runtime_config(config: RuntimeConfig) -> None:
     if config.max_anomaly_clusters <= 0:
         raise ValueError("max_anomaly_clusters must be > 0")
     if config.signal_max_age_seconds <= 0:
-        raise ValueError("signal_max_age_seconds must be greater than 0")
+        raise ValueError("signal_max_age_seconds must be > 0")
 
 
 def load_bars_from_csv(csv_path: Path, bars: int) -> list[dict[str, Any]]:
@@ -487,7 +487,7 @@ def _evaluate_signal_lifecycle(
         age_basis = "none"
     future_timestamp = source_ts is not None and source_ts > execution_ts
     if future_timestamp:
-        # Cannot compute age for future-dated signal timestamps.
+        # Cannot compute age for signals with timestamps in the future.
         signal_age_seconds = None
     else:
         signal_age_seconds = (execution_ts - source_ts) if source_ts is not None else None
