@@ -22,6 +22,11 @@ class _PartialResult:
     order = 43
 
 
+class _RequoteResult:
+    retcode = 102
+    order = 44
+
+
 class _MT5AcceptedStub:
     TRADE_RETCODE_DONE = 100
 
@@ -44,6 +49,20 @@ class _MT5PartialStub:
 
     def order_send(self, _request: dict[str, object]) -> object:
         return _PartialResult()
+
+    def shutdown(self) -> None:
+        return None
+
+
+class _MT5RequoteStub:
+    TRADE_RETCODE_DONE = 100
+    TRADE_RETCODE_REQUOTE = 102
+
+    def initialize(self) -> bool:
+        return True
+
+    def order_send(self, _request: dict[str, object]) -> object:
+        return _RequoteResult()
 
     def shutdown(self) -> None:
         return None
@@ -179,6 +198,30 @@ class TestExecutionGateSemantics(unittest.TestCase):
         self.assertEqual(controlled_execution["order_result"]["order_id"], 43)
         self.assertIn(
             "mt5_partial_fill_unreconciled",
+            controlled_execution["rollback_refusal_reasons"],
+        )
+
+    def test_requote_retcode_reported_as_unretried_requote(self) -> None:
+        memory_root = self._mkdtemp(prefix="execution_gate_requote_")
+        kwargs = _base_kwargs(memory_root)
+        kwargs["controlled_mt5_readiness"] = {
+            **dict(kwargs["controlled_mt5_readiness"]),
+            "live_execution_blocked": False,
+            "order_execution_enabled": True,
+            "execution_refused": False,
+            "execution_gate": "live_authorized_controlled_execution",
+        }
+        kwargs["mt5_module"] = _MT5RequoteStub()
+        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "requote")
+        self.assertTrue(controlled_execution["order_result"]["order_sent"])
+        self.assertEqual(
+            controlled_execution["order_result"]["error_reason"],
+            "mt5_requote_unretried",
+        )
+        self.assertEqual(controlled_execution["order_result"]["order_id"], 44)
+        self.assertIn(
+            "mt5_requote_unretried",
             controlled_execution["rollback_refusal_reasons"],
         )
 

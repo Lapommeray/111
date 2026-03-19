@@ -897,6 +897,7 @@ def _place_controlled_mt5_order(
         retcode = getattr(result, "retcode", None)
         retcode_done = getattr(mt5, "TRADE_RETCODE_DONE", None)
         retcode_done_partial = getattr(mt5, "TRADE_RETCODE_DONE_PARTIAL", None)
+        retcode_requote = getattr(mt5, "TRADE_RETCODE_REQUOTE", None)
         if retcode_done is not None and retcode == retcode_done:
             return {
                 "status": "accepted",
@@ -910,6 +911,14 @@ def _place_controlled_mt5_order(
                 "status": "partial",
                 "order_sent": True,
                 "error_reason": "mt5_partial_fill_unreconciled",
+                "retcode": retcode,
+                "order_id": int(getattr(result, "order", 0) or 0),
+            }
+        if retcode_requote is not None and retcode == retcode_requote:
+            return {
+                "status": "requote",
+                "order_sent": True,
+                "error_reason": "mt5_requote_unretried",
                 "retcode": retcode,
                 "order_id": int(getattr(result, "order", 0) or 0),
             }
