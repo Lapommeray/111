@@ -48,6 +48,14 @@ SUPPORTED_TIMEFRAMES = {"M1", "M5", "M15", "H1", "H4"}
 SUPPORTED_MODES = {"live", "replay"}
 SUPPORTED_REPLAY_SOURCES = {"csv", "memory"}
 MIN_TRADE_VOLUME = 0.01
+TRANSIENT_RETRY_ELIGIBLE_STATUSES = frozenset(
+    {
+        "requote",
+        "price_changed",
+        "price_off",
+        "too_many_requests",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -896,11 +904,114 @@ def _place_controlled_mt5_order(
         result = order_send(order_request)
         retcode = getattr(result, "retcode", None)
         retcode_done = getattr(mt5, "TRADE_RETCODE_DONE", None)
+        retcode_done_partial = getattr(mt5, "TRADE_RETCODE_DONE_PARTIAL", None)
+        retcode_requote = getattr(mt5, "TRADE_RETCODE_REQUOTE", None)
+        retcode_price_changed = getattr(mt5, "TRADE_RETCODE_PRICE_CHANGED", None)
+        retcode_no_money = getattr(mt5, "TRADE_RETCODE_NO_MONEY", None)
+        retcode_market_closed = getattr(mt5, "TRADE_RETCODE_MARKET_CLOSED", None)
+        retcode_trade_disabled = getattr(mt5, "TRADE_RETCODE_TRADE_DISABLED", None)
+        retcode_invalid_volume = getattr(mt5, "TRADE_RETCODE_INVALID_VOLUME", None)
+        retcode_invalid_stops = getattr(mt5, "TRADE_RETCODE_INVALID_STOPS", None)
+        retcode_price_off = getattr(mt5, "TRADE_RETCODE_PRICE_OFF", None)
+        retcode_too_many_requests = getattr(mt5, "TRADE_RETCODE_TOO_MANY_REQUESTS", None)
+        retcode_invalid_price = getattr(mt5, "TRADE_RETCODE_INVALID_PRICE", None)
         if retcode_done is not None and retcode == retcode_done:
             return {
                 "status": "accepted",
                 "order_sent": True,
                 "error_reason": "",
+                "retcode": retcode,
+                "order_id": int(getattr(result, "order", 0) or 0),
+            }
+        if retcode_done_partial is not None and retcode == retcode_done_partial:
+            return {
+                "status": "partial",
+                "order_sent": True,
+                "error_reason": "mt5_partial_fill_unreconciled",
+                "retcode": retcode,
+                "order_id": int(getattr(result, "order", 0) or 0),
+                "requested_volume": float(order_request.get("volume", 0.0)),
+                "filled_volume": None,
+                "remaining_volume": None,
+                "partial_outcome_quantity_truth": "unresolved",
+            }
+        if retcode_requote is not None and retcode == retcode_requote:
+            return {
+                "status": "requote",
+                "order_sent": True,
+                "error_reason": "mt5_requote_unretried",
+                "retcode": retcode,
+                "order_id": int(getattr(result, "order", 0) or 0),
+            }
+        if retcode_price_changed is not None and retcode == retcode_price_changed:
+            return {
+                "status": "price_changed",
+                "order_sent": True,
+                "error_reason": "mt5_price_changed_unretried",
+                "retcode": retcode,
+                "order_id": int(getattr(result, "order", 0) or 0),
+            }
+        if retcode_no_money is not None and retcode == retcode_no_money:
+            return {
+                "status": "insufficient_margin",
+                "order_sent": True,
+                "error_reason": "mt5_no_money",
+                "retcode": retcode,
+                "order_id": int(getattr(result, "order", 0) or 0),
+            }
+        if retcode_market_closed is not None and retcode == retcode_market_closed:
+            return {
+                "status": "market_closed",
+                "order_sent": True,
+                "error_reason": "mt5_market_closed",
+                "retcode": retcode,
+                "order_id": int(getattr(result, "order", 0) or 0),
+            }
+        if retcode_trade_disabled is not None and retcode == retcode_trade_disabled:
+            return {
+                "status": "trade_disabled",
+                "order_sent": True,
+                "error_reason": "mt5_trade_disabled",
+                "retcode": retcode,
+                "order_id": int(getattr(result, "order", 0) or 0),
+            }
+        if retcode_invalid_volume is not None and retcode == retcode_invalid_volume:
+            return {
+                "status": "invalid_volume",
+                "order_sent": True,
+                "error_reason": "mt5_invalid_volume",
+                "retcode": retcode,
+                "order_id": int(getattr(result, "order", 0) or 0),
+            }
+        if retcode_invalid_stops is not None and retcode == retcode_invalid_stops:
+            return {
+                "status": "invalid_stops",
+                "order_sent": True,
+                "error_reason": "mt5_invalid_stops",
+                "retcode": retcode,
+                "order_id": int(getattr(result, "order", 0) or 0),
+            }
+        if retcode_price_off is not None and retcode == retcode_price_off:
+            return {
+                "status": "price_off",
+                "order_sent": True,
+                "error_reason": "mt5_price_off",
+                "retcode": retcode,
+                "order_id": int(getattr(result, "order", 0) or 0),
+            }
+        if retcode_too_many_requests is not None and retcode == retcode_too_many_requests:
+            return {
+                "status": "too_many_requests",
+                "order_sent": True,
+                "error_reason": "mt5_too_many_requests",
+                "retcode": retcode,
+                "order_id": int(getattr(result, "order", 0) or 0),
+            }
+        if retcode_invalid_price is not None and retcode == retcode_invalid_price:
+            return {
+                "status": "invalid_price",
+                "order_sent": True,
+                "error_reason": "mt5_invalid_price",
                 "retcode": retcode,
                 "order_id": int(getattr(result, "order", 0) or 0),
             }
@@ -913,6 +1024,24 @@ def _place_controlled_mt5_order(
         }
     finally:
         mt5.shutdown()
+
+
+def _build_retry_metadata(*, order_result: dict[str, Any]) -> dict[str, Any]:
+    status = str(order_result.get("status") or "").strip().lower()
+    order_sent = bool(order_result.get("order_sent", False))
+    retry_eligible = bool(order_sent and status in TRANSIENT_RETRY_ELIGIBLE_STATUSES)
+    retry_eligibility_reason = (
+        "transient_non_accepted_send_outcome"
+        if retry_eligible
+        else ("no_order_send_attempt" if not order_sent else "non_transient_non_accepted_send_outcome")
+    )
+    return {
+        "retry_eligible": retry_eligible,
+        "retry_attempted_count": 0,
+        "retry_policy": "not_implemented",
+        "retry_policy_truth": "no_retry_policy_implemented",
+        "retry_eligibility_reason": retry_eligibility_reason,
+    }
 
 
 def _run_controlled_mt5_live_execution(
@@ -1028,11 +1157,17 @@ def _run_controlled_mt5_live_execution(
 
     if rejection_reasons:
         rollback_reasons = sorted(set(rejection_reasons))
+        order_sent = bool(order_result.get("order_sent", False))
         order_result = {
             **order_result,
             "status": order_result.get("status", "refused"),
-            "order_sent": bool(order_result.get("order_sent", False)),
+            "order_sent": order_sent,
             "rejection_reason": rollback_reasons[0],
+            "broker_state_confirmation": "unconfirmed" if order_sent else "not_applicable",
+            "broker_state_outcome": (
+                "unconfirmed_non_accepted_send_outcome" if order_sent else "no_order_send_attempt"
+            ),
+            **_build_retry_metadata(order_result=order_result),
         }
     else:
         order_result = {
@@ -1040,6 +1175,8 @@ def _run_controlled_mt5_live_execution(
             "status": "accepted",
             "order_sent": True,
             "rejection_reason": "",
+            "broker_state_confirmation": "unconfirmed",
+            "broker_state_outcome": "accepted_send_unreconciled",
         }
 
     is_live_trade_attempt = mode == "live" and decision in {"BUY", "SELL"}
@@ -1053,8 +1190,9 @@ def _run_controlled_mt5_live_execution(
     if consecutive_failed >= 3:
         rollback_reasons = sorted(set(rollback_reasons + ["auto_stop_triggered_repeated_failures"]))
 
-    open_position_state = (
-        {
+    order_status = str(order_result.get("status") or "")
+    if order_status == "accepted":
+        open_position_state = {
             "status": "open",
             "position_id": int(order_result.get("order_id", 0) or 0),
             "symbol": symbol,
@@ -1062,9 +1200,35 @@ def _run_controlled_mt5_live_execution(
             "entry_price": float(order_request.get("price", 0.0)),
             "stop_loss": stop_loss_take_profit["stop_loss"],
             "take_profit": stop_loss_take_profit["take_profit"],
+            "broker_position_confirmation": "unconfirmed",
+            "position_state_outcome": "assumed_open_from_accepted_send_unreconciled",
         }
-        if order_result.get("status") == "accepted"
-        else {
+        exit_decision = {
+            "decision": "hold_open_position",
+            "reason": "assumed_open_position_from_accepted_send_unreconciled",
+        }
+    elif order_status == "partial":
+        open_position_state = {
+            "status": "partial_exposure_unresolved",
+            "position_id": None,
+            "symbol": symbol,
+            "side": decision,
+            "entry_price": None,
+            "stop_loss": stop_loss_take_profit["stop_loss"],
+            "take_profit": stop_loss_take_profit["take_profit"],
+            "broker_position_confirmation": "unconfirmed",
+            "position_state_outcome": "partial_fill_exposure_unresolved",
+            "requested_volume": float(order_result.get("requested_volume", order_request.get("volume", 0.0))),
+            "filled_volume": order_result.get("filled_volume"),
+            "remaining_volume": order_result.get("remaining_volume"),
+            "partial_outcome_quantity_truth": "unresolved",
+        }
+        exit_decision = {
+            "decision": "defer_exit_partial_exposure_unresolved",
+            "reason": "partial_fill_exposure_unresolved",
+        }
+    else:
+        open_position_state = {
             "status": "flat",
             "position_id": None,
             "symbol": symbol,
@@ -1072,19 +1236,31 @@ def _run_controlled_mt5_live_execution(
             "entry_price": None,
             "stop_loss": None,
             "take_profit": None,
+            "broker_position_confirmation": "not_applicable",
+            "position_state_outcome": "no_open_position_state",
         }
-    )
-    exit_decision = (
-        {"decision": "hold_open_position", "reason": "position_active_under_governed_controls"}
+        exit_decision = {"decision": "no_position_exit", "reason": "no_open_position"}
+
+    pnl_position_open = (
+        True
         if open_position_state["status"] == "open"
-        else {"decision": "no_position_exit", "reason": "no_open_position"}
+        else None if open_position_state["status"] == "partial_exposure_unresolved" else False
     )
     pnl_snapshot = {
         "timestamp": datetime.now(tz=timezone.utc).isoformat(),
         "symbol": symbol,
         "realized_pnl": 0.0,
         "unrealized_pnl": 0.0,
-        "position_open": open_position_state["status"] == "open",
+        "position_open": pnl_position_open,
+        "position_open_truth": (
+            "assumed_from_accepted_send_unreconciled"
+            if open_position_state["status"] == "open"
+            else (
+                "partial_fill_exposure_unresolved"
+                if open_position_state["status"] == "partial_exposure_unresolved"
+                else "not_applicable"
+            )
+        ),
     }
     failure_classification = (
         _classify_mt5_execution_failure(rollback_reasons) if rollback_reasons else "none"

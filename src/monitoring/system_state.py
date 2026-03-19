@@ -65,10 +65,39 @@ def update_system_monitor_state(
         system_health = "degraded"
 
     open_position = dict(controlled_execution.get("open_position_state", {}))
+    position_status = str(open_position.get("status", "")).lower()
+    broker_position_confirmation = str(open_position.get("broker_position_confirmation", "")).lower()
+    position_state_outcome = str(open_position.get("position_state_outcome", "")).lower()
+    partial_exposure_unresolved = (
+        position_status == "partial_exposure_unresolved"
+        or position_state_outcome == "partial_fill_exposure_unresolved"
+    )
+    assumed_open_position = position_status == "open"
+    broker_verified_open_position = (
+        assumed_open_position and broker_position_confirmation == "confirmed"
+    )
     system_state = {
         "current_position": open_position,
+        "assumed_open_position": assumed_open_position,
+        "broker_verified_open_position": broker_verified_open_position,
+        "open_position_truth": (
+            "broker_verified_open_position"
+            if broker_verified_open_position
+            else (
+                "assumed_unverified_open_position"
+                if assumed_open_position
+                else (
+                    "partial_exposure_unresolved"
+                    if partial_exposure_unresolved
+                    else "no_open_position"
+                )
+            )
+        ),
+        "partial_exposure_unresolved": partial_exposure_unresolved,
+        "open_position_state_outcome": position_state_outcome,
+        "open_position_broker_confirmation": broker_position_confirmation,
         "open_orders": [controlled_execution.get("order_request", {})]
-        if open_position.get("status") == "open"
+        if broker_verified_open_position
         else [],
         "last_trades": existing_trades[-5:],
         "win_rate": performance_metrics["win_rate"],
