@@ -4787,69 +4787,6 @@
         "mode": "live",
         "snapshot_id": "snap_20260319063312975385"
       }
-    },
-    {
-      "timestamp": "2026-03-19T06:44:07.889052+00:00",
-      "artifact_type": "generated_rules",
-      "artifact_path": "/tmp/execution_gate_pipeline_blocked_2l7rpvzi/generated_rules.json",
-      "metadata": {
-        "symbol": "XAUUSD",
-        "mode": "live",
-        "rule_count": 0,
-        "snapshot_id": "snap_20260319064407883274"
-      }
-    },
-    {
-      "timestamp": "2026-03-19T06:44:07.892751+00:00",
-      "artifact_type": "meta_adaptive_profile",
-      "artifact_path": "memory/meta_adaptive_profile.json",
-      "metadata": {
-        "symbol": "XAUUSD",
-        "mode": "live",
-        "snapshot_id": "snap_20260319064407883274"
-      }
-    },
-    {
-      "timestamp": "2026-03-19T06:44:07.928102+00:00",
-      "artifact_type": "generated_rules",
-      "artifact_path": "/tmp/execution_gate_pipeline_authorized_lue7pbvt/generated_rules.json",
-      "metadata": {
-        "symbol": "XAUUSD",
-        "mode": "live",
-        "rule_count": 0,
-        "snapshot_id": "snap_20260319064407921032"
-      }
-    },
-    {
-      "timestamp": "2026-03-19T06:44:07.931873+00:00",
-      "artifact_type": "meta_adaptive_profile",
-      "artifact_path": "memory/meta_adaptive_profile.json",
-      "metadata": {
-        "symbol": "XAUUSD",
-        "mode": "live",
-        "snapshot_id": "snap_20260319064407921032"
-      }
-    },
-    {
-      "timestamp": "2026-03-19T06:44:43.386980+00:00",
-      "artifact_type": "generated_rules",
-      "artifact_path": "memory/generated_rules.json",
-      "metadata": {
-        "symbol": "XAUUSD",
-        "mode": "live",
-        "rule_count": 0,
-        "snapshot_id": "snap_20260319064443368093"
-      }
-    },
-    {
-      "timestamp": "2026-03-19T06:44:43.391464+00:00",
-      "artifact_type": "meta_adaptive_profile",
-      "artifact_path": "memory/meta_adaptive_profile.json",
-      "metadata": {
-        "symbol": "XAUUSD",
-        "mode": "live",
-        "snapshot_id": "snap_20260319064443368093"
-      }
     }
   ],
   "schema_version": "v1"

@@ -1,8 +1,0 @@
-{
-  "consecutive_failed_executions": 0,
-  "auto_stop_active": false,
-  "last_failure_reasons": [
-    "no_trade_signal"
-  ],
-  "total_execution_attempts": 0
-}

@@ -5,29 +5,5 @@
     "result": "unknown",
     "pnl_points": 0.0
   },
-  "feature_attribution": {
-    "compression_expansion": 0.0,
-    "conflict_filter": 0.0,
-    "displacement": 0.0,
-    "execution_quality": 0.0,
-    "fvg": 0.0,
-    "human_lag_exploit": 0.0,
-    "invisible_data_miner": 0.0,
-    "liquidity_sweep": 0.0,
-    "market_regime": 0.0,
-    "memory_filter": 0.0,
-    "meta_adaptive_ai": 0.0,
-    "meta_conscious_routing": 0.0,
-    "quantum_tremor_scanner": 0.0,
-    "regime_score": 0.0,
-    "self_destruct_protocol": 0.0,
-    "session_behavior": 0.0,
-    "session_filter": 0.0,
-    "sessions": 0.0,
-    "setup_score": 0.0,
-    "spectral_signal_fusion": 0.0,
-    "spread_filter": 0.0,
-    "spread_state": 0.0,
-    "volatility": 0.0
-  }
+  "feature_attribution": {}
 }

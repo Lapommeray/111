@@ -18,25 +18,6 @@
           "replay_validation_pending"
         ]
       }
-    },
-    {
-      "candidate_id": "561c388e9f4fc6b4",
-      "trade_id": "",
-      "mutation_type": "feature_weight_adjustment",
-      "weak_features": [],
-      "mutation_score": 0.38,
-      "replay_validation": {
-        "required": true,
-        "scope": "recent_live_window",
-        "passed": false
-      },
-      "governance": {
-        "promotion_state": "pending",
-        "quarantine_required": false,
-        "refusal_reasons": [
-          "replay_validation_pending"
-        ]
-      }
     }
   ]
 }
