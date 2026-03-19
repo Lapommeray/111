@@ -359,17 +359,44 @@ class TestExecutionGateSemantics(unittest.TestCase):
             "unconfirmed_non_accepted_send_outcome",
         )
         self.assertEqual(controlled_execution["order_result"]["order_id"], 43)
+        self.assertEqual(controlled_execution["order_result"]["requested_volume"], 0.01)
+        self.assertIsNone(controlled_execution["order_result"]["filled_volume"])
+        self.assertIsNone(controlled_execution["order_result"]["remaining_volume"])
+        self.assertEqual(
+            controlled_execution["order_result"]["partial_outcome_quantity_truth"],
+            "unresolved",
+        )
         self.assertEqual(
             controlled_execution["open_position_state"]["broker_position_confirmation"],
-            "not_applicable",
+            "unconfirmed",
+        )
+        self.assertEqual(
+            controlled_execution["open_position_state"]["status"],
+            "partial_exposure_unresolved",
         )
         self.assertEqual(
             controlled_execution["open_position_state"]["position_state_outcome"],
-            "no_open_position_state",
+            "partial_fill_exposure_unresolved",
         )
+        self.assertEqual(controlled_execution["open_position_state"]["requested_volume"], 0.01)
+        self.assertIsNone(controlled_execution["open_position_state"]["filled_volume"])
+        self.assertIsNone(controlled_execution["open_position_state"]["remaining_volume"])
+        self.assertEqual(
+            controlled_execution["open_position_state"]["partial_outcome_quantity_truth"],
+            "unresolved",
+        )
+        self.assertEqual(controlled_execution["pnl_snapshot"]["position_open"], None)
         self.assertEqual(
             controlled_execution["pnl_snapshot"]["position_open_truth"],
-            "not_applicable",
+            "partial_fill_exposure_unresolved",
+        )
+        self.assertEqual(
+            controlled_execution["exit_decision"]["decision"],
+            "defer_exit_partial_exposure_unresolved",
+        )
+        self.assertEqual(
+            controlled_execution["exit_decision"]["reason"],
+            "partial_fill_exposure_unresolved",
         )
         self.assertIn(
             "mt5_partial_fill_unreconciled",

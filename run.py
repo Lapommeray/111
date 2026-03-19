@@ -922,6 +922,10 @@ def _place_controlled_mt5_order(
                 "error_reason": "mt5_partial_fill_unreconciled",
                 "retcode": retcode,
                 "order_id": int(getattr(result, "order", 0) or 0),
+                "requested_volume": float(order_request.get("volume", 0.0)),
+                "filled_volume": None,
+                "remaining_volume": None,
+                "partial_outcome_quantity_truth": "unresolved",
             }
         if retcode_requote is not None and retcode == retcode_requote:
             return {
@@ -1159,8 +1163,9 @@ def _run_controlled_mt5_live_execution(
     if consecutive_failed >= 3:
         rollback_reasons = sorted(set(rollback_reasons + ["auto_stop_triggered_repeated_failures"]))
 
-    open_position_state = (
-        {
+    order_status = str(order_result.get("status") or "")
+    if order_status == "accepted":
+        open_position_state = {
             "status": "open",
             "position_id": int(order_result.get("order_id", 0) or 0),
             "symbol": symbol,
@@ -1171,8 +1176,32 @@ def _run_controlled_mt5_live_execution(
             "broker_position_confirmation": "unconfirmed",
             "position_state_outcome": "assumed_open_from_accepted_send_unreconciled",
         }
-        if order_result.get("status") == "accepted"
-        else {
+        exit_decision = {
+            "decision": "hold_open_position",
+            "reason": "assumed_open_position_from_accepted_send_unreconciled",
+        }
+    elif order_status == "partial":
+        open_position_state = {
+            "status": "partial_exposure_unresolved",
+            "position_id": None,
+            "symbol": symbol,
+            "side": decision,
+            "entry_price": None,
+            "stop_loss": stop_loss_take_profit["stop_loss"],
+            "take_profit": stop_loss_take_profit["take_profit"],
+            "broker_position_confirmation": "unconfirmed",
+            "position_state_outcome": "partial_fill_exposure_unresolved",
+            "requested_volume": float(order_result.get("requested_volume", order_request.get("volume", 0.0))),
+            "filled_volume": order_result.get("filled_volume"),
+            "remaining_volume": order_result.get("remaining_volume"),
+            "partial_outcome_quantity_truth": "unresolved",
+        }
+        exit_decision = {
+            "decision": "defer_exit_partial_exposure_unresolved",
+            "reason": "partial_fill_exposure_unresolved",
+        }
+    else:
+        open_position_state = {
             "status": "flat",
             "position_id": None,
             "symbol": symbol,
@@ -1183,25 +1212,27 @@ def _run_controlled_mt5_live_execution(
             "broker_position_confirmation": "not_applicable",
             "position_state_outcome": "no_open_position_state",
         }
-    )
-    exit_decision = (
-        {
-            "decision": "hold_open_position",
-            "reason": "assumed_open_position_from_accepted_send_unreconciled",
-        }
+        exit_decision = {"decision": "no_position_exit", "reason": "no_open_position"}
+
+    pnl_position_open = (
+        True
         if open_position_state["status"] == "open"
-        else {"decision": "no_position_exit", "reason": "no_open_position"}
+        else None if open_position_state["status"] == "partial_exposure_unresolved" else False
     )
     pnl_snapshot = {
         "timestamp": datetime.now(tz=timezone.utc).isoformat(),
         "symbol": symbol,
         "realized_pnl": 0.0,
         "unrealized_pnl": 0.0,
-        "position_open": open_position_state["status"] == "open",
+        "position_open": pnl_position_open,
         "position_open_truth": (
             "assumed_from_accepted_send_unreconciled"
             if open_position_state["status"] == "open"
-            else "not_applicable"
+            else (
+                "partial_fill_exposure_unresolved"
+                if open_position_state["status"] == "partial_exposure_unresolved"
+                else "not_applicable"
+            )
         ),
     }
     failure_classification = (
