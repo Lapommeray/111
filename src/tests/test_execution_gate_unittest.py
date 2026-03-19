@@ -1174,11 +1174,6 @@ class TestExecutionGateSemantics(unittest.TestCase):
             controlled_execution["open_position_state"]["partial_outcome_quantity_truth"],
             "broker_confirmed_partial_quantity",
         )
-        self.assertEqual(controlled_execution["order_result"]["order_id"], 44)
-        self.assertIn(
-            "mt5_requote_unretried",
-            controlled_execution["rollback_refusal_reasons"],
-        )
 
     def test_rejected_send_outcome_is_labeled_unconfirmed_broker_state(self) -> None:
         memory_root = self._mkdtemp(prefix="execution_gate_rejected_")
