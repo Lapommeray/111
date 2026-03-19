@@ -794,12 +794,20 @@ def _classify_mt5_execution_failure(reasons: list[str]) -> str:
 
 def _readiness_allows_live_order(readiness: dict[str, Any]) -> bool:
     execution_gate = str(readiness.get("execution_gate", "")).strip().lower()
+    blocked_execution_gates = {
+        "blocked",
+        "non_live_enforced",
+        "controlled_non_live",
+        "safe_resumed_non_live_blocked",
+        "refused_unsafe_readiness",
+        "quarantined_invalid_readiness",
+    }
     return all(
         [
             not bool(readiness.get("live_execution_blocked", True)),
             bool(readiness.get("order_execution_enabled", False)),
             not bool(readiness.get("execution_refused", True)),
-            execution_gate in {"controlled_live", "live_enabled"},
+            execution_gate not in blocked_execution_gates,
         ]
     )
 
