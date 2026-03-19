@@ -315,6 +315,22 @@ class TestExecutionGateSemantics(unittest.TestCase):
             "accepted_send_unreconciled",
         )
         self.assertEqual(controlled_execution["order_result"]["order_id"], 42)
+        self.assertEqual(
+            controlled_execution["open_position_state"]["broker_position_confirmation"],
+            "unconfirmed",
+        )
+        self.assertEqual(
+            controlled_execution["open_position_state"]["position_state_outcome"],
+            "assumed_open_from_accepted_send_unreconciled",
+        )
+        self.assertEqual(
+            controlled_execution["exit_decision"]["reason"],
+            "assumed_open_position_from_accepted_send_unreconciled",
+        )
+        self.assertEqual(
+            controlled_execution["pnl_snapshot"]["position_open_truth"],
+            "assumed_from_accepted_send_unreconciled",
+        )
 
     def test_partial_fill_retcode_reported_as_partial_unreconciled(self) -> None:
         memory_root = self._mkdtemp(prefix="execution_gate_partial_")
@@ -343,6 +359,18 @@ class TestExecutionGateSemantics(unittest.TestCase):
             "unconfirmed_non_accepted_send_outcome",
         )
         self.assertEqual(controlled_execution["order_result"]["order_id"], 43)
+        self.assertEqual(
+            controlled_execution["open_position_state"]["broker_position_confirmation"],
+            "not_applicable",
+        )
+        self.assertEqual(
+            controlled_execution["open_position_state"]["position_state_outcome"],
+            "no_open_position_state",
+        )
+        self.assertEqual(
+            controlled_execution["pnl_snapshot"]["position_open_truth"],
+            "not_applicable",
+        )
         self.assertIn(
             "mt5_partial_fill_unreconciled",
             controlled_execution["rollback_refusal_reasons"],

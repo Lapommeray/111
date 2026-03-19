@@ -1168,6 +1168,8 @@ def _run_controlled_mt5_live_execution(
             "entry_price": float(order_request.get("price", 0.0)),
             "stop_loss": stop_loss_take_profit["stop_loss"],
             "take_profit": stop_loss_take_profit["take_profit"],
+            "broker_position_confirmation": "unconfirmed",
+            "position_state_outcome": "assumed_open_from_accepted_send_unreconciled",
         }
         if order_result.get("status") == "accepted"
         else {
@@ -1178,10 +1180,15 @@ def _run_controlled_mt5_live_execution(
             "entry_price": None,
             "stop_loss": None,
             "take_profit": None,
+            "broker_position_confirmation": "not_applicable",
+            "position_state_outcome": "no_open_position_state",
         }
     )
     exit_decision = (
-        {"decision": "hold_open_position", "reason": "position_active_under_governed_controls"}
+        {
+            "decision": "hold_open_position",
+            "reason": "assumed_open_position_from_accepted_send_unreconciled",
+        }
         if open_position_state["status"] == "open"
         else {"decision": "no_position_exit", "reason": "no_open_position"}
     )
@@ -1191,6 +1198,11 @@ def _run_controlled_mt5_live_execution(
         "realized_pnl": 0.0,
         "unrealized_pnl": 0.0,
         "position_open": open_position_state["status"] == "open",
+        "position_open_truth": (
+            "assumed_from_accepted_send_unreconciled"
+            if open_position_state["status"] == "open"
+            else "not_applicable"
+        ),
     }
     failure_classification = (
         _classify_mt5_execution_failure(rollback_reasons) if rollback_reasons else "none"
