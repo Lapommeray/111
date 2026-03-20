@@ -28,5 +28,6 @@ def test_settings_json_is_valid_and_has_required_keys() -> None:
         "execution_no_fill_spread_threshold",
         "execution_min_fill_confidence",
         "knowledge_candidate_limit",
+        "quarantined_modules",
     ):
         assert key in payload
