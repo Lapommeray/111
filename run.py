@@ -1665,6 +1665,7 @@ def _resolve_broker_retry_price(
 def _resolve_exit_close_target_from_broker_positions(
     *,
     symbol: str,
+    position_id: int | None = None,
     mt5_module: Any | None = None,
 ) -> dict[str, Any]:
     fail_closed = {
@@ -1707,13 +1708,30 @@ def _resolve_exit_close_target_from_broker_positions(
         ]
         if len(matching_symbol_positions) == 0:
             return {**fail_closed, "fail_closed_reason": "no_symbol_position_to_close"}
-        if len(matching_symbol_positions) != 1:
-            return {
-                **fail_closed,
-                "matched_symbol_position_count": len(matching_symbol_positions),
-                "fail_closed_reason": "ambiguous_symbol_positions_to_close",
-            }
-        position = matching_symbol_positions[0]
+
+        if position_id is not None:
+            # Explicit position_id provided: resolve only by exact broker ticket match.
+            ticket_matched = [
+                p
+                for p in matching_symbol_positions
+                if int(getattr(p, "ticket", -1)) == position_id
+            ]
+            if len(ticket_matched) != 1:
+                return {
+                    **fail_closed,
+                    "matched_symbol_position_count": len(matching_symbol_positions),
+                    "fail_closed_reason": "position_id_not_found_among_broker_positions",
+                }
+            position = ticket_matched[0]
+        else:
+            # No position_id: require exactly one symbol-matched position or fail closed.
+            if len(matching_symbol_positions) != 1:
+                return {
+                    **fail_closed,
+                    "matched_symbol_position_count": len(matching_symbol_positions),
+                    "fail_closed_reason": "ambiguous_symbol_positions_to_close",
+                }
+            position = matching_symbol_positions[0]
         try:
             position_ticket = int(getattr(position, "ticket", None))
         except Exception:
@@ -1847,6 +1865,7 @@ def _run_controlled_mt5_live_execution(
     trade_tags: dict[str, Any] | None = None,
     signal_lifecycle: dict[str, Any] | None = None,
     mt5_module: Any | None = None,
+    position_id: int | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, str]]:
     persistent_state = _load_mt5_controlled_execution_state(memory_root)
     lifecycle_evaluation = _evaluate_signal_lifecycle(signal_lifecycle=signal_lifecycle)
@@ -1924,6 +1943,7 @@ def _run_controlled_mt5_live_execution(
         else:
             exit_close_target = _resolve_exit_close_target_from_broker_positions(
                 symbol=symbol,
+                position_id=position_id,
                 mt5_module=mt5_module,
             )
             if not bool(exit_close_target.get("target_resolved", False)):
@@ -3054,6 +3074,22 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     )
     fail_safe_state_clear = len(controlled_mt5_readiness.get("fail_safe_blocked_reasons", [])) == 0
     risk_state_valid = not bool(block.get("blocked", False)) and not bool(capital_guard.get("trade_refused", False))
+
+    # Load persisted position_id from the last execution artifact if available.
+    _persisted_position_id: int | None = None
+    try:
+        _artifact_path = Path(config.memory_root) / "mt5_controlled_execution_artifact.json"
+        if _artifact_path.exists():
+            _artifact_payload = json.loads(_artifact_path.read_text(encoding="utf-8"))
+            if isinstance(_artifact_payload, dict):
+                _open_state = _artifact_payload.get("open_position_state")
+                if isinstance(_open_state, dict) and _open_state.get("status") == "open":
+                    _raw_pid = _open_state.get("position_id")
+                    if _raw_pid is not None:
+                        _persisted_position_id = int(_raw_pid) if int(_raw_pid) > 0 else None
+    except Exception:
+        _persisted_position_id = None
+
     controlled_execution, controlled_execution_state, controlled_execution_paths = _run_controlled_mt5_live_execution(
         memory_root=config.memory_root,
         mode=config.mode,
@@ -3070,6 +3106,7 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         fail_safe_state_clear=fail_safe_state_clear,
         trade_tags=macro_tags,
         signal_lifecycle=signal_lifecycle,
+        position_id=_persisted_position_id,
     )
     if decision in {"BUY", "SELL"} and controlled_execution.get("order_result", {}).get("status") != "accepted":
         decision = "WAIT"

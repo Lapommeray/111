@@ -632,6 +632,121 @@ class _MT5ExitCloseUnresolvedStub(_MT5BaseStub):
         return _AcceptedResult()
 
 
+class _MT5ExitMultiPositionWithIdMatchStub(_MT5BaseStub):
+    """Two positions for same symbol; position_id 940 matches one exactly."""
+
+    POSITION_TYPE_BUY = 0
+    POSITION_TYPE_SELL = 1
+
+    def __init__(self) -> None:
+        self.send_calls = 0
+        self.sent_requests: list[dict[str, object]] = []
+        self._positions_calls = 0
+
+    def positions_get(self) -> list[object]:
+        self._positions_calls += 1
+        if self._positions_calls == 1:
+            return [
+                _Position(
+                    ticket=950,
+                    identifier=950,
+                    symbol="XAUUSD",
+                    type_value=self.POSITION_TYPE_SELL,
+                    volume=0.05,
+                ),
+                _Position(
+                    ticket=940,
+                    identifier=940,
+                    symbol="XAUUSD",
+                    type_value=self.POSITION_TYPE_BUY,
+                    volume=0.03,
+                ),
+            ]
+        return []
+
+    def symbol_info_tick(self, _symbol: str) -> object:
+        return {"ask": 2200.5, "bid": 2200.0}
+
+    def order_send(self, request: dict[str, object]) -> object:
+        self.send_calls += 1
+        self.sent_requests.append(dict(request))
+        return _AcceptedResult()
+
+
+class _MT5ExitMultiPositionIdNotFoundStub(_MT5BaseStub):
+    """Two positions for same symbol; position_id 999 matches none."""
+
+    POSITION_TYPE_BUY = 0
+    POSITION_TYPE_SELL = 1
+
+    def __init__(self) -> None:
+        self.send_calls = 0
+        self.sent_requests: list[dict[str, object]] = []
+
+    def positions_get(self) -> list[object]:
+        return [
+            _Position(
+                ticket=950,
+                identifier=950,
+                symbol="XAUUSD",
+                type_value=self.POSITION_TYPE_SELL,
+                volume=0.05,
+            ),
+            _Position(
+                ticket=940,
+                identifier=940,
+                symbol="XAUUSD",
+                type_value=self.POSITION_TYPE_BUY,
+                volume=0.03,
+            ),
+        ]
+
+    def symbol_info_tick(self, _symbol: str) -> object:
+        return {"ask": 2200.5, "bid": 2200.0}
+
+    def order_send(self, request: dict[str, object]) -> object:
+        self.send_calls += 1
+        self.sent_requests.append(dict(request))
+        return _AcceptedResult()
+
+
+class _MT5ExitMultiPositionNoIdStub(_MT5BaseStub):
+    """Two positions for same symbol; no position_id provided → ambiguous fail closed."""
+
+    POSITION_TYPE_BUY = 0
+    POSITION_TYPE_SELL = 1
+
+    def __init__(self) -> None:
+        self.send_calls = 0
+        self.sent_requests: list[dict[str, object]] = []
+
+    def positions_get(self) -> list[object]:
+        return [
+            _Position(
+                ticket=950,
+                identifier=950,
+                symbol="XAUUSD",
+                type_value=self.POSITION_TYPE_SELL,
+                volume=0.05,
+            ),
+            _Position(
+                ticket=940,
+                identifier=940,
+                symbol="XAUUSD",
+                type_value=self.POSITION_TYPE_BUY,
+                volume=0.03,
+            ),
+        ]
+
+    def symbol_info_tick(self, _symbol: str) -> object:
+        return {"ask": 2200.5, "bid": 2200.0}
+
+    def order_send(self, request: dict[str, object]) -> object:
+        self.send_calls += 1
+        self.sent_requests.append(dict(request))
+        return _AcceptedResult()
+
+
 class _MT5LivePipelineStub:
     TIMEFRAME_M1 = 1
     TIMEFRAME_M5 = 5
@@ -867,6 +982,86 @@ class TestExecutionGateSemantics(unittest.TestCase):
             "exit_required_unresolved_open_position",
         )
         self.assertEqual(mt5_stub.send_calls, 1)
+
+    # -- explicit position_id-based EXIT target resolution tests --
+
+    def test_exit_multi_position_resolves_by_exact_position_id(self) -> None:
+        """Two positions for same symbol; position_id=940 resolves to exact match."""
+        memory_root = self._mkdtemp(prefix="execution_gate_exit_pid_match_")
+        kwargs = _base_kwargs(memory_root)
+        kwargs["decision"] = "WAIT"
+        kwargs["controlled_mt5_readiness"] = {
+            **dict(kwargs["controlled_mt5_readiness"]),
+            "live_execution_blocked": False,
+            "order_execution_enabled": True,
+            "execution_refused": False,
+            "execution_gate": "live_authorized_controlled_execution",
+        }
+        mt5_stub = _MT5ExitMultiPositionWithIdMatchStub()
+        kwargs["mt5_module"] = mt5_stub
+        kwargs["position_id"] = 940
+        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "accepted")
+        self.assertTrue(controlled_execution["order_result"]["order_sent"])
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_state_confirmation"],
+            "confirmed",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_state_outcome"],
+            "exit_send_position_closed_confirmed",
+        )
+        # Must resolve to ticket 940 exactly — not 950
+        self.assertEqual(mt5_stub.send_calls, 1)
+        sent_request = mt5_stub.sent_requests[0]
+        self.assertEqual(sent_request["action"], "deal")
+        self.assertEqual(sent_request["position"], 940)
+        self.assertEqual(sent_request["volume"], 0.03)
+        # Ticket 940 is BUY, so close side must be SELL
+        self.assertEqual(sent_request["type"], "SELL")
+
+    def test_exit_multi_position_fails_closed_when_position_id_not_found(self) -> None:
+        """Two positions for same symbol; position_id=999 matches none → fail closed."""
+        memory_root = self._mkdtemp(prefix="execution_gate_exit_pid_missing_")
+        kwargs = _base_kwargs(memory_root)
+        kwargs["decision"] = "WAIT"
+        kwargs["controlled_mt5_readiness"] = {
+            **dict(kwargs["controlled_mt5_readiness"]),
+            "live_execution_blocked": False,
+            "order_execution_enabled": True,
+            "execution_refused": False,
+            "execution_gate": "live_authorized_controlled_execution",
+        }
+        mt5_stub = _MT5ExitMultiPositionIdNotFoundStub()
+        kwargs["mt5_module"] = mt5_stub
+        kwargs["position_id"] = 999
+        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        # No order should be sent — fail closed
+        self.assertEqual(mt5_stub.send_calls, 0)
+        rejection = controlled_execution.get("order_result", {}).get("rejection_reason", "")
+        self.assertIn("exit_close_target_resolution_failed", rejection)
+        self.assertIn("position_id_not_found_among_broker_positions", rejection)
+
+    def test_exit_multi_position_fails_closed_ambiguous_without_position_id(self) -> None:
+        """Two positions for same symbol; no position_id → ambiguous fail closed."""
+        memory_root = self._mkdtemp(prefix="execution_gate_exit_no_pid_")
+        kwargs = _base_kwargs(memory_root)
+        kwargs["decision"] = "WAIT"
+        kwargs["controlled_mt5_readiness"] = {
+            **dict(kwargs["controlled_mt5_readiness"]),
+            "live_execution_blocked": False,
+            "order_execution_enabled": True,
+            "execution_refused": False,
+            "execution_gate": "live_authorized_controlled_execution",
+        }
+        mt5_stub = _MT5ExitMultiPositionNoIdStub()
+        kwargs["mt5_module"] = mt5_stub
+        # No position_id passed — should fail closed ambiguous
+        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(mt5_stub.send_calls, 0)
+        rejection = controlled_execution.get("order_result", {}).get("rejection_reason", "")
+        self.assertIn("exit_close_target_resolution_failed", rejection)
+        self.assertIn("ambiguous_symbol_positions_to_close", rejection)
 
     def test_accepted_send_upgrades_to_confirmed_only_on_exact_linkage_match(self) -> None:
         memory_root = self._mkdtemp(prefix="execution_gate_live_confirmed_")
