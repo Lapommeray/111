@@ -1,0 +1,7 @@
+{
+  "consistency_score": 1.0,
+  "feed_reliability": 1.0,
+  "anomaly_score": 0.0,
+  "data_drift_score": 0.4155,
+  "validation_state": "trusted"
+}
