@@ -1742,6 +1742,12 @@ def _resolve_exit_close_target_from_broker_positions(
                         "fail_closed_reason": "ambiguous_symbol_positions_to_close",
                     }
                 candidate_records.append(candidate)
+            if len(candidate_records) == 0:
+                return {
+                    **fail_closed,
+                    "matched_symbol_position_count": len(matching_symbol_positions),
+                    "fail_closed_reason": "ambiguous_symbol_positions_to_close",
+                }
             candidate_sides = {str(candidate.get("position_side")) for candidate in candidate_records}
             if len(candidate_sides) != 1:
                 return {
@@ -1749,11 +1755,11 @@ def _resolve_exit_close_target_from_broker_positions(
                     "matched_symbol_position_count": len(matching_symbol_positions),
                     "fail_closed_reason": "ambiguous_symbol_positions_to_close",
                 }
-            minimum_volume = min(float(candidate.get("position_volume", 0.0)) for candidate in candidate_records)
+            minimum_volume = min(float(candidate["position_volume"]) for candidate in candidate_records)
             strict_winners = [
                 candidate
                 for candidate in candidate_records
-                if float(candidate.get("position_volume", 0.0)) == minimum_volume
+                if float(candidate["position_volume"]) == minimum_volume
             ]
             if len(strict_winners) != 1:
                 return {
@@ -1772,12 +1778,6 @@ def _resolve_exit_close_target_from_broker_positions(
                 "position_side": str(winner.get("position_side", "")),
                 "position_volume": float(winner.get("position_volume", 0.0)),
                 "close_order_side": str(winner.get("close_order_side", "")),
-            }
-        if len(matching_symbol_positions) != 1:
-            return {
-                **fail_closed,
-                "matched_symbol_position_count": len(matching_symbol_positions),
-                "fail_closed_reason": "ambiguous_symbol_positions_to_close",
             }
         position = matching_symbol_positions[0]
         single_position_candidate, single_position_failure = _extract_position_close_candidate(position)
