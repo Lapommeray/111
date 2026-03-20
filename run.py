@@ -1667,6 +1667,30 @@ def _resolve_exit_close_target_from_broker_positions(
     symbol: str,
     mt5_module: Any | None = None,
 ) -> dict[str, Any]:
+    def _extract_position_close_candidate(position: Any) -> tuple[dict[str, Any] | None, str]:
+        try:
+            position_ticket = int(getattr(position, "ticket", None))
+        except Exception:
+            position_ticket = None
+        if position_ticket is None or position_ticket <= 0:
+            return None, "position_ticket_unavailable_or_unreadable"
+        position_side = _normalize_mt5_position_side(
+            mt5_module=mt5,
+            position_type=getattr(position, "type", None),
+        )
+        if position_side not in {"BUY", "SELL"}:
+            return None, "position_side_unavailable_or_unreadable"
+        position_volume = _safe_positive_finite_float(getattr(position, "volume", None))
+        if position_volume is None:
+            return None, "position_volume_unavailable_or_invalid"
+        return {
+            "position_ticket": position_ticket,
+            "position_symbol": str(getattr(position, "symbol", "")),
+            "position_side": position_side,
+            "position_volume": position_volume,
+            "close_order_side": "SELL" if position_side == "BUY" else "BUY",
+        }, ""
+
     fail_closed = {
         "target_resolved": False,
         "fail_closed_reason": "",
@@ -1707,6 +1731,48 @@ def _resolve_exit_close_target_from_broker_positions(
         ]
         if len(matching_symbol_positions) == 0:
             return {**fail_closed, "fail_closed_reason": "no_symbol_position_to_close"}
+        if len(matching_symbol_positions) > 1:
+            candidate_records: list[dict[str, Any]] = []
+            for position in matching_symbol_positions:
+                candidate, candidate_failure = _extract_position_close_candidate(position)
+                if candidate is None:
+                    return {
+                        **fail_closed,
+                        "matched_symbol_position_count": len(matching_symbol_positions),
+                        "fail_closed_reason": "ambiguous_symbol_positions_to_close",
+                    }
+                candidate_records.append(candidate)
+            candidate_sides = {str(candidate.get("position_side")) for candidate in candidate_records}
+            if len(candidate_sides) != 1:
+                return {
+                    **fail_closed,
+                    "matched_symbol_position_count": len(matching_symbol_positions),
+                    "fail_closed_reason": "ambiguous_symbol_positions_to_close",
+                }
+            minimum_volume = min(float(candidate.get("position_volume", 0.0)) for candidate in candidate_records)
+            strict_winners = [
+                candidate
+                for candidate in candidate_records
+                if float(candidate.get("position_volume", 0.0)) == minimum_volume
+            ]
+            if len(strict_winners) != 1:
+                return {
+                    **fail_closed,
+                    "matched_symbol_position_count": len(matching_symbol_positions),
+                    "fail_closed_reason": "ambiguous_symbol_positions_to_close",
+                }
+            winner = strict_winners[0]
+            return {
+                **fail_closed,
+                "target_resolved": True,
+                "fail_closed_reason": "",
+                "matched_symbol_position_count": len(matching_symbol_positions),
+                "position_ticket": int(winner.get("position_ticket", 0)),
+                "position_symbol": str(winner.get("position_symbol", "")),
+                "position_side": str(winner.get("position_side", "")),
+                "position_volume": float(winner.get("position_volume", 0.0)),
+                "close_order_side": str(winner.get("close_order_side", "")),
+            }
         if len(matching_symbol_positions) != 1:
             return {
                 **fail_closed,
@@ -1714,32 +1780,19 @@ def _resolve_exit_close_target_from_broker_positions(
                 "fail_closed_reason": "ambiguous_symbol_positions_to_close",
             }
         position = matching_symbol_positions[0]
-        try:
-            position_ticket = int(getattr(position, "ticket", None))
-        except Exception:
-            position_ticket = None
-        if position_ticket is None or position_ticket <= 0:
-            return {**fail_closed, "fail_closed_reason": "position_ticket_unavailable_or_unreadable"}
-        position_side = _normalize_mt5_position_side(
-            mt5_module=mt5,
-            position_type=getattr(position, "type", None),
-        )
-        if position_side not in {"BUY", "SELL"}:
-            return {**fail_closed, "fail_closed_reason": "position_side_unavailable_or_unreadable"}
-        position_volume = _safe_positive_finite_float(getattr(position, "volume", None))
-        if position_volume is None:
-            return {**fail_closed, "fail_closed_reason": "position_volume_unavailable_or_invalid"}
-        close_order_side = "SELL" if position_side == "BUY" else "BUY"
+        single_position_candidate, single_position_failure = _extract_position_close_candidate(position)
+        if single_position_candidate is None:
+            return {**fail_closed, "fail_closed_reason": single_position_failure or "exit_close_target_resolution_unavailable"}
         return {
             **fail_closed,
             "target_resolved": True,
             "fail_closed_reason": "",
             "matched_symbol_position_count": 1,
-            "position_ticket": position_ticket,
-            "position_symbol": str(getattr(position, "symbol", "")),
-            "position_side": position_side,
-            "position_volume": position_volume,
-            "close_order_side": close_order_side,
+            "position_ticket": int(single_position_candidate.get("position_ticket", 0)),
+            "position_symbol": str(single_position_candidate.get("position_symbol", "")),
+            "position_side": str(single_position_candidate.get("position_side", "")),
+            "position_volume": float(single_position_candidate.get("position_volume", 0.0)),
+            "close_order_side": str(single_position_candidate.get("close_order_side", "")),
         }
     except Exception:
         return {**fail_closed, "fail_closed_reason": "exit_close_target_resolution_unavailable"}

@@ -632,6 +632,31 @@ class _MT5ExitCloseUnresolvedStub(_MT5BaseStub):
         return _AcceptedResult()
 
 
+class _MT5ExitCloseMultiPositionStub(_MT5BaseStub):
+    POSITION_TYPE_BUY = 0
+    POSITION_TYPE_SELL = 1
+
+    def __init__(self, *, positions: list[object]) -> None:
+        self.send_calls = 0
+        self.sent_requests: list[dict[str, object]] = []
+        self._positions = list(positions)
+        self._positions_calls = 0
+
+    def positions_get(self) -> list[object]:
+        self._positions_calls += 1
+        if self._positions_calls == 1:
+            return list(self._positions)
+        return []
+
+    def symbol_info_tick(self, _symbol: str) -> object:
+        return {"ask": 2103.2, "bid": 2103.0}
+
+    def order_send(self, request: dict[str, object]) -> object:
+        self.send_calls += 1
+        self.sent_requests.append(dict(request))
+        return _AcceptedResult()
+
+
 class _MT5LivePipelineStub:
     TIMEFRAME_M1 = 1
     TIMEFRAME_M5 = 5
@@ -867,6 +892,82 @@ class TestExecutionGateSemantics(unittest.TestCase):
             "exit_required_unresolved_open_position",
         )
         self.assertEqual(mt5_stub.send_calls, 1)
+
+    def test_exit_close_multi_position_resolves_only_with_strict_unique_volume_winner(self) -> None:
+        memory_root = self._mkdtemp(prefix="execution_gate_exit_multi_position_unique_")
+        kwargs = _base_kwargs(memory_root)
+        kwargs["decision"] = "WAIT"
+        kwargs["controlled_mt5_readiness"] = {
+            **dict(kwargs["controlled_mt5_readiness"]),
+            "live_execution_blocked": False,
+            "order_execution_enabled": True,
+            "execution_refused": False,
+            "execution_gate": "live_authorized_controlled_execution",
+        }
+        positions = [
+            _Position(
+                ticket=910,
+                identifier=910,
+                symbol="XAUUSD",
+                type_value=_MT5ExitCloseMultiPositionStub.POSITION_TYPE_BUY,
+                volume=0.05,
+            ),
+            _Position(
+                ticket=911,
+                identifier=911,
+                symbol="XAUUSD",
+                type_value=_MT5ExitCloseMultiPositionStub.POSITION_TYPE_BUY,
+                volume=0.02,
+            ),
+        ]
+        mt5_stub = _MT5ExitCloseMultiPositionStub(positions=positions)
+        kwargs["mt5_module"] = mt5_stub
+        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "accepted")
+        self.assertTrue(controlled_execution["order_result"]["order_sent"])
+        self.assertEqual(mt5_stub.send_calls, 1)
+        sent_request = mt5_stub.sent_requests[0]
+        self.assertEqual(sent_request["position"], 911)
+        self.assertEqual(sent_request["volume"], 0.02)
+        self.assertEqual(sent_request["type"], "SELL")
+
+    def test_exit_close_multi_position_without_unique_volume_winner_fails_closed_ambiguous(self) -> None:
+        memory_root = self._mkdtemp(prefix="execution_gate_exit_multi_position_ambiguous_")
+        kwargs = _base_kwargs(memory_root)
+        kwargs["decision"] = "WAIT"
+        kwargs["controlled_mt5_readiness"] = {
+            **dict(kwargs["controlled_mt5_readiness"]),
+            "live_execution_blocked": False,
+            "order_execution_enabled": True,
+            "execution_refused": False,
+            "execution_gate": "live_authorized_controlled_execution",
+        }
+        positions = [
+            _Position(
+                ticket=920,
+                identifier=920,
+                symbol="XAUUSD",
+                type_value=_MT5ExitCloseMultiPositionStub.POSITION_TYPE_BUY,
+                volume=0.03,
+            ),
+            _Position(
+                ticket=921,
+                identifier=921,
+                symbol="XAUUSD",
+                type_value=_MT5ExitCloseMultiPositionStub.POSITION_TYPE_BUY,
+                volume=0.03,
+            ),
+        ]
+        mt5_stub = _MT5ExitCloseMultiPositionStub(positions=positions)
+        kwargs["mt5_module"] = mt5_stub
+        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "refused")
+        self.assertFalse(controlled_execution["order_result"]["order_sent"])
+        self.assertEqual(mt5_stub.send_calls, 0)
+        self.assertIn(
+            "exit_close_target_resolution_failed:ambiguous_symbol_positions_to_close",
+            controlled_execution["rollback_refusal_reasons"],
+        )
 
     def test_accepted_send_upgrades_to_confirmed_only_on_exact_linkage_match(self) -> None:
         memory_root = self._mkdtemp(prefix="execution_gate_live_confirmed_")
