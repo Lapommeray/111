@@ -1707,13 +1707,42 @@ def _resolve_exit_close_target_from_broker_positions(
         ]
         if len(matching_symbol_positions) == 0:
             return {**fail_closed, "fail_closed_reason": "no_symbol_position_to_close"}
-        if len(matching_symbol_positions) != 1:
-            return {
-                **fail_closed,
-                "matched_symbol_position_count": len(matching_symbol_positions),
-                "fail_closed_reason": "ambiguous_symbol_positions_to_close",
-            }
-        position = matching_symbol_positions[0]
+
+        # -- deterministic multi-position FIFO resolution --
+        # When more than one broker position matches the symbol, resolve
+        # to the lowest-ticket (oldest / FIFO) position.  Fail closed if
+        # any matched position has an unreadable / non-positive / duplicate
+        # ticket, because ordering cannot be proven deterministic.
+        if len(matching_symbol_positions) > 1:
+            ticket_position_pairs: list[tuple[int, Any]] = []
+            seen_tickets: set[int] = set()
+            for p in matching_symbol_positions:
+                try:
+                    t = int(getattr(p, "ticket", None))
+                except Exception:
+                    return {
+                        **fail_closed,
+                        "matched_symbol_position_count": len(matching_symbol_positions),
+                        "fail_closed_reason": "multi_position_ticket_unreadable",
+                    }
+                if t is None or t <= 0:
+                    return {
+                        **fail_closed,
+                        "matched_symbol_position_count": len(matching_symbol_positions),
+                        "fail_closed_reason": "multi_position_ticket_invalid",
+                    }
+                if t in seen_tickets:
+                    return {
+                        **fail_closed,
+                        "matched_symbol_position_count": len(matching_symbol_positions),
+                        "fail_closed_reason": "multi_position_duplicate_tickets",
+                    }
+                seen_tickets.add(t)
+                ticket_position_pairs.append((t, p))
+            ticket_position_pairs.sort(key=lambda pair: pair[0])
+            position = ticket_position_pairs[0][1]
+        else:
+            position = matching_symbol_positions[0]
         try:
             position_ticket = int(getattr(position, "ticket", None))
         except Exception:
@@ -1734,7 +1763,7 @@ def _resolve_exit_close_target_from_broker_positions(
             **fail_closed,
             "target_resolved": True,
             "fail_closed_reason": "",
-            "matched_symbol_position_count": 1,
+            "matched_symbol_position_count": len(matching_symbol_positions),
             "position_ticket": position_ticket,
             "position_symbol": str(getattr(position, "symbol", "")),
             "position_side": position_side,
