@@ -1725,7 +1725,7 @@ def _resolve_exit_close_target_from_broker_positions(
                         "matched_symbol_position_count": len(matching_symbol_positions),
                         "fail_closed_reason": "multi_position_ticket_unreadable",
                     }
-                if t is None or t <= 0:
+                if t <= 0:
                     return {
                         **fail_closed,
                         "matched_symbol_position_count": len(matching_symbol_positions),
