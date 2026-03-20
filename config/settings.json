@@ -31,5 +31,6 @@
   "execution_min_fill_confidence": 0.0,
   "knowledge_expansion_enabled": false,
   "knowledge_expansion_root": "memory/knowledge_expansion",
-  "knowledge_candidate_limit": 6
+  "knowledge_candidate_limit": 6,
+  "quarantined_modules": []
 }

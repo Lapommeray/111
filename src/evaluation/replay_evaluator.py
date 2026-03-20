@@ -51,8 +51,10 @@ def evaluate_replay(
     knowledge_candidate_limit: int = 6,
     signal_lifecycle_enabled: bool = False,
     signal_max_age_seconds: int = 900,
+    quarantined_modules: list[str] | None = None,
 ) -> dict[str, Any]:
     """Run replay evaluation using the existing replay pipeline path only."""
+    effective_quarantined = list(quarantined_modules or [])
     replay_memory_root = _prepare_replay_memory_root(memory_root)
     rows = _load_rows(Path(replay_csv_path))
     if len(rows) < bars:
@@ -107,6 +109,7 @@ def evaluate_replay(
             execution_realism_v2=execution_realism_v2,
             signal_lifecycle_enabled=signal_lifecycle_enabled,
             signal_max_age_seconds=signal_max_age_seconds,
+            quarantined_modules=effective_quarantined,
         )
     else:
         cycles = _build_walk_forward_cycles(
@@ -148,6 +151,7 @@ def evaluate_replay(
                 execution_realism_v2=execution_realism_v2,
                 signal_lifecycle_enabled=signal_lifecycle_enabled,
                 signal_max_age_seconds=signal_max_age_seconds,
+                quarantined_modules=effective_quarantined,
             )
             for record in cycle_records:
                 record["walk_forward_cycle"] = cycle_index
@@ -223,6 +227,13 @@ def evaluate_replay(
             "root": knowledge_expansion_root,
             "candidate_limit": knowledge_candidate_limit,
         },
+        "quarantined_modules": effective_quarantined,
+        "data_sufficiency_tier": (
+            "evidence" if len(rows) >= 50_000
+            else "plumbing_validation" if len(rows) >= 5_000
+            else "insufficient"
+        ),
+        "calibration_status": "temporary_defaults_pending_broker_measurement",
     }
 
 
@@ -248,7 +259,9 @@ def _run_replay_steps(
     execution_realism_v2: dict[str, Any],
     signal_lifecycle_enabled: bool,
     signal_max_age_seconds: int,
+    quarantined_modules: list[str] | None = None,
 ) -> list[dict[str, Any]]:
+    effective_quarantined = list(quarantined_modules or [])
     records: list[dict[str, Any]] = []
     for step_index, end in enumerate(end_indexes, start=1):
         window = rows[:end]
@@ -278,6 +291,7 @@ def _run_replay_steps(
             compact_output=False,
             signal_lifecycle_enabled=signal_lifecycle_enabled,
             signal_max_age_seconds=signal_max_age_seconds,
+            quarantined_modules=effective_quarantined,
         )
         result = pipeline_runner(cfg)
         _apply_execution_costs_to_record(result, execution_costs)

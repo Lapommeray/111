@@ -8,7 +8,7 @@ import math
 import os
 import time
 from datetime import datetime, timezone
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -128,6 +128,7 @@ class RuntimeConfig:
     promotion_minimum_stability_score: float = 0.55
     signal_lifecycle_enabled: bool = False
     signal_max_age_seconds: int = 900
+    quarantined_modules: list[str] = field(default_factory=list)
 
 
 REQUIRED_RUNTIME_CONFIG_KEYS = (
@@ -197,6 +198,7 @@ RUNTIME_CONFIG_TYPES: dict[str, str] = {
     "promotion_minimum_stability_score": "float",
     "signal_lifecycle_enabled": "bool",
     "signal_max_age_seconds": "int",
+    "quarantined_modules": "list_of_str",
 }
 
 NON_EMPTY_STRING_CONFIG_KEYS = {
@@ -283,6 +285,12 @@ def _expect_runtime_config_type(key: str, value: Any, expected: str) -> Any:
                 f"Invalid type for config key '{key}': expected str, got {type(value).__name__}"
             )
         return value
+    if expected == "list_of_str":
+        if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+            raise ValueError(
+                f"Invalid type for config key '{key}': expected list of strings, got {type(value).__name__}"
+            )
+        return list(value)
     raise ValueError(f"Unsupported runtime config schema type for key '{key}': {expected}")
 
 
@@ -397,6 +405,20 @@ def validate_runtime_config(config: RuntimeConfig) -> None:
         raise ValueError("max_anomaly_clusters must be > 0")
     if config.signal_max_age_seconds <= 0:
         raise ValueError("signal_max_age_seconds must be > 0")
+
+    _QUARANTINABLE_MODULES = {
+        "invisible_data_miner",
+        "human_lag_exploit",
+        "quantum_tremor_scanner",
+        "spectral_signal_fusion",
+        "meta_conscious_routing",
+    }
+    for module_name in config.quarantined_modules:
+        if module_name not in _QUARANTINABLE_MODULES:
+            raise ValueError(
+                f"quarantined_modules contains unknown module '{module_name}'. "
+                f"Allowed: {', '.join(sorted(_QUARANTINABLE_MODULES))}"
+            )
 
 
 def load_bars_from_csv(csv_path: Path, bars: int) -> list[dict[str, Any]]:
@@ -2921,6 +2943,7 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         trade_outcomes=trade_outcomes,
         symbol=config.symbol,
         mode=config.mode,
+        quarantined_modules=list(config.quarantined_modules),
     )
     session_state = str(advanced_state.module_results.get("sessions", {}).payload.get("state", "unknown"))
     volatility_regime = str(advanced_state.module_results.get("volatility", {}).payload.get("state", "unknown"))
@@ -3428,6 +3451,7 @@ def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
         knowledge_candidate_limit=config.knowledge_candidate_limit,
         signal_lifecycle_enabled=config.signal_lifecycle_enabled,
         signal_max_age_seconds=config.signal_max_age_seconds,
+        quarantined_modules=list(config.quarantined_modules),
     )
 
     if config.knowledge_expansion_enabled:

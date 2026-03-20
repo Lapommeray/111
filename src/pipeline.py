@@ -148,6 +148,7 @@ def run_advanced_modules(
     trade_outcomes: list[dict[str, Any]],
     symbol: str = "XAUUSD",
     mode: str = "live",
+    quarantined_modules: list[str] | None = None,
 ) -> PipelineState:
     state = PipelineState(
         symbol=symbol,
@@ -158,6 +159,8 @@ def run_advanced_modules(
         base_confidence=base_confidence,
         base_direction=base_direction,
     )
+
+    quarantine_set = set(quarantined_modules or [])
 
     volatility_output = compute_volatility_state(bars)
     feature_outputs: dict[str, dict[str, Any]] = {
@@ -171,10 +174,13 @@ def run_advanced_modules(
         "session_behavior": track_session_behavior(bars, trade_outcomes),
         "market_regime": classify_market_regime(structure, volatility_output),
         "execution_quality": track_execution_quality(bars),
-        "invisible_data_miner": mine_internal_patterns(bars, structure, liquidity),
-        "human_lag_exploit": measure_human_lag_signal(bars),
-        "quantum_tremor_scanner": scan_tremor_state(bars),
     }
+    if "invisible_data_miner" not in quarantine_set:
+        feature_outputs["invisible_data_miner"] = mine_internal_patterns(bars, structure, liquidity)
+    if "human_lag_exploit" not in quarantine_set:
+        feature_outputs["human_lag_exploit"] = measure_human_lag_signal(bars)
+    if "quantum_tremor_scanner" not in quarantine_set:
+        feature_outputs["quantum_tremor_scanner"] = scan_tremor_state(bars)
 
     for name, output in feature_outputs.items():
         state.module_results[name] = _module_result(name, director.module_map[name]["role"], output)
@@ -198,13 +204,15 @@ def run_advanced_modules(
     scoring_outputs: dict[str, dict[str, Any]] = {
         "setup_score": compute_setup_score({**feature_outputs, **filter_outputs}),
         "regime_score": regime_score_output,
-        "spectral_signal_fusion": fuse_spectral_signals({**feature_outputs, **filter_outputs}),
-        "meta_conscious_routing": compute_meta_conscious_routing(
+    }
+    if "spectral_signal_fusion" not in quarantine_set:
+        scoring_outputs["spectral_signal_fusion"] = fuse_spectral_signals({**feature_outputs, **filter_outputs})
+    if "meta_conscious_routing" not in quarantine_set:
+        scoring_outputs["meta_conscious_routing"] = compute_meta_conscious_routing(
             regime_score=regime_score_output,
             liquidity=liquidity,
             volatility=feature_outputs["volatility"],
-        ),
-    }
+        )
 
     for name, output in scoring_outputs.items():
         state.module_results[name] = _module_result(name, director.module_map[name]["role"], output)
