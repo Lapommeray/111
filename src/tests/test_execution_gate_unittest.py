@@ -572,6 +572,66 @@ class _AcceptedPipelineResult:
     order = 77
 
 
+class _MT5ExitCloseConfirmedStub(_MT5BaseStub):
+    POSITION_TYPE_BUY = 0
+    POSITION_TYPE_SELL = 1
+
+    def __init__(self) -> None:
+        self.send_calls = 0
+        self.sent_requests: list[dict[str, object]] = []
+        self._positions_calls = 0
+
+    def positions_get(self) -> list[object]:
+        self._positions_calls += 1
+        if self._positions_calls == 1:
+            return [
+                _Position(
+                    ticket=901,
+                    identifier=901,
+                    symbol="XAUUSD",
+                    type_value=self.POSITION_TYPE_BUY,
+                    volume=0.02,
+                )
+            ]
+        return []
+
+    def symbol_info_tick(self, _symbol: str) -> object:
+        return {"ask": 2101.2, "bid": 2101.0}
+
+    def order_send(self, request: dict[str, object]) -> object:
+        self.send_calls += 1
+        self.sent_requests.append(dict(request))
+        return _AcceptedResult()
+
+
+class _MT5ExitCloseUnresolvedStub(_MT5BaseStub):
+    POSITION_TYPE_BUY = 0
+    POSITION_TYPE_SELL = 1
+
+    def __init__(self) -> None:
+        self.send_calls = 0
+        self.sent_requests: list[dict[str, object]] = []
+
+    def positions_get(self) -> list[object]:
+        return [
+            _Position(
+                ticket=902,
+                identifier=902,
+                symbol="XAUUSD",
+                type_value=self.POSITION_TYPE_BUY,
+                volume=0.03,
+            )
+        ]
+
+    def symbol_info_tick(self, _symbol: str) -> object:
+        return {"ask": 2102.2, "bid": 2102.0}
+
+    def order_send(self, request: dict[str, object]) -> object:
+        self.send_calls += 1
+        self.sent_requests.append(dict(request))
+        return _AcceptedResult()
+
+
 class _MT5LivePipelineStub:
     TIMEFRAME_M1 = 1
     TIMEFRAME_M5 = 5
@@ -721,6 +781,92 @@ class TestExecutionGateSemantics(unittest.TestCase):
             controlled_execution["pnl_snapshot"]["position_open_truth"],
             "assumed_from_accepted_send_unreconciled",
         )
+
+    def test_exit_close_executes_and_confirms_only_on_broker_position_disappearance(self) -> None:
+        memory_root = self._mkdtemp(prefix="execution_gate_exit_confirmed_")
+        kwargs = _base_kwargs(memory_root)
+        kwargs["decision"] = "WAIT"
+        kwargs["controlled_mt5_readiness"] = {
+            **dict(kwargs["controlled_mt5_readiness"]),
+            "live_execution_blocked": False,
+            "order_execution_enabled": True,
+            "execution_refused": False,
+            "execution_gate": "live_authorized_controlled_execution",
+        }
+        mt5_stub = _MT5ExitCloseConfirmedStub()
+        kwargs["mt5_module"] = mt5_stub
+        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "accepted")
+        self.assertTrue(controlled_execution["order_result"]["order_sent"])
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_state_confirmation"],
+            "confirmed",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_state_outcome"],
+            "exit_send_position_closed_confirmed",
+        )
+        self.assertEqual(
+            controlled_execution["open_position_state"]["status"],
+            "flat",
+        )
+        self.assertEqual(
+            controlled_execution["open_position_state"]["position_state_outcome"],
+            "broker_confirmed_closed_position",
+        )
+        self.assertEqual(
+            controlled_execution["exit_decision"]["reason"],
+            "broker_confirmed_closed_position",
+        )
+        self.assertEqual(mt5_stub.send_calls, 1)
+        sent_request = mt5_stub.sent_requests[0]
+        self.assertEqual(sent_request["action"], "deal")
+        self.assertEqual(sent_request["type"], "SELL")
+        self.assertEqual(sent_request["volume"], 0.02)
+        self.assertEqual(sent_request["position"], 901)
+        self.assertEqual(sent_request["price"], 2101.0)
+
+    def test_exit_close_send_without_disappearance_fails_closed_unresolved_open(self) -> None:
+        memory_root = self._mkdtemp(prefix="execution_gate_exit_unresolved_")
+        kwargs = _base_kwargs(memory_root)
+        kwargs["decision"] = "WAIT"
+        kwargs["controlled_mt5_readiness"] = {
+            **dict(kwargs["controlled_mt5_readiness"]),
+            "live_execution_blocked": False,
+            "order_execution_enabled": True,
+            "execution_refused": False,
+            "execution_gate": "live_authorized_controlled_execution",
+        }
+        mt5_stub = _MT5ExitCloseUnresolvedStub()
+        kwargs["mt5_module"] = mt5_stub
+        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "accepted")
+        self.assertTrue(controlled_execution["order_result"]["order_sent"])
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_state_confirmation"],
+            "unconfirmed",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_state_outcome"],
+            "exit_send_position_unreconciled",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_exit_verification"]["fail_closed_reason"],
+            "position_still_present_after_close_send",
+        )
+        self.assertEqual(
+            controlled_execution["open_position_state"]["status"],
+            "open",
+        )
+        self.assertEqual(
+            controlled_execution["open_position_state"]["position_state_outcome"],
+            "exit_close_unresolved_open_position",
+        )
+        self.assertEqual(
+            controlled_execution["exit_decision"]["decision"],
+            "exit_required_unresolved_open_position",
+        )
+        self.assertEqual(mt5_stub.send_calls, 1)
 
     def test_accepted_send_upgrades_to_confirmed_only_on_exact_linkage_match(self) -> None:
         memory_root = self._mkdtemp(prefix="execution_gate_live_confirmed_")
