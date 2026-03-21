@@ -3036,7 +3036,7 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
             ]
             + [f"capital_guard:{reason}" for reason in capital_guard.get("trigger_reasons", [])]
         )
-    if bool(macro_risk.get("pause_trading", False)):
+    if bool(macro_risk.get("pause_trading", False)) and config.mode == "live":
         combined_blocked = True
         combined_reasons = normalize_reasons(
             combined_reasons
