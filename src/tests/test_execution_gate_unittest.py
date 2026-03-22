@@ -2620,6 +2620,8 @@ class TestReplaySimulatedTradeExecution(unittest.TestCase):
         if original_decision in {"BUY", "SELL"}:
             self.assertNotEqual(decision.get("invalidation_reason", ""), "non_live_mode")
             self.assertIn(decision["action"], {"LONG_ENTRY", "SHORT_ENTRY"})
+        # When original_decision is WAIT, NO_TRADE is the correct and expected
+        # outcome — the unit tests above cover the BUY/SELL simulation directly.
 
 
 if __name__ == "__main__":
