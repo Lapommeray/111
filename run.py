@@ -1949,7 +1949,34 @@ def _run_controlled_mt5_live_execution(
     exit_close_target: dict[str, Any] = {}
     exit_close_verification: dict[str, Any] = {}
 
-    if mode != "live":
+    if mode == "replay" and decision in {"BUY", "SELL"}:
+        last_price = float(bars[-1]["close"]) if bars else 0.0
+        sl_offset = 2.0
+        tp_offset = 4.0
+        stop_loss = round(last_price - sl_offset, 5) if decision == "BUY" else round(last_price + sl_offset, 5)
+        take_profit = round(last_price + tp_offset, 5) if decision == "BUY" else round(last_price - tp_offset, 5)
+        stop_loss_take_profit = {"stop_loss": stop_loss, "take_profit": take_profit}
+        order_request = {
+            "action": "deal",
+            "symbol": symbol,
+            "volume": float(live_order_volume),
+            "type": decision,
+            "price": last_price,
+            "sl": stop_loss,
+            "tp": take_profit,
+            "deviation": 20,
+            "comment": "replay_simulated_execution",
+        }
+        order_result = {
+            "status": "accepted",
+            "order_sent": False,
+            "fill_price": last_price,
+            "requested_price": last_price,
+            "order_id": 0,
+            "error_reason": "",
+            "simulated": True,
+        }
+    elif mode != "live":
         rejection_reasons = ["non_live_mode"]
     elif decision not in {"BUY", "SELL"}:
         if failed_checks:
@@ -2142,7 +2169,15 @@ def _run_controlled_mt5_live_execution(
             **retry_metadata,
         }
     else:
-        if exit_branch_active:
+        if bool(order_result.get("simulated", False)):
+            order_result = {
+                **order_result,
+                "rejection_reason": "",
+                "broker_state_confirmation": "simulated",
+                "broker_state_outcome": "replay_simulated_accepted",
+                **retry_metadata,
+            }
+        elif exit_branch_active:
             sent_position_ticket = int(exit_close_target.get("position_ticket", 0) or 0)
             exit_close_verification = _verify_exit_close_position_disappearance(
                 symbol=symbol,

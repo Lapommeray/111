@@ -2530,5 +2530,99 @@ class TestExecutionGateSemantics(unittest.TestCase):
         self.assertEqual(decision["exit_rule"], "broker_confirmed_open_position")
 
 
+class TestReplaySimulatedTradeExecution(unittest.TestCase):
+    """Verify that replay mode can form simulated trades while live safeguards remain intact."""
+
+    def _mkdtemp(self, prefix: str) -> str:
+        path = tempfile.mkdtemp(prefix=prefix)
+        self.addCleanup(shutil.rmtree, path, ignore_errors=True)
+        return path
+
+    def test_replay_buy_produces_simulated_accepted_trade(self) -> None:
+        kwargs = _base_kwargs(self._mkdtemp(prefix="replay_buy_sim_"))
+        kwargs["mode"] = "replay"
+        kwargs["decision"] = "BUY"
+        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "accepted")
+        self.assertTrue(controlled_execution["order_result"]["simulated"])
+        self.assertFalse(controlled_execution["order_result"]["order_sent"])
+        self.assertEqual(controlled_execution["rollback_refusal_reasons"], [])
+        self.assertIsNotNone(controlled_execution["stop_loss_take_profit"]["stop_loss"])
+        self.assertIsNotNone(controlled_execution["stop_loss_take_profit"]["take_profit"])
+        self.assertEqual(controlled_execution["order_result"]["fill_price"], 2100.0)
+
+    def test_replay_sell_produces_simulated_accepted_trade(self) -> None:
+        kwargs = _base_kwargs(self._mkdtemp(prefix="replay_sell_sim_"))
+        kwargs["mode"] = "replay"
+        kwargs["decision"] = "SELL"
+        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "accepted")
+        self.assertTrue(controlled_execution["order_result"]["simulated"])
+        self.assertFalse(controlled_execution["order_result"]["order_sent"])
+        self.assertEqual(controlled_execution["rollback_refusal_reasons"], [])
+
+    def test_replay_wait_still_produces_non_live_mode_refusal(self) -> None:
+        kwargs = _base_kwargs(self._mkdtemp(prefix="replay_wait_nonlive_"))
+        kwargs["mode"] = "replay"
+        kwargs["decision"] = "WAIT"
+        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "refused")
+        self.assertIn("non_live_mode", controlled_execution["rollback_refusal_reasons"])
+
+    def test_live_buy_without_authorization_still_refused(self) -> None:
+        kwargs = _base_kwargs(self._mkdtemp(prefix="live_buy_still_refused_"))
+        kwargs["mode"] = "live"
+        kwargs["decision"] = "BUY"
+        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertEqual(controlled_execution["order_result"]["status"], "refused")
+        self.assertFalse(controlled_execution["order_result"]["order_sent"])
+        self.assertNotEqual(controlled_execution["rollback_refusal_reasons"], [])
+
+    def test_replay_simulated_does_not_trigger_auto_stop(self) -> None:
+        kwargs = _base_kwargs(self._mkdtemp(prefix="replay_no_autostop_"))
+        kwargs["mode"] = "replay"
+        kwargs["decision"] = "BUY"
+        _controlled_execution, state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        self.assertFalse(state["auto_stop_active"])
+        self.assertEqual(state["consecutive_failed_executions"], 0)
+
+    def test_replay_simulated_open_position_state_has_entry_price(self) -> None:
+        kwargs = _base_kwargs(self._mkdtemp(prefix="replay_open_pos_"))
+        kwargs["mode"] = "replay"
+        kwargs["decision"] = "BUY"
+        controlled_execution, _state, _paths = _run_controlled_mt5_live_execution(**kwargs)
+        open_pos = controlled_execution["open_position_state"]
+        self.assertEqual(open_pos["status"], "open")
+        self.assertEqual(open_pos["entry_price"], 2100.0)
+        self.assertEqual(open_pos["side"], "BUY")
+
+    def test_replay_pipeline_does_not_add_non_live_mode_refusal_for_buy_sell(self) -> None:
+        sample_path = Path(self._mkdtemp(prefix="replay_pipeline_samples_")) / "xauusd.csv"
+        ensure_sample_data(sample_path)
+        output = run_pipeline(
+            RuntimeConfig(
+                symbol="XAUUSD",
+                timeframe="M5",
+                bars=60,
+                sample_path=str(sample_path),
+                memory_root=self._mkdtemp(prefix="replay_pipeline_memory_"),
+                mode="replay",
+                replay_source="csv",
+                replay_csv_path=str(sample_path),
+            )
+        )
+        decision = output["status_panel"]["entry_exit_decision"]
+        controlled = output["status_panel"]["execution_state"]["controlled_mt5_readiness"]
+        artifact = controlled.get("controlled_execution_artifact", {})
+        entry_decision_mode = artifact.get("entry_decision", {}).get("mode", "")
+        self.assertEqual(entry_decision_mode, "replay")
+        original_decision = artifact.get("entry_decision", {}).get("decision", "")
+        if original_decision in {"BUY", "SELL"}:
+            self.assertNotEqual(decision.get("invalidation_reason", ""), "non_live_mode")
+            self.assertIn(decision["action"], {"LONG_ENTRY", "SHORT_ENTRY"})
+        # When original_decision is WAIT, NO_TRADE is the correct and expected
+        # outcome — the unit tests above cover the BUY/SELL simulation directly.
+
+
 if __name__ == "__main__":
     unittest.main()
