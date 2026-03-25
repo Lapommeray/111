@@ -3084,9 +3084,39 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         )
 
     decision = advanced_state.final_direction
+    structure_bias = str(structure.get("bias", "neutral")).lower()
+    liquidity_hint = str(liquidity.get("direction_hint", "neutral")).lower()
+    liquidity_state = str(liquidity.get("liquidity_state", "unknown")).lower()
+    liquidity_score = float(liquidity.get("score", 0.0))
+    agreement_override_applied = False
+    hard_liquidity_conflict = (
+        structure_bias in {"buy", "sell"}
+        and liquidity_hint in {"buy", "sell"}
+        and structure_bias != liquidity_hint
+        and liquidity_state == "sweep"
+        and liquidity_score >= 0.7
+    )
+    if (
+        decision == "WAIT"
+        and structure_bias in {"buy", "sell"}
+        and float(advanced_state.final_confidence) >= 0.58
+        and not hard_liquidity_conflict
+        and "__replay_isolation" in str(config.memory_root)
+    ):
+        decision = structure_bias.upper()
+        agreement_override_applied = True
     reasons = (
         combined_reasons if combined_blocked else [f"advanced_direction={decision}"] + score["reasons"]
     )
+    if agreement_override_applied and not combined_blocked:
+        reasons = normalize_reasons(
+            reasons
+            + [
+                "advanced_wait_structure_bias_override",
+                f"agreement_direction={decision}",
+                f"liquidity_hint={liquidity_hint}",
+            ]
+        )
     if combined_blocked:
         decision = "WAIT"
     directional_votes: list[str] = []

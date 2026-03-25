@@ -307,6 +307,98 @@ def test_data_sufficiency_tier_plumbing_validation() -> None:
     assert report["data_sufficiency_tier"] == "plumbing_validation"
 
 
+def test_evaluate_replay_persists_deterministic_decision_trace() -> None:
+    """Replay evaluation writes deterministic per-record decision trace artifact."""
+    from src.evaluation.replay_evaluator import evaluate_replay
+
+    root = Path("/tmp/test_decision_trace")
+    csv_path = _write_tiny_csv(root)
+
+    def runner(_cfg: Any) -> dict[str, Any]:
+        return {
+            "signal": {
+                "action": "WAIT",
+                "confidence": 0.58,
+                "blocked": True,
+                "reasons": [
+                    "structure_liquidity_conflict",
+                    "confidence_below_threshold",
+                ],
+                "signal_lifecycle": {"source_bar_time": 1700000300},
+                    "advanced_modules": {
+                        "final_direction": "BUY",
+                        "module_results": {
+                            "market_structure": {"direction_vote": "buy"},
+                            "liquidity_sweep": {"direction_vote": "sell"},
+                        },
+                    },
+                },
+            "status_panel": {
+                "structure_state": "trend_up",
+                "liquidity_state": "sweep",
+                "blocker_result": {
+                    "blocked": True,
+                    "blocker_reasons": [
+                        "structure_liquidity_conflict",
+                        "confidence_below_threshold",
+                    ],
+                },
+            },
+        }
+
+    report = evaluate_replay(
+        pipeline_runner=runner,
+        config_factory=RuntimeConfig,
+        symbol="XAUUSD",
+        timeframe="M5",
+        bars=5,
+        replay_csv_path=csv_path,
+        sample_path=csv_path,
+        memory_root=str(root / "memory"),
+        generated_registry_path=str(root / "memory" / "gcr.json"),
+        meta_adaptive_profile_path=str(root / "memory" / "map.json"),
+        evolution_enabled=False,
+        evolution_registry_path=str(root / "memory" / "er.json"),
+        evolution_artifact_root=str(root / "memory" / "ea"),
+        evolution_max_proposals=1,
+        compact_output=True,
+        evaluation_steps=2,
+        evaluation_stride=1,
+    )
+
+    trace_path = Path(report["decision_trace_path"])
+    assert trace_path.exists()
+    trace = json.loads(trace_path.read_text(encoding="utf-8"))
+    assert trace["schema_version"] == "replay.decision_trace.v1"
+    assert trace["record_count"] == len(trace["records"]) == 2
+    assert report["decision_trace_record_count"] == 2
+    assert report["decision_trace_schema_version"] == "replay.decision_trace.v1"
+    assert report["decision_trace_blocker_first_counts"]["structure_liquidity_conflict"] == 2
+    assert report["decision_diagnosis_schema_version"] == "replay.decision_diagnosis.v1"
+    diagnosis_path = Path(report["decision_diagnosis_path"])
+    assert diagnosis_path.exists()
+    diagnosis = json.loads(diagnosis_path.read_text(encoding="utf-8"))
+    assert diagnosis["counts"]["by_first_blocker"]["structure_liquidity_conflict"] == 2
+    assert diagnosis["counts"]["structure_liquidity_conflict"] == 2
+    assert diagnosis["counts"]["by_pre_gate_direction"]["BUY"] == 2
+
+    first = trace["records"][0]
+    assert first["record_index"] == 1
+    assert first["timestamp"] == 1700000300
+    assert first["pre_gate_direction"] == "BUY"
+    assert first["final_action"] == "WAIT"
+    assert first["structure_bias"] == "BUY"
+    assert first["liquidity_hint"] == "SELL"
+    assert first["first_blocker"] == "structure_liquidity_conflict"
+    assert first["full_blocker_sequence"] == [
+        "structure_liquidity_conflict",
+        "confidence_below_threshold",
+    ]
+    assert first["raw_layer_votes"] == {
+        "liquidity_sweep": "SELL",
+        "market_structure": "BUY",
+    }
+
 # ---------------------------------------------------------------------------
 # Section D: all five quarantinable modules are documented
 # ---------------------------------------------------------------------------
