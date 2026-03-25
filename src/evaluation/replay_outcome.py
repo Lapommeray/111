@@ -148,7 +148,9 @@ def assess_replay_outcome(
             f"trade simulation produced no measurable outcomes"
         )
 
-    # Flags for economic degeneracy (reported, not hard fail).
+    # Flags for economic degeneracy — reported for inspection, not hard fail.
+    # Economic flags are warnings: they surface economically suspicious runs
+    # without blocking evaluation, letting consumers decide thresholds.
     if closed > 0 and metrics["win_rate"] == 0.0:
         flags.append(f"0% win rate across {closed} closed trade(s)")
 
