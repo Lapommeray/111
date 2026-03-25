@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from src.evaluation.decision_completeness import run_decision_completeness_gate
 from src.evaluation.replay_evaluator import evaluate_replay
 from src.evolution.architecture_guard import ArchitectureGuard
 from src.evolution.code_generator import CodeGenerator
@@ -3504,6 +3505,17 @@ def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
         )
 
     Path(config.evaluation_output_path).write_text(json.dumps(report, indent=2), encoding="utf-8")
+
+    # Decision-completeness gate — validates every record is decisive.
+    completeness_artifact = str(
+        Path(config.memory_root) / "decision_completeness_report.json"
+    )
+    completeness_report = run_decision_completeness_gate(
+        records=report.get("records", []),
+        artifact_path=completeness_artifact,
+    )
+    report["decision_completeness"] = completeness_report
+
     return report
 
 def parse_args() -> argparse.Namespace:
