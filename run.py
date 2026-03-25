@@ -15,6 +15,7 @@ from typing import Any
 from src.evaluation.decision_completeness import run_decision_completeness_gate
 from src.evaluation.decision_quality import run_decision_quality_gate
 from src.evaluation.replay_outcome import run_replay_outcome_gate
+from src.evaluation.threshold_calibration import run_threshold_calibration
 from src.evaluation.replay_evaluator import evaluate_replay
 from src.evolution.architecture_guard import ArchitectureGuard
 from src.evolution.code_generator import CodeGenerator
@@ -3544,6 +3545,18 @@ def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
         artifact_path=outcome_artifact,
     )
     report["replay_outcome"] = outcome_report
+    _persist_report()
+
+    # Threshold-calibration report — diagnostic, never blocks.
+    calibration_artifact = str(
+        Path(config.memory_root) / "threshold_calibration_report.json"
+    )
+    calibration_report = run_threshold_calibration(
+        records=report.get("records", []),
+        outcome_report=outcome_report,
+        artifact_path=calibration_artifact,
+    )
+    report["threshold_calibration"] = calibration_report
     _persist_report()
 
     return report
