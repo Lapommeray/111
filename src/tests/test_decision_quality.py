@@ -266,6 +266,7 @@ class TestDecisionQualityGate(unittest.TestCase):
             self.assertEqual(persisted["total_records"], 3)
 
     def test_gate_fails_and_persists(self) -> None:
+        """strict=True (default) raises on zero-actionable."""
         records = [
             _rec(action="WAIT", confidence=0.0, reasons=["no setup"]),
         ]
@@ -277,6 +278,55 @@ class TestDecisionQualityGate(unittest.TestCase):
             self.assertTrue(path.exists())
             persisted = json.loads(path.read_text())
             self.assertFalse(persisted["passed"])
+
+    def test_gate_strict_true_raises_on_zero_actionable(self) -> None:
+        """Explicit strict=True raises DecisionQualityError — live safeguard."""
+        records = [
+            _rec(blocked=True, blocker_reasons=["spread_filter"]),
+            _rec(action="WAIT", confidence=0.0, reasons=["low confluence"]),
+        ]
+        comp = {"counts": _completeness_counts(blocked=1, abstain=1)}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "quality.json"
+            with self.assertRaises(DecisionQualityError) as ctx:
+                run_decision_quality_gate(records, comp, path, strict=True)
+            self.assertIn("0 actionable", str(ctx.exception))
+
+    def test_gate_strict_false_returns_warn_on_zero_actionable(self) -> None:
+        """strict=False (replay/diagnostic) completes with gate_action=warn."""
+        records = [
+            _rec(blocked=True, blocker_reasons=["spread_filter"]),
+            _rec(action="WAIT", confidence=0.0, reasons=["low confluence"]),
+        ]
+        comp = {"counts": _completeness_counts(blocked=1, abstain=1)}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "quality.json"
+            report = run_decision_quality_gate(
+                records, comp, path, strict=False,
+            )
+            # Does NOT raise — returns the report
+            self.assertFalse(report["passed"])
+            self.assertEqual(report["gate_action"], "warn")
+            self.assertTrue(any("0 actionable" in f for f in report["failures"]))
+            # Artifact persisted with honest failure data
+            self.assertTrue(path.exists())
+            persisted = json.loads(path.read_text())
+            self.assertFalse(persisted["passed"])
+            self.assertEqual(persisted["actionable_count"], 0)
+
+    def test_gate_strict_false_no_warn_on_pass(self) -> None:
+        """strict=False with healthy data: no gate_action key (normal pass)."""
+        records = [
+            _rec(action="BUY", confidence=0.9, reasons=["strong setup"]),
+        ]
+        comp = {"counts": _completeness_counts(actionable=1)}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "quality.json"
+            report = run_decision_quality_gate(
+                records, comp, path, strict=False,
+            )
+            self.assertTrue(report["passed"])
+            self.assertNotIn("gate_action", report)
 
     def test_gate_creates_parent_dirs(self) -> None:
         records = [_rec(action="BUY", confidence=0.9, reasons=["setup ok"])]
