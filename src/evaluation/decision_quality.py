@@ -234,6 +234,8 @@ def run_decision_quality_gate(
     records: list[dict[str, Any]],
     completeness_report: dict[str, Any],
     artifact_path: str | Path,
+    *,
+    strict: bool = True,
 ) -> dict[str, Any]:
     """Run the decision-quality gate and persist the report artifact.
 
@@ -246,6 +248,12 @@ def run_decision_quality_gate(
         a ``"counts"`` key).
     artifact_path:
         Filesystem path where the JSON quality report will be written.
+    strict:
+        When ``True`` (default), a failed gate raises
+        :class:`DecisionQualityError`.  When ``False`` (replay/diagnostic
+        mode), the report is persisted and returned with
+        ``gate_action = "warn"`` instead of raising, allowing downstream
+        evaluation to complete and emit diagnostic artifacts.
 
     Returns
     -------
@@ -255,7 +263,7 @@ def run_decision_quality_gate(
     Raises
     ------
     DecisionQualityError
-        If any hard-fail condition is met.
+        If any hard-fail condition is met **and** *strict* is ``True``.
     """
     counts = completeness_report.get("counts", {})
     report = assess_decision_quality(records, counts)
@@ -265,11 +273,15 @@ def run_decision_quality_gate(
     dest.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
     if not report["passed"]:
-        lines = [
-            f"Decision-quality gate FAILED: {report['failure_count']} issue(s).",
-        ]
-        for f in report["failures"]:
-            lines.append(f"  - {f}")
-        raise DecisionQualityError("\n".join(lines))
+        if strict:
+            lines = [
+                f"Decision-quality gate FAILED: {report['failure_count']} issue(s).",
+            ]
+            for f in report["failures"]:
+                lines.append(f"  - {f}")
+            raise DecisionQualityError("\n".join(lines))
+        # Non-strict (replay/diagnostic): surface the failure honestly
+        # but do not block evaluation completion.
+        report["gate_action"] = "warn"
 
     return report

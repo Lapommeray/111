@@ -6,7 +6,6 @@ from pathlib import Path
 
 from run import RuntimeConfig, ensure_sample_data, run_replay_evaluation
 from src.evaluation.blocker_effect_report import build_blocker_effect_report
-from src.evaluation.decision_quality import DecisionQualityError
 from src.evaluation.module_contribution_report import build_module_contribution_report
 from src.evaluation.session_report import build_session_report
 
@@ -114,13 +113,11 @@ def test_run_replay_evaluation_writes_json_report(tmp_path: Path) -> None:
     )
 
     # Small synthetic sample produces all-blocked records; the quality gate
-    # correctly rejects this as "0 actionable records".  The evaluation report
-    # and both gate artifacts must still be persisted before the error.
-    with pytest.raises(DecisionQualityError, match="0 actionable"):
-        run_replay_evaluation(config)
+    # detects "0 actionable records" but replay completes (strict=False)
+    # so all gate artifacts are persisted for diagnostic purposes.
+    result = run_replay_evaluation(config)
 
-    # Main evaluation report (includes decision_completeness) was written
-    # BEFORE the quality gate raised.
+    # Main evaluation report includes all gate results.
     assert report_path.exists()
     loaded = json.loads(report_path.read_text(encoding="utf-8"))
     assert loaded["steps"] == 4
@@ -128,13 +125,22 @@ def test_run_replay_evaluation_writes_json_report(tmp_path: Path) -> None:
     assert "decision_completeness" in loaded
     assert loaded["decision_completeness"]["passed"] is True
 
-    # Quality gate artifact persisted even on failure
+    # Quality gate artifact persisted with honest failure diagnosis
     quality_path = tmp_path / "memory" / "decision_quality_report.json"
     assert quality_path.exists()
     quality = json.loads(quality_path.read_text(encoding="utf-8"))
     assert quality["passed"] is False
     assert quality["actionable_count"] == 0
+    assert any("0 actionable" in f for f in quality["failures"])
 
-    # Outcome gate never ran (quality gate raised first) — no artifact.
+    # Quality report in the returned result surfaces the zero-actionable state
+    assert result["decision_quality"]["passed"] is False
+    assert result["decision_quality"]["gate_action"] == "warn"
+
+    # Outcome gate ran (quality gate no longer blocks) — artifact exists.
     outcome_path = tmp_path / "memory" / "replay_outcome_report.json"
-    assert not outcome_path.exists()
+    assert outcome_path.exists()
+
+    # Threshold calibration ran — artifact exists.
+    calibration_path = tmp_path / "memory" / "threshold_calibration_report.json"
+    assert calibration_path.exists()

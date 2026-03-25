@@ -3531,6 +3531,7 @@ def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
         records=report.get("records", []),
         completeness_report=completeness_report,
         artifact_path=quality_artifact,
+        strict=False,  # replay/diagnostic: warn but don't block
     )
     report["decision_quality"] = quality_report
     _persist_report()
