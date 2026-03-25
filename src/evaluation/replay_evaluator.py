@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import json
 import math
 import shutil
 from pathlib import Path
@@ -181,6 +182,16 @@ def evaluate_replay(
     execution_realism_v2_impact = _build_execution_realism_v2_impact(records, execution_realism_v2)
     analytics_summary = _build_analytics_summary(records)
     oos_analytics_summary = _build_oos_analytics_summary(records, walk_forward_enabled=walk_forward_enabled)
+    decision_trace = _build_replay_decision_trace(records)
+    decision_trace_path = _persist_replay_decision_trace(
+        replay_memory_root=replay_memory_root,
+        decision_trace=decision_trace,
+    )
+    diagnosis = _build_replay_decision_diagnosis(decision_trace)
+    diagnosis_path = _persist_replay_decision_diagnosis(
+        replay_memory_root=replay_memory_root,
+        diagnosis=diagnosis,
+    )
     return {
         "symbol": symbol,
         "mode": "replay_evaluation",
@@ -220,6 +231,13 @@ def evaluate_replay(
         "oos_analytics_summary": oos_analytics_summary,
         "per_cycle_summary": per_cycle_summary,
         "records": records,
+        "decision_trace_path": str(decision_trace_path),
+        "decision_trace_schema_version": str(decision_trace.get("schema_version", "")),
+        "decision_trace_record_count": int(decision_trace.get("record_count", 0)),
+        "decision_trace_blocker_first_counts": dict(decision_trace.get("blocker_first_counts", {})),
+        "decision_diagnosis_path": str(diagnosis_path),
+        "decision_diagnosis_schema_version": str(diagnosis.get("schema_version", "")),
+        "decision_diagnosis": diagnosis,
         "replay_isolated": True,
         "replay_memory_root": str(replay_memory_root),
         "knowledge_expansion_config": {
@@ -299,6 +317,195 @@ def _run_replay_steps(
         result["evaluation_step"] = step_index
         records.append(result)
     return records
+
+
+def _build_replay_decision_trace(records: list[dict[str, Any]]) -> dict[str, Any]:
+    trace_records: list[dict[str, Any]] = []
+    blocker_first_counts: dict[str, int] = {}
+
+    for index, record in enumerate(records, start=1):
+        signal = record.get("signal", {}) if isinstance(record.get("signal", {}), dict) else {}
+        advanced = signal.get("advanced_modules", {}) if isinstance(signal.get("advanced_modules", {}), dict) else {}
+        module_results = (
+            advanced.get("module_results", {})
+            if isinstance(advanced.get("module_results", {}), dict)
+            else {}
+        )
+        status_panel = (
+            record.get("status_panel", {})
+            if isinstance(record.get("status_panel", {}), dict)
+            else {}
+        )
+        blocker_result = (
+            status_panel.get("blocker_result", {})
+            if isinstance(status_panel.get("blocker_result", {}), dict)
+            else {}
+        )
+        blocker_sequence = [
+            str(reason)
+            for reason in signal.get("reasons", [])
+            if isinstance(reason, str) and reason.strip()
+        ]
+        signal_lifecycle = (
+            signal.get("signal_lifecycle", {})
+            if isinstance(signal.get("signal_lifecycle", {}), dict)
+            else {}
+        )
+        first_blocker = blocker_sequence[0] if blocker_sequence else ""
+        if first_blocker:
+            blocker_first_counts[first_blocker] = blocker_first_counts.get(first_blocker, 0) + 1
+
+        raw_layer_votes = {
+            module_name: str(module_payload.get("direction_vote", "neutral")).upper()
+            for module_name, module_payload in sorted(module_results.items())
+            if isinstance(module_payload, dict)
+        }
+        structure_bias = str(raw_layer_votes.get("market_structure", "NEUTRAL")).upper()
+        liquidity_hint = str(raw_layer_votes.get("liquidity_sweep", "NEUTRAL")).upper()
+        trace_records.append(
+            {
+                "record_index": int(record.get("evaluation_step", index)),
+                "timestamp": signal_lifecycle.get("source_bar_time"),
+                "raw_layer_votes": raw_layer_votes,
+                "pre_gate_direction": str(advanced.get("final_direction", "WAIT")).upper(),
+                "structure_bias": structure_bias,
+                "liquidity_hint": liquidity_hint,
+                "structure_state": str(status_panel.get("structure_state", "unknown")),
+                "liquidity_state": str(status_panel.get("liquidity_state", "unknown")),
+                "confidence_before_thresholding": float(signal.get("confidence", 0.0)),
+                "first_blocker": first_blocker,
+                "full_blocker_sequence": blocker_sequence,
+                "final_action": str(signal.get("action", "WAIT")).upper(),
+                "blocked": bool(blocker_result.get("blocked", False)),
+            }
+        )
+
+    return {
+        "schema_version": "replay.decision_trace.v1",
+        "record_count": len(trace_records),
+        "blocker_first_counts": dict(sorted(blocker_first_counts.items())),
+        "records": trace_records,
+    }
+
+
+def _persist_replay_decision_trace(*, replay_memory_root: Path, decision_trace: dict[str, Any]) -> Path:
+    trace_root = replay_memory_root / "decision_trace"
+    trace_root.mkdir(parents=True, exist_ok=True)
+    path = trace_root / "replay_decision_trace.json"
+    with path.open("w", encoding="utf-8") as fh:
+        json.dump(decision_trace, fh, indent=2, sort_keys=True)
+        fh.write("\n")
+    return path
+
+
+def _build_replay_decision_diagnosis(decision_trace: dict[str, Any]) -> dict[str, Any]:
+    records = decision_trace.get("records", [])
+    if not isinstance(records, list):
+        records = []
+    normalized_records = [record for record in records if isinstance(record, dict)]
+
+    by_first_blocker: dict[str, int] = {}
+    by_full_blocker_sequence: dict[str, int] = {}
+    by_pre_gate_direction: dict[str, int] = {}
+    confidence_bucket_x_first_blocker: dict[str, dict[str, int]] = {}
+    decision_signature_counts: dict[str, int] = {}
+
+    wait_while_agreement = 0
+    structure_liquidity_conflict_count = 0
+    blocked_records = 0
+    blocked_off_hours = 0
+
+    for record in normalized_records:
+        first_blocker = str(record.get("first_blocker", "")).strip() or "none"
+        by_first_blocker[first_blocker] = by_first_blocker.get(first_blocker, 0) + 1
+
+        full_sequence = record.get("full_blocker_sequence", [])
+        if isinstance(full_sequence, list):
+            seq_key = " | ".join(str(item).strip() for item in full_sequence if str(item).strip()) or "none"
+        else:
+            seq_key = "none"
+        by_full_blocker_sequence[seq_key] = by_full_blocker_sequence.get(seq_key, 0) + 1
+
+        pre_gate_direction = str(record.get("pre_gate_direction", "UNKNOWN")).upper()
+        by_pre_gate_direction[pre_gate_direction] = by_pre_gate_direction.get(pre_gate_direction, 0) + 1
+
+        structure_bias = str(record.get("structure_bias", "NEUTRAL")).upper()
+        liquidity_hint = str(record.get("liquidity_hint", "NEUTRAL")).upper()
+        final_action = str(record.get("final_action", "WAIT")).upper()
+
+        if (
+            pre_gate_direction == "WAIT"
+            and structure_bias in {"BUY", "SELL"}
+            and structure_bias == liquidity_hint
+        ):
+            wait_while_agreement += 1
+        if (
+            structure_bias in {"BUY", "SELL"}
+            and liquidity_hint in {"BUY", "SELL"}
+            and structure_bias != liquidity_hint
+        ):
+            structure_liquidity_conflict_count += 1
+
+        confidence = float(record.get("confidence_before_thresholding", 0.0))
+        if confidence < 0.5:
+            bucket = "low"
+        elif confidence < 0.75:
+            bucket = "medium"
+        else:
+            bucket = "high"
+        confidence_bucket = confidence_bucket_x_first_blocker.setdefault(bucket, {})
+        confidence_bucket[first_blocker] = confidence_bucket.get(first_blocker, 0) + 1
+
+        blocked = bool(record.get("blocked", False))
+        if blocked:
+            blocked_records += 1
+            if "session_filter:off_hours_block" in seq_key:
+                blocked_off_hours += 1
+
+        signature = (
+            f"pre={pre_gate_direction}|structure={structure_bias}|liquidity={liquidity_hint}"
+            f"|first_blocker={first_blocker}|final={final_action}"
+        )
+        decision_signature_counts[signature] = decision_signature_counts.get(signature, 0) + 1
+
+    top_signatures = [
+        {"signature": signature, "count": count}
+        for signature, count in sorted(
+            decision_signature_counts.items(),
+            key=lambda item: (-item[1], item[0]),
+        )[:10]
+    ]
+    return {
+        "schema_version": "replay.decision_diagnosis.v1",
+        "record_count": len(normalized_records),
+        "counts": {
+            "by_first_blocker": dict(sorted(by_first_blocker.items())),
+            "by_full_blocker_sequence": dict(sorted(by_full_blocker_sequence.items())),
+            "by_pre_gate_direction": dict(sorted(by_pre_gate_direction.items())),
+            "advanced_wait_with_structure_liquidity_agreement": wait_while_agreement,
+            "structure_liquidity_conflict": structure_liquidity_conflict_count,
+        },
+        "confidence_bucket_x_first_blocker": {
+            bucket: dict(sorted(inner.items()))
+            for bucket, inner in sorted(confidence_bucket_x_first_blocker.items())
+        },
+        "blocked_off_hours": {
+            "blocked_records": blocked_records,
+            "off_hours_blocked_records": blocked_off_hours,
+            "off_hours_share_of_blocked": round((blocked_off_hours / blocked_records), 4) if blocked_records else 0.0,
+        },
+        "top_repeated_decision_signatures": top_signatures,
+    }
+
+
+def _persist_replay_decision_diagnosis(*, replay_memory_root: Path, diagnosis: dict[str, Any]) -> Path:
+    trace_root = replay_memory_root / "decision_trace"
+    trace_root.mkdir(parents=True, exist_ok=True)
+    path = trace_root / "replay_decision_diagnosis.json"
+    with path.open("w", encoding="utf-8") as fh:
+        json.dump(diagnosis, fh, indent=2, sort_keys=True)
+        fh.write("\n")
+    return path
 
 
 def _build_walk_forward_cycles(

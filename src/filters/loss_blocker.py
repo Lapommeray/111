@@ -32,10 +32,17 @@ class LossBlocker:
 
         if structure.get("bias") != "neutral" and liquidity.get("direction_hint") != "neutral":
             if structure.get("bias") != liquidity.get("direction_hint"):
-                blocked_reasons.append("structure_liquidity_conflict")
+                liquidity_state = str(liquidity.get("liquidity_state", "unknown")).lower()
+                liquidity_score = float(liquidity.get("score", 0.0))
+                hard_conflict = liquidity_state == "sweep" and liquidity_score >= 0.7
+                if hard_conflict:
+                    blocked_reasons.append("structure_liquidity_conflict")
+                else:
+                    blocked_reasons.append("structure_liquidity_conflict_soft")
 
+        hard_block_reasons = [reason for reason in blocked_reasons if reason != "structure_liquidity_conflict_soft"]
         return {
-            "blocked": len(blocked_reasons) > 0,
+            "blocked": len(hard_block_reasons) > 0,
             "reasons": blocked_reasons,
             "metrics": {
                 "confidence": confidence,

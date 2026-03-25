@@ -20,11 +20,23 @@ def test_loss_blocker_blocks_conflict_even_with_high_confidence() -> None:
     result = blocker.evaluate(
         confidence=0.9,
         structure={"bias": "buy"},
-        liquidity={"direction_hint": "sell"},
+        liquidity={"direction_hint": "sell", "liquidity_state": "sweep", "score": 0.9},
         spread_points=20.0,
     )
     assert result["blocked"] is True
     assert "structure_liquidity_conflict" in result["reasons"]
+
+
+def test_loss_blocker_soft_conflict_does_not_hard_block() -> None:
+    blocker = LossBlocker(min_confidence=0.6, max_spread_points=60.0)
+    result = blocker.evaluate(
+        confidence=0.9,
+        structure={"bias": "buy"},
+        liquidity={"direction_hint": "sell", "liquidity_state": "stable", "score": 0.4},
+        spread_points=20.0,
+    )
+    assert result["blocked"] is False
+    assert "structure_liquidity_conflict_soft" in result["reasons"]
 
 
 def test_loss_blocker_passes_aligned_signal() -> None:
