@@ -1,11 +1,17 @@
 """Replay-outcome gate for economic truth validation.
 
 Runs on top of the decision-quality gate.  While quality proves the output is
-structurally believable, this gate proves the *economic* output is measurable:
+structurally believable, this gate proves the *economic* output is measurable
+and enforces minimum economic sanity:
 
 * If actionable records exist, at least one must produce a closed trade.
 * Win rate, average P&L (gross/net), expectancy, and max drawdown are reported.
-* Negative net expectancy and zero win rate are flagged.
+* With ≥ ``_MIN_CLOSED_FOR_ECONOMIC_GATE`` closed trades, the following are
+  hard-fail conditions (not just flags):
+  - 0% win rate
+  - Negative net expectancy
+  - Non-positive net P&L with drawdown present
+  - Max drawdown exceeding ``_MAX_DRAWDOWN_POINTS_THRESHOLD``
 """
 
 from __future__ import annotations
@@ -21,6 +27,13 @@ from typing import Any
 # ---------------------------------------------------------------------------
 
 _TRADE_DIRECTIONS = {"BUY", "SELL"}
+
+# Minimum closed-trade count before economic fail rules apply.  Runs with
+# fewer closed trades are too small to judge economically and only get flags.
+_MIN_CLOSED_FOR_ECONOMIC_GATE = 2
+
+# Absolute max-drawdown threshold (in points).  Exceeding this is a hard fail.
+_MAX_DRAWDOWN_POINTS_THRESHOLD = 50.0
 
 
 # ---------------------------------------------------------------------------
@@ -148,31 +161,57 @@ def assess_replay_outcome(
             f"trade simulation produced no measurable outcomes"
         )
 
-    # Flags for economic degeneracy — reported for inspection, not hard fail.
-    # Economic flags are warnings: they surface economically suspicious runs
-    # without blocking evaluation, letting consumers decide thresholds.
+    # --- Economic sanity enforcement ---
+    # When closed trades meet the minimum threshold, economic degeneracy is a
+    # hard fail.  Below the threshold the same conditions are flagged as
+    # warnings — too few trades to be statistically meaningful.
+    meaningful = closed >= _MIN_CLOSED_FOR_ECONOMIC_GATE
+
     if closed > 0 and metrics["win_rate"] == 0.0:
-        flags.append(f"0% win rate across {closed} closed trade(s)")
+        msg = f"0% win rate across {closed} closed trade(s)"
+        if meaningful:
+            failures.append(msg)
+        else:
+            flags.append(msg)
 
     if closed > 0 and metrics["net_expectancy"] < 0:
-        flags.append(
-            f"negative net expectancy: {metrics['net_expectancy']:.3f} points/trade"
+        msg = (
+            f"negative net expectancy: "
+            f"{metrics['net_expectancy']:.3f} points/trade"
         )
+        if meaningful:
+            failures.append(msg)
+        else:
+            flags.append(msg)
 
     if (
         closed > 0
         and metrics["max_drawdown_points"] > 0
         and metrics["net_pnl_points"] <= 0
     ):
-        flags.append(
+        msg = (
             f"net P&L non-positive ({metrics['net_pnl_points']:.3f}) with "
             f"max drawdown {metrics['max_drawdown_points']:.3f} points"
         )
+        if meaningful:
+            failures.append(msg)
+        else:
+            flags.append(msg)
+
+    if closed > 0 and metrics["max_drawdown_points"] > _MAX_DRAWDOWN_POINTS_THRESHOLD:
+        msg = (
+            f"max drawdown {metrics['max_drawdown_points']:.3f} points "
+            f"exceeds threshold {_MAX_DRAWDOWN_POINTS_THRESHOLD:.1f}"
+        )
+        if meaningful:
+            failures.append(msg)
+        else:
+            flags.append(msg)
 
     passed = len(failures) == 0
 
     return {
-        "schema_version": "replay_outcome.v1",
+        "schema_version": "replay_outcome.v2",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "total_records": len(records),
         "actionable_count": actionable,

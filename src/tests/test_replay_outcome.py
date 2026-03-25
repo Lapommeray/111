@@ -1,8 +1,9 @@
 """Tests for the replay-outcome / economic truth gate.
 
-Covers fail conditions (actionable but no closed trades), flag conditions
-(negative expectancy, 0% win rate, net P&L non-positive), pass conditions
-(healthy mixed run), metric correctness, and artifact persistence.
+Covers hard-fail conditions (actionable but no closed trades, 0% win rate,
+negative expectancy, non-positive net P&L with drawdown, excessive drawdown),
+sub-threshold flag conditions (single-trade runs), pass conditions (healthy
+mixed run), metric correctness, threshold constants, and artifact persistence.
 """
 
 from __future__ import annotations
@@ -15,6 +16,8 @@ from typing import Any
 
 from src.evaluation.replay_outcome import (
     ReplayOutcomeError,
+    _MAX_DRAWDOWN_POINTS_THRESHOLD,
+    _MIN_CLOSED_FOR_ECONOMIC_GATE,
     _compute_metrics,
     _is_closed_trade,
     assess_replay_outcome,
@@ -247,33 +250,102 @@ class TestAssessReplayOutcome(unittest.TestCase):
         report = assess_replay_outcome([], _quality(actionable=0))
         self.assertTrue(report["passed"])
 
-    def test_all_losses_flagged(self) -> None:
+    # -- hard-fail rules (≥ _MIN_CLOSED_FOR_ECONOMIC_GATE trades) ----------
+
+    def test_all_losses_hard_fail(self) -> None:
+        """≥2 closed trades all losing → hard fail (0% win + neg expectancy)."""
         records = [
             _closed_rec(direction="SELL", pnl_points=-3.0, result="loss"),
             _closed_rec(pnl_points=-1.5, result="loss"),
         ]
         report = assess_replay_outcome(records, _quality(actionable=2))
-        self.assertTrue(report["passed"])  # flags, not hard fail
-        self.assertTrue(any("0% win rate" in f for f in report["flags"]))
-        self.assertTrue(any("negative net expectancy" in f for f in report["flags"]))
+        self.assertFalse(report["passed"])
+        self.assertTrue(any("0% win rate" in f for f in report["failures"]))
+        self.assertTrue(
+            any("negative net expectancy" in f for f in report["failures"])
+        )
 
-    def test_negative_expectancy_flagged(self) -> None:
+    def test_negative_expectancy_hard_fail(self) -> None:
+        """≥2 closed trades with net-negative expectancy → hard fail."""
         records = [
             _closed_rec(pnl_points=1.0, result="win"),
             _closed_rec(direction="SELL", pnl_points=-5.0, result="loss"),
         ]
         report = assess_replay_outcome(records, _quality(actionable=2))
-        self.assertTrue(report["passed"])
-        self.assertTrue(any("negative net expectancy" in f for f in report["flags"]))
+        self.assertFalse(report["passed"])
+        self.assertTrue(
+            any("negative net expectancy" in f for f in report["failures"])
+        )
 
-    def test_non_positive_net_with_drawdown_flagged(self) -> None:
+    def test_non_positive_net_with_drawdown_hard_fail(self) -> None:
+        """≥2 closed trades, net P&L ≤ 0, drawdown > 0 → hard fail."""
         records = [
             _closed_rec(pnl_points=2.0, result="win"),
             _closed_rec(direction="SELL", pnl_points=-3.0, result="loss"),
         ]
         report = assess_replay_outcome(records, _quality(actionable=2))
+        self.assertFalse(report["passed"])
+        self.assertTrue(
+            any("net P&L non-positive" in f for f in report["failures"])
+        )
+
+    def test_excessive_drawdown_hard_fail(self) -> None:
+        """Max drawdown exceeding threshold → hard fail."""
+        # 2 trades: +1, -(threshold+1) → drawdown > threshold
+        big_loss = -(_MAX_DRAWDOWN_POINTS_THRESHOLD + 1.0)
+        records = [
+            _closed_rec(pnl_points=1.0, result="win"),
+            _closed_rec(direction="SELL", pnl_points=big_loss, result="loss"),
+        ]
+        report = assess_replay_outcome(records, _quality(actionable=2))
+        self.assertFalse(report["passed"])
+        self.assertTrue(
+            any("exceeds threshold" in f for f in report["failures"])
+        )
+
+    def test_drawdown_at_threshold_passes(self) -> None:
+        """Drawdown exactly at threshold → not a fail."""
+        # Series: +threshold, -threshold → drawdown == threshold exactly, not >
+        records = [
+            _closed_rec(pnl_points=_MAX_DRAWDOWN_POINTS_THRESHOLD, result="win"),
+            _closed_rec(
+                direction="SELL",
+                pnl_points=-_MAX_DRAWDOWN_POINTS_THRESHOLD,
+                result="loss",
+            ),
+        ]
+        report = assess_replay_outcome(records, _quality(actionable=2))
+        # net pnl = 0, drawdown == threshold exactly → not > threshold
+        # But non-positive net with drawdown still triggers:
+        self.assertTrue(
+            any("net P&L non-positive" in f for f in report["failures"])
+        )
+        # Drawdown at threshold, not exceeding:
+        self.assertFalse(
+            any("exceeds threshold" in f for f in report["failures"])
+        )
+
+    # -- sub-threshold: single trade → flags, not failures -----------------
+
+    def test_single_loss_flagged_not_failed(self) -> None:
+        """Only 1 closed trade (< threshold) → flags, not hard fail."""
+        records = [_closed_rec(pnl_points=-2.0, result="loss")]
+        report = assess_replay_outcome(records, _quality(actionable=1))
         self.assertTrue(report["passed"])
-        self.assertTrue(any("net P&L non-positive" in f for f in report["flags"]))
+        self.assertGreater(len(report["flags"]), 0)
+        self.assertTrue(any("0% win rate" in f for f in report["flags"]))
+        self.assertTrue(
+            any("negative net expectancy" in f for f in report["flags"])
+        )
+
+    def test_single_flat_trade_flagged_not_failed(self) -> None:
+        """Single flat trade has 0% win rate → flag, not fail."""
+        records = [_closed_rec(pnl_points=0.0, result="flat")]
+        report = assess_replay_outcome(records, _quality(actionable=1))
+        self.assertTrue(report["passed"])
+        self.assertTrue(any("0% win rate" in f for f in report["flags"]))
+
+    # -- pass conditions ---------------------------------------------------
 
     def test_all_wins_no_flags(self) -> None:
         records = [
@@ -291,20 +363,9 @@ class TestAssessReplayOutcome(unittest.TestCase):
         self.assertAlmostEqual(report["win_rate"], 1.0)
         self.assertAlmostEqual(report["net_expectancy"], 1.5)
 
-    def test_schema_version_present(self) -> None:
+    def test_schema_version_v2(self) -> None:
         report = assess_replay_outcome([], _quality(actionable=0))
-        self.assertEqual(report["schema_version"], "replay_outcome.v1")
-
-    def test_flat_trade_not_flagged(self) -> None:
-        """A flat trade (result='flat') counts as closed but not win or loss."""
-        records = [_closed_rec(pnl_points=0.0, result="flat")]
-        report = assess_replay_outcome(records, _quality(actionable=1))
-        self.assertTrue(report["passed"])
-        self.assertEqual(report["wins"], 0)
-        self.assertEqual(report["losses"], 0)
-        self.assertEqual(report["closed_trades"], 1)
-        # 0% win rate is flagged even for flat trades
-        self.assertTrue(any("0% win rate" in f for f in report["flags"]))
+        self.assertEqual(report["schema_version"], "replay_outcome.v2")
 
     def test_record_missing_status_panel_ignored(self) -> None:
         """Records without status_panel are silently skipped (not closed)."""
@@ -312,6 +373,14 @@ class TestAssessReplayOutcome(unittest.TestCase):
         report = assess_replay_outcome(records, _quality(actionable=1))
         self.assertFalse(report["passed"])
         self.assertEqual(report["closed_trades"], 0)
+
+    # -- threshold constant sanity -----------------------------------------
+
+    def test_min_closed_threshold_is_reasonable(self) -> None:
+        self.assertGreaterEqual(_MIN_CLOSED_FOR_ECONOMIC_GATE, 2)
+
+    def test_max_drawdown_threshold_is_positive(self) -> None:
+        self.assertGreater(_MAX_DRAWDOWN_POINTS_THRESHOLD, 0)
 
 
 # ---------------------------------------------------------------------------
@@ -365,6 +434,37 @@ class TestReplayOutcomeGate(unittest.TestCase):
                 run_replay_outcome_gate(records, qual, path)
             self.assertIn("0 closed trades", str(ctx.exception))
             self.assertIn("3 actionable", str(ctx.exception))
+
+    def test_gate_economic_hard_fail_persists_then_raises(self) -> None:
+        """All losses (≥2 trades) → gate raises, artifact persisted first."""
+        records = [
+            _closed_rec(pnl_points=-2.0, result="loss"),
+            _closed_rec(direction="SELL", pnl_points=-3.0, result="loss"),
+        ]
+        qual = _quality(actionable=2)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "outcome.json"
+            with self.assertRaises(ReplayOutcomeError) as ctx:
+                run_replay_outcome_gate(records, qual, path)
+            self.assertIn("0% win rate", str(ctx.exception))
+            self.assertTrue(path.exists())
+            persisted = json.loads(path.read_text())
+            self.assertFalse(persisted["passed"])
+            self.assertGreater(persisted["failure_count"], 0)
+
+    def test_gate_drawdown_hard_fail(self) -> None:
+        """Excessive drawdown → gate raises."""
+        big_loss = -(_MAX_DRAWDOWN_POINTS_THRESHOLD + 10.0)
+        records = [
+            _closed_rec(pnl_points=1.0, result="win"),
+            _closed_rec(direction="SELL", pnl_points=big_loss, result="loss"),
+        ]
+        qual = _quality(actionable=2)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "outcome.json"
+            with self.assertRaises(ReplayOutcomeError) as ctx:
+                run_replay_outcome_gate(records, qual, path)
+            self.assertIn("exceeds threshold", str(ctx.exception))
 
 
 if __name__ == "__main__":
