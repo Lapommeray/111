@@ -5,6 +5,11 @@ from src.evaluation.decision_completeness import (
     run_decision_completeness_gate,
     validate_records,
 )
+from src.evaluation.decision_quality import (
+    DecisionQualityError,
+    assess_decision_quality,
+    run_decision_quality_gate,
+)
 from src.evaluation.module_contribution_report import build_module_contribution_report
 from src.evaluation.replay_evaluator import evaluate_replay
 from src.evaluation.session_report import build_session_report
@@ -18,4 +23,7 @@ __all__ = [
     "validate_records",
     "run_decision_completeness_gate",
     "DecisionCompletenessError",
+    "assess_decision_quality",
+    "run_decision_quality_gate",
+    "DecisionQualityError",
 ]

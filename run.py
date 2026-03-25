@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from src.evaluation.decision_completeness import run_decision_completeness_gate
+from src.evaluation.decision_quality import run_decision_quality_gate
 from src.evaluation.replay_evaluator import evaluate_replay
 from src.evolution.architecture_guard import ArchitectureGuard
 from src.evolution.code_generator import CodeGenerator
@@ -3504,7 +3505,10 @@ def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
             iteration_id="replay_evaluation",
         )
 
-    Path(config.evaluation_output_path).write_text(json.dumps(report, indent=2), encoding="utf-8")
+    def _persist_report() -> None:
+        Path(config.evaluation_output_path).write_text(
+            json.dumps(report, indent=2), encoding="utf-8"
+        )
 
     # Decision-completeness gate — validates every record is decisive.
     completeness_artifact = str(
@@ -3515,6 +3519,19 @@ def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
         artifact_path=completeness_artifact,
     )
     report["decision_completeness"] = completeness_report
+    _persist_report()
+
+    # Decision-quality gate — validates distribution & reason quality.
+    quality_artifact = str(
+        Path(config.memory_root) / "decision_quality_report.json"
+    )
+    quality_report = run_decision_quality_gate(
+        records=report.get("records", []),
+        completeness_report=completeness_report,
+        artifact_path=quality_artifact,
+    )
+    report["decision_quality"] = quality_report
+    _persist_report()
 
     return report
 
