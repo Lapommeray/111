@@ -129,6 +129,119 @@ def _compute_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _build_drawdown_attribution(records: list[dict[str, Any]]) -> dict[str, Any]:
+    """Build deterministic max-drawdown attribution details for closed trades."""
+    trade_events: list[dict[str, Any]] = []
+    cumulative = 0.0
+    peak_equity = 0.0
+    peak_event_index = -1
+    max_drawdown_points = 0.0
+    worst_segments: list[dict[str, Any]] = []
+    event_index = 0
+
+    for record_index, record in enumerate(records):
+        outcome = _extract_latest_outcome(record)
+        if not _is_closed_trade(outcome):
+            continue
+        gross = round(
+            float(outcome.get("pnl_points_gross", outcome.get("pnl_points", 0.0))),
+            3,
+        )
+        net = round(float(outcome.get("pnl_points_net", gross)), 3)
+        cumulative = round(cumulative + net, 3)
+        if cumulative > peak_equity:
+            peak_equity = cumulative
+            peak_event_index = event_index
+        drawdown = round(peak_equity - cumulative, 3)
+        trade_event = {
+            "event_index": event_index,
+            "record_index": record_index,
+            "trade_id": str(outcome.get("trade_id", f"record_{record_index}")),
+            "direction": str(outcome.get("direction", "")),
+            "result": str(outcome.get("result", "")),
+            "gross_points": gross,
+            "net_points": net,
+            "cumulative_equity_points": cumulative,
+            "peak_equity_points": peak_equity,
+            "drawdown_points": drawdown,
+            "evaluation_step": record.get("evaluation_step"),
+            "walk_forward_cycle": record.get("walk_forward_cycle"),
+        }
+        trade_events.append(trade_event)
+
+        if drawdown > max_drawdown_points:
+            max_drawdown_points = drawdown
+            worst_segments = [
+                {
+                    "segment_id": "segment_1",
+                    "peak_event_index": peak_event_index,
+                    "trough_event_index": event_index,
+                    "peak_equity_points": peak_equity,
+                    "trough_equity_points": cumulative,
+                    "drawdown_points": drawdown,
+                }
+            ]
+        elif drawdown == max_drawdown_points and drawdown > 0:
+            segment_id = f"segment_{len(worst_segments) + 1}"
+            worst_segments.append(
+                {
+                    "segment_id": segment_id,
+                    "peak_event_index": peak_event_index,
+                    "trough_event_index": event_index,
+                    "peak_equity_points": peak_equity,
+                    "trough_equity_points": cumulative,
+                    "drawdown_points": drawdown,
+                }
+            )
+
+        event_index += 1
+
+    for segment in worst_segments:
+        peak_idx = int(segment["peak_event_index"])
+        trough_idx = int(segment["trough_event_index"])
+        left = max(0, peak_idx - 3)
+        right = min(len(trade_events) - 1, trough_idx + 3)
+        segment_events = trade_events[peak_idx : trough_idx + 1] if trough_idx >= peak_idx >= 0 else []
+        contributing_trade_ids = [
+            str(event.get("trade_id", ""))
+            for event in segment_events
+            if float(event.get("net_points", 0.0)) < 0
+        ]
+        contributing_record_indexes = [
+            int(event.get("record_index", -1))
+            for event in segment_events
+            if float(event.get("net_points", 0.0)) < 0
+        ]
+        contributing_steps = [
+            event.get("evaluation_step")
+            for event in segment_events
+            if event.get("evaluation_step") is not None
+        ]
+        segment["contributing_trade_ids"] = contributing_trade_ids
+        segment["contributing_record_indexes"] = contributing_record_indexes
+        segment["contributing_replay_windows"] = contributing_steps
+        segment["equity_path_window"] = trade_events[left : right + 1]
+        segment["equity_path_peak_to_trough"] = segment_events
+        segment["segment_signature"] = (
+            f"{segment['peak_event_index']}->{segment['trough_event_index']}"
+            f"|dd={segment['drawdown_points']:.3f}"
+            f"|records={','.join(str(idx) for idx in contributing_record_indexes)}"
+        )
+        segment["segment_fingerprint"] = (
+            f"{segment['peak_event_index']}->{segment['trough_event_index']}"
+            f"|dd={segment['drawdown_points']:.3f}"
+            f"|trades={','.join(contributing_trade_ids)}"
+        )
+
+    return {
+        "schema_version": "replay.drawdown_attribution.v1",
+        "closed_trade_count": len(trade_events),
+        "max_drawdown_points": round(max_drawdown_points, 3),
+        "worst_drawdown_segment_count": len(worst_segments),
+        "worst_drawdown_segments": worst_segments,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Core outcome assessment
 # ---------------------------------------------------------------------------
@@ -269,8 +382,18 @@ def run_replay_outcome_gate(
     """
     report = assess_replay_outcome(records, quality_report)
 
+    drawdown_attribution = _build_drawdown_attribution(records)
     dest = Path(artifact_path)
     dest.parent.mkdir(parents=True, exist_ok=True)
+    drawdown_dest = dest.with_name(f"{dest.stem}_drawdown_attribution{dest.suffix}")
+    drawdown_dest.write_text(
+        json.dumps(drawdown_attribution, indent=2),
+        encoding="utf-8",
+    )
+    report["drawdown_attribution_path"] = str(drawdown_dest)
+    report["drawdown_attribution_schema_version"] = str(
+        drawdown_attribution.get("schema_version", "")
+    )
     dest.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
     if not report["passed"]:

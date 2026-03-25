@@ -298,6 +298,41 @@ def _expect_runtime_config_type(key: str, value: Any, expected: str) -> Any:
     raise ValueError(f"Unsupported runtime config schema type for key '{key}': {expected}")
 
 
+def _should_apply_replay_wait_structure_override(
+    *,
+    decision: str,
+    structure_bias: str,
+    advanced_confidence: float,
+    hard_liquidity_conflict: bool,
+    memory_root: str,
+    combined_reasons: list[str],
+    effective_signal_confidence: float,
+) -> tuple[bool, str]:
+    """Return whether replay WAIT→structure-bias override should apply.
+
+    Additive mitigation: when a soft structure/liquidity conflict is present and
+    effective signal confidence is weak, skip the replay-only override so the
+    pipeline remains in WAIT during known drawdown-prone disagreement segments.
+    """
+    if decision != "WAIT":
+        return False, ""
+    if structure_bias not in {"buy", "sell"}:
+        return False, ""
+    if advanced_confidence < 0.58:
+        return False, ""
+    if hard_liquidity_conflict:
+        return False, ""
+    if "__replay_isolation" not in str(memory_root):
+        return False, ""
+
+    soft_conflict = "structure_liquidity_conflict_soft" in {
+        str(reason).strip() for reason in combined_reasons
+    }
+    if soft_conflict and effective_signal_confidence < 0.5:
+        return False, "replay_drawdown_soft_conflict_override_guard"
+    return True, ""
+
+
 def load_runtime_config(path: Path) -> RuntimeConfig:
     if not path.exists():
         return RuntimeConfig()
@@ -3096,13 +3131,16 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         and liquidity_state == "sweep"
         and liquidity_score >= 0.7
     )
-    if (
-        decision == "WAIT"
-        and structure_bias in {"buy", "sell"}
-        and float(advanced_state.final_confidence) >= 0.58
-        and not hard_liquidity_conflict
-        and "__replay_isolation" in str(config.memory_root)
-    ):
+    should_apply_override, override_guard_reason = _should_apply_replay_wait_structure_override(
+        decision=decision,
+        structure_bias=structure_bias,
+        advanced_confidence=float(advanced_state.final_confidence),
+        hard_liquidity_conflict=hard_liquidity_conflict,
+        memory_root=str(config.memory_root),
+        combined_reasons=combined_reasons,
+        effective_signal_confidence=effective_signal_confidence,
+    )
+    if should_apply_override:
         decision = structure_bias.upper()
         agreement_override_applied = True
     reasons = (
@@ -3117,6 +3155,8 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
                 f"liquidity_hint={liquidity_hint}",
             ]
         )
+    elif override_guard_reason and not combined_blocked:
+        reasons = normalize_reasons(reasons + [override_guard_reason])
     if combined_blocked:
         decision = "WAIT"
     directional_votes: list[str] = []

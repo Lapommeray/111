@@ -18,6 +18,7 @@ from src.evaluation.replay_outcome import (
     ReplayOutcomeError,
     _MAX_DRAWDOWN_POINTS_THRESHOLD,
     _MIN_CLOSED_FOR_ECONOMIC_GATE,
+    _build_drawdown_attribution,
     _compute_metrics,
     _is_closed_trade,
     assess_replay_outcome,
@@ -213,6 +214,39 @@ class TestComputeMetrics(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# _build_drawdown_attribution unit tests
+# ---------------------------------------------------------------------------
+
+
+class TestDrawdownAttribution(unittest.TestCase):
+
+    def test_peak_to_trough_attribution(self) -> None:
+        records = [
+            _closed_rec(pnl_points=8.0, result="win"),
+            _closed_rec(direction="SELL", pnl_points=-2.0, result="loss"),
+            _closed_rec(direction="SELL", pnl_points=-5.0, result="loss"),
+            _closed_rec(pnl_points=1.0, result="win"),
+        ]
+        payload = _build_drawdown_attribution(records)
+        self.assertEqual(payload["schema_version"], "replay.drawdown_attribution.v1")
+        self.assertEqual(payload["max_drawdown_points"], 7.0)
+        self.assertEqual(payload["worst_drawdown_segment_count"], 1)
+        segment = payload["worst_drawdown_segments"][0]
+        self.assertEqual(segment["peak_event_index"], 0)
+        self.assertEqual(segment["trough_event_index"], 2)
+        self.assertEqual(segment["contributing_trade_ids"], ["test_trade", "test_trade"])
+        self.assertTrue(segment["equity_path_peak_to_trough"])
+        self.assertIn("segment_signature", segment)
+        self.assertIn("segment_fingerprint", segment)
+
+    def test_no_closed_trades(self) -> None:
+        payload = _build_drawdown_attribution([_skipped_rec(), _blocked_rec()])
+        self.assertEqual(payload["closed_trade_count"], 0)
+        self.assertEqual(payload["max_drawdown_points"], 0.0)
+        self.assertEqual(payload["worst_drawdown_segments"], [])
+
+
+# ---------------------------------------------------------------------------
 # assess_replay_outcome tests
 # ---------------------------------------------------------------------------
 
@@ -401,6 +435,10 @@ class TestReplayOutcomeGate(unittest.TestCase):
             report = run_replay_outcome_gate(records, qual, path)
             self.assertTrue(report["passed"])
             self.assertTrue(path.exists())
+            drawdown_path = Path(report["drawdown_attribution_path"])
+            self.assertTrue(drawdown_path.exists())
+            drawdown_payload = json.loads(drawdown_path.read_text())
+            self.assertEqual(drawdown_payload["schema_version"], "replay.drawdown_attribution.v1")
             persisted = json.loads(path.read_text())
             self.assertTrue(persisted["passed"])
             self.assertEqual(persisted["closed_trades"], 2)
