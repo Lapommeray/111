@@ -1,0 +1,28 @@
+{
+  "promotion_activation_state": "watch",
+  "activation_readiness_score": 0.5475,
+  "activation_gate_reliability": 0.615,
+  "activation_block_pressure": 0.3311,
+  "quarantine_required": false,
+  "allowed_activation_count": 6,
+  "rejected_activation_count": 10,
+  "promotion_freeze_recommended": false,
+  "activation_mode": "watch_only",
+  "governance_flags": {
+    "sandbox_only": true,
+    "replay_validation_required": true,
+    "live_deployment_allowed": false,
+    "no_blind_live_self_rewrites": true,
+    "promotion_activation_pause_guard": false,
+    "promotion_activation_refusal_guard": false
+  },
+  "paths": {
+    "latest": "memory/promotion_activation_gate/promotion_activation_latest.json",
+    "history": "memory/promotion_activation_gate/promotion_activation_history.json",
+    "activation_candidate_registry": "memory/promotion_activation_gate/activation_candidate_registry.json",
+    "activation_decision_audit": "memory/promotion_activation_gate/activation_decision_audit.json",
+    "activation_quarantine_registry": "memory/promotion_activation_gate/activation_quarantine_registry.json",
+    "activation_budget_registry": "memory/promotion_activation_gate/activation_budget_registry.json",
+    "promotion_activation_governance_state": "memory/promotion_activation_gate/promotion_activation_governance_state.json"
+  }
+}

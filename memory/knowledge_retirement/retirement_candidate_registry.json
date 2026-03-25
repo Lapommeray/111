@@ -1,0 +1,6 @@
+{
+  "candidate_count": 0,
+  "stale_capability_pressure": 0.1308,
+  "redundancy_retirement_overlap": 0.0,
+  "retirement_reason_cluster": "balanced_retirement_governance"
+}
