@@ -10,6 +10,11 @@ from src.evaluation.decision_quality import (
     assess_decision_quality,
     run_decision_quality_gate,
 )
+from src.evaluation.replay_outcome import (
+    ReplayOutcomeError,
+    assess_replay_outcome,
+    run_replay_outcome_gate,
+)
 from src.evaluation.module_contribution_report import build_module_contribution_report
 from src.evaluation.replay_evaluator import evaluate_replay
 from src.evaluation.session_report import build_session_report
@@ -26,4 +31,7 @@ __all__ = [
     "assess_decision_quality",
     "run_decision_quality_gate",
     "DecisionQualityError",
+    "assess_replay_outcome",
+    "run_replay_outcome_gate",
+    "ReplayOutcomeError",
 ]

@@ -14,6 +14,7 @@ from typing import Any
 
 from src.evaluation.decision_completeness import run_decision_completeness_gate
 from src.evaluation.decision_quality import run_decision_quality_gate
+from src.evaluation.replay_outcome import run_replay_outcome_gate
 from src.evaluation.replay_evaluator import evaluate_replay
 from src.evolution.architecture_guard import ArchitectureGuard
 from src.evolution.code_generator import CodeGenerator
@@ -3531,6 +3532,18 @@ def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
         artifact_path=quality_artifact,
     )
     report["decision_quality"] = quality_report
+    _persist_report()
+
+    # Replay-outcome gate — validates economic outcomes.
+    outcome_artifact = str(
+        Path(config.memory_root) / "replay_outcome_report.json"
+    )
+    outcome_report = run_replay_outcome_gate(
+        records=report.get("records", []),
+        quality_report=quality_report,
+        artifact_path=outcome_artifact,
+    )
+    report["replay_outcome"] = outcome_report
     _persist_report()
 
     return report

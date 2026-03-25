@@ -134,3 +134,7 @@ def test_run_replay_evaluation_writes_json_report(tmp_path: Path) -> None:
     quality = json.loads(quality_path.read_text(encoding="utf-8"))
     assert quality["passed"] is False
     assert quality["actionable_count"] == 0
+
+    # Outcome gate never ran (quality gate raised first) — no artifact.
+    outcome_path = tmp_path / "memory" / "replay_outcome_report.json"
+    assert not outcome_path.exists()
