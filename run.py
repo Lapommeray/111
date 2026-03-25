@@ -3598,11 +3598,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--mode", choices=["live", "replay"], default=None)
     parser.add_argument("--replay-source", choices=["csv", "memory"], default=None)
     parser.add_argument("--replay-csv", default=None)
+    parser.add_argument("--evaluation-output-path", default=None)
     parser.add_argument("--evolution-enabled", choices=["true", "false"], default=None)
     parser.add_argument("--compact-output", choices=["true", "false"], default=None)
     parser.add_argument("--evaluate-replay", choices=["true", "false"], default=None)
     parser.add_argument("--evaluation-steps", type=int, default=None)
     parser.add_argument("--evaluation-stride", type=int, default=None)
+    parser.add_argument("--walk-forward-enabled", choices=["true", "false"], default=None)
+    parser.add_argument("--walk-forward-context-bars", type=int, default=None)
+    parser.add_argument("--walk-forward-test-bars", type=int, default=None)
+    parser.add_argument("--walk-forward-step-bars", type=int, default=None)
+    parser.add_argument("--quarantined-modules", default=None)
     parser.add_argument("--knowledge-expansion-enabled", choices=["true", "false"], default=None)
     parser.add_argument("--live-execution-enabled", choices=["true", "false"], default=None)
     parser.add_argument("--live-authorization-enabled", choices=["true", "false"], default=None)
@@ -3619,6 +3625,10 @@ def main() -> None:
         config = RuntimeConfig(**{**config.__dict__, "replay_source": args.replay_source})
     if args.replay_csv is not None:
         config = RuntimeConfig(**{**config.__dict__, "replay_csv_path": args.replay_csv})
+    if args.evaluation_output_path is not None:
+        config = RuntimeConfig(
+            **{**config.__dict__, "evaluation_output_path": args.evaluation_output_path}
+        )
     if args.evolution_enabled is not None:
         config = RuntimeConfig(
             **{**config.__dict__, "evolution_enabled": args.evolution_enabled.lower() == "true"}
@@ -3631,6 +3641,46 @@ def main() -> None:
         config = RuntimeConfig(**{**config.__dict__, "evaluation_steps": int(args.evaluation_steps)})
     if args.evaluation_stride is not None:
         config = RuntimeConfig(**{**config.__dict__, "evaluation_stride": int(args.evaluation_stride)})
+    if args.walk_forward_enabled is not None:
+        config = RuntimeConfig(
+            **{
+                **config.__dict__,
+                "walk_forward_enabled": args.walk_forward_enabled.lower() == "true",
+            }
+        )
+    if args.walk_forward_context_bars is not None:
+        config = RuntimeConfig(
+            **{
+                **config.__dict__,
+                "walk_forward_context_bars": int(args.walk_forward_context_bars),
+            }
+        )
+    if args.walk_forward_test_bars is not None:
+        config = RuntimeConfig(
+            **{
+                **config.__dict__,
+                "walk_forward_test_bars": int(args.walk_forward_test_bars),
+            }
+        )
+    if args.walk_forward_step_bars is not None:
+        config = RuntimeConfig(
+            **{
+                **config.__dict__,
+                "walk_forward_step_bars": int(args.walk_forward_step_bars),
+            }
+        )
+    if args.quarantined_modules is not None:
+        parsed_quarantine = [
+            item.strip()
+            for item in str(args.quarantined_modules).split(",")
+            if item.strip()
+        ]
+        config = RuntimeConfig(
+            **{
+                **config.__dict__,
+                "quarantined_modules": parsed_quarantine,
+            }
+        )
     if args.knowledge_expansion_enabled is not None:
         config = RuntimeConfig(
             **{
