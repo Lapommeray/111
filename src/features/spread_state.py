@@ -17,7 +17,7 @@ def compute_spread_state(bars: list[dict[str, Any]], baseline_points: float = 40
 
     recent = bars[-5:]
     avg_range = sum(float(b["high"]) - float(b["low"]) for b in recent) / 5.0
-    spread_points = max(5.0, min(120.0, round(avg_range * 18.0, 2)))
+    spread_points = max(5.0, min(120.0, round(avg_range * 2.0, 2)))
 
     if spread_points > baseline_points * 1.4:
         state = "wide"
