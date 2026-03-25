@@ -198,6 +198,22 @@ class TestAssessDecisionQuality(unittest.TestCase):
         self.assertFalse(report["passed"])
         self.assertTrue(any("degenerate" in f for f in report["failures"]))
 
+    def test_non_string_reason_in_record_fails(self) -> None:
+        """Non-string reason values (e.g. int) must be caught at record level."""
+        record: dict[str, Any] = {
+            "signal": {
+                "action": "BUY",
+                "confidence": 0.8,
+                "blocked": False,
+                "blocker_reasons": [],
+                "reasons": [123],  # type: ignore[list-item]
+            }
+        }
+        counts = _completeness_counts(actionable=1)
+        report = assess_decision_quality([record], counts)
+        self.assertFalse(report["passed"])
+        self.assertTrue(any("bad reasons" in f for f in report["failures"]))
+
     def test_empty_run_passes(self) -> None:
         report = assess_decision_quality([], _completeness_counts())
         self.assertTrue(report["passed"])
