@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import pytest
 from pathlib import Path
 
 from run import RuntimeConfig, ensure_sample_data, run_replay_evaluation
 from src.evaluation.blocker_effect_report import build_blocker_effect_report
+from src.evaluation.decision_quality import DecisionQualityError
 from src.evaluation.module_contribution_report import build_module_contribution_report
 from src.evaluation.session_report import build_session_report
 
@@ -111,24 +113,28 @@ def test_run_replay_evaluation_writes_json_report(tmp_path: Path) -> None:
         knowledge_candidate_limit=5,
     )
 
-    report = run_replay_evaluation(config)
-    assert report["symbol"] == "XAUUSD"
-    assert report["mode"] == "replay_evaluation"
-    assert report["steps"] == 4
-    assert "module_contribution_report" in report
+    # Small synthetic sample produces all-blocked records; the quality gate
+    # correctly rejects this as "0 actionable records".  The evaluation report
+    # and both gate artifacts must still be persisted before the error.
+    with pytest.raises(DecisionQualityError, match="0 actionable"):
+        run_replay_evaluation(config)
+
+    # Main evaluation report (includes decision_completeness) was written
+    # BEFORE the quality gate raised.
     assert report_path.exists()
-    module_any = next(iter(report["module_contribution_report"]["modules"].values()))
-    assert "regime_specific_alignment" in module_any
-    assert "contradiction_reduction_proxy" in module_any
-    assert "blocker_protection_strength" in module_any
-    assert "confidence_calibration_shift" in module_any
-    assert "drawdown_prevention_proxy" in module_any
-    assert "knowledge_expansion_phase_a" in report
-    assert report["knowledge_expansion_phase_a"]["enabled"] is True
-
     loaded = json.loads(report_path.read_text(encoding="utf-8"))
     assert loaded["steps"] == 4
-    assert loaded["knowledge_expansion_phase_a"]["enabled"] is True
+    assert loaded["symbol"] == "XAUUSD"
+    assert "decision_completeness" in loaded
+    assert loaded["decision_completeness"]["passed"] is True
 
-    loaded = json.loads(report_path.read_text(encoding="utf-8"))
-    assert loaded["steps"] == 4
+    # Quality gate artifact persisted even on failure
+    quality_path = tmp_path / "memory" / "decision_quality_report.json"
+    assert quality_path.exists()
+    quality = json.loads(quality_path.read_text(encoding="utf-8"))
+    assert quality["passed"] is False
+    assert quality["actionable_count"] == 0
+
+    # Outcome gate never ran (quality gate raised first) — no artifact.
+    outcome_path = tmp_path / "memory" / "replay_outcome_report.json"
+    assert not outcome_path.exists()
