@@ -234,6 +234,25 @@ class TestCompareDrawdownFiles(unittest.TestCase):
             result = compare_drawdown_files(inc_path, quar_path, out_path)
             self.assertTrue(out_path.exists())
 
+    def test_file_not_found_raises(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            missing = Path(tmpdir) / "does_not_exist.json"
+            other = Path(tmpdir) / "other.json"
+            other.write_text(json.dumps(_make_attribution()))
+            with self.assertRaises(FileNotFoundError):
+                compare_drawdown_files(missing, other)
+            with self.assertRaises(FileNotFoundError):
+                compare_drawdown_files(other, missing)
+
+    def test_invalid_json_raises(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            bad = Path(tmpdir) / "bad.json"
+            good = Path(tmpdir) / "good.json"
+            bad.write_text("not valid json {{{")
+            good.write_text(json.dumps(_make_attribution()))
+            with self.assertRaises(json.JSONDecodeError):
+                compare_drawdown_files(bad, good)
+
 
 if __name__ == "__main__":
     unittest.main()

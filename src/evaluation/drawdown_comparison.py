@@ -42,9 +42,9 @@ def _record_indexes(segment: dict[str, Any]) -> list[int]:
     return [int(r) for r in segment.get("contributing_record_indexes", [])]
 
 
-def _replay_windows(segment: dict[str, Any]) -> list[Any]:
-    """Return contributing replay windows from a segment."""
-    return list(segment.get("contributing_replay_windows", []))
+def _replay_windows(segment: dict[str, Any]) -> list[int]:
+    """Return contributing replay windows (evaluation steps) from a segment."""
+    return [int(w) for w in segment.get("contributing_replay_windows", []) if w is not None]
 
 
 # ---------------------------------------------------------------------------

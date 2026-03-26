@@ -3627,7 +3627,7 @@ def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
                 outcome_artifact_path.read_text(encoding="utf-8")
             )
         else:
-            outcome_report = {"passed": False, "drawdown_attribution_path": None}
+            outcome_report = {"passed": False}
         report["replay_outcome"] = outcome_report
         _persist_report()
         raise
