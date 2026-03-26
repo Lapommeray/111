@@ -1,0 +1,12 @@
+{
+  "activation_budget": 0.7063,
+  "concurrency_budget": 2,
+  "priority_weight": {
+    "autonomous_capability_expansion": 0.7104,
+    "governed_capability_invention": 0.6396
+  },
+  "resource_share": {
+    "autonomous_capability_expansion": 0.5545,
+    "governed_capability_invention": 0.4455
+  }
+}

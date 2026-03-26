@@ -14,7 +14,7 @@ from typing import Any
 
 from src.evaluation.decision_completeness import run_decision_completeness_gate
 from src.evaluation.decision_quality import run_decision_quality_gate
-from src.evaluation.replay_outcome import run_replay_outcome_gate
+from src.evaluation.replay_outcome import run_replay_outcome_gate, ReplayOutcomeError
 from src.evaluation.threshold_calibration import run_threshold_calibration
 from src.evaluation.replay_evaluator import evaluate_replay
 from src.evolution.architecture_guard import ArchitectureGuard
@@ -3610,11 +3610,27 @@ def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
     outcome_artifact = str(
         Path(config.memory_root) / "replay_outcome_report.json"
     )
-    outcome_report = run_replay_outcome_gate(
-        records=report.get("records", []),
-        quality_report=quality_report,
-        artifact_path=outcome_artifact,
-    )
+    try:
+        outcome_report = run_replay_outcome_gate(
+            records=report.get("records", []),
+            quality_report=quality_report,
+            artifact_path=outcome_artifact,
+        )
+    except ReplayOutcomeError:
+        # Gate wrote its own artifact (including drawdown_attribution_path)
+        # before raising.  Read it back so the main evaluation report on disk
+        # surfaces the drawdown attribution path for downstream consumers
+        # (e.g. A/B comparison tooling).
+        outcome_artifact_path = Path(outcome_artifact)
+        if outcome_artifact_path.exists():
+            outcome_report = json.loads(
+                outcome_artifact_path.read_text(encoding="utf-8")
+            )
+        else:
+            outcome_report = {"passed": False}
+        report["replay_outcome"] = outcome_report
+        _persist_report()
+        raise
     report["replay_outcome"] = outcome_report
     _persist_report()
 

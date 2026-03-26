@@ -1,0 +1,6 @@
+{
+  "previous_regime_label": "mean_reversion_regime",
+  "current_regime_label": "mean_reversion_regime",
+  "regime_transition_intensity": 0.2341,
+  "transition_detected": false
+}
