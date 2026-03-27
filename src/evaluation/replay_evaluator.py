@@ -98,6 +98,7 @@ def evaluate_replay(
             symbol=symbol,
             timeframe=timeframe,
             bars=bars,
+            replay_csv_path=replay_csv_path,
             sample_path=sample_path,
             replay_memory_root=replay_memory_root,
             generated_registry_path=generated_registry_path,
@@ -140,6 +141,7 @@ def evaluate_replay(
                 symbol=symbol,
                 timeframe=timeframe,
                 bars=bars,
+                replay_csv_path=replay_csv_path,
                 sample_path=sample_path,
                 replay_memory_root=replay_memory_root,
                 generated_registry_path=generated_registry_path,
@@ -265,6 +267,7 @@ def _run_replay_steps(
     symbol: str,
     timeframe: str,
     bars: int,
+    replay_csv_path: str,
     sample_path: str,
     replay_memory_root: Path,
     generated_registry_path: str,
@@ -286,6 +289,12 @@ def _run_replay_steps(
         step_root = replay_memory_root / "steps" / f"{window_prefix}_{step_index:04d}"
         temp_csv = step_root / "replay_window.csv"
         _write_rows(temp_csv, window)
+        _persist_replay_window_manifest(
+            step_root=step_root,
+            source_dataset_path=replay_csv_path,
+            end_index=end,
+            rows=window,
+        )
         step_generated_registry_path = step_root / Path(generated_registry_path).name
         step_meta_adaptive_profile_path = step_root / Path(meta_adaptive_profile_path).name
         step_evolution_registry_path = step_root / Path(evolution_registry_path).name
@@ -311,7 +320,13 @@ def _run_replay_steps(
             signal_max_age_seconds=signal_max_age_seconds,
             quarantined_modules=effective_quarantined,
         )
-        result = pipeline_runner(cfg)
+        try:
+            result = pipeline_runner(cfg)
+        except Exception:
+            # Preserve the exact step input on failures for forensic replay.
+            raise
+        if temp_csv.exists():
+            temp_csv.unlink()
         _apply_execution_costs_to_record(result, execution_costs)
         _apply_execution_realism_v2_to_record(result, execution_costs, execution_realism_v2)
         result["evaluation_step"] = step_index
@@ -733,6 +748,30 @@ def _write_rows(path: Path, rows: list[dict[str, str]]) -> None:
         writer = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
         writer.writeheader()
         writer.writerows(rows)
+
+
+def _persist_replay_window_manifest(
+    *,
+    step_root: Path,
+    source_dataset_path: str,
+    end_index: int,
+    rows: list[dict[str, str]],
+) -> Path:
+    if not rows:
+        raise ValueError("Cannot build replay manifest for empty evaluation window.")
+    path = step_root / "replay_window_manifest.json"
+    payload = {
+        "schema_version": "replay.window_manifest.v1",
+        "source_dataset_path": str(source_dataset_path),
+        "end_index": int(end_index),
+        "row_count": len(rows),
+        "first_bar_timestamp": str(rows[0].get("time", "")),
+        "last_bar_timestamp": str(rows[-1].get("time", "")),
+    }
+    with path.open("w", encoding="utf-8") as fh:
+        json.dump(payload, fh, indent=2, sort_keys=True)
+        fh.write("\n")
+    return path
 
 
 def _action_distribution(records: list[dict[str, Any]]) -> dict[str, int]:

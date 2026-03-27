@@ -112,6 +112,10 @@ def _memory_sensitive_pipeline_runner(config: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _failing_pipeline_runner(_config: dict[str, Any]) -> dict[str, Any]:
+    raise RuntimeError("synthetic replay step failure")
+
+
 def _evaluate_with_costs(
     tmp_path: Path,
     *,
@@ -653,4 +657,80 @@ def test_replay_isolation_cleans_existing_sandbox_deterministically(tmp_path: Pa
 
     assert second_report["replay_memory_root"] == first_report["replay_memory_root"]
     assert not stale_artifact.exists()
-    assert (sandbox_root / "steps" / "evaluation_window_0001" / "replay_window.csv").exists()
+
+
+def test_replay_isolation_deletes_successful_step_csv_and_persists_manifest(tmp_path: Path) -> None:
+    csv_path = tmp_path / "replay.csv"
+    _write_replay_csv(csv_path, rows=12)
+
+    report = evaluate_replay(
+        pipeline_runner=_memory_sensitive_pipeline_runner,
+        config_factory=_identity_config_factory,
+        symbol="XAUUSD",
+        timeframe="M5",
+        bars=5,
+        replay_csv_path=str(csv_path),
+        sample_path=str(csv_path),
+        memory_root=str(tmp_path / "memory"),
+        generated_registry_path=str(tmp_path / "memory" / "generated_code_registry.json"),
+        meta_adaptive_profile_path=str(tmp_path / "memory" / "meta_adaptive_profile.json"),
+        evolution_enabled=False,
+        evolution_registry_path=str(tmp_path / "memory" / "evolution_registry.json"),
+        evolution_artifact_root=str(tmp_path / "memory" / "evolution_artifacts"),
+        evolution_max_proposals=1,
+        compact_output=False,
+        evaluation_steps=2,
+        evaluation_stride=1,
+    )
+
+    step_root = Path(report["replay_memory_root"]) / "steps" / "evaluation_window_0001"
+    manifest_path = step_root / "replay_window_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert manifest_path.exists()
+    assert not (step_root / "replay_window.csv").exists()
+    assert manifest == {
+        "schema_version": "replay.window_manifest.v1",
+        "source_dataset_path": str(csv_path),
+        "end_index": 5,
+        "row_count": 5,
+        "first_bar_timestamp": "1700000000",
+        "last_bar_timestamp": "1700000240",
+    }
+
+
+def test_replay_isolation_keeps_failed_step_csv_and_manifest(tmp_path: Path) -> None:
+    csv_path = tmp_path / "replay.csv"
+    _write_replay_csv(csv_path, rows=12)
+
+    with pytest.raises(RuntimeError, match="synthetic replay step failure"):
+        evaluate_replay(
+            pipeline_runner=_failing_pipeline_runner,
+            config_factory=_identity_config_factory,
+            symbol="XAUUSD",
+            timeframe="M5",
+            bars=5,
+            replay_csv_path=str(csv_path),
+            sample_path=str(csv_path),
+            memory_root=str(tmp_path / "memory"),
+            generated_registry_path=str(tmp_path / "memory" / "generated_code_registry.json"),
+            meta_adaptive_profile_path=str(tmp_path / "memory" / "meta_adaptive_profile.json"),
+            evolution_enabled=False,
+            evolution_registry_path=str(tmp_path / "memory" / "evolution_registry.json"),
+            evolution_artifact_root=str(tmp_path / "memory" / "evolution_artifacts"),
+            evolution_max_proposals=1,
+            compact_output=False,
+            evaluation_steps=1,
+            evaluation_stride=1,
+        )
+
+    step_root = tmp_path / "memory__replay_isolation" / "steps" / "evaluation_window_0001"
+    manifest_path = step_root / "replay_window_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert manifest_path.exists()
+    assert (step_root / "replay_window.csv").exists()
+    assert manifest["schema_version"] == "replay.window_manifest.v1"
+    assert manifest["source_dataset_path"] == str(csv_path)
+    assert manifest["end_index"] == 5
+    assert manifest["row_count"] == 5
