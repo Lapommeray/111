@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import csv
+import errno
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -379,6 +381,26 @@ def test_walk_forward_valid_config_creates_deterministic_sequential_cycles(tmp_p
     assert report_a["per_cycle_summary"][1]["test_start_bar_index"] == 9
 
 
+def test_walk_forward_respects_global_evaluation_steps_budget(tmp_path: Path) -> None:
+    report = _evaluate_with_costs(
+        tmp_path,
+        pnls=[0.5] * 3,
+        bars=5,
+        evaluation_stride=1,
+        walk_forward_enabled=True,
+        walk_forward_context_bars=6,
+        walk_forward_test_bars=4,
+        walk_forward_step_bars=3,
+        csv_rows=18,
+    )
+
+    assert report["steps"] == 3
+    assert report["cycle_count"] == 1
+    assert len(report["records"]) == 3
+    assert [record["walk_forward_cycle"] for record in report["records"]] == [1, 1, 1]
+    assert report["per_cycle_summary"][0]["closed_trades"] == 3
+
+
 def test_walk_forward_impossible_config_fails_clearly(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="No walk-forward cycles can be built"):
         _evaluate_with_costs(
@@ -657,6 +679,47 @@ def test_replay_isolation_cleans_existing_sandbox_deterministically(tmp_path: Pa
 
     assert second_report["replay_memory_root"] == first_report["replay_memory_root"]
     assert not stale_artifact.exists()
+
+
+def test_replay_isolation_retries_enotempty_cleanup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    csv_path = tmp_path / "replay.csv"
+    _write_replay_csv(csv_path, rows=12)
+    kwargs = dict(
+        pipeline_runner=_memory_sensitive_pipeline_runner,
+        config_factory=_identity_config_factory,
+        symbol="XAUUSD",
+        timeframe="M5",
+        bars=5,
+        replay_csv_path=str(csv_path),
+        sample_path=str(csv_path),
+        memory_root=str(tmp_path / "memory"),
+        generated_registry_path=str(tmp_path / "memory" / "generated_code_registry.json"),
+        meta_adaptive_profile_path=str(tmp_path / "memory" / "meta_adaptive_profile.json"),
+        evolution_enabled=False,
+        evolution_registry_path=str(tmp_path / "memory" / "evolution_registry.json"),
+        evolution_artifact_root=str(tmp_path / "memory" / "evolution_artifacts"),
+        evolution_max_proposals=1,
+        compact_output=False,
+        evaluation_steps=2,
+        evaluation_stride=1,
+    )
+    first_report = evaluate_replay(**kwargs)
+    sandbox_root = Path(first_report["replay_memory_root"])
+    original_rmtree = shutil.rmtree
+    calls = {"count": 0}
+
+    def _flaky_rmtree(path: Path) -> None:
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise OSError(errno.ENOTEMPTY, "Directory not empty", "steps")
+        original_rmtree(path)
+
+    monkeypatch.setattr("src.evaluation.replay_evaluator.shutil.rmtree", _flaky_rmtree)
+
+    second_report = evaluate_replay(**kwargs)
+
+    assert calls["count"] >= 2
+    assert second_report["replay_memory_root"] == str(sandbox_root)
 
 
 def test_replay_isolation_deletes_successful_step_csv_and_persists_manifest(tmp_path: Path) -> None:

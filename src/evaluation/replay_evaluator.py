@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import csv
+import errno
 import json
 import math
 import shutil
+import time
 from pathlib import Path
 from typing import Any, Callable
 
@@ -122,7 +124,10 @@ def evaluate_replay(
             step_bars=walk_forward_step_bars,
             evaluation_stride=evaluation_stride,
         )
+        remaining_steps = evaluation_steps
         for cycle_index, cycle in enumerate(cycles, start=1):
+            if remaining_steps <= 0:
+                break
             end_indexes = list(
                 range(
                     int(cycle["test_start_index"]) + 1,
@@ -132,6 +137,8 @@ def evaluate_replay(
             )
             if end_indexes and end_indexes[-1] != int(cycle["test_end_index_exclusive"]):
                 end_indexes.append(int(cycle["test_end_index_exclusive"]))
+            if len(end_indexes) > remaining_steps:
+                end_indexes = end_indexes[:remaining_steps]
             cycle_records = _run_replay_steps(
                 rows=rows,
                 end_indexes=end_indexes,
@@ -156,6 +163,7 @@ def evaluate_replay(
                 signal_max_age_seconds=signal_max_age_seconds,
                 quarantined_modules=effective_quarantined,
             )
+            remaining_steps -= len(cycle_records)
             for record in cycle_records:
                 record["walk_forward_cycle"] = cycle_index
             records.extend(cycle_records)
@@ -166,7 +174,7 @@ def evaluate_replay(
                     cycle_records=cycle_records,
                 )
             )
-        cycle_count = len(cycles)
+        cycle_count = len(per_cycle_summary)
         oos_summary = _build_walk_forward_oos_summary(
             context_bars=walk_forward_context_bars,
             test_bars=walk_forward_test_bars,
@@ -735,7 +743,18 @@ def _prepare_replay_memory_root(memory_root: str) -> Path:
 def _safe_rmtree(path: Path, *, expected_parent: Path) -> None:
     resolved = path.resolve()
     if resolved.name.endswith("__replay_isolation") and resolved.parent == expected_parent.resolve():
-        shutil.rmtree(resolved)
+        last_error: OSError | None = None
+        for _ in range(3):
+            try:
+                shutil.rmtree(resolved)
+                return
+            except OSError as exc:
+                last_error = exc
+                if exc.errno != errno.ENOTEMPTY:
+                    raise
+                time.sleep(0.05)
+        if last_error is not None:
+            raise last_error
         return
     raise RuntimeError(f"Refusing to delete non-replay sandbox path: {resolved}")
 
