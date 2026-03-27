@@ -14,6 +14,7 @@ from typing import Any
 
 from src.evaluation.decision_completeness import run_decision_completeness_gate
 from src.evaluation.decision_quality import run_decision_quality_gate
+from src.evaluation.drawdown_comparison import compare_drawdown_files
 from src.evaluation.replay_outcome import run_replay_outcome_gate, ReplayOutcomeError
 from src.evaluation.threshold_calibration import run_threshold_calibration
 from src.evaluation.replay_evaluator import evaluate_replay
@@ -859,6 +860,19 @@ def _load_mt5_controlled_execution_state(memory_root: str) -> dict[str, Any]:
             "total_execution_attempts": 0,
         }
     return payload
+
+
+def _is_replay_evaluation_step_memory_root(memory_root: Path) -> bool:
+    parts = memory_root.expanduser().parts
+    if not any(part.endswith("__replay_isolation") for part in parts):
+        return False
+    if "steps" not in parts:
+        return False
+    try:
+        steps_index = parts.index("steps")
+    except ValueError:
+        return False
+    return steps_index < len(parts) - 1
 
 
 def _classify_mt5_execution_failure(reasons: list[str]) -> str:
@@ -2572,6 +2586,24 @@ def run_evolution_kernel(config: RuntimeConfig) -> dict[str, Any]:
             },
         }
 
+    if _is_replay_evaluation_step_memory_root(Path(config.memory_root)):
+        return {
+            "enabled": True,
+            "inspection": {
+                "skipped": True,
+                "skip_reason": "replay_evaluation_step_isolation",
+            },
+            "gaps": [],
+            "lifecycle": [],
+            "status_counts": {
+                "proposed": 0,
+                "verified": 0,
+                "promoted": 0,
+                "rejected": 0,
+                "archived": 0,
+            },
+        }
+
     project_root = Path.cwd()
     generated_registry_path = Path(config.generated_registry_path)
     evolution_registry = EvolutionRegistry(Path(config.evolution_registry_path))
@@ -2639,6 +2671,21 @@ def run_evolution_kernel(config: RuntimeConfig) -> dict[str, Any]:
         "lifecycle": lifecycle,
         "status_counts": evolution_registry.count_by_status(),
     }
+
+
+def _build_persistable_replay_evaluation_report(report: dict[str, Any]) -> dict[str, Any]:
+    records = report.get("records")
+    if (
+        bool(report.get("replay_isolated", False))
+        and isinstance(records, list)
+        and len(records) > 1000
+    ):
+        persisted = dict(report)
+        persisted.pop("records", None)
+        persisted["persisted_record_count"] = len(records)
+        persisted["persisted_records_omitted"] = True
+        return persisted
+    return report
 
 
 def _build_compact_signal_payload(signal_payload: dict[str, Any]) -> dict[str, Any]:
@@ -3578,8 +3625,9 @@ def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
         )
 
     def _persist_report() -> None:
+        persisted_report = _build_persistable_replay_evaluation_report(report)
         Path(config.evaluation_output_path).write_text(
-            json.dumps(report, indent=2), encoding="utf-8"
+            json.dumps(persisted_report, indent=2), encoding="utf-8"
         )
 
     # Decision-completeness gate — validates every record is decisive.
@@ -3633,6 +3681,87 @@ def run_replay_evaluation(config: RuntimeConfig) -> dict[str, Any]:
         raise
     report["replay_outcome"] = outcome_report
     _persist_report()
+
+    if config.quarantined_modules and outcome_report.get("drawdown_attribution_path"):
+        included_report = evaluate_replay(
+            pipeline_runner=run_pipeline,
+            config_factory=RuntimeConfig,
+            symbol=config.symbol,
+            timeframe=config.timeframe,
+            bars=config.bars,
+            replay_csv_path=config.replay_csv_path,
+            sample_path=config.sample_path,
+            memory_root=config.memory_root,
+            generated_registry_path=config.generated_registry_path,
+            meta_adaptive_profile_path=config.meta_adaptive_profile_path,
+            evolution_enabled=config.evolution_enabled,
+            evolution_registry_path=config.evolution_registry_path,
+            evolution_artifact_root=config.evolution_artifact_root,
+            evolution_max_proposals=config.evolution_max_proposals,
+            compact_output=config.compact_output,
+            evaluation_steps=config.evaluation_steps,
+            evaluation_stride=config.evaluation_stride,
+            walk_forward_enabled=config.walk_forward_enabled,
+            walk_forward_context_bars=config.walk_forward_context_bars,
+            walk_forward_test_bars=config.walk_forward_test_bars,
+            walk_forward_step_bars=config.walk_forward_step_bars,
+            execution_spread_cost_points=config.execution_spread_cost_points,
+            execution_commission_cost_points=config.execution_commission_cost_points,
+            execution_slippage_cost_points=config.execution_slippage_cost_points,
+            execution_realism_v2_enabled=config.execution_realism_v2_enabled,
+            execution_latency_penalty_points=config.execution_latency_penalty_points,
+            execution_slippage_multiplier=config.execution_slippage_multiplier,
+            execution_no_fill_spread_threshold=config.execution_no_fill_spread_threshold,
+            execution_min_fill_confidence=config.execution_min_fill_confidence,
+            knowledge_expansion_enabled=False,
+            knowledge_expansion_root=config.knowledge_expansion_root,
+            knowledge_candidate_limit=config.knowledge_candidate_limit,
+            signal_lifecycle_enabled=config.signal_lifecycle_enabled,
+            signal_max_age_seconds=config.signal_max_age_seconds,
+            quarantined_modules=[],
+        )
+        included_quality_artifact = str(
+            Path(config.memory_root) / "decision_quality_report_included.json"
+        )
+        included_quality_report = run_decision_quality_gate(
+            records=included_report.get("records", []),
+            completeness_report={"passed": True},
+            artifact_path=included_quality_artifact,
+            strict=False,
+        )
+        included_outcome_artifact = str(
+            Path(config.memory_root) / "replay_outcome_report_included.json"
+        )
+        try:
+            included_outcome_report = run_replay_outcome_gate(
+                records=included_report.get("records", []),
+                quality_report=included_quality_report,
+                artifact_path=included_outcome_artifact,
+            )
+        except ReplayOutcomeError:
+            included_outcome_artifact_path = Path(included_outcome_artifact)
+            if included_outcome_artifact_path.exists():
+                included_outcome_report = json.loads(
+                    included_outcome_artifact_path.read_text(encoding="utf-8")
+                )
+            else:
+                included_outcome_report = {"passed": False}
+        included_drawdown_path = included_outcome_report.get("drawdown_attribution_path")
+        if included_drawdown_path:
+            drawdown_comparison_artifact = str(
+                Path(config.memory_root) / "replay_drawdown_comparison_report.json"
+            )
+            drawdown_comparison_report = compare_drawdown_files(
+                included_path=included_drawdown_path,
+                quarantined_path=outcome_report["drawdown_attribution_path"],
+                output_path=drawdown_comparison_artifact,
+            )
+            report["drawdown_comparison"] = drawdown_comparison_report
+            report["drawdown_comparison_path"] = drawdown_comparison_artifact
+            report["drawdown_comparison_schema_version"] = str(
+                drawdown_comparison_report.get("schema_version", "")
+            )
+            _persist_report()
 
     # Threshold-calibration report — diagnostic, never blocks.
     calibration_artifact = str(
