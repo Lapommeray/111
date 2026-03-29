@@ -10,9 +10,9 @@ def apply_conflict_filter(votes: list[str], base_direction: str) -> dict[str, An
     sell_count = sum(1 for v in normalized if v == "sell")
 
     active_votes = buy_count + sell_count
-    near_even_split = abs(buy_count - sell_count) <= 1
-    # Only hard-block when contradiction is both present and materially strong.
-    blocked = buy_count > 0 and sell_count > 0 and near_even_split and active_votes >= 4
+    # Only hard-block true deadlock contradictions; close but non-tie splits
+    # are handled by downstream directional-margin conviction guards.
+    blocked = buy_count > 0 and sell_count > 0 and buy_count == sell_count and active_votes >= 4
     reasons = [f"buy_votes={buy_count}", f"sell_votes={sell_count}"]
 
     if blocked:
