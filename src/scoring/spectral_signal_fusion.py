@@ -6,12 +6,16 @@ from typing import Any
 def fuse_spectral_signals(module_outputs: dict[str, dict[str, Any]]) -> dict[str, Any]:
     """Combines existing module outputs into a transparent fused contribution."""
     selected = [
-        module_outputs.get("displacement", {}),
-        module_outputs.get("fvg", {}),
-        module_outputs.get("volatility", {}),
-        module_outputs.get("quantum_tremor_scanner", {}),
-        module_outputs.get("invisible_data_miner", {}),
-        module_outputs.get("human_lag_exploit", {}),
+        module_outputs[name]
+        for name in (
+            "displacement",
+            "fvg",
+            "volatility",
+            "quantum_tremor_scanner",
+            "invisible_data_miner",
+            "human_lag_exploit",
+        )
+        if name in module_outputs
     ]
 
     deltas = [float(x.get("confidence_delta", 0.0)) for x in selected]
