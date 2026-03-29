@@ -3296,6 +3296,8 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     )
     if decision in {"BUY", "SELL"} and controlled_execution.get("order_result", {}).get("status") != "accepted":
         decision = "WAIT"
+        # Execution refused: align abstain confidence with non-trade semantics.
+        effective_signal_confidence = round(min(effective_signal_confidence, 0.59), 4)
         reasons = normalize_reasons(
             reasons
             + ["mt5_controlled_execution_refused"]
