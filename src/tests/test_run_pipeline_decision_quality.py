@@ -363,3 +363,71 @@ def test_invalidated_setup_with_open_position_surfaces_exit_contract(tmp_path: P
     assert output["signal"]["action"] == "WAIT"
     assert decision_contract["action"] == "EXIT"
     assert "open/partial position exists" in decision_contract["why_not_trade"]
+
+
+def test_execution_refusal_degrades_wait_confidence_and_reasons(tmp_path: Path) -> None:
+    """Execution refusal should not leave abstain confidence in trade-ready range."""
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+    state = _state_with_votes(
+        bars=_bars(),
+        mode="replay",
+        final_direction="BUY",
+        final_confidence=0.9,
+        buy_votes=3,
+        sell_votes=0,
+        conflict_blocked=False,
+    )
+    refused_execution = {
+        "entry_decision": {"decision": "BUY", "eligible_for_order": True},
+        "pre_trade_checks": {"checks": [], "failed_checks": [], "all_checks_passed": True},
+        "order_request": {"type": "BUY"},
+        "order_result": {"status": "refused", "order_sent": False, "error_reason": "order_send_refused"},
+        "stop_loss_take_profit": {"stop_loss": None, "take_profit": None},
+        "rejection_reason": "order_send_refused",
+        "rollback_refusal_reasons": ["order_send_refused"],
+        "trade_tags": {},
+        "refusal_tags": {},
+        "failure_tags": {},
+        "open_position_state": {"status": "flat"},
+        "exit_decision": {"decision": "no_position_exit", "reason": "no_open_position"},
+        "pnl_snapshot": {
+            "timestamp": "2026-01-01T00:00:00+00:00",
+            "symbol": "XAUUSD",
+            "realized_pnl": 0.0,
+            "unrealized_pnl": 0.0,
+            "position_open": False,
+            "position_open_truth": "not_applicable",
+        },
+        "mistake_failure_classification": "transient",
+        "replay_feedback_hook": {"enabled": True, "hook_status": "queued_for_feedback", "mistake_classification": "transient"},
+        "auto_stop_active": False,
+        "signal_lifecycle": {"signal_fresh": True, "signal_lifecycle_refusal_reasons": []},
+    }
+    with (
+        patch("run.classify_market_structure", return_value={"state": "trend_up", "bias": "buy", "strength": 0.9}),
+        patch(
+            "run.assess_liquidity_state",
+            return_value={"liquidity_state": "stable", "direction_hint": "buy", "score": 0.85},
+        ),
+        patch("run.compute_confidence", return_value={"confidence": 0.9, "direction": "BUY", "reasons": ["seed_buy"]}),
+        patch("run.run_advanced_modules", return_value=state),
+        patch("run.collect_xauusd_macro_state", return_value=_macro_state(pause_trading=False, confidence_penalty=0.0)),
+        patch(
+            "run.score_signal_intelligence",
+            return_value={"signal_score": 0.9, "confidence": 0.88, "feature_contributors": {"buy_vote_0": 1.0}},
+        ),
+        patch("run.evaluate_capital_protection", return_value=_capital_ok()),
+        patch(
+            "run._run_controlled_mt5_live_execution",
+            return_value=(refused_execution, {"auto_stop_active": False}, {"artifact_path": "stub"}),
+        ),
+    ):
+        output = run_pipeline(_runtime_config(sample_path, tmp_path / "memory_exec_refusal", mode="replay"))
+
+    signal = output["signal"]
+    assert signal["action"] == "WAIT"
+    assert signal["blocked"] is False
+    assert signal["blocker_reasons"] == []
+    assert "mt5_controlled_execution_refused" in signal["reasons"]
+    assert signal["confidence"] <= 0.59
