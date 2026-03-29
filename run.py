@@ -3190,6 +3190,9 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     if should_apply_override:
         decision = structure_bias.upper()
         agreement_override_applied = True
+    if decision in {"BUY", "SELL"} and effective_signal_confidence < blocker.min_confidence:
+        combined_blocked = True
+        combined_reasons = normalize_reasons(combined_reasons + ["confidence_below_threshold"])
     reasons = (
         combined_reasons if combined_blocked else [f"advanced_direction={decision}"] + score["reasons"]
     )
