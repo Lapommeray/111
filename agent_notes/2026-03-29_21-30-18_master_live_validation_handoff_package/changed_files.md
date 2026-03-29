@@ -1,0 +1,27 @@
+## Changed files
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/summary.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/changed_files.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/tests.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/next_steps.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/risks.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/evidence.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/current_status.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/master_live_only_scope.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/master_live_run_sequence.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/scenario_A_operator_packet.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/scenario_B_operator_packet.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/scenario_C_operator_packet.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/scenario_D_operator_packet.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/scenario_E_operator_packet.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/scenario_F_operator_packet.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/scenario_G_operator_packet.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/scenario_A_review_worksheet.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/scenario_B_review_worksheet.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/scenario_C_review_worksheet.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/scenario_D_review_worksheet.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/scenario_E_review_worksheet.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/scenario_F_review_worksheet.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/scenario_G_review_worksheet.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/master_failure_escalation_map.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/master_live_validation_completion_criteria.md`
+- `agent_notes/2026-03-29_21-30-18_master_live_validation_handoff_package/master_live_validation_handoff.md`
