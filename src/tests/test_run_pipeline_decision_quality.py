@@ -631,3 +631,114 @@ def test_partial_exposure_degradation_attaches_transition_reason_and_exit_contra
     assert decision_contract["action"] == "EXIT"
     assert "partial_exposure_unresolved_manage_exit" in decision_contract["exit_rule"]
     assert "open_position_exit_management:partial_fill_exposure_unresolved" in signal["reasons"]
+
+
+def test_4v3_boundary_degrades_to_wait_with_coherent_confidence_and_reason(tmp_path: Path) -> None:
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+    state = _state_with_votes(
+        bars=_bars(),
+        mode="replay",
+        final_direction="BUY",
+        final_confidence=0.9,
+        buy_votes=4,
+        sell_votes=3,
+        conflict_blocked=False,
+    )
+    with (
+        patch("run.classify_market_structure", return_value={"state": "trend_up", "bias": "buy", "strength": 0.9}),
+        patch(
+            "run.assess_liquidity_state",
+            return_value={"liquidity_state": "stable", "direction_hint": "buy", "score": 0.85},
+        ),
+        patch("run.compute_confidence", return_value={"confidence": 0.9, "direction": "BUY", "reasons": ["seed_buy"]}),
+        patch("run.run_advanced_modules", return_value=state),
+        patch("run.collect_xauusd_macro_state", return_value=_macro_state(pause_trading=False, confidence_penalty=0.0)),
+        patch(
+            "run.score_signal_intelligence",
+            return_value={"signal_score": 0.9, "confidence": 0.88, "feature_contributors": {"buy_vote_0": 1.0}},
+        ),
+        patch("run.evaluate_capital_protection", return_value=_capital_ok()),
+    ):
+        output = run_pipeline(_runtime_config(sample_path, tmp_path / "memory_boundary_4v3", mode="replay"))
+
+    signal = output["signal"]
+    assert signal["action"] == "WAIT"
+    assert signal["blocked"] is False
+    assert signal["blocker_reasons"] == []
+    assert "directional_vote_margin_insufficient" in signal["reasons"]
+    assert signal["confidence"] <= 0.59
+
+
+def test_5v4_boundary_degrades_when_conviction_is_weak(tmp_path: Path) -> None:
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+    state = _state_with_votes(
+        bars=_bars(),
+        mode="replay",
+        final_direction="BUY",
+        final_confidence=0.7,
+        buy_votes=5,
+        sell_votes=4,
+        conflict_blocked=False,
+    )
+    with (
+        patch("run.classify_market_structure", return_value={"state": "trend_up", "bias": "buy", "strength": 0.9}),
+        patch(
+            "run.assess_liquidity_state",
+            return_value={"liquidity_state": "stable", "direction_hint": "buy", "score": 0.85},
+        ),
+        patch("run.compute_confidence", return_value={"confidence": 0.9, "direction": "BUY", "reasons": ["seed_buy"]}),
+        patch("run.run_advanced_modules", return_value=state),
+        patch("run.collect_xauusd_macro_state", return_value=_macro_state(pause_trading=False, confidence_penalty=0.0)),
+        patch(
+            "run.score_signal_intelligence",
+            return_value={"signal_score": 0.88, "confidence": 0.86, "feature_contributors": {"buy_vote_0": 1.0}},
+        ),
+        patch("run.evaluate_capital_protection", return_value=_capital_ok()),
+    ):
+        output = run_pipeline(_runtime_config(sample_path, tmp_path / "memory_boundary_5v4_weak", mode="replay"))
+
+    signal = output["signal"]
+    assert signal["action"] == "WAIT"
+    assert signal["blocked"] is False
+    assert signal["blocker_reasons"] == []
+    assert "directional_conviction_below_threshold" in signal["reasons"]
+    assert signal["confidence"] <= 0.59
+
+
+def test_5v4_boundary_allows_entry_when_conviction_is_strong(tmp_path: Path) -> None:
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+    state = _state_with_votes(
+        bars=_bars(),
+        mode="replay",
+        final_direction="BUY",
+        final_confidence=0.98,
+        buy_votes=5,
+        sell_votes=4,
+        conflict_blocked=False,
+    )
+    with (
+        patch("run.classify_market_structure", return_value={"state": "trend_up", "bias": "buy", "strength": 0.9}),
+        patch(
+            "run.assess_liquidity_state",
+            return_value={"liquidity_state": "stable", "direction_hint": "buy", "score": 0.85},
+        ),
+        patch("run.compute_confidence", return_value={"confidence": 0.92, "direction": "BUY", "reasons": ["seed_buy"]}),
+        patch("run.run_advanced_modules", return_value=state),
+        patch("run.collect_xauusd_macro_state", return_value=_macro_state(pause_trading=False, confidence_penalty=0.0)),
+        patch(
+            "run.score_signal_intelligence",
+            return_value={"signal_score": 0.94, "confidence": 0.91, "feature_contributors": {"buy_vote_0": 1.0}},
+        ),
+        patch("run.evaluate_capital_protection", return_value=_capital_ok()),
+    ):
+        output = run_pipeline(_runtime_config(sample_path, tmp_path / "memory_boundary_5v4_strong", mode="replay"))
+
+    signal = output["signal"]
+    assert signal["action"] == "BUY"
+    assert signal["blocked"] is False
+    assert signal["blocker_reasons"] == []
+    assert "directional_vote_margin_insufficient" not in signal["reasons"]
+    assert signal["confidence"] == 0.91

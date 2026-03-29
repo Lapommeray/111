@@ -3232,7 +3232,13 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     directional_degraded_to_wait = False
     if decision in {"BUY", "SELL"} and not combined_blocked:
         weak_directional_conviction = directional_conviction < 0.62
-        insufficient_vote_margin = directional_vote_margin < 2
+        slight_majority_override = (
+            directional_vote_margin == 1
+            and directional_vote_total >= 9
+            and directional_conviction >= 0.8
+            and directional_support_ratio >= 0.55
+        )
+        insufficient_vote_margin = directional_vote_margin < 2 and not slight_majority_override
         if weak_directional_conviction or insufficient_vote_margin or conflict_blocked:
             decision = "WAIT"
             directional_degraded_to_wait = True
