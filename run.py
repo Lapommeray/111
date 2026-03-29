@@ -3445,10 +3445,15 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         "latest_trade_outcome": outcome,
     }
 
+    # Keep setup classification aligned with publicly exposed confidence.
+    signal_input_confidence = effective_signal_confidence
+    if combined_blocked and not combined_reasons:
+        combined_reasons = ["blocked_without_explicit_reason"]
+
     signal = build_signal_output(
         symbol=config.symbol,
         action=decision,
-        confidence=strategy_intelligence["confidence"],
+        confidence=signal_input_confidence,
         reasons=reasons,
         block_result={"blocked": combined_blocked, "reasons": combined_reasons},
         structure=structure,
