@@ -16,3 +16,13 @@ def test_conflict_filter_blocks_when_both_sides_strong_and_close() -> None:
     assert result["blocked"] is True
     assert "direction_conflict" in result["reasons"]
 
+
+def test_conflict_filter_does_not_hard_block_three_vs_two_split() -> None:
+    """3:2 split should degrade conviction downstream, not hard-block here."""
+    result = apply_conflict_filter(
+        votes=["buy", "buy", "buy", "sell", "sell"],
+        base_direction="BUY",
+    )
+    assert result["blocked"] is False
+    assert "direction_conflict" not in result["reasons"]
+
