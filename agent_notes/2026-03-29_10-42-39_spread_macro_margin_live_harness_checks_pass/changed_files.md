@@ -1,0 +1,11 @@
+## Changed files
+- `src/tests/test_run_pipeline_decision_quality.py`
+  - Added 7 deterministic integration/guard tests for:
+    - spread-threshold + macro-penalty coherence,
+    - margin-1 directional outcomes under macro penalty / pause / conflicting tags.
+- `agent_notes/2026-03-29_10-42-39_spread_macro_margin_live_harness_checks_pass/summary.md`
+- `agent_notes/2026-03-29_10-42-39_spread_macro_margin_live_harness_checks_pass/changed_files.md`
+- `agent_notes/2026-03-29_10-42-39_spread_macro_margin_live_harness_checks_pass/tests.md`
+- `agent_notes/2026-03-29_10-42-39_spread_macro_margin_live_harness_checks_pass/next_steps.md`
+- `agent_notes/2026-03-29_10-42-39_spread_macro_margin_live_harness_checks_pass/risks.md`
+- `agent_notes/2026-03-29_10-42-39_spread_macro_margin_live_harness_checks_pass/evidence.md`
