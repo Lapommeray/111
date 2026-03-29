@@ -230,7 +230,9 @@ def test_run_pipeline_replay_macro_penalty_updates_public_confidence_and_classif
         output = run_pipeline(_runtime_config(sample_path, tmp_path / "memory_penalty", mode="replay"))
 
     signal = output["signal"]
-    assert signal["action"] == "BUY"
+    assert signal["action"] == "WAIT"
+    assert signal["blocked"] is True
+    assert "confidence_below_threshold" in signal["blocker_reasons"]
     assert signal["confidence"] == 0.55
     assert signal["advanced_modules"]["final_direction"] == "BUY"
     assert signal["advanced_modules"]["final_confidence"] == 0.9
