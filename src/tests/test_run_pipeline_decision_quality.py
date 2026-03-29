@@ -742,3 +742,157 @@ def test_5v4_boundary_allows_entry_when_conviction_is_strong(tmp_path: Path) -> 
     assert signal["blocker_reasons"] == []
     assert "directional_vote_margin_insufficient" not in signal["reasons"]
     assert signal["confidence"] == 0.91
+
+
+def test_spread_at_threshold_is_not_blocked_and_reasons_stay_coherent(tmp_path: Path) -> None:
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+    state = _state_with_votes(
+        bars=_bars(),
+        mode="replay",
+        final_direction="BUY",
+        final_confidence=0.9,
+        buy_votes=3,
+        sell_votes=0,
+        conflict_blocked=False,
+    )
+    spread_edge_state = _state_with_votes(
+        bars=_bars(),
+        mode="replay",
+        final_direction="BUY",
+        final_confidence=0.9,
+        buy_votes=3,
+        sell_votes=0,
+        conflict_blocked=False,
+    )
+    spread_edge_state.module_results["spread_state"] = ModuleResult(
+        name="spread_state",
+        role="spread_proxy_estimator",
+        direction_vote="neutral",
+        confidence_delta=0.0,
+        blocked=False,
+        reasons=[],
+        payload={"spread_points": 60.0},
+    )
+    with (
+        patch("run.classify_market_structure", return_value={"state": "trend_up", "bias": "buy", "strength": 0.9}),
+        patch(
+            "run.assess_liquidity_state",
+            return_value={"liquidity_state": "stable", "direction_hint": "buy", "score": 0.85},
+        ),
+        patch("run.compute_confidence", return_value={"confidence": 0.9, "direction": "BUY", "reasons": ["seed_buy"]}),
+        patch("run.run_advanced_modules", return_value=spread_edge_state),
+        patch("run.collect_xauusd_macro_state", return_value=_macro_state(pause_trading=False, confidence_penalty=0.0)),
+        patch(
+            "run.score_signal_intelligence",
+            return_value={"signal_score": 0.9, "confidence": 0.88, "feature_contributors": {"buy_vote_0": 1.0}},
+        ),
+        patch("run.evaluate_capital_protection", return_value=_capital_ok()),
+    ):
+        output = run_pipeline(_runtime_config(sample_path, tmp_path / "memory_spread_eq_threshold", mode="replay"))
+
+    signal = output["signal"]
+    assert signal["action"] == "BUY"
+    assert signal["blocked"] is False
+    assert signal["blocker_reasons"] == []
+    assert "spread_too_wide" not in signal["reasons"]
+
+
+def test_spread_just_below_threshold_is_not_blocked_and_reasons_stay_coherent(tmp_path: Path) -> None:
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+    spread_edge_state = _state_with_votes(
+        bars=_bars(),
+        mode="replay",
+        final_direction="BUY",
+        final_confidence=0.9,
+        buy_votes=3,
+        sell_votes=0,
+        conflict_blocked=False,
+    )
+    spread_edge_state.module_results["spread_state"] = ModuleResult(
+        name="spread_state",
+        role="spread_proxy_estimator",
+        direction_vote="neutral",
+        confidence_delta=0.0,
+        blocked=False,
+        reasons=[],
+        payload={"spread_points": 59.99},
+    )
+    with (
+        patch("run.classify_market_structure", return_value={"state": "trend_up", "bias": "buy", "strength": 0.9}),
+        patch(
+            "run.assess_liquidity_state",
+            return_value={"liquidity_state": "stable", "direction_hint": "buy", "score": 0.85},
+        ),
+        patch("run.compute_confidence", return_value={"confidence": 0.9, "direction": "BUY", "reasons": ["seed_buy"]}),
+        patch("run.run_advanced_modules", return_value=spread_edge_state),
+        patch("run.collect_xauusd_macro_state", return_value=_macro_state(pause_trading=False, confidence_penalty=0.0)),
+        patch(
+            "run.score_signal_intelligence",
+            return_value={"signal_score": 0.9, "confidence": 0.88, "feature_contributors": {"buy_vote_0": 1.0}},
+        ),
+        patch("run.evaluate_capital_protection", return_value=_capital_ok()),
+    ):
+        output = run_pipeline(_runtime_config(sample_path, tmp_path / "memory_spread_below_threshold", mode="replay"))
+
+    signal = output["signal"]
+    assert signal["action"] == "BUY"
+    assert signal["blocked"] is False
+    assert signal["blocker_reasons"] == []
+    assert "spread_too_wide" not in signal["reasons"]
+
+
+def test_spread_above_threshold_blocks_with_explicit_reason(tmp_path: Path) -> None:
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+    spread_wide_state = _state_with_votes(
+        bars=_bars(),
+        mode="replay",
+        final_direction="BUY",
+        final_confidence=0.9,
+        buy_votes=3,
+        sell_votes=0,
+        conflict_blocked=False,
+    )
+    spread_wide_state.module_results["spread_filter"] = ModuleResult(
+        name="spread_filter",
+        role="spread_block_gate",
+        direction_vote="wait",
+        confidence_delta=-0.07,
+        blocked=True,
+        reasons=["spread_too_wide"],
+        payload={
+            "module": "spread_filter",
+            "blocked": True,
+            "reasons": ["spread_too_wide"],
+            "confidence_delta": -0.07,
+            "direction_vote": "wait",
+            "metrics": {"spread_points": 60.01, "max_spread_points": 60.0},
+        },
+    )
+    spread_wide_state.blocked = True
+    spread_wide_state.blocked_reasons = ["spread_filter:spread_too_wide"]
+
+    with (
+        patch("run.classify_market_structure", return_value={"state": "trend_up", "bias": "buy", "strength": 0.9}),
+        patch(
+            "run.assess_liquidity_state",
+            return_value={"liquidity_state": "stable", "direction_hint": "buy", "score": 0.85},
+        ),
+        patch("run.compute_confidence", return_value={"confidence": 0.9, "direction": "BUY", "reasons": ["seed_buy"]}),
+        patch("run.run_advanced_modules", return_value=spread_wide_state),
+        patch("run.collect_xauusd_macro_state", return_value=_macro_state(pause_trading=False, confidence_penalty=0.0)),
+        patch(
+            "run.score_signal_intelligence",
+            return_value={"signal_score": 0.9, "confidence": 0.88, "feature_contributors": {"buy_vote_0": 1.0}},
+        ),
+        patch("run.evaluate_capital_protection", return_value=_capital_ok()),
+    ):
+        output = run_pipeline(_runtime_config(sample_path, tmp_path / "memory_spread_above_threshold", mode="replay"))
+
+    signal = output["signal"]
+    assert signal["action"] == "WAIT"
+    assert signal["blocked"] is True
+    assert "spread_filter:spread_too_wide" in signal["blocker_reasons"]
+    assert "spread_filter:spread_too_wide" in signal["reasons"]

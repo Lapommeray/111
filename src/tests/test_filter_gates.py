@@ -4,6 +4,7 @@ from src.filters.conflict_filter import apply_conflict_filter
 from src.filters.memory_filter import apply_memory_filter
 from src.filters.self_destruct_protocol import apply_self_destruct_protocol
 from src.filters.session_filter import apply_session_filter
+from src.filters.spread_filter import apply_spread_filter
 
 
 def test_memory_filter_blocks_loss_cluster() -> None:
@@ -46,3 +47,24 @@ def test_session_filter_blocks_off_hours() -> None:
     assert blocked["blocked"] is True
     assert blocked["direction_vote"] == "wait"
     assert allowed["blocked"] is False
+
+
+def test_spread_filter_allows_when_equal_to_threshold() -> None:
+    result = apply_spread_filter({"spread_points": 60.0}, max_spread_points=60.0)
+    assert result["blocked"] is False
+    assert result["direction_vote"] == "neutral"
+    assert result["reasons"] == ["spread_ok"]
+
+
+def test_spread_filter_allows_when_just_below_threshold() -> None:
+    result = apply_spread_filter({"spread_points": 59.99}, max_spread_points=60.0)
+    assert result["blocked"] is False
+    assert result["direction_vote"] == "neutral"
+    assert result["reasons"] == ["spread_ok"]
+
+
+def test_spread_filter_blocks_when_just_above_threshold() -> None:
+    result = apply_spread_filter({"spread_points": 60.01}, max_spread_points=60.0)
+    assert result["blocked"] is True
+    assert result["direction_vote"] == "wait"
+    assert result["reasons"] == ["spread_too_wide"]
