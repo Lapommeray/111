@@ -1,0 +1,11 @@
+## Changed files
+- `agent_notes/2026-03-29_20-39-32_live_validation_operational_sequence_pass/summary.md`
+- `agent_notes/2026-03-29_20-39-32_live_validation_operational_sequence_pass/changed_files.md`
+- `agent_notes/2026-03-29_20-39-32_live_validation_operational_sequence_pass/tests.md`
+- `agent_notes/2026-03-29_20-39-32_live_validation_operational_sequence_pass/next_steps.md`
+- `agent_notes/2026-03-29_20-39-32_live_validation_operational_sequence_pass/risks.md`
+- `agent_notes/2026-03-29_20-39-32_live_validation_operational_sequence_pass/evidence.md`
+- `agent_notes/2026-03-29_20-39-32_live_validation_operational_sequence_pass/live_run_sequence.md`
+- `agent_notes/2026-03-29_20-39-32_live_validation_operational_sequence_pass/per_scenario_review_rules.md`
+- `agent_notes/2026-03-29_20-39-32_live_validation_operational_sequence_pass/live_failure_escalation_map.md`
+- `agent_notes/2026-03-29_20-39-32_live_validation_operational_sequence_pass/live_validation_completion_criteria.md`
