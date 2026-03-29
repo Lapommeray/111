@@ -3331,6 +3331,22 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         reasons = normalize_reasons(
             reasons + [f"open_position_exit_management:{position_state_outcome}"]
         )
+        unresolved_close_reasons = [
+            str(reason)
+            for reason in controlled_execution.get("rollback_refusal_reasons", [])
+            if str(reason).strip()
+        ]
+        if unresolved_close_reasons:
+            reasons = normalize_reasons(
+                reasons + [f"open_position_exit_retry:{reason}" for reason in unresolved_close_reasons]
+            )
+        retry_policy_truth = str(
+            controlled_execution.get("order_result", {}).get("retry_policy_truth", "")
+        ).strip()
+        if retry_policy_truth:
+            reasons = normalize_reasons(
+                reasons + [f"open_position_exit_retry_policy:{retry_policy_truth}"]
+            )
     controlled_mt5_readiness = {
         **controlled_mt5_readiness,
         "live_execution_enabled": bool(config.live_execution_enabled),

@@ -633,6 +633,93 @@ def test_partial_exposure_degradation_attaches_transition_reason_and_exit_contra
     assert "open_position_exit_management:partial_fill_exposure_unresolved" in signal["reasons"]
 
 
+def test_unresolved_exit_close_retry_reasons_propagate_to_signal_layer(tmp_path: Path) -> None:
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+    state = _state_with_votes(
+        bars=_bars(),
+        mode="replay",
+        final_direction="WAIT",
+        final_confidence=0.9,
+        buy_votes=0,
+        sell_votes=0,
+        conflict_blocked=False,
+    )
+    unresolved_close_retry = {
+        "entry_decision": {"decision": "WAIT", "eligible_for_order": False},
+        "pre_trade_checks": {"checks": [], "failed_checks": [], "all_checks_passed": True},
+        "order_request": {},
+        "order_result": {
+            "status": "refused",
+            "order_sent": True,
+            "error_reason": "exit_close_order_send_refused",
+            "retry_attempted_count": 1,
+            "retry_policy_truth": "retry_attempted_bounded_single_retry_execution_policy",
+        },
+        "stop_loss_take_profit": {"stop_loss": None, "take_profit": None},
+        "rejection_reason": "exit_close_order_send_refused",
+        "rollback_refusal_reasons": [
+            "exit_close_order_send_refused",
+            "retry_not_attempted_fail_closed_guard_blocked",
+        ],
+        "trade_tags": {},
+        "refusal_tags": {},
+        "failure_tags": {},
+        "open_position_state": {
+            "status": "open",
+            "position_id": 77,
+            "symbol": "XAUUSD",
+            "side": "BUY",
+            "entry_price": 2100.2,
+            "stop_loss": 2098.2,
+            "take_profit": 2104.2,
+            "broker_position_confirmation": "unconfirmed",
+            "position_state_outcome": "exit_close_unresolved_open_position",
+        },
+        "exit_decision": {"decision": "exit_required_unresolved_open_position", "reason": "exit_close_unresolved_open_position"},
+        "pnl_snapshot": {
+            "timestamp": "2026-01-01T00:00:00+00:00",
+            "symbol": "XAUUSD",
+            "realized_pnl": 0.0,
+            "unrealized_pnl": 0.0,
+            "position_open": True,
+            "position_open_truth": "assumed_from_accepted_send_unreconciled",
+        },
+        "mistake_failure_classification": "none",
+        "replay_feedback_hook": {"enabled": True, "hook_status": "queued_for_feedback", "mistake_classification": "none"},
+        "auto_stop_active": False,
+        "signal_lifecycle": {"signal_fresh": True, "signal_lifecycle_refusal_reasons": []},
+    }
+    with (
+        patch("run.classify_market_structure", return_value={"state": "trend_up", "bias": "buy", "strength": 0.9}),
+        patch(
+            "run.assess_liquidity_state",
+            return_value={"liquidity_state": "stable", "direction_hint": "buy", "score": 0.85},
+        ),
+        patch("run.compute_confidence", return_value={"confidence": 0.9, "direction": "BUY", "reasons": ["seed_buy"]}),
+        patch("run.run_advanced_modules", return_value=state),
+        patch("run.collect_xauusd_macro_state", return_value=_macro_state(pause_trading=False, confidence_penalty=0.0)),
+        patch(
+            "run.score_signal_intelligence",
+            return_value={"signal_score": 0.9, "confidence": 0.88, "feature_contributors": {"buy_vote_0": 1.0}},
+        ),
+        patch("run.evaluate_capital_protection", return_value=_capital_ok()),
+        patch(
+            "run._run_controlled_mt5_live_execution",
+            return_value=(unresolved_close_retry, {"auto_stop_active": False}, {"artifact_path": "stub"}),
+        ),
+    ):
+        output = run_pipeline(_runtime_config(sample_path, tmp_path / "memory_unresolved_exit_retry", mode="replay"))
+
+    signal = output["signal"]
+    decision_contract = output["status_panel"]["entry_exit_decision"]
+    assert signal["action"] == "WAIT"
+    assert signal["confidence"] <= 0.59
+    assert decision_contract["action"] == "EXIT"
+    assert "open_position_exit_management:exit_close_unresolved_open_position" in signal["reasons"]
+    assert "open_position_exit_retry:exit_close_order_send_refused" in signal["reasons"]
+    assert "open_position_exit_retry_policy:retry_attempted_bounded_single_retry_execution_policy" in signal["reasons"]
+
 def test_4v3_boundary_degrades_to_wait_with_coherent_confidence_and_reason(tmp_path: Path) -> None:
     sample_path = tmp_path / "samples" / "xauusd.csv"
     ensure_sample_data(sample_path)
