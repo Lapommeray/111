@@ -1,0 +1,8 @@
+## Tests run
+1. `python3 -m pytest -q src/tests/test_run_pipeline_decision_quality.py::test_spread_at_threshold_with_macro_penalty_blocks_by_confidence_not_spread src/tests/test_run_pipeline_decision_quality.py::test_spread_just_below_threshold_with_macro_penalty_blocks_by_confidence_only src/tests/test_run_pipeline_decision_quality.py::test_spread_above_threshold_with_macro_penalty_stays_spread_blocked_and_consistent src/tests/test_run_pipeline_decision_quality.py::test_5v4_strong_setup_with_macro_penalty_degrades_to_wait_coherently src/tests/test_run_pipeline_decision_quality.py::test_5v4_strong_setup_with_macro_pause_tag_does_not_block_in_replay src/tests/test_run_pipeline_decision_quality.py::test_6v5_strong_setup_with_macro_penalty_stays_conservative_and_blocked_by_confidence src/tests/test_run_pipeline_decision_quality.py::test_5v4_strong_setup_with_conflicting_macro_tags_and_no_penalty_remains_tradable`
+- Result: PASS
+- Output: `7 passed`
+
+2. `python3 -m pytest -q src/tests/test_run_pipeline_decision_quality.py src/tests/test_run_pipeline_contract.py src/tests/test_filter_gates.py src/tests/test_conflict_filter_precision.py src/tests/test_fusion_router_scoring.py src/tests/test_execution_gate_unittest.py src/tests/test_memory.py`
+- Result: PASS
+- Output: `125 passed in 12.09s`

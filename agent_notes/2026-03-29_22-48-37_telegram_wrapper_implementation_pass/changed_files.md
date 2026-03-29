@@ -1,0 +1,14 @@
+## Changed files
+- `src/alerts/__init__.py`
+- `src/alerts/telegram_sidecar.py`
+- `src/tests/test_telegram_sidecar.py`
+- `TELEGRAM_ALERTS.md`
+- `agent_notes/2026-03-29_22-48-37_telegram_wrapper_implementation_pass/summary.md`
+- `agent_notes/2026-03-29_22-48-37_telegram_wrapper_implementation_pass/changed_files.md`
+- `agent_notes/2026-03-29_22-48-37_telegram_wrapper_implementation_pass/tests.md`
+- `agent_notes/2026-03-29_22-48-37_telegram_wrapper_implementation_pass/next_steps.md`
+- `agent_notes/2026-03-29_22-48-37_telegram_wrapper_implementation_pass/risks.md`
+- `agent_notes/2026-03-29_22-48-37_telegram_wrapper_implementation_pass/setup.md`
+- `agent_notes/2026-03-29_22-48-37_telegram_wrapper_implementation_pass/telegram_setup.md`
+- `agent_notes/2026-03-29_22-48-37_telegram_wrapper_implementation_pass/app_run_instructions.md`
+- `agent_notes/2026-03-29_22-48-37_telegram_wrapper_implementation_pass/signal_schema.md`

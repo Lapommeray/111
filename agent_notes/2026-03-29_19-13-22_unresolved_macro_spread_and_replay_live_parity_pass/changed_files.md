@@ -1,0 +1,18 @@
+## Changed files
+- `run.py`
+  - Minimal fix in final decision assembly: preserve `open_position_exit_management:*`, `open_position_exit_retry:*`, and `open_position_exit_retry_policy:*` reasons whenever `decision == "WAIT"` and open position state is `open` / `partial_exposure_unresolved`, including blocked paths.
+- `src/tests/test_run_pipeline_decision_quality.py`
+  - Added helper fixtures for unresolved-exit payload and live-ready adapter state.
+  - Added co-occurrence integration tests:
+    - `test_unresolved_exit_retry_with_macro_penalty_and_spread_above_threshold_preserves_cooccurring_reasons`
+    - `test_unresolved_exit_retry_with_macro_penalty_and_spread_at_threshold_preserves_retry_reasons`
+    - `test_unresolved_exit_retry_with_macro_penalty_and_spread_below_threshold_preserves_retry_reasons`
+  - Added replay-vs-live parity tests:
+    - `test_replay_live_parity_preserves_unresolved_exit_retry_reasons_when_no_live_only_blockers`
+    - `test_replay_live_parity_live_pause_blocks_but_keeps_unresolved_exit_reason_propagation`
+- `agent_notes/2026-03-29_19-13-22_unresolved_macro_spread_and_replay_live_parity_pass/summary.md`
+- `agent_notes/2026-03-29_19-13-22_unresolved_macro_spread_and_replay_live_parity_pass/changed_files.md`
+- `agent_notes/2026-03-29_19-13-22_unresolved_macro_spread_and_replay_live_parity_pass/tests.md`
+- `agent_notes/2026-03-29_19-13-22_unresolved_macro_spread_and_replay_live_parity_pass/next_steps.md`
+- `agent_notes/2026-03-29_19-13-22_unresolved_macro_spread_and_replay_live_parity_pass/risks.md`
+- `agent_notes/2026-03-29_19-13-22_unresolved_macro_spread_and_replay_live_parity_pass/evidence.md`

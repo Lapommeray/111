@@ -970,6 +970,24 @@ class TestExecutionGateSemantics(unittest.TestCase):
             "position_still_present_after_close_send",
         )
         self.assertEqual(
+            controlled_execution["order_result"]["broker_exit_verification"]["initial_confirmation"],
+            "unconfirmed",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_exit_verification"]["delayed_recheck_attempted"],
+            True,
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_exit_verification"]["delayed_recheck_confirmation"],
+            "unconfirmed",
+        )
+        self.assertTrue(
+            bool(controlled_execution["order_result"]["broker_exit_verification"]["verification_checked_at"])
+        )
+        self.assertTrue(
+            bool(controlled_execution["order_result"]["broker_exit_verification"]["final_confirmation"])
+        )
+        self.assertEqual(
             controlled_execution["open_position_state"]["status"],
             "open",
         )
@@ -1531,6 +1549,24 @@ class TestExecutionGateSemantics(unittest.TestCase):
             42,
         )
         self.assertEqual(
+            controlled_execution["order_result"]["broker_position_verification"]["initial_confirmation"],
+            "unconfirmed",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_position_verification"]["delayed_recheck_attempted"],
+            True,
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["broker_position_verification"]["delayed_recheck_confirmation"],
+            "confirmed",
+        )
+        self.assertTrue(
+            bool(controlled_execution["order_result"]["broker_position_verification"]["verification_checked_at"])
+        )
+        self.assertTrue(
+            bool(controlled_execution["order_result"]["broker_position_verification"]["final_confirmation"])
+        )
+        self.assertEqual(
             controlled_execution["open_position_state"]["broker_position_confirmation"],
             "confirmed",
         )
@@ -1610,6 +1646,24 @@ class TestExecutionGateSemantics(unittest.TestCase):
         self.assertEqual(
             controlled_execution["order_result"]["partial_quantity_verification"]["broker_quantity_outcome"],
             "partial_quantity_confirmed_from_linked_deal",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["partial_quantity_verification"]["initial_confirmation"],
+            "unconfirmed",
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["partial_quantity_verification"]["delayed_recheck_attempted"],
+            True,
+        )
+        self.assertEqual(
+            controlled_execution["order_result"]["partial_quantity_verification"]["delayed_recheck_confirmation"],
+            "confirmed",
+        )
+        self.assertTrue(
+            bool(controlled_execution["order_result"]["partial_quantity_verification"]["verification_checked_at"])
+        )
+        self.assertTrue(
+            bool(controlled_execution["order_result"]["partial_quantity_verification"]["final_confirmation"])
         )
         self.assertEqual(
             controlled_execution["open_position_state"]["partial_outcome_quantity_truth"],

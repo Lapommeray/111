@@ -1,0 +1,11 @@
+## Changed files
+- `agent_notes/2026-03-29_20-55-42_first_live_run_operator_packet_pass/summary.md`
+- `agent_notes/2026-03-29_20-55-42_first_live_run_operator_packet_pass/changed_files.md`
+- `agent_notes/2026-03-29_20-55-42_first_live_run_operator_packet_pass/tests.md`
+- `agent_notes/2026-03-29_20-55-42_first_live_run_operator_packet_pass/next_steps.md`
+- `agent_notes/2026-03-29_20-55-42_first_live_run_operator_packet_pass/risks.md`
+- `agent_notes/2026-03-29_20-55-42_first_live_run_operator_packet_pass/evidence.md`
+- `agent_notes/2026-03-29_20-55-42_first_live_run_operator_packet_pass/scenario_A_operator_packet.md`
+- `agent_notes/2026-03-29_20-55-42_first_live_run_operator_packet_pass/scenario_B_operator_packet.md`
+- `agent_notes/2026-03-29_20-55-42_first_live_run_operator_packet_pass/scenario_A_review_worksheet.md`
+- `agent_notes/2026-03-29_20-55-42_first_live_run_operator_packet_pass/scenario_B_review_worksheet.md`

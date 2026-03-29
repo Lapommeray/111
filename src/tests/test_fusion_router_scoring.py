@@ -20,6 +20,29 @@ def test_spectral_signal_fusion_votes_and_delta_are_visible() -> None:
     assert isinstance(result["confidence_delta"], float)
 
 
+def test_spectral_signal_fusion_does_not_dilute_when_optional_modules_missing() -> None:
+    """Missing optional modules should not be treated as zero-delta evidence."""
+    outputs = {
+        "displacement": {"direction_vote": "buy", "confidence_delta": 0.08},
+        "fvg": {"direction_vote": "buy", "confidence_delta": 0.04},
+        "volatility": {"direction_vote": "neutral", "confidence_delta": -0.02},
+    }
+    result = fuse_spectral_signals(outputs)
+    # Expected avg over present modules only: (0.08 + 0.04 - 0.02) / 3 = 0.0333
+    assert result["confidence_delta"] == 0.0333
+    assert result["direction_vote"] == "buy"
+
+
+def test_spectral_signal_fusion_ignores_quarantined_missing_vote_slots() -> None:
+    """When only one directional signal is available, missing slots must not force neutrality."""
+    outputs = {
+        "displacement": {"direction_vote": "buy", "confidence_delta": 0.08},
+    }
+    result = fuse_spectral_signals(outputs)
+    assert result["direction_vote"] == "buy"
+    assert result["confidence_delta"] == 0.08
+
+
 def test_meta_conscious_routing_uses_regime_liquidity_volatility() -> None:
     regime = {"score": 0.75}
     liquidity = {"score": 0.7, "direction_hint": "buy"}

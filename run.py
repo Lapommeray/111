@@ -2237,18 +2237,27 @@ def _run_controlled_mt5_live_execution(
                 position_ticket=sent_position_ticket,
                 mt5_module=mt5_module,
             )
+            initial_exit_close_confirmation = str(exit_close_verification.get("confirmation", "unconfirmed"))
+            delayed_exit_close_attempted = False
+            delayed_exit_close_confirmation = ""
             if (
                 sent_position_ticket > 0
                 and exit_close_verification.get("confirmation") != "confirmed"
             ):
+                delayed_exit_close_attempted = True
                 time.sleep(BOUNDED_DELAYED_BROKER_RECHECK_SECONDS)
                 delayed_exit_close_verification = _verify_exit_close_position_disappearance(
                     symbol=symbol,
                     position_ticket=sent_position_ticket,
                     mt5_module=mt5_module,
                 )
+                delayed_exit_close_confirmation = str(
+                    delayed_exit_close_verification.get("confirmation", "unconfirmed")
+                )
                 if delayed_exit_close_verification.get("confirmation") == "confirmed":
                     exit_close_verification = delayed_exit_close_verification
+            final_exit_close_confirmation = str(exit_close_verification.get("confirmation", "unconfirmed"))
+            verification_checked_at = datetime.now(tz=timezone.utc).isoformat()
             order_result = {
                 **order_result,
                 "status": "accepted",
@@ -2256,7 +2265,14 @@ def _run_controlled_mt5_live_execution(
                 "rejection_reason": "",
                 "broker_state_confirmation": exit_close_verification["confirmation"],
                 "broker_state_outcome": exit_close_verification["broker_state_outcome"],
-                "broker_exit_verification": exit_close_verification,
+                "broker_exit_verification": {
+                    **exit_close_verification,
+                    "initial_confirmation": initial_exit_close_confirmation,
+                    "delayed_recheck_attempted": delayed_exit_close_attempted,
+                    "delayed_recheck_confirmation": delayed_exit_close_confirmation,
+                    "final_confirmation": final_exit_close_confirmation,
+                    "verification_checked_at": verification_checked_at,
+                },
                 **retry_metadata,
             }
         else:
@@ -2268,10 +2284,16 @@ def _run_controlled_mt5_live_execution(
                 volume=float(order_request.get("volume", 0.0)),
                 mt5_module=mt5_module,
             )
+            initial_broker_position_confirmation = str(
+                broker_position_verification.get("confirmation", "unconfirmed")
+            )
+            delayed_broker_recheck_attempted = False
+            delayed_broker_recheck_confirmation = ""
             if (
                 sent_order_id > 0
                 and broker_position_verification.get("confirmation") != "confirmed"
             ):
+                delayed_broker_recheck_attempted = True
                 time.sleep(BOUNDED_DELAYED_BROKER_RECHECK_SECONDS)
                 delayed_broker_position_verification = _verify_accepted_send_position_linkage(
                     sent_order_id=sent_order_id,
@@ -2280,8 +2302,15 @@ def _run_controlled_mt5_live_execution(
                     volume=float(order_request.get("volume", 0.0)),
                     mt5_module=mt5_module,
                 )
+                delayed_broker_recheck_confirmation = str(
+                    delayed_broker_position_verification.get("confirmation", "unconfirmed")
+                )
                 if delayed_broker_position_verification.get("confirmation") == "confirmed":
                     broker_position_verification = delayed_broker_position_verification
+            final_broker_position_confirmation = str(
+                broker_position_verification.get("confirmation", "unconfirmed")
+            )
+            verification_checked_at = datetime.now(tz=timezone.utc).isoformat()
             order_result = {
                 **order_result,
                 "status": "accepted",
@@ -2289,7 +2318,14 @@ def _run_controlled_mt5_live_execution(
                 "rejection_reason": "",
                 "broker_state_confirmation": broker_position_verification["confirmation"],
                 "broker_state_outcome": broker_position_verification["broker_state_outcome"],
-                "broker_position_verification": broker_position_verification,
+                "broker_position_verification": {
+                    **broker_position_verification,
+                    "initial_confirmation": initial_broker_position_confirmation,
+                    "delayed_recheck_attempted": delayed_broker_recheck_attempted,
+                    "delayed_recheck_confirmation": delayed_broker_recheck_confirmation,
+                    "final_confirmation": final_broker_position_confirmation,
+                    "verification_checked_at": verification_checked_at,
+                },
                 **retry_metadata,
             }
 
@@ -2390,7 +2426,13 @@ def _run_controlled_mt5_live_execution(
             requested_volume=float(order_result.get("requested_volume", order_request.get("volume", 0.0))),
             mt5_module=mt5_module,
         )
+        initial_partial_confirmation = str(
+            partial_quantity_verification.get("confirmation", "unconfirmed")
+        )
+        delayed_partial_recheck_attempted = False
+        delayed_partial_recheck_confirmation = ""
         if sent_order_id > 0 and partial_quantity_verification.get("confirmation") != "confirmed":
+            delayed_partial_recheck_attempted = True
             time.sleep(BOUNDED_DELAYED_BROKER_RECHECK_SECONDS)
             delayed_partial_quantity_verification = _verify_partial_send_deal_quantity(
                 sent_order_id=sent_order_id,
@@ -2399,8 +2441,21 @@ def _run_controlled_mt5_live_execution(
                 requested_volume=float(order_result.get("requested_volume", order_request.get("volume", 0.0))),
                 mt5_module=mt5_module,
             )
+            delayed_partial_recheck_confirmation = str(
+                delayed_partial_quantity_verification.get("confirmation", "unconfirmed")
+            )
             if delayed_partial_quantity_verification.get("confirmation") == "confirmed":
                 partial_quantity_verification = delayed_partial_quantity_verification
+        final_partial_confirmation = str(partial_quantity_verification.get("confirmation", "unconfirmed"))
+        verification_checked_at = datetime.now(tz=timezone.utc).isoformat()
+        partial_quantity_verification = {
+            **partial_quantity_verification,
+            "initial_confirmation": initial_partial_confirmation,
+            "delayed_recheck_attempted": delayed_partial_recheck_attempted,
+            "delayed_recheck_confirmation": delayed_partial_recheck_confirmation,
+            "final_confirmation": final_partial_confirmation,
+            "verification_checked_at": verification_checked_at,
+        }
         if partial_quantity_verification.get("confirmation") == "confirmed":
             order_result = {
                 **order_result,
@@ -3190,6 +3245,9 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     if should_apply_override:
         decision = structure_bias.upper()
         agreement_override_applied = True
+    if decision in {"BUY", "SELL"} and effective_signal_confidence < blocker.min_confidence:
+        combined_blocked = True
+        combined_reasons = normalize_reasons(combined_reasons + ["confidence_below_threshold"])
     reasons = (
         combined_reasons if combined_blocked else [f"advanced_direction={decision}"] + score["reasons"]
     )
@@ -3226,11 +3284,19 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     )
     conflict_filter_result = advanced_state.module_results.get("conflict_filter")
     conflict_blocked = bool(conflict_filter_result.blocked) if conflict_filter_result is not None else False
+    directional_degraded_to_wait = False
     if decision in {"BUY", "SELL"} and not combined_blocked:
         weak_directional_conviction = directional_conviction < 0.62
-        insufficient_vote_margin = directional_vote_margin < 2
+        slight_majority_override = (
+            directional_vote_margin == 1
+            and directional_vote_total >= 9
+            and directional_conviction >= 0.8
+            and directional_support_ratio >= 0.55
+        )
+        insufficient_vote_margin = directional_vote_margin < 2 and not slight_majority_override
         if weak_directional_conviction or insufficient_vote_margin or conflict_blocked:
             decision = "WAIT"
+            directional_degraded_to_wait = True
             reasons = normalize_reasons(
                 reasons
                 + (
@@ -3245,6 +3311,8 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
                 )
                 + (["directional_conflict_active"] if conflict_blocked else [])
             )
+    if directional_degraded_to_wait and not combined_blocked:
+        effective_signal_confidence = round(min(effective_signal_confidence, 0.59), 4)
 
     signal_lifecycle = _build_signal_lifecycle_context(
         enabled=bool(config.signal_lifecycle_enabled),
@@ -3289,6 +3357,8 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     )
     if decision in {"BUY", "SELL"} and controlled_execution.get("order_result", {}).get("status") != "accepted":
         decision = "WAIT"
+        # Execution refused: align abstain confidence with non-trade semantics.
+        effective_signal_confidence = round(min(effective_signal_confidence, 0.59), 4)
         reasons = normalize_reasons(
             reasons
             + ["mt5_controlled_execution_refused"]
@@ -3297,6 +3367,40 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
                 for reason in controlled_execution.get("rollback_refusal_reasons", [])
             ]
         )
+    if decision == "WAIT" and not combined_blocked:
+        rebased_confidence = round(min(effective_signal_confidence, 0.59), 4)
+        if rebased_confidence < effective_signal_confidence:
+            effective_signal_confidence = rebased_confidence
+            reasons = normalize_reasons(reasons + ["abstain_confidence_rebased"])
+    open_position_state_for_reason = controlled_execution.get("open_position_state", {})
+    if (
+        decision == "WAIT"
+        and str(open_position_state_for_reason.get("status", "")).lower() in {"open", "partial_exposure_unresolved"}
+    ):
+        position_state_outcome = str(
+            open_position_state_for_reason.get("position_state_outcome")
+            or controlled_execution.get("exit_decision", {}).get("reason")
+            or "open_position_state_unknown"
+        )
+        reasons = normalize_reasons(
+            reasons + [f"open_position_exit_management:{position_state_outcome}"]
+        )
+        unresolved_close_reasons = [
+            str(reason)
+            for reason in controlled_execution.get("rollback_refusal_reasons", [])
+            if str(reason).strip()
+        ]
+        if unresolved_close_reasons:
+            reasons = normalize_reasons(
+                reasons + [f"open_position_exit_retry:{reason}" for reason in unresolved_close_reasons]
+            )
+        retry_policy_truth = str(
+            controlled_execution.get("order_result", {}).get("retry_policy_truth", "")
+        ).strip()
+        if retry_policy_truth:
+            reasons = normalize_reasons(
+                reasons + [f"open_position_exit_retry_policy:{retry_policy_truth}"]
+            )
     controlled_mt5_readiness = {
         **controlled_mt5_readiness,
         "live_execution_enabled": bool(config.live_execution_enabled),
@@ -3445,10 +3549,15 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         "latest_trade_outcome": outcome,
     }
 
+    # Keep setup classification aligned with publicly exposed confidence.
+    signal_input_confidence = effective_signal_confidence
+    if combined_blocked and not combined_reasons:
+        combined_reasons = ["blocked_without_explicit_reason"]
+
     signal = build_signal_output(
         symbol=config.symbol,
         action=decision,
-        confidence=strategy_intelligence["confidence"],
+        confidence=signal_input_confidence,
         reasons=reasons,
         block_result={"blocked": combined_blocked, "reasons": combined_reasons},
         structure=structure,

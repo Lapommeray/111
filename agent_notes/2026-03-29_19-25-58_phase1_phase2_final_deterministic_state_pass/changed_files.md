@@ -1,0 +1,11 @@
+## Changed files in this pass
+- `src/tests/test_run_pipeline_decision_quality.py`
+  - Added:
+    - `test_unresolved_exit_retry_with_macro_penalty_and_spread_above_keeps_full_retry_reason_set`
+    - `test_replay_live_parity_with_macro_penalty_and_spread_above_matches_blockers_and_retry_reasons`
+- `agent_notes/2026-03-29_19-25-58_phase1_phase2_final_deterministic_state_pass/summary.md`
+- `agent_notes/2026-03-29_19-25-58_phase1_phase2_final_deterministic_state_pass/changed_files.md`
+- `agent_notes/2026-03-29_19-25-58_phase1_phase2_final_deterministic_state_pass/tests.md`
+- `agent_notes/2026-03-29_19-25-58_phase1_phase2_final_deterministic_state_pass/next_steps.md`
+- `agent_notes/2026-03-29_19-25-58_phase1_phase2_final_deterministic_state_pass/risks.md`
+- `agent_notes/2026-03-29_19-25-58_phase1_phase2_final_deterministic_state_pass/evidence.md`
