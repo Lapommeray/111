@@ -60,6 +60,75 @@ def _capital_ok() -> dict[str, object]:
     }
 
 
+def _live_ready_readiness() -> dict[str, object]:
+    return {
+        "readiness_timestamp": "2026-01-01T00:00:00+00:00",
+        "data_source": "mt5_stub",
+        "terminal_connection_stable": True,
+        "symbol_subscription_ready": True,
+        "account_readiness": True,
+        "tick_data_freshness": True,
+        "fail_safe_blocked_state": True,
+        "live_execution_blocked": True,
+        "order_execution_enabled": False,
+        "execution_refused": False,
+        "execution_gate": "live_stub_blocked",
+        "ready_for_controlled_usage": True,
+        "symbol_validity": True,
+        "account_trading_permission": True,
+        "data_freshness": True,
+        "fail_safe_blocked_reasons": [],
+    }
+
+
+def _unresolved_exit_retry_payload() -> dict[str, object]:
+    return {
+        "entry_decision": {"decision": "WAIT", "eligible_for_order": False},
+        "pre_trade_checks": {"checks": [], "failed_checks": [], "all_checks_passed": True},
+        "order_request": {},
+        "order_result": {
+            "status": "refused",
+            "order_sent": True,
+            "error_reason": "exit_close_order_send_refused",
+            "retry_attempted_count": 1,
+            "retry_policy_truth": "retry_attempted_bounded_single_retry_execution_policy",
+        },
+        "stop_loss_take_profit": {"stop_loss": None, "take_profit": None},
+        "rejection_reason": "exit_close_order_send_refused",
+        "rollback_refusal_reasons": [
+            "exit_close_order_send_refused",
+            "retry_not_attempted_fail_closed_guard_blocked",
+        ],
+        "trade_tags": {},
+        "refusal_tags": {},
+        "failure_tags": {},
+        "open_position_state": {
+            "status": "open",
+            "position_id": 77,
+            "symbol": "XAUUSD",
+            "side": "BUY",
+            "entry_price": 2100.2,
+            "stop_loss": 2098.2,
+            "take_profit": 2104.2,
+            "broker_position_confirmation": "unconfirmed",
+            "position_state_outcome": "exit_close_unresolved_open_position",
+        },
+        "exit_decision": {"decision": "exit_required_unresolved_open_position", "reason": "exit_close_unresolved_open_position"},
+        "pnl_snapshot": {
+            "timestamp": "2026-01-01T00:00:00+00:00",
+            "symbol": "XAUUSD",
+            "realized_pnl": 0.0,
+            "unrealized_pnl": 0.0,
+            "position_open": True,
+            "position_open_truth": "assumed_from_accepted_send_unreconciled",
+        },
+        "mistake_failure_classification": "none",
+        "replay_feedback_hook": {"enabled": True, "hook_status": "queued_for_feedback", "mistake_classification": "none"},
+        "auto_stop_active": False,
+        "signal_lifecycle": {"signal_fresh": True, "signal_lifecycle_refusal_reasons": []},
+    }
+
+
 def _state_with_votes(
     *,
     bars: list[dict[str, float]],
@@ -1443,3 +1512,361 @@ def test_5v4_strong_setup_with_conflicting_macro_tags_and_no_penalty_remains_tra
     assert signal["blocked"] is False
     assert signal["blocker_reasons"] == []
     assert signal["confidence"] == 0.91
+
+
+def test_unresolved_exit_retry_with_macro_penalty_and_spread_above_threshold_preserves_cooccurring_reasons(
+    tmp_path: Path,
+) -> None:
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+    state = _state_with_votes(
+        bars=_bars(),
+        mode="replay",
+        final_direction="BUY",
+        final_confidence=0.9,
+        buy_votes=3,
+        sell_votes=0,
+        conflict_blocked=False,
+    )
+    state.module_results["spread_filter"] = ModuleResult(
+        name="spread_filter",
+        role="spread_block_gate",
+        direction_vote="wait",
+        confidence_delta=-0.07,
+        blocked=True,
+        reasons=["spread_too_wide"],
+        payload={
+            "module": "spread_filter",
+            "blocked": True,
+            "reasons": ["spread_too_wide"],
+            "confidence_delta": -0.07,
+            "direction_vote": "wait",
+            "metrics": {"spread_points": 60.01, "max_spread_points": 60.0},
+        },
+    )
+    state.blocked = True
+    state.blocked_reasons = ["spread_filter:spread_too_wide"]
+    with (
+        patch("run.classify_market_structure", return_value={"state": "trend_up", "bias": "buy", "strength": 0.9}),
+        patch(
+            "run.assess_liquidity_state",
+            return_value={"liquidity_state": "stable", "direction_hint": "buy", "score": 0.85},
+        ),
+        patch("run.compute_confidence", return_value={"confidence": 0.9, "direction": "BUY", "reasons": ["seed_buy"]}),
+        patch("run.run_advanced_modules", return_value=state),
+        patch("run.collect_xauusd_macro_state", return_value=_macro_state(pause_trading=False, confidence_penalty=0.35)),
+        patch(
+            "run.score_signal_intelligence",
+            return_value={"signal_score": 0.9, "confidence": 0.88, "feature_contributors": {"buy_vote_0": 1.0}},
+        ),
+        patch("run.evaluate_capital_protection", return_value=_capital_ok()),
+        patch(
+            "run._run_controlled_mt5_live_execution",
+            return_value=(_unresolved_exit_retry_payload(), {"auto_stop_active": False}, {"artifact_path": "stub"}),
+        ),
+    ):
+        output = run_pipeline(_runtime_config(sample_path, tmp_path / "memory_unresolved_macro_spread_above", mode="replay"))
+
+    signal = output["signal"]
+    decision_contract = output["status_panel"]["entry_exit_decision"]
+    assert signal["action"] == "WAIT"
+    assert signal["blocked"] is True
+    assert signal["setup_classification"] == "blocked"
+    assert signal["confidence"] == 0.53
+    assert "spread_filter:spread_too_wide" in signal["blocker_reasons"]
+    assert "confidence_below_threshold" in signal["blocker_reasons"]
+    assert "open_position_exit_management:exit_close_unresolved_open_position" in signal["reasons"]
+    assert "open_position_exit_retry:exit_close_order_send_refused" in signal["reasons"]
+    assert "open_position_exit_retry_policy:retry_attempted_bounded_single_retry_execution_policy" in signal["reasons"]
+    assert "spread_filter:spread_too_wide" in signal["reasons"]
+    assert decision_contract["action"] == "EXIT"
+    assert "exit" in str(decision_contract["exit_rule"])
+    assert "exit_close_order_send_refused" in decision_contract["invalidation_reason"]
+
+
+def test_unresolved_exit_retry_with_macro_penalty_and_spread_at_threshold_preserves_retry_reasons(
+    tmp_path: Path,
+) -> None:
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+    state = _state_with_votes(
+        bars=_bars(),
+        mode="replay",
+        final_direction="BUY",
+        final_confidence=0.9,
+        buy_votes=3,
+        sell_votes=0,
+        conflict_blocked=False,
+    )
+    state.module_results["spread_state"] = ModuleResult(
+        name="spread_state",
+        role="spread_proxy_estimator",
+        direction_vote="neutral",
+        confidence_delta=0.0,
+        blocked=False,
+        reasons=[],
+        payload={"spread_points": 60.0},
+    )
+    state.module_results["spread_filter"] = ModuleResult(
+        name="spread_filter",
+        role="spread_block_gate",
+        direction_vote="neutral",
+        confidence_delta=0.0,
+        blocked=False,
+        reasons=["spread_ok"],
+        payload={
+            "module": "spread_filter",
+            "blocked": False,
+            "reasons": ["spread_ok"],
+            "confidence_delta": 0.0,
+            "direction_vote": "neutral",
+            "metrics": {"spread_points": 60.0, "max_spread_points": 60.0},
+        },
+    )
+    with (
+        patch("run.classify_market_structure", return_value={"state": "trend_up", "bias": "buy", "strength": 0.9}),
+        patch(
+            "run.assess_liquidity_state",
+            return_value={"liquidity_state": "stable", "direction_hint": "buy", "score": 0.85},
+        ),
+        patch("run.compute_confidence", return_value={"confidence": 0.9, "direction": "BUY", "reasons": ["seed_buy"]}),
+        patch("run.run_advanced_modules", return_value=state),
+        patch("run.collect_xauusd_macro_state", return_value=_macro_state(pause_trading=False, confidence_penalty=0.35)),
+        patch(
+            "run.score_signal_intelligence",
+            return_value={"signal_score": 0.9, "confidence": 0.88, "feature_contributors": {"buy_vote_0": 1.0}},
+        ),
+        patch("run.evaluate_capital_protection", return_value=_capital_ok()),
+        patch(
+            "run._run_controlled_mt5_live_execution",
+            return_value=(_unresolved_exit_retry_payload(), {"auto_stop_active": False}, {"artifact_path": "stub"}),
+        ),
+    ):
+        output = run_pipeline(_runtime_config(sample_path, tmp_path / "memory_unresolved_macro_spread_eq", mode="replay"))
+
+    signal = output["signal"]
+    decision_contract = output["status_panel"]["entry_exit_decision"]
+    assert signal["action"] == "WAIT"
+    assert signal["blocked"] is True
+    assert signal["setup_classification"] == "blocked"
+    assert signal["confidence"] == 0.53
+    assert "confidence_below_threshold" in signal["blocker_reasons"]
+    assert "spread_filter:spread_too_wide" not in signal["blocker_reasons"]
+    assert "open_position_exit_management:exit_close_unresolved_open_position" in signal["reasons"]
+    assert "open_position_exit_retry:exit_close_order_send_refused" in signal["reasons"]
+    assert "open_position_exit_retry_policy:retry_attempted_bounded_single_retry_execution_policy" in signal["reasons"]
+    assert decision_contract["action"] == "EXIT"
+    assert "exit_close_order_send_refused" in decision_contract["invalidation_reason"]
+
+
+def test_unresolved_exit_retry_with_macro_penalty_and_spread_below_threshold_preserves_retry_reasons(
+    tmp_path: Path,
+) -> None:
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+    state = _state_with_votes(
+        bars=_bars(),
+        mode="replay",
+        final_direction="BUY",
+        final_confidence=0.9,
+        buy_votes=3,
+        sell_votes=0,
+        conflict_blocked=False,
+    )
+    state.module_results["spread_state"] = ModuleResult(
+        name="spread_state",
+        role="spread_proxy_estimator",
+        direction_vote="neutral",
+        confidence_delta=0.0,
+        blocked=False,
+        reasons=[],
+        payload={"spread_points": 59.99},
+    )
+    state.module_results["spread_filter"] = ModuleResult(
+        name="spread_filter",
+        role="spread_block_gate",
+        direction_vote="neutral",
+        confidence_delta=0.0,
+        blocked=False,
+        reasons=["spread_ok"],
+        payload={
+            "module": "spread_filter",
+            "blocked": False,
+            "reasons": ["spread_ok"],
+            "confidence_delta": 0.0,
+            "direction_vote": "neutral",
+            "metrics": {"spread_points": 59.99, "max_spread_points": 60.0},
+        },
+    )
+    with (
+        patch("run.classify_market_structure", return_value={"state": "trend_up", "bias": "buy", "strength": 0.9}),
+        patch(
+            "run.assess_liquidity_state",
+            return_value={"liquidity_state": "stable", "direction_hint": "buy", "score": 0.85},
+        ),
+        patch("run.compute_confidence", return_value={"confidence": 0.9, "direction": "BUY", "reasons": ["seed_buy"]}),
+        patch("run.run_advanced_modules", return_value=state),
+        patch("run.collect_xauusd_macro_state", return_value=_macro_state(pause_trading=False, confidence_penalty=0.35)),
+        patch(
+            "run.score_signal_intelligence",
+            return_value={"signal_score": 0.9, "confidence": 0.88, "feature_contributors": {"buy_vote_0": 1.0}},
+        ),
+        patch("run.evaluate_capital_protection", return_value=_capital_ok()),
+        patch(
+            "run._run_controlled_mt5_live_execution",
+            return_value=(_unresolved_exit_retry_payload(), {"auto_stop_active": False}, {"artifact_path": "stub"}),
+        ),
+    ):
+        output = run_pipeline(_runtime_config(sample_path, tmp_path / "memory_unresolved_macro_spread_below", mode="replay"))
+
+    signal = output["signal"]
+    decision_contract = output["status_panel"]["entry_exit_decision"]
+    assert signal["action"] == "WAIT"
+    assert signal["blocked"] is True
+    assert signal["setup_classification"] == "blocked"
+    assert signal["confidence"] == 0.53
+    assert "confidence_below_threshold" in signal["blocker_reasons"]
+    assert "spread_filter:spread_too_wide" not in signal["blocker_reasons"]
+    assert "open_position_exit_management:exit_close_unresolved_open_position" in signal["reasons"]
+    assert "open_position_exit_retry:exit_close_order_send_refused" in signal["reasons"]
+    assert "open_position_exit_retry_policy:retry_attempted_bounded_single_retry_execution_policy" in signal["reasons"]
+    assert decision_contract["action"] == "EXIT"
+    assert "exit_close_order_send_refused" in decision_contract["invalidation_reason"]
+
+
+def test_replay_live_parity_preserves_unresolved_exit_retry_reasons_when_no_live_only_blockers(
+    tmp_path: Path,
+) -> None:
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+    replay_state = _state_with_votes(
+        bars=_bars(),
+        mode="replay",
+        final_direction="WAIT",
+        final_confidence=0.9,
+        buy_votes=0,
+        sell_votes=0,
+        conflict_blocked=False,
+    )
+    live_state = _state_with_votes(
+        bars=_bars(),
+        mode="live",
+        final_direction="WAIT",
+        final_confidence=0.9,
+        buy_votes=0,
+        sell_votes=0,
+        conflict_blocked=False,
+    )
+    with (
+        patch("run.classify_market_structure", return_value={"state": "trend_up", "bias": "buy", "strength": 0.9}),
+        patch(
+            "run.assess_liquidity_state",
+            return_value={"liquidity_state": "stable", "direction_hint": "buy", "score": 0.85},
+        ),
+        patch("run.compute_confidence", return_value={"confidence": 0.9, "direction": "BUY", "reasons": ["seed_buy"]}),
+        patch("run.collect_xauusd_macro_state", return_value=_macro_state(pause_trading=False, confidence_penalty=0.0)),
+        patch(
+            "run.score_signal_intelligence",
+            return_value={"signal_score": 0.9, "confidence": 0.88, "feature_contributors": {"buy_vote_0": 1.0}},
+        ),
+        patch("run.evaluate_capital_protection", return_value=_capital_ok()),
+        patch(
+            "run._run_controlled_mt5_live_execution",
+            return_value=(_unresolved_exit_retry_payload(), {"auto_stop_active": False}, {"artifact_path": "stub"}),
+        ),
+    ):
+        with patch("run.run_advanced_modules", return_value=replay_state):
+            replay_output = run_pipeline(_runtime_config(sample_path, tmp_path / "memory_parity_replay", mode="replay"))
+        with (
+            patch("run.run_advanced_modules", return_value=live_state),
+            patch("run.MT5Adapter") as mt5_adapter_cls,
+        ):
+            adapter = mt5_adapter_cls.return_value
+            adapter.get_bars.return_value = _bars()
+            adapter.get_controlled_readiness_state.return_value = _live_ready_readiness()
+            live_output = run_pipeline(_runtime_config(sample_path, tmp_path / "memory_parity_live", mode="live"))
+
+    replay_signal = replay_output["signal"]
+    live_signal = live_output["signal"]
+    assert replay_signal["blocked"] is False
+    assert live_signal["blocked"] is False
+    assert replay_signal["action"] == "WAIT"
+    assert live_signal["action"] == "WAIT"
+    assert replay_signal["confidence"] <= 0.59
+    assert live_signal["confidence"] <= 0.59
+    assert "macro_feed_unsafe_pause" not in replay_signal["blocker_reasons"]
+    assert "macro_feed_unsafe_pause" not in live_signal["blocker_reasons"]
+    assert "open_position_exit_management:exit_close_unresolved_open_position" in replay_signal["reasons"]
+    assert "open_position_exit_management:exit_close_unresolved_open_position" in live_signal["reasons"]
+    assert "open_position_exit_retry:exit_close_order_send_refused" in replay_signal["reasons"]
+    assert "open_position_exit_retry:exit_close_order_send_refused" in live_signal["reasons"]
+    assert "open_position_exit_retry_policy:retry_attempted_bounded_single_retry_execution_policy" in replay_signal["reasons"]
+    assert "open_position_exit_retry_policy:retry_attempted_bounded_single_retry_execution_policy" in live_signal["reasons"]
+    assert replay_output["status_panel"]["entry_exit_decision"]["action"] == "EXIT"
+    assert live_output["status_panel"]["entry_exit_decision"]["action"] == "EXIT"
+
+
+def test_replay_live_parity_live_pause_blocks_but_keeps_unresolved_exit_reason_propagation(
+    tmp_path: Path,
+) -> None:
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+    replay_state = _state_with_votes(
+        bars=_bars(),
+        mode="replay",
+        final_direction="WAIT",
+        final_confidence=0.9,
+        buy_votes=0,
+        sell_votes=0,
+        conflict_blocked=False,
+    )
+    live_state = _state_with_votes(
+        bars=_bars(),
+        mode="live",
+        final_direction="WAIT",
+        final_confidence=0.9,
+        buy_votes=0,
+        sell_votes=0,
+        conflict_blocked=False,
+    )
+    with (
+        patch("run.classify_market_structure", return_value={"state": "trend_up", "bias": "buy", "strength": 0.9}),
+        patch(
+            "run.assess_liquidity_state",
+            return_value={"liquidity_state": "stable", "direction_hint": "buy", "score": 0.85},
+        ),
+        patch("run.compute_confidence", return_value={"confidence": 0.9, "direction": "BUY", "reasons": ["seed_buy"]}),
+        patch("run.collect_xauusd_macro_state", return_value=_macro_state(pause_trading=True, confidence_penalty=0.0)),
+        patch(
+            "run.score_signal_intelligence",
+            return_value={"signal_score": 0.9, "confidence": 0.88, "feature_contributors": {"buy_vote_0": 1.0}},
+        ),
+        patch("run.evaluate_capital_protection", return_value=_capital_ok()),
+        patch(
+            "run._run_controlled_mt5_live_execution",
+            return_value=(_unresolved_exit_retry_payload(), {"auto_stop_active": False}, {"artifact_path": "stub"}),
+        ),
+    ):
+        with patch("run.run_advanced_modules", return_value=replay_state):
+            replay_output = run_pipeline(_runtime_config(sample_path, tmp_path / "memory_parity_pause_replay", mode="replay"))
+        with (
+            patch("run.run_advanced_modules", return_value=live_state),
+            patch("run.MT5Adapter") as mt5_adapter_cls,
+        ):
+            adapter = mt5_adapter_cls.return_value
+            adapter.get_bars.return_value = _bars()
+            adapter.get_controlled_readiness_state.return_value = _live_ready_readiness()
+            live_output = run_pipeline(_runtime_config(sample_path, tmp_path / "memory_parity_pause_live", mode="live"))
+
+    replay_signal = replay_output["signal"]
+    live_signal = live_output["signal"]
+    assert replay_signal["blocked"] is False
+    assert live_signal["blocked"] is True
+    assert "macro_feed_unsafe_pause" not in replay_signal["blocker_reasons"]
+    assert "macro_feed_unsafe_pause" in live_signal["blocker_reasons"]
+    assert "open_position_exit_management:exit_close_unresolved_open_position" in replay_signal["reasons"]
+    assert "open_position_exit_management:exit_close_unresolved_open_position" in live_signal["reasons"]
+    assert "open_position_exit_retry:exit_close_order_send_refused" in replay_signal["reasons"]
+    assert "open_position_exit_retry:exit_close_order_send_refused" in live_signal["reasons"]
+    assert replay_output["status_panel"]["entry_exit_decision"]["action"] == "EXIT"
+    assert live_output["status_panel"]["entry_exit_decision"]["action"] == "EXIT"

@@ -3320,7 +3320,6 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     open_position_state_for_reason = controlled_execution.get("open_position_state", {})
     if (
         decision == "WAIT"
-        and not combined_blocked
         and str(open_position_state_for_reason.get("status", "")).lower() in {"open", "partial_exposure_unresolved"}
     ):
         position_state_outcome = str(
