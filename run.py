@@ -3229,11 +3229,13 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
     )
     conflict_filter_result = advanced_state.module_results.get("conflict_filter")
     conflict_blocked = bool(conflict_filter_result.blocked) if conflict_filter_result is not None else False
+    directional_degraded_to_wait = False
     if decision in {"BUY", "SELL"} and not combined_blocked:
         weak_directional_conviction = directional_conviction < 0.62
         insufficient_vote_margin = directional_vote_margin < 2
         if weak_directional_conviction or insufficient_vote_margin or conflict_blocked:
             decision = "WAIT"
+            directional_degraded_to_wait = True
             reasons = normalize_reasons(
                 reasons
                 + (
@@ -3248,6 +3250,8 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
                 )
                 + (["directional_conflict_active"] if conflict_blocked else [])
             )
+    if directional_degraded_to_wait and not combined_blocked:
+        effective_signal_confidence = round(min(effective_signal_confidence, 0.59), 4)
 
     signal_lifecycle = _build_signal_lifecycle_context(
         enabled=bool(config.signal_lifecycle_enabled),
