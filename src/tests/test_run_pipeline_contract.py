@@ -236,7 +236,7 @@ def test_run_pipeline_replay_macro_penalty_updates_public_confidence_and_classif
     assert signal["confidence"] == 0.55
     assert signal["advanced_modules"]["final_direction"] == "BUY"
     assert signal["advanced_modules"]["final_confidence"] == 0.9
-    assert signal["setup_classification"] == "low_confluence"
+    assert signal["setup_classification"] == "blocked"
 
 
 def test_run_pipeline_live_macro_pause_blocks_with_reason(tmp_path: Path) -> None:
