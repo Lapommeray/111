@@ -1,0 +1,192 @@
+## Live validation checklist (operational)
+
+Use one run record per scenario with `live_run_evidence_template.md`.
+
+### Scenario A — Broker send/linkage timing race
+- Trigger condition:
+  - Live mode BUY/SELL send accepted by terminal while broker position linkage may lag.
+- Expected live observation:
+  - `order_result.status=accepted` and linkage may transition from unconfirmed to confirmed after delayed recheck.
+- Artifact fields to capture:
+  - `order_result.broker_position_verification.initial_confirmation`
+  - `order_result.broker_position_verification.delayed_recheck_attempted`
+  - `order_result.broker_position_verification.delayed_recheck_confirmation`
+  - `order_result.broker_position_verification.final_confirmation`
+  - `order_result.broker_position_verification.verification_checked_at`
+  - `order_result.broker_position_verification.broker_state_outcome`
+- Final signal fields to check:
+  - `signal.action`
+  - `signal.confidence`
+  - `signal.reasons`
+  - `signal.blocker_reasons`
+  - `signal.classification`
+- entry_exit_decision fields to check:
+  - `status_panel.entry_exit_decision.action`
+  - `status_panel.entry_exit_decision.invalidation_reason`
+  - `status_panel.entry_exit_decision.open_position_state.status`
+  - `status_panel.entry_exit_decision.open_position_state.position_state_outcome`
+- Success:
+  - No contradiction between verification outcome and open-position state; reasons remain coherent.
+- Failure:
+  - Persistent unresolved linkage without coherent reason/state alignment.
+- Correct-branch proof:
+  - Artifact shows delayed timeline fields plus consistent final position state.
+- Live defect proof:
+  - Artifact shows contradictory final state (e.g., confirmed linkage but flat/no position without matching exit path).
+
+### Scenario B — Exit close confirmation delay window
+- Trigger condition:
+  - Live managed open position receives close send and broker disappearance confirmation may lag.
+- Expected live observation:
+  - `broker_exit_verification` may start unconfirmed and later confirm.
+- Artifact fields to capture:
+  - `order_result.broker_exit_verification.initial_confirmation`
+  - `order_result.broker_exit_verification.delayed_recheck_attempted`
+  - `order_result.broker_exit_verification.delayed_recheck_confirmation`
+  - `order_result.broker_exit_verification.final_confirmation`
+  - `order_result.broker_exit_verification.verification_checked_at`
+  - `order_result.broker_exit_verification.broker_state_outcome`
+- Final signal fields to check:
+  - `signal.action`
+  - `signal.reasons` (must preserve `open_position_exit_management:*`)
+- entry_exit_decision fields to check:
+  - `status_panel.entry_exit_decision.action`
+  - `status_panel.entry_exit_decision.invalidation_reason`
+  - `status_panel.entry_exit_decision.open_position_state.status`
+- Success:
+  - Timeline fields explain delayed confirmation and final state is coherent (`flat` when confirmed).
+- Failure:
+  - Unresolved open state without auditable timeline or contradiction between contract and broker verification.
+- Correct-branch proof:
+  - Explicit delayed-recheck metadata with consistent final exit/open state.
+- Live defect proof:
+  - Confirmed broker close but `open_position_state.status=open` and no coherent invalidation/transition reason.
+
+### Scenario C — Retry/refusal path under true latency
+- Trigger condition:
+  - Live send returns non-accepted status in bounded single-retry slice.
+- Expected live observation:
+  - Retry policy executes once when eligible or records fail-closed blocked reason when not.
+- Artifact fields to capture:
+  - `order_result.retry_policy_truth`
+  - `order_result.retry_attempted_count`
+  - `order_result.retry_blocked_reason`
+  - `order_result.retry_final_outcome_status`
+  - `rollback_refusal_reasons`
+- Final signal fields to check:
+  - `signal.action` (coherent WAIT on refusal paths)
+  - `signal.confidence` (abstain-band on refusal/WAIT)
+  - `signal.reasons` (`mt5_controlled_execution_refused`, `mt5_controlled_refusal:*`, open-position retry reasons where applicable)
+- entry_exit_decision fields to check:
+  - `status_panel.entry_exit_decision.action`
+  - `status_panel.entry_exit_decision.invalidation_reason`
+- Success:
+  - Retry path is explicit, bounded, and reason-complete.
+- Failure:
+  - Silent retry/refusal cause loss or mismatch between contract and signal reasons.
+- Correct-branch proof:
+  - Retry metadata and refusal reasons are preserved in artifact and final signal layer.
+- Live defect proof:
+  - Refusal/retry occurred but no corresponding reason in final signal or conflicting contract action.
+
+### Scenario D — Spread-sensitive live behavior near threshold
+- Trigger condition:
+  - Live spread fluctuates around configured max threshold.
+- Expected live observation:
+  - Spread blocker appears only when boundary condition requires it; co-occurring reasons remain preserved.
+- Artifact fields to capture:
+  - `signal.blocker_reasons`
+  - `signal.reasons`
+  - `signal.action`
+  - `signal.confidence`
+  - `status_panel.entry_exit_decision`
+- Final signal fields to check:
+  - `signal.blocker_reasons` contains spread blocker only when above threshold.
+  - `signal.reasons` retains open-position retry/management reasons when co-occurring.
+- entry_exit_decision fields to check:
+  - `status_panel.entry_exit_decision.action`
+  - `status_panel.entry_exit_decision.invalidation_reason`
+- Success:
+  - No silent reason drops in spread-boundary co-occurrence.
+- Failure:
+  - Spread blocker suppresses or contradicts open-position retry/management reason propagation.
+- Correct-branch proof:
+  - Artifacts demonstrate coherent co-occurrence reason set.
+- Live defect proof:
+  - Missing spread or open-position reason despite matching trigger conditions.
+
+### Scenario E — Live macro pause during open-position management
+- Trigger condition:
+  - Live macro pause active while open-position exit management is active.
+- Expected live observation:
+  - Pause-related blocker present without hiding open-position exit/retry reasons.
+- Artifact fields to capture:
+  - `signal.blocker_reasons` (`macro_feed_unsafe_pause` when active)
+  - `signal.reasons` (`open_position_exit_management:*`, `open_position_exit_retry:*` when applicable)
+  - `status_panel.entry_exit_decision`
+- Final signal fields to check:
+  - `signal.action=WAIT` with coherent blocker and open-position reasons.
+- entry_exit_decision fields to check:
+  - `status_panel.entry_exit_decision.action`
+  - `status_panel.entry_exit_decision.invalidation_reason`
+  - `status_panel.entry_exit_decision.open_position_state.status`
+- Success:
+  - Live-only pause behavior is explicit and reason-complete.
+- Failure:
+  - Pause block appears but hides open-position transition/retry context.
+- Correct-branch proof:
+  - Both macro pause and open-position reasons persist in final signal.
+- Live defect proof:
+  - Macro blocker appears alone despite active unresolved exit management.
+
+### Scenario F — Network interruption/partition effects during verification
+- Trigger condition:
+  - Intermittent terminal/network failures during broker verification calls.
+- Expected live observation:
+  - Fail-closed reason classification is explicit in verification payloads.
+- Artifact fields to capture:
+  - `broker_position_verification.fail_closed_reason` (if entry linkage path)
+  - `broker_exit_verification.fail_closed_reason` (if exit path)
+  - `partial_quantity_verification.fail_closed_reason` (if partial path)
+  - `rollback_refusal_reasons`
+- Final signal fields to check:
+  - `signal.action`
+  - `signal.reasons`
+  - `signal.blocker_reasons`
+- entry_exit_decision fields to check:
+  - `status_panel.entry_exit_decision.action`
+  - `status_panel.entry_exit_decision.invalidation_reason`
+- Success:
+  - Infrastructure-induced uncertainty is explicit and coherent across layers.
+- Failure:
+  - Ambiguous unresolved state without explicit fail-closed reason evidence.
+- Correct-branch proof:
+  - Artifacts include fail-closed reason + coherent WAIT/management contract.
+- Live defect proof:
+  - Verification failure with missing fail-closed reason and contradictory downstream state.
+
+### Scenario G — Reconciliation mismatch over time
+- Trigger condition:
+  - Successive live artifacts show divergence between expected position state and broker truth.
+- Expected live observation:
+  - Transition path is explicit in verification payloads and open_position_state progression.
+- Artifact fields to capture:
+  - `open_position_state.status`
+  - `open_position_state.position_state_outcome`
+  - `pnl_snapshot.position_open_truth`
+  - verification payload confirmations/outcomes
+  - history progression in `mt5_controlled_execution_history.json`
+- Final signal fields to check:
+  - `signal.action`
+  - `signal.reasons` (open-position management/retry context)
+- entry_exit_decision fields to check:
+  - `status_panel.entry_exit_decision.action`
+  - `status_panel.entry_exit_decision.open_position_state.*`
+- Success:
+  - State progression reconciles without contradictions across consecutive artifacts.
+- Failure:
+  - Persistent contradictory open/flat truth progression with no matching verification outcome.
+- Correct-branch proof:
+  - History snapshots show coherent transitions and reason propagation.
+- Live defect proof:
+  - Artifact sequence proves unresolved contradiction not explained by verification metadata.

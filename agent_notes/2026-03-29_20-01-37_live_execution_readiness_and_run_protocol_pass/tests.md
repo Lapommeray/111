@@ -1,0 +1,8 @@
+## Tests run
+1. `python3 -m pytest -q src/tests/test_execution_gate_unittest.py::TestExecutionGateSemantics::test_accepted_send_delayed_recheck_confirms_exact_linkage_when_broker_truth_appears src/tests/test_execution_gate_unittest.py::TestExecutionGateSemantics::test_exit_close_send_without_disappearance_fails_closed_unresolved_open src/tests/test_execution_gate_unittest.py::TestExecutionGateSemantics::test_partial_fill_delayed_recheck_confirms_exact_linked_deal_when_broker_truth_appears src/tests/test_memory.py::test_run_pipeline_persists_controlled_mt5_execution_artifacts src/tests/test_run_pipeline_decision_quality.py::test_unresolved_exit_retry_with_macro_penalty_and_spread_above_keeps_full_retry_reason_set src/tests/test_run_pipeline_decision_quality.py::test_replay_live_parity_with_macro_penalty_and_spread_above_matches_blockers_and_retry_reasons`
+- Result: PASS
+- Output: `6 passed in 0.67s`
+
+2. `python3 -m pytest -q src/tests/test_run_pipeline_contract.py src/tests/test_execution_gate_unittest.py src/tests/test_memory.py src/tests/test_run_pipeline_decision_quality.py::test_replay_live_parity_live_pause_blocks_but_keeps_unresolved_exit_reason_propagation`
+- Result: PASS
+- Output: `85 passed in 8.86s`
