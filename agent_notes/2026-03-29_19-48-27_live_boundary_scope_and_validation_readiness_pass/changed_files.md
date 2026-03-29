@@ -1,0 +1,22 @@
+## Changed files
+- `run.py`
+  - Added explicit delayed-recheck observability metadata to broker verification payloads:
+    - `initial_confirmation`
+    - `delayed_recheck_attempted`
+    - `delayed_recheck_confirmation`
+    - `final_confirmation`
+    - `verification_checked_at`
+  - Applied to:
+    - `order_result.broker_position_verification`
+    - `order_result.broker_exit_verification`
+    - `order_result.partial_quantity_verification`
+- `src/tests/test_execution_gate_unittest.py`
+  - Tightened delayed-recheck tests to assert the new verification metadata fields are present and coherent.
+- `agent_notes/2026-03-29_19-48-27_live_boundary_scope_and_validation_readiness_pass/summary.md`
+- `agent_notes/2026-03-29_19-48-27_live_boundary_scope_and_validation_readiness_pass/changed_files.md`
+- `agent_notes/2026-03-29_19-48-27_live_boundary_scope_and_validation_readiness_pass/tests.md`
+- `agent_notes/2026-03-29_19-48-27_live_boundary_scope_and_validation_readiness_pass/next_steps.md`
+- `agent_notes/2026-03-29_19-48-27_live_boundary_scope_and_validation_readiness_pass/risks.md`
+- `agent_notes/2026-03-29_19-48-27_live_boundary_scope_and_validation_readiness_pass/evidence.md`
+- `agent_notes/2026-03-29_19-48-27_live_boundary_scope_and_validation_readiness_pass/live_only_scope.md`
+- `agent_notes/2026-03-29_19-48-27_live_boundary_scope_and_validation_readiness_pass/live_validation_plan.md`

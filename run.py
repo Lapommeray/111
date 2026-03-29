@@ -2237,18 +2237,27 @@ def _run_controlled_mt5_live_execution(
                 position_ticket=sent_position_ticket,
                 mt5_module=mt5_module,
             )
+            initial_exit_close_confirmation = str(exit_close_verification.get("confirmation", "unconfirmed"))
+            delayed_exit_close_attempted = False
+            delayed_exit_close_confirmation = ""
             if (
                 sent_position_ticket > 0
                 and exit_close_verification.get("confirmation") != "confirmed"
             ):
+                delayed_exit_close_attempted = True
                 time.sleep(BOUNDED_DELAYED_BROKER_RECHECK_SECONDS)
                 delayed_exit_close_verification = _verify_exit_close_position_disappearance(
                     symbol=symbol,
                     position_ticket=sent_position_ticket,
                     mt5_module=mt5_module,
                 )
+                delayed_exit_close_confirmation = str(
+                    delayed_exit_close_verification.get("confirmation", "unconfirmed")
+                )
                 if delayed_exit_close_verification.get("confirmation") == "confirmed":
                     exit_close_verification = delayed_exit_close_verification
+            final_exit_close_confirmation = str(exit_close_verification.get("confirmation", "unconfirmed"))
+            verification_checked_at = datetime.now(tz=timezone.utc).isoformat()
             order_result = {
                 **order_result,
                 "status": "accepted",
@@ -2256,7 +2265,14 @@ def _run_controlled_mt5_live_execution(
                 "rejection_reason": "",
                 "broker_state_confirmation": exit_close_verification["confirmation"],
                 "broker_state_outcome": exit_close_verification["broker_state_outcome"],
-                "broker_exit_verification": exit_close_verification,
+                "broker_exit_verification": {
+                    **exit_close_verification,
+                    "initial_confirmation": initial_exit_close_confirmation,
+                    "delayed_recheck_attempted": delayed_exit_close_attempted,
+                    "delayed_recheck_confirmation": delayed_exit_close_confirmation,
+                    "final_confirmation": final_exit_close_confirmation,
+                    "verification_checked_at": verification_checked_at,
+                },
                 **retry_metadata,
             }
         else:
@@ -2268,10 +2284,16 @@ def _run_controlled_mt5_live_execution(
                 volume=float(order_request.get("volume", 0.0)),
                 mt5_module=mt5_module,
             )
+            initial_broker_position_confirmation = str(
+                broker_position_verification.get("confirmation", "unconfirmed")
+            )
+            delayed_broker_recheck_attempted = False
+            delayed_broker_recheck_confirmation = ""
             if (
                 sent_order_id > 0
                 and broker_position_verification.get("confirmation") != "confirmed"
             ):
+                delayed_broker_recheck_attempted = True
                 time.sleep(BOUNDED_DELAYED_BROKER_RECHECK_SECONDS)
                 delayed_broker_position_verification = _verify_accepted_send_position_linkage(
                     sent_order_id=sent_order_id,
@@ -2280,8 +2302,15 @@ def _run_controlled_mt5_live_execution(
                     volume=float(order_request.get("volume", 0.0)),
                     mt5_module=mt5_module,
                 )
+                delayed_broker_recheck_confirmation = str(
+                    delayed_broker_position_verification.get("confirmation", "unconfirmed")
+                )
                 if delayed_broker_position_verification.get("confirmation") == "confirmed":
                     broker_position_verification = delayed_broker_position_verification
+            final_broker_position_confirmation = str(
+                broker_position_verification.get("confirmation", "unconfirmed")
+            )
+            verification_checked_at = datetime.now(tz=timezone.utc).isoformat()
             order_result = {
                 **order_result,
                 "status": "accepted",
@@ -2289,7 +2318,14 @@ def _run_controlled_mt5_live_execution(
                 "rejection_reason": "",
                 "broker_state_confirmation": broker_position_verification["confirmation"],
                 "broker_state_outcome": broker_position_verification["broker_state_outcome"],
-                "broker_position_verification": broker_position_verification,
+                "broker_position_verification": {
+                    **broker_position_verification,
+                    "initial_confirmation": initial_broker_position_confirmation,
+                    "delayed_recheck_attempted": delayed_broker_recheck_attempted,
+                    "delayed_recheck_confirmation": delayed_broker_recheck_confirmation,
+                    "final_confirmation": final_broker_position_confirmation,
+                    "verification_checked_at": verification_checked_at,
+                },
                 **retry_metadata,
             }
 
@@ -2390,7 +2426,13 @@ def _run_controlled_mt5_live_execution(
             requested_volume=float(order_result.get("requested_volume", order_request.get("volume", 0.0))),
             mt5_module=mt5_module,
         )
+        initial_partial_confirmation = str(
+            partial_quantity_verification.get("confirmation", "unconfirmed")
+        )
+        delayed_partial_recheck_attempted = False
+        delayed_partial_recheck_confirmation = ""
         if sent_order_id > 0 and partial_quantity_verification.get("confirmation") != "confirmed":
+            delayed_partial_recheck_attempted = True
             time.sleep(BOUNDED_DELAYED_BROKER_RECHECK_SECONDS)
             delayed_partial_quantity_verification = _verify_partial_send_deal_quantity(
                 sent_order_id=sent_order_id,
@@ -2399,8 +2441,21 @@ def _run_controlled_mt5_live_execution(
                 requested_volume=float(order_result.get("requested_volume", order_request.get("volume", 0.0))),
                 mt5_module=mt5_module,
             )
+            delayed_partial_recheck_confirmation = str(
+                delayed_partial_quantity_verification.get("confirmation", "unconfirmed")
+            )
             if delayed_partial_quantity_verification.get("confirmation") == "confirmed":
                 partial_quantity_verification = delayed_partial_quantity_verification
+        final_partial_confirmation = str(partial_quantity_verification.get("confirmation", "unconfirmed"))
+        verification_checked_at = datetime.now(tz=timezone.utc).isoformat()
+        partial_quantity_verification = {
+            **partial_quantity_verification,
+            "initial_confirmation": initial_partial_confirmation,
+            "delayed_recheck_attempted": delayed_partial_recheck_attempted,
+            "delayed_recheck_confirmation": delayed_partial_recheck_confirmation,
+            "final_confirmation": final_partial_confirmation,
+            "verification_checked_at": verification_checked_at,
+        }
         if partial_quantity_verification.get("confirmation") == "confirmed":
             order_result = {
                 **order_result,
