@@ -252,6 +252,44 @@ def test_manipulated_setup_conflict_votes_abstains_with_explicit_reason(tmp_path
     assert "directional_conflict_active" in signal["reasons"]
 
 
+def test_slight_majority_setup_rebases_confidence_after_directional_degradation(tmp_path: Path) -> None:
+    """3:2 directional split should abstain and confidence should be degraded, not stay high."""
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+    state = _state_with_votes(
+        bars=_bars(),
+        mode="replay",
+        final_direction="BUY",
+        final_confidence=0.9,
+        buy_votes=3,
+        sell_votes=2,
+        conflict_blocked=False,
+    )
+    with (
+        patch("run.classify_market_structure", return_value={"state": "trend_up", "bias": "buy", "strength": 0.9}),
+        patch(
+            "run.assess_liquidity_state",
+            return_value={"liquidity_state": "stable", "direction_hint": "buy", "score": 0.85},
+        ),
+        patch("run.compute_confidence", return_value={"confidence": 0.9, "direction": "BUY", "reasons": ["seed_buy"]}),
+        patch("run.run_advanced_modules", return_value=state),
+        patch("run.collect_xauusd_macro_state", return_value=_macro_state(pause_trading=False, confidence_penalty=0.0)),
+        patch(
+            "run.score_signal_intelligence",
+            return_value={"signal_score": 0.9, "confidence": 0.88, "feature_contributors": {"buy_vote_0": 1.0}},
+        ),
+        patch("run.evaluate_capital_protection", return_value=_capital_ok()),
+    ):
+        output = run_pipeline(_runtime_config(sample_path, tmp_path / "memory_slight_majority", mode="replay"))
+
+    signal = output["signal"]
+    assert signal["action"] == "WAIT"
+    assert signal["blocked"] is False
+    assert signal["blocker_reasons"] == []
+    assert "directional_vote_margin_insufficient" in signal["reasons"]
+    assert signal["confidence"] <= 0.59
+
+
 def test_invalidated_setup_with_open_position_surfaces_exit_contract(tmp_path: Path) -> None:
     sample_path = tmp_path / "samples" / "xauusd.csv"
     ensure_sample_data(sample_path)
