@@ -3306,6 +3306,11 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
                 for reason in controlled_execution.get("rollback_refusal_reasons", [])
             ]
         )
+    if decision == "WAIT" and not combined_blocked:
+        rebased_confidence = round(min(effective_signal_confidence, 0.59), 4)
+        if rebased_confidence < effective_signal_confidence:
+            effective_signal_confidence = rebased_confidence
+            reasons = normalize_reasons(reasons + ["abstain_confidence_rebased"])
     controlled_mt5_readiness = {
         **controlled_mt5_readiness,
         "live_execution_enabled": bool(config.live_execution_enabled),

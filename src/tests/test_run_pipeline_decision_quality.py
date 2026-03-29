@@ -431,3 +431,41 @@ def test_execution_refusal_degrades_wait_confidence_and_reasons(tmp_path: Path) 
     assert signal["blocker_reasons"] == []
     assert "mt5_controlled_execution_refused" in signal["reasons"]
     assert signal["confidence"] <= 0.59
+
+
+def test_unblocked_wait_direction_rebases_confidence_to_abstain_band(tmp_path: Path) -> None:
+    """WAIT (without hard block) should not retain trade-ready confidence."""
+    sample_path = tmp_path / "samples" / "xauusd.csv"
+    ensure_sample_data(sample_path)
+    state = _state_with_votes(
+        bars=_bars(),
+        mode="replay",
+        final_direction="WAIT",
+        final_confidence=0.9,
+        buy_votes=0,
+        sell_votes=0,
+        conflict_blocked=False,
+    )
+    with (
+        patch("run.classify_market_structure", return_value={"state": "trend_up", "bias": "buy", "strength": 0.9}),
+        patch(
+            "run.assess_liquidity_state",
+            return_value={"liquidity_state": "stable", "direction_hint": "buy", "score": 0.85},
+        ),
+        patch("run.compute_confidence", return_value={"confidence": 0.9, "direction": "BUY", "reasons": ["seed_buy"]}),
+        patch("run.run_advanced_modules", return_value=state),
+        patch("run.collect_xauusd_macro_state", return_value=_macro_state(pause_trading=False, confidence_penalty=0.0)),
+        patch(
+            "run.score_signal_intelligence",
+            return_value={"signal_score": 0.9, "confidence": 0.88, "feature_contributors": {"buy_vote_0": 1.0}},
+        ),
+        patch("run.evaluate_capital_protection", return_value=_capital_ok()),
+    ):
+        output = run_pipeline(_runtime_config(sample_path, tmp_path / "memory_wait_rebase", mode="replay"))
+
+    signal = output["signal"]
+    assert signal["action"] == "WAIT"
+    assert signal["blocked"] is False
+    assert signal["blocker_reasons"] == []
+    assert signal["confidence"] <= 0.59
+    assert "abstain_confidence_rebased" in signal["reasons"]
