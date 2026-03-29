@@ -3311,6 +3311,20 @@ def run_pipeline(config: RuntimeConfig) -> dict[str, Any]:
         if rebased_confidence < effective_signal_confidence:
             effective_signal_confidence = rebased_confidence
             reasons = normalize_reasons(reasons + ["abstain_confidence_rebased"])
+    open_position_state_for_reason = controlled_execution.get("open_position_state", {})
+    if (
+        decision == "WAIT"
+        and not combined_blocked
+        and str(open_position_state_for_reason.get("status", "")).lower() in {"open", "partial_exposure_unresolved"}
+    ):
+        position_state_outcome = str(
+            open_position_state_for_reason.get("position_state_outcome")
+            or controlled_execution.get("exit_decision", {}).get("reason")
+            or "open_position_state_unknown"
+        )
+        reasons = normalize_reasons(
+            reasons + [f"open_position_exit_management:{position_state_outcome}"]
+        )
     controlled_mt5_readiness = {
         **controlled_mt5_readiness,
         "live_execution_enabled": bool(config.live_execution_enabled),
