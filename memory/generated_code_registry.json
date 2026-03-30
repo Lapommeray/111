@@ -5270,6 +5270,27 @@
         "mode": "live",
         "snapshot_id": "snap_20260320015548309616"
       }
+    },
+    {
+      "timestamp": "2026-03-30T09:02:05.791143+00:00",
+      "artifact_type": "generated_rules",
+      "artifact_path": "memory/generated_rules.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "replay",
+        "rule_count": 0,
+        "snapshot_id": "snap_20260330090205772459"
+      }
+    },
+    {
+      "timestamp": "2026-03-30T09:02:05.795018+00:00",
+      "artifact_type": "meta_adaptive_profile",
+      "artifact_path": "memory/meta_adaptive_profile.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "replay",
+        "snapshot_id": "snap_20260330090205772459"
+      }
     }
   ],
   "schema_version": "v1"
