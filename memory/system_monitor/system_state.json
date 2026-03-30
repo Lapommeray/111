@@ -19,64 +19,180 @@
   "open_orders": [],
   "last_trades": [
     {
-      "timestamp": "2026-03-15T04:30:44.858101+00:00",
-      "trade_id": "blocked_snap_20260315043044855570",
-      "symbol": "XAUUSD",
-      "direction": "WAIT",
-      "status": "skipped",
-      "result": "n/a",
-      "pnl_points": 0.0,
-      "source_reasons": [
-        "structure_liquidity_conflict",
-        "session_filter:off_hours_block"
-      ],
-      "confidence": 0.9983
-    },
-    {
-      "timestamp": "2026-03-15T04:30:44.866762+00:00",
-      "trade_id": "blocked_snap_20260315043044861553",
-      "symbol": "XAUUSD",
-      "direction": "WAIT",
-      "status": "skipped",
-      "result": "n/a",
-      "pnl_points": 0.0,
-      "source_reasons": [
-        "structure_liquidity_conflict",
-        "session_filter:off_hours_block"
-      ],
-      "confidence": 0.9983
-    },
-    {
-      "timestamp": "2026-03-15T04:30:44.877984+00:00",
-      "trade_id": "blocked_snap_20260315043044870269",
-      "symbol": "XAUUSD",
-      "direction": "WAIT",
-      "status": "skipped",
-      "result": "n/a",
-      "pnl_points": 0.0,
-      "source_reasons": [
-        "structure_liquidity_conflict",
-        "session_filter:off_hours_block"
-      ],
-      "confidence": 0.9983
-    },
-    {
-      "timestamp": "2026-03-15T04:30:44.891779+00:00",
-      "trade_id": "blocked_snap_20260315043044881691",
-      "symbol": "XAUUSD",
-      "direction": "WAIT",
-      "status": "skipped",
-      "result": "n/a",
-      "pnl_points": 0.0,
-      "source_reasons": [
-        "structure_liquidity_conflict",
-        "session_filter:off_hours_block"
-      ],
-      "confidence": 0.9983
-    },
-    {
       "timestamp": "2026-03-30T09:02:05.788632+00:00",
       "trade_id": "blocked_snap_20260330090205772459",
+      "symbol": "XAUUSD",
+      "direction": "WAIT",
+      "status": "skipped",
+      "result": "n/a",
+      "pnl_points": 0.0,
+      "source_reasons": [
+        "advanced_direction=WAIT",
+        "structure_bias=buy",
+        "liquidity_hint=sell",
+        "agreement=0.4"
+      ],
+      "confidence": 0.4962,
+      "trade_tags": {
+        "session": "asia",
+        "volatility_regime": "balanced",
+        "macro_state": "balanced",
+        "dxy_state": "unavailable",
+        "yield_state": "flat_or_inverted",
+        "event_news_state": "calm",
+        "round_number_proximity": "clear_round_number",
+        "correlation_regime_state": "insufficient_data",
+        "major_round_number_proximity": "clear_major_round_number",
+        "event_type": "unknown",
+        "session_policy": "asia_reduced_size",
+        "correlation_confirmation": "dual_stable",
+        "surgical_layer_triggers": [
+          "stop_hunt_footprint_analyzer",
+          "round_number_stop_cluster_map"
+        ],
+        "dxy_proxy_state": "unavailable",
+        "gld_flow_state": "unavailable",
+        "macro_feed_health": "unavailable",
+        "synthetic_feature_state": "sandbox_pending",
+        "negative_space_state": "sandbox_pending",
+        "invariant_break_state": "sandbox_pending",
+        "pain_geometry_risk": 0.0,
+        "counterfactual_evaluation": "sandbox_pending",
+        "liquidity_decay_state": "sandbox_pending"
+      }
+    },
+    {
+      "timestamp": "2026-03-30T10:05:28.482768+00:00",
+      "trade_id": "blocked_snap_20260330100528459699",
+      "symbol": "XAUUSD",
+      "direction": "WAIT",
+      "status": "skipped",
+      "result": "n/a",
+      "pnl_points": 0.0,
+      "source_reasons": [
+        "advanced_direction=WAIT",
+        "structure_bias=buy",
+        "liquidity_hint=sell",
+        "agreement=0.4"
+      ],
+      "confidence": 0.4962,
+      "trade_tags": {
+        "session": "asia",
+        "volatility_regime": "balanced",
+        "macro_state": "balanced",
+        "dxy_state": "unavailable",
+        "yield_state": "flat_or_inverted",
+        "event_news_state": "calm",
+        "round_number_proximity": "clear_round_number",
+        "correlation_regime_state": "insufficient_data",
+        "major_round_number_proximity": "clear_major_round_number",
+        "event_type": "unknown",
+        "session_policy": "asia_reduced_size",
+        "correlation_confirmation": "dual_stable",
+        "surgical_layer_triggers": [
+          "stop_hunt_footprint_analyzer",
+          "round_number_stop_cluster_map"
+        ],
+        "dxy_proxy_state": "unavailable",
+        "gld_flow_state": "unavailable",
+        "macro_feed_health": "unavailable",
+        "synthetic_feature_state": "sandbox_pending",
+        "negative_space_state": "sandbox_pending",
+        "invariant_break_state": "sandbox_pending",
+        "pain_geometry_risk": 0.0,
+        "counterfactual_evaluation": "sandbox_pending",
+        "liquidity_decay_state": "sandbox_pending"
+      }
+    },
+    {
+      "timestamp": "2026-03-30T10:05:41.002952+00:00",
+      "trade_id": "blocked_snap_20260330100540971807",
+      "symbol": "XAUUSD",
+      "direction": "WAIT",
+      "status": "skipped",
+      "result": "n/a",
+      "pnl_points": 0.0,
+      "source_reasons": [
+        "advanced_direction=WAIT",
+        "structure_bias=buy",
+        "liquidity_hint=sell",
+        "agreement=0.4"
+      ],
+      "confidence": 0.4962,
+      "trade_tags": {
+        "session": "asia",
+        "volatility_regime": "balanced",
+        "macro_state": "balanced",
+        "dxy_state": "unavailable",
+        "yield_state": "flat_or_inverted",
+        "event_news_state": "calm",
+        "round_number_proximity": "clear_round_number",
+        "correlation_regime_state": "insufficient_data",
+        "major_round_number_proximity": "clear_major_round_number",
+        "event_type": "unknown",
+        "session_policy": "asia_reduced_size",
+        "correlation_confirmation": "dual_stable",
+        "surgical_layer_triggers": [
+          "stop_hunt_footprint_analyzer",
+          "round_number_stop_cluster_map"
+        ],
+        "dxy_proxy_state": "unavailable",
+        "gld_flow_state": "unavailable",
+        "macro_feed_health": "unavailable",
+        "synthetic_feature_state": "sandbox_pending",
+        "negative_space_state": "sandbox_pending",
+        "invariant_break_state": "sandbox_pending",
+        "pain_geometry_risk": 0.0,
+        "counterfactual_evaluation": "sandbox_pending",
+        "liquidity_decay_state": "sandbox_pending"
+      }
+    },
+    {
+      "timestamp": "2026-03-30T20:11:00.796914+00:00",
+      "trade_id": "blocked_snap_20260330201100757067",
+      "symbol": "XAUUSD",
+      "direction": "WAIT",
+      "status": "skipped",
+      "result": "n/a",
+      "pnl_points": 0.0,
+      "source_reasons": [
+        "advanced_direction=WAIT",
+        "structure_bias=buy",
+        "liquidity_hint=sell",
+        "agreement=0.4"
+      ],
+      "confidence": 0.4962,
+      "trade_tags": {
+        "session": "asia",
+        "volatility_regime": "balanced",
+        "macro_state": "balanced",
+        "dxy_state": "unavailable",
+        "yield_state": "flat_or_inverted",
+        "event_news_state": "calm",
+        "round_number_proximity": "clear_round_number",
+        "correlation_regime_state": "insufficient_data",
+        "major_round_number_proximity": "clear_major_round_number",
+        "event_type": "unknown",
+        "session_policy": "asia_reduced_size",
+        "correlation_confirmation": "dual_stable",
+        "surgical_layer_triggers": [
+          "stop_hunt_footprint_analyzer",
+          "round_number_stop_cluster_map"
+        ],
+        "dxy_proxy_state": "unavailable",
+        "gld_flow_state": "unavailable",
+        "macro_feed_health": "unavailable",
+        "synthetic_feature_state": "sandbox_pending",
+        "negative_space_state": "sandbox_pending",
+        "invariant_break_state": "sandbox_pending",
+        "pain_geometry_risk": 0.0,
+        "counterfactual_evaluation": "sandbox_pending",
+        "liquidity_decay_state": "sandbox_pending"
+      }
+    },
+    {
+      "timestamp": "2026-03-30T20:22:55.427948+00:00",
+      "trade_id": "blocked_snap_20260330202255382128",
       "symbol": "XAUUSD",
       "direction": "WAIT",
       "status": "skipped",

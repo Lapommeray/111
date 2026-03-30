@@ -2,95 +2,95 @@
   "feature_scores": {
     "compression_expansion": {
       "running_score": 0.49,
-      "samples": 1
+      "samples": 5
     },
     "conflict_filter": {
       "running_score": 0.55,
-      "samples": 1
+      "samples": 5
     },
     "displacement": {
       "running_score": 0.5,
-      "samples": 1
+      "samples": 5
     },
     "execution_quality": {
       "running_score": 0.54,
-      "samples": 1
+      "samples": 5
     },
     "fvg": {
       "running_score": 0.49,
-      "samples": 1
+      "samples": 5
     },
     "human_lag_exploit": {
       "running_score": 0.49,
-      "samples": 1
+      "samples": 5
     },
     "invisible_data_miner": {
       "running_score": 0.62,
-      "samples": 1
+      "samples": 5
     },
     "liquidity_sweep": {
       "running_score": 0.6,
-      "samples": 1
+      "samples": 5
     },
     "market_regime": {
       "running_score": 0.58,
-      "samples": 1
+      "samples": 5
     },
     "memory_filter": {
       "running_score": 0.56,
-      "samples": 1
+      "samples": 5
     },
     "meta_adaptive_ai": {
       "running_score": 0.5,
-      "samples": 1
+      "samples": 5
     },
     "meta_conscious_routing": {
       "running_score": 0.64,
-      "samples": 1
+      "samples": 5
     },
     "quantum_tremor_scanner": {
       "running_score": 0.51,
-      "samples": 1
+      "samples": 5
     },
     "regime_score": {
       "running_score": 0.575,
-      "samples": 1
+      "samples": 5
     },
     "self_destruct_protocol": {
       "running_score": 0.5,
-      "samples": 1
+      "samples": 5
     },
     "session_behavior": {
       "running_score": 0.5,
-      "samples": 1
+      "samples": 5
     },
     "session_filter": {
       "running_score": 0.51,
-      "samples": 1
+      "samples": 5
     },
     "sessions": {
       "running_score": 0.5,
-      "samples": 1
+      "samples": 5
     },
     "setup_score": {
       "running_score": 0.5,
-      "samples": 1
+      "samples": 5
     },
     "spectral_signal_fusion": {
       "running_score": 0.5533,
-      "samples": 1
+      "samples": 5
     },
     "spread_filter": {
       "running_score": 0.5,
-      "samples": 1
+      "samples": 5
     },
     "spread_state": {
       "running_score": 0.52,
-      "samples": 1
+      "samples": 5
     },
     "volatility": {
       "running_score": 0.51,
-      "samples": 1
+      "samples": 5
     }
   }
 }

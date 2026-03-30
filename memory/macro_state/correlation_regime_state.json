@@ -5,6 +5,30 @@
       "xau_return": 4.884e-05,
       "dxy_change": null,
       "us10y_change": null
+    },
+    {
+      "time": 1700019200,
+      "xau_return": 4.884e-05,
+      "dxy_change": null,
+      "us10y_change": null
+    },
+    {
+      "time": 1700019200,
+      "xau_return": 4.884e-05,
+      "dxy_change": null,
+      "us10y_change": null
+    },
+    {
+      "time": 1700019200,
+      "xau_return": 4.884e-05,
+      "dxy_change": null,
+      "us10y_change": null
+    },
+    {
+      "time": 1700019200,
+      "xau_return": 4.884e-05,
+      "dxy_change": null,
+      "us10y_change": null
     }
   ],
   "last_correlations": {
@@ -45,6 +69,6 @@
       }
     },
     "correlation_regime_tags": [],
-    "logged_at": "2026-03-30T09:02:05.767389+00:00"
+    "logged_at": "2026-03-30T20:22:55.372974+00:00"
   }
 }
