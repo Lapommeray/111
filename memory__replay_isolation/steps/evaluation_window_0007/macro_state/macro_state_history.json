@@ -1,0 +1,69 @@
+[
+  {
+    "logged_at": "2026-03-30T22:59:51.086110+00:00",
+    "macro_states": {
+      "dxy_state": "unavailable",
+      "yield_state": "flat_or_inverted",
+      "inflation_real_rate_state": "inflation_stable",
+      "event_news_state": "calm",
+      "gld_flow_state": "unavailable"
+    },
+    "risk_behavior": {
+      "size_multiplier": 0.595,
+      "confidence_penalty": 0.19,
+      "pause_trading": true,
+      "pause_seconds": 0,
+      "reasons": [
+        "stop_hunt_sweep_detected",
+        "dxy_proxy_degraded_fallback_alpha",
+        "gld_flow_optional_unavailable",
+        "feeds_unavailable:alpha_vantage,central_bank_gold_reserves,comex_open_interest,dxy_proxy,economic_calendar,fred_DGS10,fred_DGS2,fred_T10YIE,gold_option_magnet_levels,gold_physical_premium_discount,treasury",
+        "macro_feed_state_unsafe_or_stale"
+      ]
+    },
+    "trade_tags": {
+      "session": "asia",
+      "volatility_regime": "balanced",
+      "macro_state": "balanced",
+      "dxy_state": "unavailable",
+      "yield_state": "flat_or_inverted",
+      "event_news_state": "calm",
+      "round_number_proximity": "approaching_round_number",
+      "correlation_regime_state": "insufficient_data",
+      "major_round_number_proximity": "clear_major_round_number",
+      "event_type": "unknown",
+      "session_policy": "asia_reduced_size",
+      "correlation_confirmation": "dual_stable",
+      "surgical_layer_triggers": [
+        "stop_hunt_footprint_analyzer"
+      ],
+      "dxy_proxy_state": "unavailable",
+      "gld_flow_state": "unavailable",
+      "macro_feed_health": "unavailable",
+      "synthetic_feature_state": "sandbox_pending",
+      "negative_space_state": "sandbox_pending",
+      "invariant_break_state": "sandbox_pending",
+      "pain_geometry_risk": 0.0,
+      "counterfactual_evaluation": "sandbox_pending",
+      "liquidity_decay_state": "sandbox_pending"
+    },
+    "feed_availability": {
+      "dxy_proxy": false,
+      "alpha_vantage": false,
+      "fred_dgs10": false,
+      "fred_dgs2": false,
+      "fred_t10yie": false,
+      "treasury": false,
+      "economic_calendar": false,
+      "comex_open_interest": false,
+      "gold_etf_flows": false,
+      "gold_option_magnet_levels": false,
+      "gold_physical_premium_discount": false,
+      "central_bank_gold_reserves": false
+    },
+    "feed_registry_health": "unavailable",
+    "surgical_layer_triggers": [
+      "stop_hunt_footprint_analyzer"
+    ]
+  }
+]

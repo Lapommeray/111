@@ -1,0 +1,25 @@
+{
+  "artifacts": [
+    {
+      "timestamp": "2026-03-30T22:59:51.061761+00:00",
+      "artifact_type": "generated_rules",
+      "artifact_path": "/home/runner/work/111/111/memory__replay_isolation/steps/evaluation_window_0005/generated_rules.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "replay",
+        "rule_count": 0,
+        "snapshot_id": "snap_20260330225951054251"
+      }
+    },
+    {
+      "timestamp": "2026-03-30T22:59:51.061988+00:00",
+      "artifact_type": "meta_adaptive_profile",
+      "artifact_path": "/home/runner/work/111/111/memory__replay_isolation/steps/evaluation_window_0005/meta_adaptive_profile.json",
+      "metadata": {
+        "symbol": "XAUUSD",
+        "mode": "replay",
+        "snapshot_id": "snap_20260330225951054251"
+      }
+    }
+  ]
+}

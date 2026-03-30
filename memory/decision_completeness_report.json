@@ -1,0 +1,121 @@
+{
+  "schema_version": "decision_completeness.v1",
+  "timestamp": "2026-03-30T22:59:51.361511+00:00",
+  "total_records": 21,
+  "counts": {
+    "actionable": 0,
+    "blocked": 12,
+    "abstain": 9,
+    "invalid": 0
+  },
+  "passed": true,
+  "failure_count": 0,
+  "failures": [],
+  "classifications": [
+    {
+      "index": 0,
+      "state": "blocked",
+      "reason": "blocked by: structure_liquidity_conflict"
+    },
+    {
+      "index": 1,
+      "state": "abstain",
+      "reason": "WAIT because: advanced_direction=WAIT, structure_bias=sell, liquidity_hint=buy"
+    },
+    {
+      "index": 2,
+      "state": "blocked",
+      "reason": "blocked by: confidence_below_threshold"
+    },
+    {
+      "index": 3,
+      "state": "blocked",
+      "reason": "blocked by: structure_liquidity_conflict"
+    },
+    {
+      "index": 4,
+      "state": "blocked",
+      "reason": "blocked by: structure_liquidity_conflict_soft, confidence_below_threshold"
+    },
+    {
+      "index": 5,
+      "state": "abstain",
+      "reason": "WAIT because: advanced_direction=WAIT, structure_bias=buy, liquidity_hint=sell"
+    },
+    {
+      "index": 6,
+      "state": "abstain",
+      "reason": "WAIT because: advanced_direction=WAIT, structure_bias=buy, liquidity_hint=sell"
+    },
+    {
+      "index": 7,
+      "state": "abstain",
+      "reason": "WAIT because: advanced_direction=WAIT, structure_bias=buy, liquidity_hint=sell"
+    },
+    {
+      "index": 8,
+      "state": "blocked",
+      "reason": "blocked by: structure_liquidity_conflict"
+    },
+    {
+      "index": 9,
+      "state": "blocked",
+      "reason": "blocked by: structure_liquidity_conflict"
+    },
+    {
+      "index": 10,
+      "state": "blocked",
+      "reason": "blocked by: structure_liquidity_conflict"
+    },
+    {
+      "index": 11,
+      "state": "blocked",
+      "reason": "blocked by: structure_liquidity_conflict"
+    },
+    {
+      "index": 12,
+      "state": "abstain",
+      "reason": "WAIT because: advanced_direction=WAIT, structure_bias=buy, liquidity_hint=sell"
+    },
+    {
+      "index": 13,
+      "state": "abstain",
+      "reason": "WAIT because: advanced_direction=WAIT, structure_bias=buy, liquidity_hint=sell"
+    },
+    {
+      "index": 14,
+      "state": "abstain",
+      "reason": "WAIT because: advanced_direction=WAIT, structure_bias=buy, liquidity_hint=sell"
+    },
+    {
+      "index": 15,
+      "state": "abstain",
+      "reason": "WAIT because: advanced_direction=WAIT, structure_bias=buy, liquidity_hint=sell"
+    },
+    {
+      "index": 16,
+      "state": "blocked",
+      "reason": "blocked by: structure_liquidity_conflict"
+    },
+    {
+      "index": 17,
+      "state": "blocked",
+      "reason": "blocked by: structure_liquidity_conflict"
+    },
+    {
+      "index": 18,
+      "state": "blocked",
+      "reason": "blocked by: structure_liquidity_conflict"
+    },
+    {
+      "index": 19,
+      "state": "blocked",
+      "reason": "blocked by: structure_liquidity_conflict"
+    },
+    {
+      "index": 20,
+      "state": "abstain",
+      "reason": "WAIT because: advanced_direction=WAIT, structure_bias=buy, liquidity_hint=sell"
+    }
+  ]
+}

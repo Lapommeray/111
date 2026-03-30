@@ -8,6 +8,13 @@
       "reason": "weaker_or_unvalidated_strategy_logic",
       "replay_validation_required": true,
       "replay_validation_passed": false
+    },
+    {
+      "candidate_id": "567730ff8b4e4275",
+      "decision": "quarantine",
+      "reason": "weaker_or_unvalidated_strategy_logic",
+      "replay_validation_required": true,
+      "replay_validation_passed": false
     }
   ]
 }

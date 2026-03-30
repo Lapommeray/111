@@ -1,0 +1,62 @@
+{
+  "schema_version": "threshold_calibration.v1",
+  "timestamp": "2026-03-30T22:59:51.554031+00:00",
+  "closed_trades": 0,
+  "net_pnl_distribution": {
+    "count": 0,
+    "min": 0.0,
+    "max": 0.0,
+    "mean": 0.0,
+    "median": 0.0,
+    "stdev": 0.0,
+    "p10": 0.0,
+    "p90": 0.0
+  },
+  "gross_pnl_distribution": {
+    "count": 0,
+    "min": 0.0,
+    "max": 0.0,
+    "mean": 0.0,
+    "median": 0.0,
+    "stdev": 0.0,
+    "p10": 0.0,
+    "p90": 0.0
+  },
+  "drawdown_distribution": {
+    "observations": 0,
+    "max": 0.0,
+    "mean": 0.0,
+    "median": 0.0,
+    "p90": 0.0,
+    "p95": 0.0
+  },
+  "observed": {
+    "win_rate": 0.0,
+    "net_expectancy": 0.0,
+    "max_drawdown_points": 0.0
+  },
+  "current_thresholds": {
+    "min_closed_for_economic_gate": 2,
+    "max_drawdown_points_threshold": 50.0,
+    "expectancy_floor": 0.0,
+    "win_rate_floor": 0.0
+  },
+  "recommendations": {
+    "min_closed_for_economic_gate": {
+      "state": "tighten",
+      "reason": "observed only 0 closed trades vs threshold 2 \u2014 sample may be too small for robust calibration"
+    },
+    "max_drawdown_points_threshold": {
+      "state": "confirmed",
+      "reason": "p95 drawdown 0.000 vs threshold 50.0 \u2014 headroom is appropriate"
+    },
+    "expectancy_floor": {
+      "state": "confirmed",
+      "reason": "observed net expectancy 0.000 is non-positive \u2014 hard fail already enforces this"
+    },
+    "win_rate_floor": {
+      "state": "confirmed",
+      "reason": "observed win rate 0.00% is at 0% \u2014 hard fail already enforces this"
+    }
+  }
+}

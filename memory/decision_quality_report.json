@@ -1,0 +1,35 @@
+{
+  "schema_version": "decision_quality.v1",
+  "timestamp": "2026-03-30T22:59:51.426134+00:00",
+  "total_records": 21,
+  "actionable_count": 0,
+  "blocked_count": 12,
+  "abstain_count": 9,
+  "invalid_count": 0,
+  "actionable_ratio": 0.0,
+  "abstain_ratio": 0.4286,
+  "buy_vs_sell_distribution": {
+    "BUY": 0,
+    "SELL": 0
+  },
+  "confidence_summary": {
+    "count": 0,
+    "min": null,
+    "max": null,
+    "mean": null,
+    "unique_count": 0,
+    "flat_confidence": false
+  },
+  "reason_quality": {
+    "total_reasons_checked": 80,
+    "bad_reason_count": 0,
+    "bad_reasons": [],
+    "passed": true
+  },
+  "passed": false,
+  "failure_count": 1,
+  "failures": [
+    "non-empty run with 0 actionable records"
+  ],
+  "flags": []
+}

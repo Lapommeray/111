@@ -1,0 +1,7 @@
+{
+  "schema_version": "replay.drawdown_attribution.v1",
+  "closed_trade_count": 0,
+  "max_drawdown_points": 0.0,
+  "worst_drawdown_segment_count": 0,
+  "worst_drawdown_segments": []
+}

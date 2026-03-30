@@ -1,0 +1,10 @@
+{
+  "quarantine_required": false,
+  "quarantine_reasons": [
+    "tick_data_freshness"
+  ],
+  "invalid_state_reasons": [],
+  "failed_required_checks": [
+    "tick_data_freshness"
+  ]
+}

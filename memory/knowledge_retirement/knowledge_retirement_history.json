@@ -28,6 +28,35 @@
         "retirement_reason_cluster_registry": "memory/knowledge_retirement/retirement_reason_cluster_registry.json",
         "knowledge_retirement_governance_state": "memory/knowledge_retirement/knowledge_retirement_governance_state.json"
       }
+    },
+    {
+      "retirement_pressure_score": 0.1381,
+      "deprecation_readiness_score": 0.7015,
+      "pruning_reliability": 0.4828,
+      "retirement_safety_score": 0.6259,
+      "redundancy_retirement_overlap": 0.0,
+      "stale_capability_pressure": 0.1308,
+      "rollback_dependency_risk": 0.2947,
+      "retirement_reason_cluster": "balanced_retirement_governance",
+      "promotion_freeze_recommended": false,
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true,
+        "retirement_pause_guard": false,
+        "retirement_refusal_guard": false
+      },
+      "paths": {
+        "latest": "memory/knowledge_retirement/knowledge_retirement_latest.json",
+        "history": "memory/knowledge_retirement/knowledge_retirement_history.json",
+        "retirement_candidate_registry": "memory/knowledge_retirement/retirement_candidate_registry.json",
+        "deprecation_readiness_registry": "memory/knowledge_retirement/deprecation_readiness_registry.json",
+        "pruning_reliability_registry": "memory/knowledge_retirement/pruning_reliability_registry.json",
+        "retirement_dependency_watchlist": "memory/knowledge_retirement/retirement_dependency_watchlist.json",
+        "retirement_reason_cluster_registry": "memory/knowledge_retirement/retirement_reason_cluster_registry.json",
+        "knowledge_retirement_governance_state": "memory/knowledge_retirement/knowledge_retirement_governance_state.json"
+      }
     }
   ]
 }

@@ -1,0 +1,8 @@
+{
+  "end_index": 260,
+  "first_bar_timestamp": "1700000060",
+  "last_bar_timestamp": "1700015600",
+  "row_count": 260,
+  "schema_version": "replay.window_manifest.v1",
+  "source_dataset_path": "data/samples/xauusd.csv"
+}

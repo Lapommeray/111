@@ -1,0 +1,11 @@
+{
+  "trading_day": "19676",
+  "daily_loss_points": 0.0,
+  "last_trade_id": "",
+  "trade_count": 0,
+  "equity_peak_points": 0.0,
+  "equity_points": 0.0,
+  "consecutive_loss_streak": 0,
+  "anomaly_cluster_count": 0,
+  "emergency_stop_active": false
+}
