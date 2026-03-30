@@ -1,5 +1,5 @@
 {
-  "logged_at": "2026-03-30T20:11:00.749858+00:00",
+  "logged_at": "2026-03-30T20:22:55.374467+00:00",
   "trade_tags": {
     "session": "asia",
     "volatility_regime": "balanced",
@@ -62,7 +62,7 @@
         }
       },
       "correlation_regime_tags": [],
-      "logged_at": "2026-03-30T20:11:00.748443+00:00",
+      "logged_at": "2026-03-30T20:22:55.372974+00:00",
       "paths": {
         "state": "memory/macro_state/correlation_regime_state.json",
         "history": "memory/macro_state/correlation_regime_history.json"
@@ -81,7 +81,7 @@
       "favorite_zones": [
         {
           "level": 2047.8,
-          "sweeps": 4
+          "sweeps": 5
         }
       ]
     },

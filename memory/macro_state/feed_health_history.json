@@ -110,5 +110,33 @@
       "gld_flow_state": "unavailable",
       "macro_feed_health": "unavailable"
     }
+  },
+  {
+    "logged_at": "2026-03-30T20:22:55.374467+00:00",
+    "feed_registry": {
+      "dxy_proxy": {
+        "feed_name": "dxy_proxy",
+        "status": "unavailable",
+        "health_status": "degraded",
+        "last_update_timestamp": "2026-03-30T20:22:55.372789+00:00",
+        "symbol_scope": "XAUUSD",
+        "data_confidence": 0.35,
+        "fallback_state": "alpha_vantage_dxy_proxy"
+      },
+      "gld_flow": {
+        "feed_name": "gld_flow",
+        "status": "unavailable",
+        "health_status": "degraded",
+        "last_update_timestamp": "2026-03-30T20:22:55.372804+00:00",
+        "symbol_scope": "XAUUSD",
+        "data_confidence": 0.35,
+        "fallback_state": "optional_no_hard_dependency"
+      }
+    },
+    "trade_tags_subset": {
+      "dxy_proxy_state": "unavailable",
+      "gld_flow_state": "unavailable",
+      "macro_feed_health": "unavailable"
+    }
   }
 ]
