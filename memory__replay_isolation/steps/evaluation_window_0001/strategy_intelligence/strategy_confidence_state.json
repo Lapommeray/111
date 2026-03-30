@@ -1,9 +1,0 @@
-{
-  "symbol": "XAUUSD",
-  "adaptive_weight": 0.5,
-  "win_rate": 0.5,
-  "confirmation_ratio": 0.0,
-  "latest_signal_id": "bc9ca9b0a556f065",
-  "latest_signal_score": 0.5299,
-  "latest_confidence": 0.6855
-}
