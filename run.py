@@ -3907,6 +3907,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--live-execution-enabled", choices=["true", "false"], default=None)
     parser.add_argument("--live-authorization-enabled", choices=["true", "false"], default=None)
     parser.add_argument("--live-order-volume", type=float, default=None)
+    parser.add_argument(
+        "--telegram",
+        choices=["true", "false"],
+        default=None,
+        help="Send actionable alerts via Telegram after pipeline run",
+    )
     return parser.parse_args()
 
 
@@ -4005,8 +4011,17 @@ def main() -> None:
         )
 
     evaluate_replay_mode = args.evaluate_replay is not None and args.evaluate_replay.lower() == "true"
+    telegram_enabled = args.telegram is not None and args.telegram.lower() == "true"
+
     if evaluate_replay_mode:
         print(run_replay_evaluation(config))
+    elif telegram_enabled:
+        from src.alerts.telegram_sidecar import deliver_output_to_telegram
+
+        output = run_pipeline(config)
+        print(output)
+        delivery = deliver_output_to_telegram(output)
+        print(delivery)
     else:
         print(run_pipeline(config))
 

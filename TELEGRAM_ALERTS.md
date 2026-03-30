@@ -29,13 +29,29 @@ Example:
 
 ## Run
 
-Run via Python using the existing runtime config:
+### CLI (recommended)
 
-`python3 -c "from run import RuntimeConfig; from src.alerts.telegram_sidecar import run_pipeline_with_telegram; output, delivery = run_pipeline_with_telegram(RuntimeConfig()); print(delivery)"`
+```bash
+python3 run.py --mode replay --replay-source csv --config config/settings.json --telegram true
+```
+
+This runs the full pipeline and, if the signal is actionable (BUY/SELL/EXIT), sends a Telegram alert.
+
+### Programmatic
+
+```python
+from run import RuntimeConfig
+from src.alerts.telegram_sidecar import run_pipeline_with_telegram
+
+output, delivery = run_pipeline_with_telegram(RuntimeConfig())
+print(delivery)
+```
 
 You can also pass token/chat directly in code:
 
-`run_pipeline_with_telegram(config, bot_token="...", chat_id="...")`
+```python
+run_pipeline_with_telegram(config, bot_token="...", chat_id="...")
+```
 
 ## Behavior
 
