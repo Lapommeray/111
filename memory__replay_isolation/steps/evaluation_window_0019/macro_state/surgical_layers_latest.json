@@ -1,0 +1,158 @@
+{
+  "logged_at": "2026-03-30T22:19:12.900448+00:00",
+  "trade_tags": {
+    "session": "asia",
+    "volatility_regime": "balanced",
+    "macro_state": "balanced",
+    "dxy_state": "unavailable",
+    "yield_state": "flat_or_inverted",
+    "event_news_state": "calm",
+    "round_number_proximity": "clear_round_number",
+    "correlation_regime_state": "insufficient_data",
+    "major_round_number_proximity": "clear_major_round_number",
+    "event_type": "unknown",
+    "session_policy": "asia_reduced_size",
+    "correlation_confirmation": "dual_stable",
+    "surgical_layer_triggers": [
+      "stop_hunt_footprint_analyzer"
+    ],
+    "dxy_proxy_state": "unavailable",
+    "gld_flow_state": "unavailable",
+    "macro_feed_health": "unavailable",
+    "synthetic_feature_state": "sandbox_pending",
+    "negative_space_state": "sandbox_pending",
+    "invariant_break_state": "sandbox_pending",
+    "pain_geometry_risk": 0.0,
+    "counterfactual_evaluation": "sandbox_pending",
+    "liquidity_decay_state": "sandbox_pending"
+  },
+  "detectors": {
+    "correlation_regime": {
+      "state": "insufficient_data",
+      "break_detected": false,
+      "confirmation": "dual_stable",
+      "rolling_correlations": {
+        "xau_dxy": null,
+        "xau_us10y": null
+      },
+      "previous_correlations": {
+        "xau_dxy": null,
+        "xau_us10y": null
+      },
+      "window_samples": {
+        "xau_dxy": 0,
+        "xau_us10y": 0
+      },
+      "break_reasons": [],
+      "pairs": {
+        "xau_dxy": {
+          "break_detected": false,
+          "state": "insufficient_data",
+          "reason": "insufficient_samples",
+          "expected_sign": -1,
+          "tier": "insufficient_data"
+        },
+        "xau_us10y": {
+          "break_detected": false,
+          "state": "insufficient_data",
+          "reason": "insufficient_samples",
+          "expected_sign": -1,
+          "tier": "insufficient_data"
+        }
+      },
+      "correlation_regime_tags": [],
+      "logged_at": "2026-03-30T22:19:12.899874+00:00",
+      "paths": {
+        "state": "/home/runner/work/111/111/memory__replay_isolation/steps/evaluation_window_0019/macro_state/correlation_regime_state.json",
+        "history": "/home/runner/work/111/111/memory__replay_isolation/steps/evaluation_window_0019/macro_state/correlation_regime_history.json"
+      }
+    },
+    "stop_hunt_footprint": {
+      "state": "sweep_detected",
+      "active": true,
+      "events": [
+        {
+          "type": "upside_sweep",
+          "level": 2046.8,
+          "opposite_bias": "sell"
+        }
+      ],
+      "favorite_zones": [
+        {
+          "level": 2046.8,
+          "sweeps": 1
+        }
+      ]
+    },
+    "london_fix_imbalance": {
+      "state": "outside_fix_window",
+      "active": false,
+      "partial": false
+    },
+    "round_number_cluster": {
+      "state": "zone_a_interaction",
+      "active": false,
+      "nearest_round_level": 2050.0,
+      "first_hit_zone": "zone_a",
+      "zone_b_quick_reversal": false
+    },
+    "session_transition_volatility_decay": {
+      "state": "session_stable",
+      "active": false,
+      "transition": "none",
+      "session": "asia",
+      "volatility_ratio": 0.998826,
+      "size_multiplier": 1.0,
+      "confidence_penalty": 0.0
+    },
+    "tokyo_open_liquidity_vacuum": {
+      "state": "tokyo_normal_liquidity",
+      "active": false,
+      "partial": true,
+      "auto_pause_seconds": 0,
+      "spread_now": 0.0,
+      "spread_median": 0.0,
+      "tick_velocity_now": 150.0,
+      "tick_velocity_median": 140.0
+    },
+    "blowoff_top_fingerprint": {
+      "state": "no_blowoff",
+      "active": false,
+      "price_jump": 0.000196,
+      "volume_ratio": 1.013605,
+      "upper_wick_ratio": 0.47619,
+      "close_bottom_fraction": 0.52381,
+      "next_candle_lower_high": false
+    },
+    "nfp_front_run": {
+      "state": "normal",
+      "active": false,
+      "nfp_timestamp": "2023-12-01T13:30:00+00:00",
+      "seconds_to_nfp": 1418800,
+      "pre_nfp_24h_drift": 0.002685,
+      "size_multiplier": 1.0,
+      "pause_trading": false
+    },
+    "price_archaeologist": {
+      "state": "no_revisit",
+      "active": false,
+      "partial": false,
+      "zones": [],
+      "revisit_candidates": []
+    },
+    "dealer_gamma_flip_proxy": {
+      "state": "neutral_proxy",
+      "active": false,
+      "proxy": true,
+      "partial": true,
+      "nearest_strike": 2050.0,
+      "distance_to_strike": 3.6,
+      "momentum": 4.9e-05,
+      "acceleration": -0.0
+    }
+  },
+  "partial_layers": [
+    "tokyo_open_liquidity_vacuum",
+    "dealer_gamma_flip_proxy"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "zones": [],
+  "last": {
+    "state": "no_revisit",
+    "active": false,
+    "partial": false,
+    "zones": [],
+    "revisit_candidates": []
+  }
+}

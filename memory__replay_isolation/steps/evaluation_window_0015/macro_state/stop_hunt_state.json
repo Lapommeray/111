@@ -1,0 +1,22 @@
+{
+  "swept_levels": {
+    "2044.8": 1
+  },
+  "last": {
+    "state": "sweep_detected",
+    "active": true,
+    "events": [
+      {
+        "type": "upside_sweep",
+        "level": 2044.8,
+        "opposite_bias": "sell"
+      }
+    ],
+    "favorite_zones": [
+      {
+        "level": 2044.8,
+        "sweeps": 1
+      }
+    ]
+  }
+}

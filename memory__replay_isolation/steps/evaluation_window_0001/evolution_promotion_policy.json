@@ -1,0 +1,26 @@
+{
+  "promotion_state": "sandboxed",
+  "failed_thresholds": [
+    "minimum_replay_sample_size",
+    "minimum_expectancy",
+    "stability_requirement"
+  ],
+  "metrics": {
+    "sample_size": 0,
+    "expectancy_points": 0.0,
+    "drawdown_points": 0.0,
+    "stability_score": 0.0
+  },
+  "thresholds": {
+    "minimum_replay_sample_size": 30,
+    "minimum_expectancy_points": 0.05,
+    "maximum_drawdown_points": 4.0,
+    "minimum_stability_score": 0.55
+  },
+  "optimization_priorities": [
+    "maximize_expectancy",
+    "minimize_drawdown",
+    "prioritize_survival_over_win_rate",
+    "prefer_stable_equity_curve_over_high_variance"
+  ]
+}
