@@ -155,5 +155,44 @@
       "counterfactual_evaluation": "sandbox_pending",
       "liquidity_decay_state": "sandbox_pending"
     }
+  },
+  {
+    "timestamp": "2026-03-30T20:11:00.796428+00:00",
+    "symbol": "XAUUSD",
+    "snapshot_id": "snap_20260330201100757067",
+    "direction": "WAIT",
+    "reasons": [
+      "advanced_direction=WAIT",
+      "structure_bias=buy",
+      "liquidity_hint=sell",
+      "agreement=0.4"
+    ],
+    "trade_tags": {
+      "session": "asia",
+      "volatility_regime": "balanced",
+      "macro_state": "balanced",
+      "dxy_state": "unavailable",
+      "yield_state": "flat_or_inverted",
+      "event_news_state": "calm",
+      "round_number_proximity": "clear_round_number",
+      "correlation_regime_state": "insufficient_data",
+      "major_round_number_proximity": "clear_major_round_number",
+      "event_type": "unknown",
+      "session_policy": "asia_reduced_size",
+      "correlation_confirmation": "dual_stable",
+      "surgical_layer_triggers": [
+        "stop_hunt_footprint_analyzer",
+        "round_number_stop_cluster_map"
+      ],
+      "dxy_proxy_state": "unavailable",
+      "gld_flow_state": "unavailable",
+      "macro_feed_health": "unavailable",
+      "synthetic_feature_state": "sandbox_pending",
+      "negative_space_state": "sandbox_pending",
+      "invariant_break_state": "sandbox_pending",
+      "pain_geometry_risk": 0.0,
+      "counterfactual_evaluation": "sandbox_pending",
+      "liquidity_decay_state": "sandbox_pending"
+    }
   }
 ]
