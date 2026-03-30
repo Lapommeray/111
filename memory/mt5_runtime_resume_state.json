@@ -1,5 +1,5 @@
 {
-  "previous_status": "unknown",
+  "previous_status": "interrupted",
   "status": "interrupted",
   "interruption_detected": true,
   "safe_resume_applied": false

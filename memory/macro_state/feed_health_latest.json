@@ -1,11 +1,11 @@
 {
-  "logged_at": "2026-03-30T09:02:05.768258+00:00",
+  "logged_at": "2026-03-30T10:05:40.964890+00:00",
   "feed_registry": {
     "dxy_proxy": {
       "feed_name": "dxy_proxy",
       "status": "unavailable",
       "health_status": "degraded",
-      "last_update_timestamp": "2026-03-30T09:02:05.767274+00:00",
+      "last_update_timestamp": "2026-03-30T10:05:40.963324+00:00",
       "symbol_scope": "XAUUSD",
       "data_confidence": 0.35,
       "fallback_state": "alpha_vantage_dxy_proxy"
@@ -14,7 +14,7 @@
       "feed_name": "gld_flow",
       "status": "unavailable",
       "health_status": "degraded",
-      "last_update_timestamp": "2026-03-30T09:02:05.767289+00:00",
+      "last_update_timestamp": "2026-03-30T10:05:40.963343+00:00",
       "symbol_scope": "XAUUSD",
       "data_confidence": 0.35,
       "fallback_state": "optional_no_hard_dependency"

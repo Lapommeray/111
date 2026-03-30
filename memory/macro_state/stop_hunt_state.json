@@ -1,6 +1,6 @@
 {
   "swept_levels": {
-    "2047.8": 1
+    "2047.8": 3
   },
   "last": {
     "state": "sweep_detected",
@@ -15,7 +15,7 @@
     "favorite_zones": [
       {
         "level": 2047.8,
-        "sweeps": 1
+        "sweeps": 3
       }
     ]
   }
