@@ -1,6 +1,6 @@
 {
   "entry_decision": {
-    "entry_timestamp": "2026-03-30T22:59:51.330118+00:00",
+    "entry_timestamp": "2026-03-30T23:20:07.688398+00:00",
     "mode": "replay",
     "symbol": "XAUUSD",
     "decision": "WAIT",
@@ -11,9 +11,9 @@
       "signal_max_age_seconds": 900,
       "signal_age_basis": "source_bar_time",
       "source_bar_time": 1700018900,
-      "decision_created_at": "2026-03-30T22:59:51.330047+00:00",
-      "execution_checked_at": "2026-03-30T22:59:51.330102+00:00",
-      "signal_age_seconds": 74892691,
+      "decision_created_at": "2026-03-30T23:20:07.688327+00:00",
+      "execution_checked_at": "2026-03-30T23:20:07.688382+00:00",
+      "signal_age_seconds": 74893907,
       "signal_fresh": true,
       "signal_lifecycle_reason": "signal_lifecycle_disabled",
       "signal_lifecycle_refusal_reasons": []
@@ -168,7 +168,7 @@
     "reason": "no_open_position"
   },
   "pnl_snapshot": {
-    "timestamp": "2026-03-30T22:59:51.330128+00:00",
+    "timestamp": "2026-03-30T23:20:07.688408+00:00",
     "symbol": "XAUUSD",
     "realized_pnl": 0.0,
     "unrealized_pnl": 0.0,
@@ -187,9 +187,9 @@
     "signal_max_age_seconds": 900,
     "signal_age_basis": "source_bar_time",
     "source_bar_time": 1700018900,
-    "decision_created_at": "2026-03-30T22:59:51.330047+00:00",
-    "execution_checked_at": "2026-03-30T22:59:51.330102+00:00",
-    "signal_age_seconds": 74892691,
+    "decision_created_at": "2026-03-30T23:20:07.688327+00:00",
+    "execution_checked_at": "2026-03-30T23:20:07.688382+00:00",
+    "signal_age_seconds": 74893907,
     "signal_fresh": true,
     "signal_lifecycle_reason": "signal_lifecycle_disabled",
     "signal_lifecycle_refusal_reasons": []

@@ -1,8 +1,8 @@
 {
   "patterns": [
     {
-      "snapshot_id": "snap_20260330225951256167",
-      "timestamp": "2026-03-30T22:59:51.256220+00:00",
+      "snapshot_id": "snap_20260330232007616140",
+      "timestamp": "2026-03-30T23:20:07.616196+00:00",
       "symbol": "XAUUSD",
       "mode": "replay",
       "execution_state": {
@@ -19,7 +19,7 @@
           "mt5_execution_refusal_not_required"
         ],
         "controlled_mt5_readiness": {
-          "readiness_timestamp": "2026-03-30T22:59:51.249239+00:00",
+          "readiness_timestamp": "2026-03-30T23:20:07.608435+00:00",
           "data_source": "replay_csv",
           "terminal_connection_attempts": 0,
           "terminal_connection_successes": 0,
@@ -30,10 +30,10 @@
           "account_trading_permission": false,
           "account_readiness": false,
           "data_freshness": false,
-          "data_age_seconds": 74893891,
+          "data_age_seconds": 74895107,
           "tick_freshness_window_seconds": 900,
           "tick_data_freshness": false,
-          "tick_age_seconds": 74893891,
+          "tick_age_seconds": 74895107,
           "fail_safe_blocked_state": true,
           "fail_safe_blocked_reasons": [
             "account_not_ready",
@@ -209,9 +209,9 @@
             "signal_max_age_seconds": 900,
             "signal_age_basis": "source_bar_time",
             "source_bar_time": 1700017700,
-            "decision_created_at": "2026-03-30T22:59:51.254538+00:00",
-            "execution_checked_at": "2026-03-30T22:59:51.254594+00:00",
-            "signal_age_seconds": 74893891,
+            "decision_created_at": "2026-03-30T23:20:07.614516+00:00",
+            "execution_checked_at": "2026-03-30T23:20:07.614571+00:00",
+            "signal_age_seconds": 74895107,
             "signal_fresh": true,
             "signal_lifecycle_reason": "signal_lifecycle_disabled",
             "signal_lifecycle_refusal_reasons": []
@@ -226,7 +226,7 @@
           },
           "controlled_execution_artifact": {
             "entry_decision": {
-              "entry_timestamp": "2026-03-30T22:59:51.254609+00:00",
+              "entry_timestamp": "2026-03-30T23:20:07.614587+00:00",
               "mode": "replay",
               "symbol": "XAUUSD",
               "decision": "WAIT",
@@ -237,9 +237,9 @@
                 "signal_max_age_seconds": 900,
                 "signal_age_basis": "source_bar_time",
                 "source_bar_time": 1700017700,
-                "decision_created_at": "2026-03-30T22:59:51.254538+00:00",
-                "execution_checked_at": "2026-03-30T22:59:51.254594+00:00",
-                "signal_age_seconds": 74893891,
+                "decision_created_at": "2026-03-30T23:20:07.614516+00:00",
+                "execution_checked_at": "2026-03-30T23:20:07.614571+00:00",
+                "signal_age_seconds": 74895107,
                 "signal_fresh": true,
                 "signal_lifecycle_reason": "signal_lifecycle_disabled",
                 "signal_lifecycle_refusal_reasons": []
@@ -393,7 +393,7 @@
               "reason": "no_open_position"
             },
             "pnl_snapshot": {
-              "timestamp": "2026-03-30T22:59:51.254619+00:00",
+              "timestamp": "2026-03-30T23:20:07.614597+00:00",
               "symbol": "XAUUSD",
               "realized_pnl": 0.0,
               "unrealized_pnl": 0.0,
@@ -412,9 +412,9 @@
               "signal_max_age_seconds": 900,
               "signal_age_basis": "source_bar_time",
               "source_bar_time": 1700017700,
-              "decision_created_at": "2026-03-30T22:59:51.254538+00:00",
-              "execution_checked_at": "2026-03-30T22:59:51.254594+00:00",
-              "signal_age_seconds": 74893891,
+              "decision_created_at": "2026-03-30T23:20:07.614516+00:00",
+              "execution_checked_at": "2026-03-30T23:20:07.614571+00:00",
+              "signal_age_seconds": 74895107,
               "signal_fresh": true,
               "signal_lifecycle_reason": "signal_lifecycle_disabled",
               "signal_lifecycle_refusal_reasons": []
@@ -439,7 +439,7 @@
         "mt5_auto_stop_active": false,
         "mt5_controlled_execution": {
           "entry_decision": {
-            "entry_timestamp": "2026-03-30T22:59:51.254609+00:00",
+            "entry_timestamp": "2026-03-30T23:20:07.614587+00:00",
             "mode": "replay",
             "symbol": "XAUUSD",
             "decision": "WAIT",
@@ -450,9 +450,9 @@
               "signal_max_age_seconds": 900,
               "signal_age_basis": "source_bar_time",
               "source_bar_time": 1700017700,
-              "decision_created_at": "2026-03-30T22:59:51.254538+00:00",
-              "execution_checked_at": "2026-03-30T22:59:51.254594+00:00",
-              "signal_age_seconds": 74893891,
+              "decision_created_at": "2026-03-30T23:20:07.614516+00:00",
+              "execution_checked_at": "2026-03-30T23:20:07.614571+00:00",
+              "signal_age_seconds": 74895107,
               "signal_fresh": true,
               "signal_lifecycle_reason": "signal_lifecycle_disabled",
               "signal_lifecycle_refusal_reasons": []
@@ -606,7 +606,7 @@
             "reason": "no_open_position"
           },
           "pnl_snapshot": {
-            "timestamp": "2026-03-30T22:59:51.254619+00:00",
+            "timestamp": "2026-03-30T23:20:07.614597+00:00",
             "symbol": "XAUUSD",
             "realized_pnl": 0.0,
             "unrealized_pnl": 0.0,
@@ -625,9 +625,9 @@
             "signal_max_age_seconds": 900,
             "signal_age_basis": "source_bar_time",
             "source_bar_time": 1700017700,
-            "decision_created_at": "2026-03-30T22:59:51.254538+00:00",
-            "execution_checked_at": "2026-03-30T22:59:51.254594+00:00",
-            "signal_age_seconds": 74893891,
+            "decision_created_at": "2026-03-30T23:20:07.614516+00:00",
+            "execution_checked_at": "2026-03-30T23:20:07.614571+00:00",
+            "signal_age_seconds": 74895107,
             "signal_fresh": true,
             "signal_lifecycle_reason": "signal_lifecycle_disabled",
             "signal_lifecycle_refusal_reasons": []
@@ -692,7 +692,7 @@
                 "external_fetch_disabled"
               ],
               "metrics": {},
-              "timestamp": "2026-03-30T22:59:51.251024+00:00"
+              "timestamp": "2026-03-30T23:20:07.610877+00:00"
             },
             "alpha_vantage": {
               "feed": "alpha_vantage",
@@ -703,7 +703,7 @@
                 "external_fetch_disabled"
               ],
               "metrics": {},
-              "timestamp": "2026-03-30T22:59:51.251029+00:00"
+              "timestamp": "2026-03-30T23:20:07.610882+00:00"
             },
             "fred": {
               "DGS10": {
@@ -752,7 +752,7 @@
                 "external_fetch_disabled"
               ],
               "metrics": {},
-              "timestamp": "2026-03-30T22:59:51.251032+00:00"
+              "timestamp": "2026-03-30T23:20:07.610886+00:00"
             },
             "economic_calendar": {
               "feed": "economic_calendar",
@@ -763,7 +763,7 @@
                 "external_fetch_disabled"
               ],
               "metrics": {},
-              "timestamp": "2026-03-30T22:59:51.251034+00:00"
+              "timestamp": "2026-03-30T23:20:07.610888+00:00"
             },
             "comex_open_interest": {
               "feed": "comex_open_interest",
@@ -774,7 +774,7 @@
                 "external_fetch_disabled"
               ],
               "metrics": {},
-              "timestamp": "2026-03-30T22:59:51.251035+00:00"
+              "timestamp": "2026-03-30T23:20:07.610890+00:00"
             },
             "gold_etf_flows": {
               "feed": "gold_etf_flows",
@@ -785,7 +785,7 @@
                 "external_fetch_disabled"
               ],
               "metrics": {},
-              "timestamp": "2026-03-30T22:59:51.251037+00:00"
+              "timestamp": "2026-03-30T23:20:07.610891+00:00"
             },
             "gold_option_magnet_levels": {
               "feed": "gold_option_magnet_levels",
@@ -796,7 +796,7 @@
                 "external_fetch_disabled"
               ],
               "metrics": {},
-              "timestamp": "2026-03-30T22:59:51.251039+00:00"
+              "timestamp": "2026-03-30T23:20:07.610893+00:00"
             },
             "gold_physical_premium_discount": {
               "feed": "gold_physical_premium_discount",
@@ -807,7 +807,7 @@
                 "external_fetch_disabled"
               ],
               "metrics": {},
-              "timestamp": "2026-03-30T22:59:51.251040+00:00"
+              "timestamp": "2026-03-30T23:20:07.610894+00:00"
             },
             "central_bank_gold_reserves": {
               "feed": "central_bank_gold_reserves",
@@ -818,7 +818,7 @@
                 "external_fetch_disabled"
               ],
               "metrics": {},
-              "timestamp": "2026-03-30T22:59:51.251042+00:00"
+              "timestamp": "2026-03-30T23:20:07.610896+00:00"
             }
           },
           "feed_registry": {
@@ -826,7 +826,7 @@
               "feed_name": "dxy_proxy",
               "status": "unavailable",
               "health_status": "degraded",
-              "last_update_timestamp": "2026-03-30T22:59:51.251024+00:00",
+              "last_update_timestamp": "2026-03-30T23:20:07.610877+00:00",
               "symbol_scope": "XAUUSD",
               "data_confidence": 0.35,
               "fallback_state": "alpha_vantage_dxy_proxy"
@@ -835,7 +835,7 @@
               "feed_name": "gld_flow",
               "status": "unavailable",
               "health_status": "degraded",
-              "last_update_timestamp": "2026-03-30T22:59:51.251037+00:00",
+              "last_update_timestamp": "2026-03-30T23:20:07.610891+00:00",
               "symbol_scope": "XAUUSD",
               "data_confidence": 0.35,
               "fallback_state": "optional_no_hard_dependency"
@@ -1076,7 +1076,7 @@
               }
             },
             "correlation_regime_tags": [],
-            "logged_at": "2026-03-30T22:59:51.251102+00:00",
+            "logged_at": "2026-03-30T23:20:07.610989+00:00",
             "paths": {
               "state": "/home/runner/work/111/111/memory__replay_isolation/steps/evaluation_window_0016/macro_state/correlation_regime_state.json",
               "history": "/home/runner/work/111/111/memory__replay_isolation/steps/evaluation_window_0016/macro_state/correlation_regime_history.json"
@@ -1167,7 +1167,7 @@
               "acceleration": -0.0
             }
           },
-          "logged_at": "2026-03-30T22:59:51.251899+00:00",
+          "logged_at": "2026-03-30T23:20:07.611823+00:00",
           "paths": {
             "latest": "/home/runner/work/111/111/memory__replay_isolation/steps/evaluation_window_0016/macro_state/macro_state_latest.json",
             "history": "/home/runner/work/111/111/memory__replay_isolation/steps/evaluation_window_0016/macro_state/macro_state_history.json",
@@ -5621,7 +5621,7 @@
       ],
       "controlled_mt5_execution": {
         "entry_decision": {
-          "entry_timestamp": "2026-03-30T22:59:51.254609+00:00",
+          "entry_timestamp": "2026-03-30T23:20:07.614587+00:00",
           "mode": "replay",
           "symbol": "XAUUSD",
           "decision": "WAIT",
@@ -5632,9 +5632,9 @@
             "signal_max_age_seconds": 900,
             "signal_age_basis": "source_bar_time",
             "source_bar_time": 1700017700,
-            "decision_created_at": "2026-03-30T22:59:51.254538+00:00",
-            "execution_checked_at": "2026-03-30T22:59:51.254594+00:00",
-            "signal_age_seconds": 74893891,
+            "decision_created_at": "2026-03-30T23:20:07.614516+00:00",
+            "execution_checked_at": "2026-03-30T23:20:07.614571+00:00",
+            "signal_age_seconds": 74895107,
             "signal_fresh": true,
             "signal_lifecycle_reason": "signal_lifecycle_disabled",
             "signal_lifecycle_refusal_reasons": []
@@ -5788,7 +5788,7 @@
           "reason": "no_open_position"
         },
         "pnl_snapshot": {
-          "timestamp": "2026-03-30T22:59:51.254619+00:00",
+          "timestamp": "2026-03-30T23:20:07.614597+00:00",
           "symbol": "XAUUSD",
           "realized_pnl": 0.0,
           "unrealized_pnl": 0.0,
@@ -5807,9 +5807,9 @@
           "signal_max_age_seconds": 900,
           "signal_age_basis": "source_bar_time",
           "source_bar_time": 1700017700,
-          "decision_created_at": "2026-03-30T22:59:51.254538+00:00",
-          "execution_checked_at": "2026-03-30T22:59:51.254594+00:00",
-          "signal_age_seconds": 74893891,
+          "decision_created_at": "2026-03-30T23:20:07.614516+00:00",
+          "execution_checked_at": "2026-03-30T23:20:07.614571+00:00",
+          "signal_age_seconds": 74895107,
           "signal_fresh": true,
           "signal_lifecycle_reason": "signal_lifecycle_disabled",
           "signal_lifecycle_refusal_reasons": []

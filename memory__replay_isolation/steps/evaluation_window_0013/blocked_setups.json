@@ -1,8 +1,8 @@
 [
   {
-    "timestamp": "2026-03-30T22:59:51.207713+00:00",
+    "timestamp": "2026-03-30T23:20:07.565938+00:00",
     "symbol": "XAUUSD",
-    "snapshot_id": "snap_20260330225951201714",
+    "snapshot_id": "snap_20260330232007559930",
     "direction": "WAIT",
     "reasons": [
       "advanced_direction=WAIT",

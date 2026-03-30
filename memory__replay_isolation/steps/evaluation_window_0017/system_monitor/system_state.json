@@ -19,8 +19,8 @@
   "open_orders": [],
   "last_trades": [
     {
-      "timestamp": "2026-03-30T22:59:51.282998+00:00",
-      "trade_id": "blocked_snap_20260330225951274418",
+      "timestamp": "2026-03-30T23:20:07.640743+00:00",
+      "trade_id": "blocked_snap_20260330232007634576",
       "symbol": "XAUUSD",
       "direction": "WAIT",
       "status": "skipped",

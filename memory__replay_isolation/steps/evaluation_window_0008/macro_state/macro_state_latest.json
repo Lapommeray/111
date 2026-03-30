@@ -9,7 +9,7 @@
         "external_fetch_disabled"
       ],
       "metrics": {},
-      "timestamp": "2026-03-30T22:59:51.103367+00:00"
+      "timestamp": "2026-03-30T23:20:07.461181+00:00"
     },
     "alpha_vantage": {
       "feed": "alpha_vantage",
@@ -20,7 +20,7 @@
         "external_fetch_disabled"
       ],
       "metrics": {},
-      "timestamp": "2026-03-30T22:59:51.103372+00:00"
+      "timestamp": "2026-03-30T23:20:07.461186+00:00"
     },
     "fred": {
       "DGS10": {
@@ -69,7 +69,7 @@
         "external_fetch_disabled"
       ],
       "metrics": {},
-      "timestamp": "2026-03-30T22:59:51.103375+00:00"
+      "timestamp": "2026-03-30T23:20:07.461189+00:00"
     },
     "economic_calendar": {
       "feed": "economic_calendar",
@@ -80,7 +80,7 @@
         "external_fetch_disabled"
       ],
       "metrics": {},
-      "timestamp": "2026-03-30T22:59:51.103377+00:00"
+      "timestamp": "2026-03-30T23:20:07.461191+00:00"
     },
     "comex_open_interest": {
       "feed": "comex_open_interest",
@@ -91,7 +91,7 @@
         "external_fetch_disabled"
       ],
       "metrics": {},
-      "timestamp": "2026-03-30T22:59:51.103379+00:00"
+      "timestamp": "2026-03-30T23:20:07.461193+00:00"
     },
     "gold_etf_flows": {
       "feed": "gold_etf_flows",
@@ -102,7 +102,7 @@
         "external_fetch_disabled"
       ],
       "metrics": {},
-      "timestamp": "2026-03-30T22:59:51.103380+00:00"
+      "timestamp": "2026-03-30T23:20:07.461195+00:00"
     },
     "gold_option_magnet_levels": {
       "feed": "gold_option_magnet_levels",
@@ -113,7 +113,7 @@
         "external_fetch_disabled"
       ],
       "metrics": {},
-      "timestamp": "2026-03-30T22:59:51.103382+00:00"
+      "timestamp": "2026-03-30T23:20:07.461196+00:00"
     },
     "gold_physical_premium_discount": {
       "feed": "gold_physical_premium_discount",
@@ -124,7 +124,7 @@
         "external_fetch_disabled"
       ],
       "metrics": {},
-      "timestamp": "2026-03-30T22:59:51.103383+00:00"
+      "timestamp": "2026-03-30T23:20:07.461198+00:00"
     },
     "central_bank_gold_reserves": {
       "feed": "central_bank_gold_reserves",
@@ -135,7 +135,7 @@
         "external_fetch_disabled"
       ],
       "metrics": {},
-      "timestamp": "2026-03-30T22:59:51.103385+00:00"
+      "timestamp": "2026-03-30T23:20:07.461199+00:00"
     }
   },
   "feed_registry": {
@@ -143,7 +143,7 @@
       "feed_name": "dxy_proxy",
       "status": "unavailable",
       "health_status": "degraded",
-      "last_update_timestamp": "2026-03-30T22:59:51.103367+00:00",
+      "last_update_timestamp": "2026-03-30T23:20:07.461181+00:00",
       "symbol_scope": "XAUUSD",
       "data_confidence": 0.35,
       "fallback_state": "alpha_vantage_dxy_proxy"
@@ -152,7 +152,7 @@
       "feed_name": "gld_flow",
       "status": "unavailable",
       "health_status": "degraded",
-      "last_update_timestamp": "2026-03-30T22:59:51.103380+00:00",
+      "last_update_timestamp": "2026-03-30T23:20:07.461195+00:00",
       "symbol_scope": "XAUUSD",
       "data_confidence": 0.35,
       "fallback_state": "optional_no_hard_dependency"
@@ -394,7 +394,7 @@
       }
     },
     "correlation_regime_tags": [],
-    "logged_at": "2026-03-30T22:59:51.103445+00:00",
+    "logged_at": "2026-03-30T23:20:07.461329+00:00",
     "paths": {
       "state": "/home/runner/work/111/111/memory__replay_isolation/steps/evaluation_window_0008/macro_state/correlation_regime_state.json",
       "history": "/home/runner/work/111/111/memory__replay_isolation/steps/evaluation_window_0008/macro_state/correlation_regime_history.json"
@@ -485,5 +485,5 @@
       "acceleration": -0.0
     }
   },
-  "logged_at": "2026-03-30T22:59:51.104278+00:00"
+  "logged_at": "2026-03-30T23:20:07.462125+00:00"
 }

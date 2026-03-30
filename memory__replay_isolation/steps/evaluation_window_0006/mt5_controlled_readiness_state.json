@@ -1,5 +1,5 @@
 {
-  "readiness_timestamp": "2026-03-30T22:59:51.065302+00:00",
+  "readiness_timestamp": "2026-03-30T23:20:07.420763+00:00",
   "data_source": "replay_csv",
   "terminal_connection_attempts": 0,
   "terminal_connection_successes": 0,
@@ -10,10 +10,10 @@
   "account_trading_permission": false,
   "account_readiness": false,
   "data_freshness": false,
-  "data_age_seconds": 74896891,
+  "data_age_seconds": 74898107,
   "tick_freshness_window_seconds": 900,
   "tick_data_freshness": false,
-  "tick_age_seconds": 74896891,
+  "tick_age_seconds": 74898107,
   "fail_safe_blocked_state": true,
   "fail_safe_blocked_reasons": [
     "account_not_ready",

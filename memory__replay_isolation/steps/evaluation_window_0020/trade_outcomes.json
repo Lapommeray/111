@@ -1,7 +1,7 @@
 [
   {
-    "timestamp": "2026-03-30T22:59:51.337853+00:00",
-    "trade_id": "blocked_snap_20260330225951331585",
+    "timestamp": "2026-03-30T23:20:07.696053+00:00",
+    "trade_id": "blocked_snap_20260330232007689880",
     "symbol": "XAUUSD",
     "direction": "WAIT",
     "status": "skipped",

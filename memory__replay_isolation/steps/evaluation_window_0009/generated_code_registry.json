@@ -1,24 +1,24 @@
 {
   "artifacts": [
     {
-      "timestamp": "2026-03-30T22:59:51.134423+00:00",
+      "timestamp": "2026-03-30T23:20:07.494095+00:00",
       "artifact_type": "generated_rules",
       "artifact_path": "/home/runner/work/111/111/memory__replay_isolation/steps/evaluation_window_0009/generated_rules.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
         "rule_count": 0,
-        "snapshot_id": "snap_20260330225951126758"
+        "snapshot_id": "snap_20260330232007486562"
       }
     },
     {
-      "timestamp": "2026-03-30T22:59:51.134632+00:00",
+      "timestamp": "2026-03-30T23:20:07.494302+00:00",
       "artifact_type": "meta_adaptive_profile",
       "artifact_path": "/home/runner/work/111/111/memory__replay_isolation/steps/evaluation_window_0009/meta_adaptive_profile.json",
       "metadata": {
         "symbol": "XAUUSD",
         "mode": "replay",
-        "snapshot_id": "snap_20260330225951126758"
+        "snapshot_id": "snap_20260330232007486562"
       }
     }
   ]
