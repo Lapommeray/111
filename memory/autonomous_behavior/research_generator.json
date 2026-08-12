@@ -9,12 +9,25 @@
     {
       "candidate_id": "b4cfc0eeaa7cc29e",
       "source": "strategy_comparison"
+    },
+    {
+      "candidate_id": "567730ff8b4e4275",
+      "source": "strategy_comparison"
     }
   ],
   "replay_experiments": [
     {
       "experiment_id": "replay_1",
       "candidate_target": "b4cfc0eeaa7cc29e",
+      "sandbox_governance": {
+        "sandbox_status": "replay_only",
+        "replay_validation_required": true,
+        "promotion_allowed": false
+      }
+    },
+    {
+      "experiment_id": "replay_2",
+      "candidate_target": "567730ff8b4e4275",
       "sandbox_governance": {
         "sandbox_status": "replay_only",
         "replay_validation_required": true,
