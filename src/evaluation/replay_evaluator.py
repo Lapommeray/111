@@ -12,6 +12,7 @@ from typing import Any, Callable
 from src.evaluation.blocker_effect_report import build_blocker_effect_report
 from src.evaluation.module_contribution_report import build_module_contribution_report
 from src.evaluation.session_report import build_session_report
+from src.utils import validate_market_data_csv_headers
 
 
 PipelineRunner = Callable[[Any], dict[str, Any]]
@@ -725,7 +726,13 @@ def _load_rows(path: Path) -> list[dict[str, str]]:
     if not path.exists():
         raise FileNotFoundError(f"Replay CSV not found for evaluation: {path}")
     with path.open("r", encoding="utf-8") as fh:
-        return list(csv.DictReader(fh))
+        reader = csv.DictReader(fh)
+        validate_market_data_csv_headers(
+            reader.fieldnames,
+            path=path,
+            context="Replay evaluation CSV",
+        )
+        return list(reader)
 
 
 def _prepare_replay_memory_root(memory_root: str) -> Path:

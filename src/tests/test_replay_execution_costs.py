@@ -194,6 +194,36 @@ def test_zero_execution_cost_preserves_gross_pnl(tmp_path: Path) -> None:
     assert impact["net_pnl_points"] == 1.25
 
 
+def test_evaluate_replay_rejects_missing_required_csv_columns(tmp_path: Path) -> None:
+    csv_path = tmp_path / "replay.csv"
+    csv_path.write_text(
+        "time,open,high,low,tick_volume\n"
+        "1700000000,2000.0,2000.2,1999.8,100\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Replay evaluation CSV missing required column\\(s\\): close"):
+        evaluate_replay(
+            pipeline_runner=_pipeline_runner_from_pnls([1.0]),
+            config_factory=_identity_config_factory,
+            symbol="XAUUSD",
+            timeframe="M5",
+            bars=1,
+            replay_csv_path=str(csv_path),
+            sample_path=str(csv_path),
+            memory_root=str(tmp_path / "memory"),
+            generated_registry_path=str(tmp_path / "memory" / "generated_code_registry.json"),
+            meta_adaptive_profile_path=str(tmp_path / "memory" / "meta_adaptive_profile.json"),
+            evolution_enabled=False,
+            evolution_registry_path=str(tmp_path / "memory" / "evolution_registry.json"),
+            evolution_artifact_root=str(tmp_path / "memory" / "evolution_artifacts"),
+            evolution_max_proposals=1,
+            compact_output=False,
+            evaluation_steps=1,
+            evaluation_stride=1,
+        )
+
+
 def test_spread_cost_reduces_net_pnl(tmp_path: Path) -> None:
     report = _evaluate_with_costs(tmp_path, pnls=[1.25], spread=0.2)
     outcome = report["records"][0]["status_panel"]["memory_result"]["latest_trade_outcome"]

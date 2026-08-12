@@ -118,6 +118,31 @@ def test_mt5_adapter_marks_stale_csv_data_as_not_fresh(tmp_path: Path) -> None:
     assert "tick_data_stale" in readiness["fail_safe_blocked_reasons"]
 
 
+def test_mt5_adapter_rejects_csv_fallback_missing_required_columns(tmp_path: Path) -> None:
+    csv_path = tmp_path / "samples" / "bad.csv"
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    csv_path.write_text(
+        "time,open,high,low,tick_volume\n"
+        "1700000000,2000.0,2000.5,1999.5,100\n",
+        encoding="utf-8",
+    )
+
+    adapter = MT5Adapter(MT5Config(symbol="XAUUSD", bars=1, csv_fallback_path=str(csv_path)))
+
+    with pytest.raises(ValueError, match="CSV fallback missing required column\\(s\\): close"):
+        adapter.get_bars()
+
+
+def test_mt5_adapter_rejects_insufficient_csv_fallback_rows(tmp_path: Path) -> None:
+    csv_path = tmp_path / "samples" / "short.csv"
+    _write_sample_csv(csv_path, rows=2)
+
+    adapter = MT5Adapter(MT5Config(symbol="XAUUSD", bars=3, csv_fallback_path=str(csv_path)))
+
+    with pytest.raises(ValueError, match="CSV fallback requires at least 3 bars, found 2"):
+        adapter.get_bars()
+
+
 def test_execution_state_to_dict_shape() -> None:
     state = ExecutionState(
         symbol="XAUUSD",

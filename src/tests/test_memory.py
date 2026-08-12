@@ -9,6 +9,8 @@ from run import (
     RuntimeConfig,
     _run_controlled_mt5_live_execution,
     ensure_sample_data,
+    load_bars_from_csv,
+    load_bars_from_memory,
     load_runtime_config,
     run_pipeline,
     validate_runtime_config,
@@ -62,6 +64,56 @@ def _write_fresh_csv(path: Path, rows: int = 20, *, base_timestamp: int = 4_000_
 def test_import_and_path_safety() -> None:
     imported = __import__("src.indicator.signal_model", fromlist=["build_signal_output"])
     assert hasattr(imported, "build_signal_output")
+
+
+def test_load_bars_from_csv_rejects_missing_required_columns(tmp_path: Path) -> None:
+    csv_path = tmp_path / "bad.csv"
+    csv_path.write_text(
+        "time,open,high,low,tick_volume\n"
+        "1700000000,2000.0,2000.5,1999.5,120\n",
+        encoding="utf-8",
+    )
+
+    try:
+        load_bars_from_csv(csv_path, 1)
+        assert False, "Expected ValueError for missing close column"
+    except ValueError as exc:
+        assert "missing required column(s): close" in str(exc)
+
+
+def test_load_bars_from_csv_rejects_insufficient_rows(tmp_path: Path) -> None:
+    csv_path = tmp_path / "short.csv"
+    _write_fresh_csv(csv_path, rows=2)
+
+    try:
+        load_bars_from_csv(csv_path, 3)
+        assert False, "Expected ValueError for insufficient replay rows"
+    except ValueError as exc:
+        assert "requires at least 3 bars, found 2" in str(exc)
+
+
+def test_load_bars_from_memory_rejects_insufficient_snapshot_bars(tmp_path: Path) -> None:
+    store = PatternStore(PatternStoreConfig(root=str(tmp_path / "memory")))
+    store.save(
+        "pattern_memory",
+        {
+            "patterns": [
+                {
+                    "snapshot_id": "snap_1",
+                    "bars": [
+                        {"time": 1, "open": 1.0, "high": 1.1, "low": 0.9, "close": 1.0, "tick_volume": 1.0},
+                        {"time": 2, "open": 1.1, "high": 1.2, "low": 1.0, "close": 1.1, "tick_volume": 1.0},
+                    ],
+                }
+            ]
+        },
+    )
+
+    try:
+        load_bars_from_memory(store, 3)
+        assert False, "Expected ValueError for insufficient memory replay bars"
+    except ValueError as exc:
+        assert "requires at least 3 bars, found 2" in str(exc)
 
 
 def test_pattern_store_seed_files_created(tmp_path: Path) -> None:

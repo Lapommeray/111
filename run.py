@@ -48,7 +48,14 @@ from src.macro.gold_macro import MacroFeedConfig, collect_xauusd_macro_state
 from src.risk.capital_guard import evaluate_capital_protection
 from src.scoring.confidence_score import compute_confidence
 from src.strategy.intelligence import score_signal_intelligence
-from src.utils import normalize_reasons, register_generated_artifact, write_json_atomic
+from src.utils import (
+    normalize_reasons,
+    parse_market_data_csv_row,
+    register_generated_artifact,
+    require_minimum_bars,
+    validate_market_data_csv_headers,
+    write_json_atomic,
+)
 
 
 SUPPORTED_TIMEFRAMES = {"M1", "M5", "M15", "H1", "H4"}
@@ -471,20 +478,23 @@ def load_bars_from_csv(csv_path: Path, bars: int) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     with csv_path.open("r", encoding="utf-8") as fh:
         reader = csv.DictReader(fh)
-        for row in reader:
+        validate_market_data_csv_headers(
+            reader.fieldnames,
+            path=csv_path,
+            context="Replay CSV",
+        )
+        for line_number, row in enumerate(reader, start=2):
             rows.append(
-                {
-                    "time": int(row["time"]),
-                    "open": float(row["open"]),
-                    "high": float(row["high"]),
-                    "low": float(row["low"]),
-                    "close": float(row["close"]),
-                    "tick_volume": float(row.get("tick_volume", 0.0)),
-                }
+                parse_market_data_csv_row(
+                    row,
+                    path=csv_path,
+                    context="Replay CSV",
+                    line_number=line_number,
+                )
             )
     if not rows:
         raise ValueError(f"Replay CSV is empty: {csv_path}")
-    return rows[-bars:]
+    return require_minimum_bars(rows, bars, context="Replay CSV")
 
 
 def load_bars_from_memory(store: PatternStore, bars: int) -> list[dict[str, Any]]:
@@ -495,7 +505,7 @@ def load_bars_from_memory(store: PatternStore, bars: int) -> list[dict[str, Any]
     snapshot_bars = patterns[-1].get("bars")
     if not snapshot_bars:
         raise ValueError("Latest snapshot has no stored bars for replay.")
-    return snapshot_bars[-bars:]
+    return require_minimum_bars(snapshot_bars, bars, context="Memory replay")
 
 
 def _assess_data_freshness(bars: list[dict[str, Any]], *, max_age_seconds: int) -> tuple[bool, int | None]:

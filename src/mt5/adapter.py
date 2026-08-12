@@ -7,6 +7,11 @@ from typing import Any
 import csv
 
 from src.mt5.symbol_guard import SymbolGuard
+from src.utils import (
+    parse_market_data_csv_row,
+    require_minimum_bars,
+    validate_market_data_csv_headers,
+)
 
 
 @dataclass(frozen=True)
@@ -262,18 +267,21 @@ class MT5Adapter:
 
         with path.open("r", encoding="utf-8") as fh:
             reader = csv.DictReader(fh)
+            validate_market_data_csv_headers(
+                reader.fieldnames,
+                path=path,
+                context="CSV fallback",
+            )
             bars = []
-            for row in reader:
+            for line_number, row in enumerate(reader, start=2):
                 bars.append(
-                    {
-                        "time": int(row["time"]),
-                        "open": float(row["open"]),
-                        "high": float(row["high"]),
-                        "low": float(row["low"]),
-                        "close": float(row["close"]),
-                        "tick_volume": float(row.get("tick_volume", 0.0)),
-                    }
+                    parse_market_data_csv_row(
+                        row,
+                        path=path,
+                        context="CSV fallback",
+                        line_number=line_number,
+                    )
                 )
         if not bars:
             raise ValueError(f"CSV fallback is empty: {path}")
-        return bars[-self.config.bars :]
+        return require_minimum_bars(bars, self.config.bars, context="CSV fallback")

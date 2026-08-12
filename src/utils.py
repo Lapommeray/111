@@ -7,6 +7,9 @@ from typing import Any
 import json
 
 
+MARKET_DATA_REQUIRED_COLUMNS = ("time", "open", "high", "low", "close")
+
+
 def clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
 
@@ -52,6 +55,55 @@ def safe_mean(values: list[float]) -> float:
 
 def ensure_required_keys(row: dict[str, Any], keys: list[str]) -> bool:
     return all(k in row for k in keys)
+
+
+def validate_market_data_csv_headers(
+    fieldnames: list[str] | None,
+    *,
+    path: Path,
+    context: str,
+) -> None:
+    names = list(fieldnames or [])
+    missing = [column for column in MARKET_DATA_REQUIRED_COLUMNS if column not in names]
+    if missing:
+        raise ValueError(
+            f"{context} missing required column(s): {', '.join(missing)} in {path}"
+        )
+
+
+def parse_market_data_csv_row(
+    row: dict[str, Any],
+    *,
+    path: Path,
+    context: str,
+    line_number: int,
+) -> dict[str, Any]:
+    try:
+        return {
+            "time": int(row["time"]),
+            "open": float(row["open"]),
+            "high": float(row["high"]),
+            "low": float(row["low"]),
+            "close": float(row["close"]),
+            "tick_volume": float(row.get("tick_volume", 0.0)),
+        }
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"{context} has invalid market-data values at line {line_number} in {path}: {exc}"
+        ) from exc
+
+
+def require_minimum_bars(
+    bars_data: list[dict[str, Any]],
+    required_bars: int,
+    *,
+    context: str,
+) -> list[dict[str, Any]]:
+    if len(bars_data) < required_bars:
+        raise ValueError(
+            f"{context} requires at least {required_bars} bars, found {len(bars_data)}"
+        )
+    return bars_data[-required_bars:]
 
 
 def module_ready(output: dict[str, Any]) -> tuple[bool, str, list[str]]:
