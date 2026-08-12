@@ -11,7 +11,7 @@ class LossBlocker:
     duplicating those responsibilities.
     """
 
-    def __init__(self, min_confidence: float = 0.6, max_spread_points: float = 60.0) -> None:
+    def __init__(self, min_confidence: float = 0.72, max_spread_points: float = 60.0) -> None:
         self.min_confidence = min_confidence
         self.max_spread_points = max_spread_points
 

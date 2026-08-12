@@ -10,14 +10,14 @@ def apply_memory_filter(
 ) -> dict[str, Any]:
     """Use stored outcomes to block repeated losing directions."""
     d = direction.upper()
-    recent_outcomes = [o for o in trade_outcomes[-30:] if str(o.get("direction", "")).upper() == d]
+    recent_outcomes = [o for o in trade_outcomes[-20:] if str(o.get("direction", "")).upper() == d]
     losses = [o for o in recent_outcomes if o.get("result") == "loss"]
 
     recent_blocked_same_direction = [
         b for b in blocked_setups[-20:] if str(b.get("direction", "")).upper() == d
     ]
 
-    blocked = len(losses) >= 3
+    blocked = len(losses) >= 2
     reasons = [
         f"recent_direction_outcomes={len(recent_outcomes)}",
         f"recent_direction_losses={len(losses)}",
