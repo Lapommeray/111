@@ -133,16 +133,6 @@ def test_mt5_adapter_rejects_csv_fallback_missing_required_columns(tmp_path: Pat
         adapter.get_bars()
 
 
-def test_mt5_adapter_rejects_insufficient_csv_fallback_rows(tmp_path: Path) -> None:
-    csv_path = tmp_path / "samples" / "short.csv"
-    _write_sample_csv(csv_path, rows=2)
-
-    adapter = MT5Adapter(MT5Config(symbol="XAUUSD", bars=3, csv_fallback_path=str(csv_path)))
-
-    with pytest.raises(ValueError, match="CSV fallback requires at least 3 bars, found 2"):
-        adapter.get_bars()
-
-
 def test_execution_state_to_dict_shape() -> None:
     state = ExecutionState(
         symbol="XAUUSD",

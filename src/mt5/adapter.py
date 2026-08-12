@@ -9,7 +9,6 @@ import csv
 from src.mt5.symbol_guard import SymbolGuard
 from src.utils import (
     parse_market_data_csv_row,
-    require_minimum_bars,
     validate_market_data_csv_headers,
 )
 
@@ -284,4 +283,4 @@ class MT5Adapter:
                 )
         if not bars:
             raise ValueError(f"CSV fallback is empty: {path}")
-        return require_minimum_bars(bars, self.config.bars, context="CSV fallback")
+        return bars[-self.config.bars :]

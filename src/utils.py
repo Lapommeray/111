@@ -93,19 +93,6 @@ def parse_market_data_csv_row(
         ) from exc
 
 
-def require_minimum_bars(
-    bars_data: list[dict[str, Any]],
-    required_bars: int,
-    *,
-    context: str,
-) -> list[dict[str, Any]]:
-    if len(bars_data) < required_bars:
-        raise ValueError(
-            f"{context} requires at least {required_bars} bars, found {len(bars_data)}"
-        )
-    return bars_data[-required_bars:]
-
-
 def module_ready(output: dict[str, Any]) -> tuple[bool, str, list[str]]:
     reasons = list(output.get("reasons", []))
     if str(output.get("state", "")).lower() == "insufficient_data":

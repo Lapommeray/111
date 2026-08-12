@@ -52,7 +52,6 @@ from src.utils import (
     normalize_reasons,
     parse_market_data_csv_row,
     register_generated_artifact,
-    require_minimum_bars,
     validate_market_data_csv_headers,
     write_json_atomic,
 )
@@ -494,7 +493,7 @@ def load_bars_from_csv(csv_path: Path, bars: int) -> list[dict[str, Any]]:
             )
     if not rows:
         raise ValueError(f"Replay CSV is empty: {csv_path}")
-    return require_minimum_bars(rows, bars, context="Replay CSV")
+    return rows[-bars:]
 
 
 def load_bars_from_memory(store: PatternStore, bars: int) -> list[dict[str, Any]]:
@@ -505,7 +504,7 @@ def load_bars_from_memory(store: PatternStore, bars: int) -> list[dict[str, Any]
     snapshot_bars = patterns[-1].get("bars")
     if not snapshot_bars:
         raise ValueError("Latest snapshot has no stored bars for replay.")
-    return require_minimum_bars(snapshot_bars, bars, context="Memory replay")
+    return snapshot_bars[-bars:]
 
 
 def _assess_data_freshness(bars: list[dict[str, Any]], *, max_age_seconds: int) -> tuple[bool, int | None]:

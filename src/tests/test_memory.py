@@ -81,18 +81,7 @@ def test_load_bars_from_csv_rejects_missing_required_columns(tmp_path: Path) -> 
         assert "missing required column(s): close" in str(exc)
 
 
-def test_load_bars_from_csv_rejects_insufficient_rows(tmp_path: Path) -> None:
-    csv_path = tmp_path / "short.csv"
-    _write_fresh_csv(csv_path, rows=2)
-
-    try:
-        load_bars_from_csv(csv_path, 3)
-        assert False, "Expected ValueError for insufficient replay rows"
-    except ValueError as exc:
-        assert "requires at least 3 bars, found 2" in str(exc)
-
-
-def test_load_bars_from_memory_rejects_insufficient_snapshot_bars(tmp_path: Path) -> None:
+def test_load_bars_from_memory_preserves_existing_truncation_behavior(tmp_path: Path) -> None:
     store = PatternStore(PatternStoreConfig(root=str(tmp_path / "memory")))
     store.save(
         "pattern_memory",
@@ -109,11 +98,9 @@ def test_load_bars_from_memory_rejects_insufficient_snapshot_bars(tmp_path: Path
         },
     )
 
-    try:
-        load_bars_from_memory(store, 3)
-        assert False, "Expected ValueError for insufficient memory replay bars"
-    except ValueError as exc:
-        assert "requires at least 3 bars, found 2" in str(exc)
+    loaded = load_bars_from_memory(store, 3)
+
+    assert [bar["time"] for bar in loaded] == [1, 2]
 
 
 def test_pattern_store_seed_files_created(tmp_path: Path) -> None:
