@@ -15,6 +15,19 @@ def test_runtime_config_valid_settings_json_parses_and_validates() -> None:
     assert isinstance(config, RuntimeConfig)
 
 
+def test_runtime_config_missing_file_still_uses_environment_defaults(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ALPHA_VANTAGE_API_KEY", "alpha-key")
+    monkeypatch.setenv("FRED_API_KEY", "fred-key")
+
+    config = load_runtime_config(tmp_path / "missing-settings.json")
+
+    assert config.alpha_vantage_api_key == "alpha-key"
+    assert config.fred_api_key == "fred-key"
+
+
 def test_runtime_config_missing_required_key_fails_clearly(tmp_path: Path) -> None:
     config_path = tmp_path / "settings.json"
     config_path.write_text(

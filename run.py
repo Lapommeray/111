@@ -259,6 +259,13 @@ def ensure_sample_data(path: Path) -> None:
         writer.writerows(rows)
 
 
+def _runtime_config_defaults() -> RuntimeConfig:
+    return RuntimeConfig(
+        alpha_vantage_api_key=os.getenv("ALPHA_VANTAGE_API_KEY", ""),
+        fred_api_key=os.getenv("FRED_API_KEY", ""),
+    )
+
+
 def _expect_runtime_config_type(key: str, value: Any, expected: str) -> Any:
     def _is_plain_int(candidate: Any) -> bool:
         return isinstance(candidate, int) and not isinstance(candidate, bool)
@@ -335,8 +342,9 @@ def _should_apply_replay_wait_structure_override(
 
 
 def load_runtime_config(path: Path) -> RuntimeConfig:
+    defaults = _runtime_config_defaults()
     if not path.exists():
-        return RuntimeConfig()
+        return defaults
     try:
         with path.open("r", encoding="utf-8") as fh:
             data = json.load(fh)
@@ -358,10 +366,6 @@ def load_runtime_config(path: Path) -> RuntimeConfig:
     if unknown_keys:
         raise ValueError(f"Unsupported config key(s) in '{path}': {', '.join(unknown_keys)}")
 
-    defaults = RuntimeConfig(
-        alpha_vantage_api_key=os.getenv("ALPHA_VANTAGE_API_KEY", ""),
-        fred_api_key=os.getenv("FRED_API_KEY", ""),
-    )
     payload: dict[str, Any] = dict(defaults.__dict__)
 
     for key, value in data.items():
