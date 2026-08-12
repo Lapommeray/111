@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
+# Minimum structure strength required for a directional signal.
+_MIN_STRUCTURE_STRENGTH = 0.55
+# Minimum liquidity score required for a directional signal.
+_MIN_LIQUIDITY_SCORE = 0.45
+
 
 def compute_confidence(structure: dict[str, Any], liquidity: dict[str, Any]) -> dict[str, Any]:
     """Build a transparent confidence score from directional agreement + strength."""
@@ -10,11 +15,6 @@ def compute_confidence(structure: dict[str, Any], liquidity: dict[str, Any]) -> 
 
     structure_strength = float(structure.get("strength", 0.0))
     liquidity_score = float(liquidity.get("score", 0.0))
-
-    # Gate 1: minimum structure strength required for a directional signal.
-    _MIN_STRUCTURE_STRENGTH = 0.55
-    # Gate 2: minimum liquidity score required for a directional signal.
-    _MIN_LIQUIDITY_SCORE = 0.45
 
     agreement = 1.0 if structure_bias in {"buy", "sell"} and structure_bias == liquidity_hint else 0.4
     confidence = (0.55 * structure_strength) + (0.35 * liquidity_score) + (0.10 * agreement)

@@ -2,6 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
+# Minimum fraction by which the dominant vote side must lead the minority side.
+# Splits tighter than this threshold are too contested to act on.
+_MIN_VOTE_MARGIN = 0.15
+# Minimum number of active (buy or sell) votes before margin filtering applies.
+_MIN_ACTIVE_VOTES = 4
+
 
 def apply_conflict_filter(votes: list[str], base_direction: str) -> dict[str, Any]:
     """Block when buy/sell votes are simultaneously strong and contradictory."""
@@ -10,18 +16,14 @@ def apply_conflict_filter(votes: list[str], base_direction: str) -> dict[str, An
     sell_count = sum(1 for v in normalized if v == "sell")
 
     active_votes = buy_count + sell_count
-    # Hard-block exact-tie deadlocks.
-    exact_tie = buy_count > 0 and sell_count > 0 and buy_count == sell_count and active_votes >= 4
-    # Also block when the winning side's margin is less than 15% of active votes
-    # (very close split, e.g. 5 buy vs 4 sell). A 3:2 split (margin=0.2) is
-    # allowed to pass through so downstream conviction guards can handle it.
-    low_margin = (
-        active_votes >= 4
+    # Block when both sides are present and the winning margin is too small.
+    # This covers exact ties (margin == 0) and near-ties (margin < _MIN_VOTE_MARGIN).
+    blocked = (
+        active_votes >= _MIN_ACTIVE_VOTES
         and buy_count > 0
         and sell_count > 0
-        and abs(buy_count - sell_count) / active_votes < 0.15
+        and abs(buy_count - sell_count) / active_votes < _MIN_VOTE_MARGIN
     )
-    blocked = exact_tie or low_margin
     reasons = [f"buy_votes={buy_count}", f"sell_votes={sell_count}"]
 
     if blocked:
