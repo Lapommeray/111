@@ -109,6 +109,61 @@
         "capability_rank_registry": "memory/capability_competition/capability_rank_registry.json",
         "capability_competition_governance_state": "memory/capability_competition/capability_competition_governance_state.json"
       }
+    },
+    {
+      "capability_competition_state": {
+        "state": "balanced",
+        "top_capability": "autonomous_capability_expansion",
+        "competition_spread": 0.1565
+      },
+      "capability_competition_reliability": 0.5646,
+      "capability_competition": {
+        "ranked_capabilities": [
+          {
+            "capability_id": "autonomous_capability_expansion",
+            "performance": 0.634,
+            "stability": 0.78,
+            "risk": 0.5088,
+            "novelty": 0.6872,
+            "regime_compatibility": 0.72,
+            "competition_score": 0.66
+          },
+          {
+            "capability_id": "governed_capability_invention",
+            "performance": 0.5,
+            "stability": 0.254,
+            "risk": 0.5019,
+            "novelty": 1.0,
+            "regime_compatibility": 0.64,
+            "competition_score": 0.5302
+          },
+          {
+            "capability_id": "coherence_stability_guard",
+            "performance": 0.3052,
+            "stability": 0.51,
+            "risk": 0.4553,
+            "novelty": 0.5135,
+            "regime_compatibility": 0.82,
+            "competition_score": 0.5035
+          }
+        ],
+        "competition_pressure": 0.2341,
+        "selection_limit": 2
+      },
+      "governance_flags": {
+        "sandbox_only": true,
+        "replay_validation_required": true,
+        "live_deployment_allowed": false,
+        "no_blind_live_self_rewrites": true,
+        "competition_pause_guard": false,
+        "competition_refusal_guard": false
+      },
+      "paths": {
+        "latest": "memory/capability_competition/capability_competition_latest.json",
+        "history": "memory/capability_competition/capability_competition_history.json",
+        "capability_rank_registry": "memory/capability_competition/capability_rank_registry.json",
+        "capability_competition_governance_state": "memory/capability_competition/capability_competition_governance_state.json"
+      }
     }
   ]
 }
